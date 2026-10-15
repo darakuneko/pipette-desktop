@@ -58,7 +58,7 @@ type Filter = (&'static str, &'static [&'static str]);
 /// without one.
 struct Export {
     member: &'static str,
-    run: fn(&Dialogs, &str, Option<&str>) -> FileSaveResult,
+    dialog: &'static SaveDialog,
     title: &'static str,
     named: &'static str,
     unnamed: &'static str,
@@ -68,7 +68,7 @@ struct Export {
 const EXPORTS: &[Export] = &[
     Export {
         member: "saveLayout",
-        run: save_layout,
+        dialog: &LAYOUT_SAVE,
         title: "Export Layout",
         named: "My Board.vil",
         unnamed: "keyboard.vil",
@@ -76,15 +76,23 @@ const EXPORTS: &[Export] = &[
     },
     Export {
         member: "exportKeymapC",
-        run: export_keymap_c,
+        dialog: &KEYMAP_C_SAVE,
         title: "Export keymap.c",
         named: "My Board_keymap.c",
         unnamed: "keymap.c",
         filter: ("C Source", &["c"]),
     },
     Export {
+        member: "exportPdf",
+        dialog: &PDF_SAVE,
+        title: "Export Keymap PDF",
+        named: "My Board.pdf",
+        unnamed: "keymap.pdf",
+        filter: ("PDF Document", &["pdf"]),
+    },
+    Export {
         member: "exportCsv",
-        run: export_csv,
+        dialog: &CSV_SAVE,
         title: "Export CSV",
         named: "My Board.csv",
         unnamed: "typing-test-history.csv",
@@ -92,7 +100,7 @@ const EXPORTS: &[Export] = &[
     },
     Export {
         member: "exportJson",
-        run: export_json,
+        dialog: &JSON_SAVE,
         title: "Export JSON",
         named: "My Board.json",
         unnamed: "export.json",
@@ -102,16 +110,17 @@ const EXPORTS: &[Export] = &[
 
 #[test]
 fn saves_and_exports_show_their_dialog_and_write_the_content() {
-    for &Export { member, run, title, named, unnamed, filter } in EXPORTS {
+    for &Export { member, dialog, title, named, unnamed, filter } in EXPORTS {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("out");
         let dialogs = scripted([Some(path.clone()), None, None]);
 
-        assert_eq!(run(&dialogs.dialogs, "content ✓", Some("My Board")), saved(&path), "{member}");
+        let saved_here = save_with_dialog(&dialogs.dialogs, dialog, Some("My Board"), "content ✓".as_bytes());
+        assert_eq!(saved_here, saved(&path), "{member}");
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "content ✓", "{member}");
         // An empty name is no name.
-        run(&dialogs.dialogs, "", Some(""));
-        run(&dialogs.dialogs, "", None);
+        save_with_dialog(&dialogs.dialogs, dialog, Some(""), b"");
+        save_with_dialog(&dialogs.dialogs, dialog, None, b"");
 
         assert_eq!(
             dialogs.requests(),
@@ -122,26 +131,9 @@ fn saves_and_exports_show_their_dialog_and_write_the_content() {
 }
 
 #[test]
-fn the_pdf_export_writes_the_decoded_bytes() {
-    let dir = TempDir::new().unwrap();
-    let path = dir.path().join("keymap.pdf");
-    let dialogs = scripted([Some(path.clone()), None]);
-
-    assert_eq!(export_pdf(&dialogs.dialogs, "JVBERi0=", Some("My Board")), saved(&path));
-    assert_eq!(std::fs::read(&path).unwrap(), b"%PDF-");
-    export_pdf(&dialogs.dialogs, "", None);
-
-    let filter: Filter = ("PDF Document", &["pdf"]);
-    assert_eq!(
-        dialogs.requests(),
-        [save("Export Keymap PDF", "My Board.pdf", filter), save("Export Keymap PDF", "keymap.pdf", filter)]
-    );
-}
-
-#[test]
 fn the_default_name_is_the_cleaned_device_name() {
     let dialogs = scripted([]);
-    save_layout(&dialogs.dialogs, "{}", Some(" a/b:c? ..."));
+    save_with_dialog(&dialogs.dialogs, &LAYOUT_SAVE, Some(" a/b:c? ..."), b"{}");
     let [request] = dialogs.requests().try_into().unwrap();
     assert_eq!(request.kind, DialogKind::SaveFile { default_name: "a_b_c_.vil".to_owned() });
 }
@@ -153,14 +145,17 @@ fn a_save_overwrites_the_chosen_file() {
     std::fs::write(&path, "an older and longer layout").unwrap();
     let dialogs = scripted([Some(path.clone())]);
 
-    assert_eq!(save_layout(&dialogs.dialogs, "{}", None), saved(&path));
+    assert_eq!(save_with_dialog(&dialogs.dialogs, &LAYOUT_SAVE, None, b"{}"), saved(&path));
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "{}");
 }
 
 #[test]
 fn a_cancelled_save_writes_nothing() {
     let dialogs = scripted([None]);
-    assert_eq!(save_layout(&dialogs.dialogs, "{}", None), FileSaveResult::failed("cancelled"));
+    assert_eq!(
+        save_with_dialog(&dialogs.dialogs, &LAYOUT_SAVE, None, b"{}"),
+        FileSaveResult::failed("cancelled")
+    );
 }
 
 #[test]
@@ -169,7 +164,7 @@ fn a_failed_write_answers_its_error() {
     let path = dir.path().join("missing").join("keyboard.vil");
     let dialogs = scripted([Some(path)]);
 
-    let result = save_layout(&dialogs.dialogs, "{}", None);
+    let result = save_with_dialog(&dialogs.dialogs, &LAYOUT_SAVE, None, b"{}");
     assert!(!result.success);
     assert_eq!(result.file_path, None);
     assert!(result.error.is_some_and(|error| !error.is_empty() && error != "cancelled"));

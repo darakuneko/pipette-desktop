@@ -107,16 +107,58 @@ fn default_name(name: Option<&str>, suffix: &str, fallback: &str) -> String {
     }
 }
 
-fn save_request(title: &str, default_name: String, filter: FileFilter) -> DialogRequest {
-    DialogRequest {
-        kind: DialogKind::SaveFile { default_name },
-        title: title.to_owned(),
-        filters: vec![filter, FileFilter::all_files()],
-    }
+/// The save dialog of a save or an export, with the values of its Electron
+/// handler.
+struct SaveDialog {
+    title: &'static str,
+    /// Appended to the cleaned name the page passes.
+    suffix: &'static str,
+    /// The default name when the page passes none.
+    fallback: &'static str,
+    filter: (&'static str, &'static str),
 }
 
-/// Asks where to save and writes `contents` there.
-fn save_with_dialog(dialogs: &Dialogs, request: DialogRequest, contents: &[u8]) -> FileSaveResult {
+const LAYOUT_SAVE: SaveDialog = SaveDialog {
+    title: "Export Layout",
+    suffix: ".vil",
+    fallback: "keyboard.vil",
+    filter: ("Vial Layout", "vil"),
+};
+const KEYMAP_C_SAVE: SaveDialog = SaveDialog {
+    title: "Export keymap.c",
+    suffix: "_keymap.c",
+    fallback: "keymap.c",
+    filter: ("C Source", "c"),
+};
+const PDF_SAVE: SaveDialog = SaveDialog {
+    title: "Export Keymap PDF",
+    suffix: ".pdf",
+    fallback: "keymap.pdf",
+    filter: ("PDF Document", "pdf"),
+};
+const CSV_SAVE: SaveDialog = SaveDialog {
+    title: "Export CSV",
+    suffix: ".csv",
+    fallback: "typing-test-history.csv",
+    filter: ("CSV", "csv"),
+};
+const JSON_SAVE: SaveDialog =
+    SaveDialog { title: "Export JSON", suffix: ".json", fallback: "export.json", filter: ("JSON", "json") };
+
+/// Asks where to save, starting from the default name for `name`, and
+/// writes `contents` there.
+fn save_with_dialog(
+    dialogs: &Dialogs,
+    dialog: &SaveDialog,
+    name: Option<&str>,
+    contents: &[u8],
+) -> FileSaveResult {
+    let (filter_name, extension) = dialog.filter;
+    let request = DialogRequest {
+        kind: DialogKind::SaveFile { default_name: default_name(name, dialog.suffix, dialog.fallback) },
+        title: dialog.title.to_owned(),
+        filters: vec![FileFilter::new(filter_name, &[extension]), FileFilter::all_files()],
+    };
     let Some(path) = dialogs.show(request) else { return FileSaveResult::failed(CANCELLED) };
     match std::fs::write(&path, contents) {
         Ok(()) => FileSaveResult { success: true, file_path: Some(path_text(&path)), error: None },
@@ -136,37 +178,6 @@ fn open_with_dialog(dialogs: &Dialogs, request: DialogRequest) -> FileOpenResult
         },
         Err(err) => FileOpenResult::failed(err.to_string()),
     }
-}
-
-fn save_layout(dialogs: &Dialogs, json: &str, device_name: Option<&str>) -> FileSaveResult {
-    let name = default_name(device_name, ".vil", "keyboard.vil");
-    let request = save_request("Export Layout", name, FileFilter::new("Vial Layout", &["vil"]));
-    save_with_dialog(dialogs, request, json.as_bytes())
-}
-
-fn export_keymap_c(dialogs: &Dialogs, content: &str, device_name: Option<&str>) -> FileSaveResult {
-    let name = default_name(device_name, "_keymap.c", "keymap.c");
-    let request = save_request("Export keymap.c", name, FileFilter::new("C Source", &["c"]));
-    save_with_dialog(dialogs, request, content.as_bytes())
-}
-
-/// `base64_data` is decoded as Node's `Buffer.from(data, 'base64')` does.
-fn export_pdf(dialogs: &Dialogs, base64_data: &str, device_name: Option<&str>) -> FileSaveResult {
-    let name = default_name(device_name, ".pdf", "keymap.pdf");
-    let request = save_request("Export Keymap PDF", name, FileFilter::new("PDF Document", &["pdf"]));
-    save_with_dialog(dialogs, request, &decode_base64_as_node(base64_data))
-}
-
-fn export_csv(dialogs: &Dialogs, content: &str, name: Option<&str>) -> FileSaveResult {
-    let name = default_name(name, ".csv", "typing-test-history.csv");
-    let request = save_request("Export CSV", name, FileFilter::new("CSV", &["csv"]));
-    save_with_dialog(dialogs, request, content.as_bytes())
-}
-
-fn export_json(dialogs: &Dialogs, content: &str, name: Option<&str>) -> FileSaveResult {
-    let name = default_name(name, ".json", "export.json");
-    let request = save_request("Export JSON", name, FileFilter::new("JSON", &["json"]));
-    save_with_dialog(dialogs, request, content.as_bytes())
 }
 
 /// The entries of a CSV bundle, `[{ name, content }, ...]` with string
@@ -301,13 +312,23 @@ async fn blocking<T: Send + 'static>(
     Ok(tauri::async_runtime::spawn_blocking(move || run(&dialogs)).await?)
 }
 
+/// [`save_with_dialog`] on a blocking-task thread.
+async fn save_command(
+    dialogs: State<'_, Dialogs>,
+    dialog: &'static SaveDialog,
+    name: Option<String>,
+    contents: Vec<u8>,
+) -> Result<FileSaveResult, CommandError> {
+    blocking(dialogs, move |dialogs| save_with_dialog(dialogs, dialog, name.as_deref(), &contents)).await
+}
+
 #[tauri::command]
 pub async fn file_save_layout(
     dialogs: State<'_, Dialogs>,
     json: String,
     device_name: Option<String>,
 ) -> Result<FileSaveResult, CommandError> {
-    blocking(dialogs, move |dialogs| save_layout(dialogs, &json, device_name.as_deref())).await
+    save_command(dialogs, &LAYOUT_SAVE, device_name, json.into_bytes()).await
 }
 
 #[tauri::command]
@@ -316,16 +337,17 @@ pub async fn file_export_keymap_c(
     content: String,
     device_name: Option<String>,
 ) -> Result<FileSaveResult, CommandError> {
-    blocking(dialogs, move |dialogs| export_keymap_c(dialogs, &content, device_name.as_deref())).await
+    save_command(dialogs, &KEYMAP_C_SAVE, device_name, content.into_bytes()).await
 }
 
+/// `base64_data` is decoded as Node's `Buffer.from(data, 'base64')` does.
 #[tauri::command]
 pub async fn file_export_pdf(
     dialogs: State<'_, Dialogs>,
     base64_data: String,
     device_name: Option<String>,
 ) -> Result<FileSaveResult, CommandError> {
-    blocking(dialogs, move |dialogs| export_pdf(dialogs, &base64_data, device_name.as_deref())).await
+    save_command(dialogs, &PDF_SAVE, device_name, decode_base64_as_node(&base64_data)).await
 }
 
 #[tauri::command]
@@ -334,7 +356,7 @@ pub async fn file_export_csv(
     content: String,
     default_name: Option<String>,
 ) -> Result<FileSaveResult, CommandError> {
-    blocking(dialogs, move |dialogs| export_csv(dialogs, &content, default_name.as_deref())).await
+    save_command(dialogs, &CSV_SAVE, default_name, content.into_bytes()).await
 }
 
 #[tauri::command]
@@ -343,7 +365,7 @@ pub async fn file_export_json(
     content: String,
     default_name: Option<String>,
 ) -> Result<FileSaveResult, CommandError> {
-    blocking(dialogs, move |dialogs| export_json(dialogs, &content, default_name.as_deref())).await
+    save_command(dialogs, &JSON_SAVE, default_name, content.into_bytes()).await
 }
 
 /// `files` is checked here rather than typed, so a malformed list answers
