@@ -8,7 +8,7 @@
     "beforeDevCommand": "pnpm exec vite --config vite.tauri.config.ts",
     "beforeBuildCommand": "pnpm exec vite build --config vite.tauri.config.ts",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "../out/renderer-tauri"
+    "frontendDist": "../out-tauri/renderer"
   },
   "app": {
     "withGlobalTauri": false,

@@ -86,6 +86,6 @@ export default [
     }
   },
   {
-    ignores: ['out/', 'dist/', 'node_modules/']
+    ignores: ['out/', 'out-tauri/', 'dist/', 'node_modules/']
   }
 ]

@@ -60,7 +60,7 @@ export default defineConfig({
   },
   build: {
     ...shared.build,
-    outDir: resolve(__dirname, 'out/renderer-tauri'),
+    outDir: resolve(__dirname, 'out-tauri/renderer'),
     emptyOutDir: true,
     rollupOptions: {
       input: resolve(RENDERER_ROOT, 'tauri.html'),
