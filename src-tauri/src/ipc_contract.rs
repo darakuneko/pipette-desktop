@@ -4,9 +4,9 @@
 //! it invokes, the arguments it passes and the response; the shim's tests
 //! (src/tauri-shim/__tests__/ipc-fixtures.test.ts) replay them against the
 //! shim. Here each entry runs through the app's own command handler
-//! (`app_commands` in main.rs) on Tauri's mock runtime: the command must be
-//! registered, take `invokeArgs` as its arguments, and respond with
-//! `response`.
+//! (`app_commands` in main.rs) on Tauri's mock runtime, with a new app
+//! config in a temp directory: the command must be registered, take
+//! `invokeArgs` as its arguments, and respond with `response`.
 //!
 //! The HID service lists only the virtual keyboard. The virtual keyboard
 //! cannot be probed, so behind it sits one scripted hardware keyboard
@@ -20,12 +20,14 @@ use std::ffi::CString;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
+use pipette_app_config::AppConfigStore;
 use pipette_hid::{HidBackend, HidError, HidHandle, HidService, RawDeviceInfo, Timing, VirtualDeviceMode};
 use serde_json::{Value, json};
 use tauri::WebviewWindow;
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
+use tempfile::TempDir;
 
 use crate::hid_commands::Hid;
 
@@ -124,10 +126,13 @@ pub(crate) fn probe_keyboard_service() -> HidService {
     HidService::with_backend(Box::new(ProbeKeyboard), VirtualDeviceMode::Only, Timing::new(|| 0, |_| {}))
 }
 
-/// A fresh app with the app commands and the state they use, and its window.
-fn app_window() -> WebviewWindow<MockRuntime> {
+/// A fresh app with the app commands and the state they use, with
+/// `user_data` as its userData directory, and its window.
+fn app_window(user_data: &Path) -> WebviewWindow<MockRuntime> {
+    let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     let app = mock_builder()
         .manage(Hid(Arc::new(probe_keyboard_service())))
+        .manage(config)
         .invoke_handler(crate::app_commands())
         .build(mock_context(noop_assets()))
         .unwrap();
@@ -155,11 +160,15 @@ fn mismatch(entry: &Entry) -> Option<String> {
     if !APP_COMMANDS.contains(&entry.command.as_str()) {
         return Some("not in APP_COMMANDS".into());
     }
-    let window = app_window();
+    let user_data = TempDir::new().unwrap();
+    run_entry(entry, &app_window(user_data.path()))
+}
+
+fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<String> {
     if NEED_OPEN_DEVICE.contains(&entry.command.as_str()) {
         let (vendor_id, product_id) = VIRTUAL_KEYBOARD;
         let opened =
-            invoke(&window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
+            invoke(window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
         if opened != Ok(json!(true)) {
             return Some(format!("opening the virtual keyboard: {opened:?}"));
         }
@@ -167,7 +176,7 @@ fn mismatch(entry: &Entry) -> Option<String> {
     if NEED_PROBE.contains(&entry.command.as_str()) {
         let (vendor_id, product_id, serial_number) = PROBE_KEYBOARD;
         let opened = invoke(
-            &window,
+            window,
             "hid_probe_open",
             &json!({ "vendorId": vendor_id, "productId": product_id, "serialNumber": serial_number }),
         );
@@ -175,7 +184,7 @@ fn mismatch(entry: &Entry) -> Option<String> {
             return Some(format!("opening the probe handle: {opened:?}"));
         }
     }
-    match invoke(&window, &entry.command, &entry.invoke_args) {
+    match invoke(window, &entry.command, &entry.invoke_args) {
         Ok(response) if response == entry.response => None,
         Ok(response) => Some(format!("responded {response}, the fixture records {}", entry.response)),
         Err(err) => Some(format!("failed: {err}")),

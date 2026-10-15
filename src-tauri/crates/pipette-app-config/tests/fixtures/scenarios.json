@@ -1,0 +1,987 @@
+[
+  {
+    "name": "new",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"dark\"",
+        "notified": [
+          [
+            "theme",
+            "\"dark\""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"dark\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"dark\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"dark\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "set writes the same value again",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "write",
+        "text": "{\"theme\":\"dark\"}",
+        "file": "{\"theme\":\"dark\"}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"dark\"",
+        "notified": [
+          [
+            "theme",
+            "\"dark\""
+          ]
+        ],
+        "file": "{\n\t\"theme\": \"dark\"\n}"
+      }
+    ]
+  },
+  {
+    "name": "missing defaults and unknown keys",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"theme\":\"dark\",\"zzz\":1,\"10\":\"ten\",\"autoSync\":true,\"2\":[]}",
+        "file": "{\"theme\":\"dark\",\"zzz\":1,\"10\":\"ten\",\"autoSync\":true,\"2\":[]}"
+      },
+      {
+        "op": "start",
+        "result": "{\"2\":[],\"10\":\"ten\",\"autoSync\":true,\"theme\":\"dark\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"zzz\":1}",
+        "file": "{\n\t\"2\": [],\n\t\"10\": \"ten\",\n\t\"autoSync\": true,\n\t\"theme\": \"dark\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"zzz\": 1\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"2\":[],\"10\":\"ten\",\"autoSync\":true,\"theme\":\"dark\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"zzz\":1}",
+        "file": "{\n\t\"2\": [],\n\t\"10\": \"ten\",\n\t\"autoSync\": true,\n\t\"theme\": \"dark\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"zzz\": 1\n}"
+      }
+    ]
+  },
+  {
+    "name": "every default in another order is not rewritten",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"packsPulledOnce\":false,\"restoreLastSession\":true,\"startInTray\":false,\"trayResident\":false,\"autoLaunch\":false,\"zoomFactor\":100,\"typingMonitorAppEnabled\":true,\"typingRecordingConsentAccepted\":false,\"typingHeatmapWindowMin\":5,\"maxKeymapHistory\":100,\"defaultQuickSelect\":false,\"defaultSplitKeyMode\":\"split\",\"defaultBasicViewType\":\"ansi\",\"hubEnabled\":false,\"language\":\"builtin:en\",\"autoLockTime\":10,\"defaultLayerPanelOpen\":true,\"defaultAutoAdvance\":true,\"defaultKeyboardLayout\":\"qwerty\",\"currentKeyboardLayout\":\"qwerty\",\"theme\":\"system\",\"autoSync\":false}",
+        "file": "{\"packsPulledOnce\":false,\"restoreLastSession\":true,\"startInTray\":false,\"trayResident\":false,\"autoLaunch\":false,\"zoomFactor\":100,\"typingMonitorAppEnabled\":true,\"typingRecordingConsentAccepted\":false,\"typingHeatmapWindowMin\":5,\"maxKeymapHistory\":100,\"defaultQuickSelect\":false,\"defaultSplitKeyMode\":\"split\",\"defaultBasicViewType\":\"ansi\",\"hubEnabled\":false,\"language\":\"builtin:en\",\"autoLockTime\":10,\"defaultLayerPanelOpen\":true,\"defaultAutoAdvance\":true,\"defaultKeyboardLayout\":\"qwerty\",\"currentKeyboardLayout\":\"qwerty\",\"theme\":\"system\",\"autoSync\":false}"
+      },
+      {
+        "op": "start",
+        "result": "{\"packsPulledOnce\":false,\"restoreLastSession\":true,\"startInTray\":false,\"trayResident\":false,\"autoLaunch\":false,\"zoomFactor\":100,\"typingMonitorAppEnabled\":true,\"typingRecordingConsentAccepted\":false,\"typingHeatmapWindowMin\":5,\"maxKeymapHistory\":100,\"defaultQuickSelect\":false,\"defaultSplitKeyMode\":\"split\",\"defaultBasicViewType\":\"ansi\",\"hubEnabled\":false,\"language\":\"builtin:en\",\"autoLockTime\":10,\"defaultLayerPanelOpen\":true,\"defaultAutoAdvance\":true,\"defaultKeyboardLayout\":\"qwerty\",\"currentKeyboardLayout\":\"qwerty\",\"theme\":\"system\",\"autoSync\":false}",
+        "file": "{\"packsPulledOnce\":false,\"restoreLastSession\":true,\"startInTray\":false,\"trayResident\":false,\"autoLaunch\":false,\"zoomFactor\":100,\"typingMonitorAppEnabled\":true,\"typingRecordingConsentAccepted\":false,\"typingHeatmapWindowMin\":5,\"maxKeymapHistory\":100,\"defaultQuickSelect\":false,\"defaultSplitKeyMode\":\"split\",\"defaultBasicViewType\":\"ansi\",\"hubEnabled\":false,\"language\":\"builtin:en\",\"autoLockTime\":10,\"defaultLayerPanelOpen\":true,\"defaultAutoAdvance\":true,\"defaultKeyboardLayout\":\"qwerty\",\"currentKeyboardLayout\":\"qwerty\",\"theme\":\"system\",\"autoSync\":false}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"packsPulledOnce\":false,\"restoreLastSession\":true,\"startInTray\":false,\"trayResident\":false,\"autoLaunch\":false,\"zoomFactor\":100,\"typingMonitorAppEnabled\":true,\"typingRecordingConsentAccepted\":false,\"typingHeatmapWindowMin\":5,\"maxKeymapHistory\":100,\"defaultQuickSelect\":false,\"defaultSplitKeyMode\":\"split\",\"defaultBasicViewType\":\"ansi\",\"hubEnabled\":false,\"language\":\"builtin:en\",\"autoLockTime\":10,\"defaultLayerPanelOpen\":true,\"defaultAutoAdvance\":true,\"defaultKeyboardLayout\":\"qwerty\",\"currentKeyboardLayout\":\"qwerty\",\"theme\":\"system\",\"autoSync\":false}",
+        "file": "{\"packsPulledOnce\":false,\"restoreLastSession\":true,\"startInTray\":false,\"trayResident\":false,\"autoLaunch\":false,\"zoomFactor\":100,\"typingMonitorAppEnabled\":true,\"typingRecordingConsentAccepted\":false,\"typingHeatmapWindowMin\":5,\"maxKeymapHistory\":100,\"defaultQuickSelect\":false,\"defaultSplitKeyMode\":\"split\",\"defaultBasicViewType\":\"ansi\",\"hubEnabled\":false,\"language\":\"builtin:en\",\"autoLockTime\":10,\"defaultLayerPanelOpen\":true,\"defaultAutoAdvance\":true,\"defaultKeyboardLayout\":\"qwerty\",\"currentKeyboardLayout\":\"qwerty\",\"theme\":\"system\",\"autoSync\":false}"
+      }
+    ]
+  },
+  {
+    "name": "duplicate keys",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"theme\":\"dark\",\"zzz\":1,\"theme\":\"light\"}",
+        "file": "{\"theme\":\"dark\",\"zzz\":1,\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"zzz\":1}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"zzz\": 1\n}"
+      }
+    ]
+  },
+  {
+    "name": "numbers in the file",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"maxKeymapHistory\":100.0,\"zoomFactor\":1e2,\"a\":9007199254740993,\"b\":-0,\"c\":1E400,\"d\":0.1,\"e\":1e21,\"f\":1e-7}",
+        "file": "{\"maxKeymapHistory\":100.0,\"zoomFactor\":1e2,\"a\":9007199254740993,\"b\":-0,\"c\":1E400,\"d\":0.1,\"e\":1e21,\"f\":1e-7}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"a\":9007199254740992,\"b\":0,\"c\":null,\"d\":0.1,\"e\":1e+21,\"f\":1e-7}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"a\": 9007199254740992,\n\t\"b\": 0,\n\t\"c\": null,\n\t\"d\": 0.1,\n\t\"e\": 1e+21,\n\t\"f\": 1e-7\n}"
+      }
+    ]
+  },
+  {
+    "name": "invalid UTF-8 in a string",
+    "steps": [
+      {
+        "op": "writeHex",
+        "hex": "7b227468656d65223a22ff227d",
+        "file": "{\"theme\":\"�\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"�\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"�\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language \"ja\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":\"ja\",\"theme\":\"light\"}",
+        "file": "{\"language\":\"ja\",\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"oneShotNotice\":\"ja-removed\"}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"oneShotNotice\": \"ja-removed\"\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"oneShotNotice\":\"ja-removed\"}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"oneShotNotice\": \"ja-removed\"\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"oneShotNotice\":\"ja-removed\"}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"oneShotNotice\": \"ja-removed\"\n}"
+      }
+    ]
+  },
+  {
+    "name": "language \"en\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":\"en\",\"theme\":\"light\"}",
+        "file": "{\"language\":\"en\",\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language \"pack:foo\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":\"pack:foo\",\"theme\":\"light\"}",
+        "file": "{\"language\":\"pack:foo\",\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"pack:foo\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"pack:foo\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"pack:foo\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"pack:foo\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"pack:foo\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"pack:foo\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language \"builtin:en\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":\"builtin:en\",\"theme\":\"light\"}",
+        "file": "{\"language\":\"builtin:en\",\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language \"fr\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":\"fr\",\"theme\":\"light\"}",
+        "file": "{\"language\":\"fr\",\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language \"\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":\"\",\"theme\":\"light\"}",
+        "file": "{\"language\":\"\",\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language 5",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":5,\"theme\":\"light\"}",
+        "file": "{\"language\":5,\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language null",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":null,\"theme\":\"light\"}",
+        "file": "{\"language\":null,\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language true",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"language\":true,\"theme\":\"light\"}",
+        "file": "{\"language\":true,\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language missing",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"theme\":\"light\"}",
+        "file": "{\"theme\":\"light\"}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"light\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "language migration runs on start only",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "language",
+        "value": "\"ja\"",
+        "notified": [
+          [
+            "language",
+            "\"ja\""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"ja\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"ja\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"ja\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "ipc values",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "lastDevice",
+        "value": "null",
+        "notified": [
+          [
+            "lastDevice",
+            "null"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": null\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "lastDevice",
+        "value": "{\"vendorId\":1,\"productId\":2,\"serialNumber\":\"x\",\"nested\":{\"2\":3,\"10\":2,\"b\":1}}",
+        "notified": [
+          [
+            "lastDevice",
+            "{\"vendorId\":1,\"productId\":2,\"serialNumber\":\"x\",\"nested\":{\"2\":3,\"10\":2,\"b\":1}}"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "zoomFactor",
+        "value": "0.1",
+        "notified": [
+          [
+            "zoomFactor",
+            "0.1"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0.1,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "zoomFactor",
+        "value": "1e+21",
+        "notified": [
+          [
+            "zoomFactor",
+            "1e+21"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 1e+21,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "zoomFactor",
+        "value": "0",
+        "notified": [
+          [
+            "zoomFactor",
+            "0"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "maxKeymapHistory",
+        "value": "9007199254740992",
+        "notified": [
+          [
+            "maxKeymapHistory",
+            "9007199254740992"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 9007199254740992,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "maxKeymapHistory",
+        "value": "1e-7",
+        "notified": [
+          [
+            "maxKeymapHistory",
+            "1e-7"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"日本語😀 é\"",
+        "notified": [
+          [
+            "theme",
+            "\"日本語😀 é\""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"日本語😀 é\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"\\u0001\\n\\t\\\"\\\\ \"",
+        "notified": [
+          [
+            "theme",
+            "\"\\u0001\\n\\t\\\"\\\\ \""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"\\u0001\\n\\t\\\"\\\\ \",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"\\ud800x\\udc00\"",
+        "notified": [
+          [
+            "theme",
+            "\"\\ud800x\\udc00\""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"\\ud800x\\udc00\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"\"",
+        "notified": [
+          [
+            "theme",
+            "\"\""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "autoSync",
+        "value": "[1,\"a\",null,{\"z\":1}]",
+        "notified": [
+          [
+            "autoSync",
+            "[1,\"a\",null,{\"z\":1}]"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": [\n\t\t1,\n\t\t\"a\",\n\t\tnull,\n\t\t{\n\t\t\t\"z\": 1\n\t\t}\n\t],\n\t\"theme\": \"\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "trayResident",
+        "value": "true",
+        "notified": [
+          [
+            "trayResident",
+            "true"
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": [\n\t\t1,\n\t\t\"a\",\n\t\tnull,\n\t\t{\n\t\t\t\"z\": 1\n\t\t}\n\t],\n\t\"theme\": \"\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": true,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"autoSync\":[1,\"a\",null,{\"z\":1}],\"theme\":\"\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":1e-7,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":0,\"autoLaunch\":false,\"trayResident\":true,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"lastDevice\":{\"vendorId\":1,\"productId\":2,\"serialNumber\":\"x\",\"nested\":{\"2\":3,\"10\":2,\"b\":1}}}",
+        "file": "{\n\t\"autoSync\": [\n\t\t1,\n\t\t\"a\",\n\t\tnull,\n\t\t{\n\t\t\t\"z\": 1\n\t\t}\n\t],\n\t\"theme\": \"\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 1e-7,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 0,\n\t\"autoLaunch\": false,\n\t\"trayResident\": true,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"lastDevice\": {\n\t\t\"vendorId\": 1,\n\t\t\"productId\": 2,\n\t\t\"serialNumber\": \"x\",\n\t\t\"nested\": {\n\t\t\t\"2\": 3,\n\t\t\t\"10\": 2,\n\t\t\t\"b\": 1\n\t\t}\n\t}\n}"
+      }
+    ]
+  },
+  {
+    "name": "keys the IPC does not set",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "windowState",
+        "value": "{\"x\":0,\"y\":0,\"width\":1,\"height\":1}",
+        "notified": [],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "foo",
+        "value": "1",
+        "notified": [],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "__internal__",
+        "value": "1",
+        "notified": [],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSetUndefined",
+        "key": "theme",
+        "error": {
+          "name": "TypeError",
+          "message": "Use `delete()` to clear values"
+        },
+        "notified": [],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "ipcSetUndefined",
+        "key": "foo",
+        "notified": [],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "direct set",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "set",
+        "key": "windowState",
+        "value": "{\"x\":-1,\"y\":-1,\"width\":1440,\"height\":1024}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"windowState\": {\n\t\t\"x\": -1,\n\t\t\"y\": -1,\n\t\t\"width\": 1440,\n\t\t\"height\": 1024\n\t}\n}"
+      },
+      {
+        "op": "set",
+        "key": "10",
+        "value": "\"ten\"",
+        "file": "{\n\t\"10\": \"ten\",\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"windowState\": {\n\t\t\"x\": -1,\n\t\t\"y\": -1,\n\t\t\"width\": 1440,\n\t\t\"height\": 1024\n\t}\n}"
+      },
+      {
+        "op": "set",
+        "key": "__internal__",
+        "value": "1",
+        "error": {
+          "name": "TypeError",
+          "message": "Please don't use the __internal__ key, as it's used to manage this module internal operations."
+        },
+        "file": "{\n\t\"10\": \"ten\",\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"windowState\": {\n\t\t\"x\": -1,\n\t\t\"y\": -1,\n\t\t\"width\": 1440,\n\t\t\"height\": 1024\n\t}\n}"
+      },
+      {
+        "op": "set",
+        "key": "__internal__.migrations",
+        "value": "1",
+        "error": {
+          "name": "TypeError",
+          "message": "Please don't use the __internal__ key, as it's used to manage this module internal operations."
+        },
+        "file": "{\n\t\"10\": \"ten\",\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"windowState\": {\n\t\t\"x\": -1,\n\t\t\"y\": -1,\n\t\t\"width\": 1440,\n\t\t\"height\": 1024\n\t}\n}"
+      }
+    ]
+  },
+  {
+    "name": "clear and replace keep __internal__",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"theme\":\"dark\",\"__internal__\":{\"migrations\":{\"version\":\"1.0.0\"}},\"zzz\":1}",
+        "file": "{\"theme\":\"dark\",\"__internal__\":{\"migrations\":{\"version\":\"1.0.0\"}},\"zzz\":1}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"dark\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"__internal__\":{\"migrations\":{\"version\":\"1.0.0\"}},\"zzz\":1}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"dark\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"__internal__\": {\n\t\t\"migrations\": {\n\t\t\t\"version\": \"1.0.0\"\n\t\t}\n\t},\n\t\"zzz\": 1\n}"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"light\"",
+        "notified": [
+          [
+            "theme",
+            "\"light\""
+          ]
+        ],
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"light\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"__internal__\": {\n\t\t\"migrations\": {\n\t\t\t\"version\": \"1.0.0\"\n\t\t}\n\t},\n\t\"zzz\": 1\n}"
+      },
+      {
+        "op": "clear",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"__internal__\": {\n\t\t\"migrations\": {\n\t\t\t\"version\": \"1.0.0\"\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "replace",
+        "value": "{\"theme\":\"light\",\"autoSync\":true}",
+        "file": "{\n\t\"theme\": \"light\",\n\t\"autoSync\": true,\n\t\"__internal__\": {\n\t\t\"migrations\": {\n\t\t\t\"version\": \"1.0.0\"\n\t\t}\n\t}\n}"
+      },
+      {
+        "op": "replace",
+        "value": "{\"__internal__\":{\"other\":1},\"theme\":\"dark\"}",
+        "file": "{\n\t\"__internal__\": {\n\t\t\"other\": 1\n\t},\n\t\"theme\": \"dark\"\n}"
+      },
+      {
+        "op": "clear",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"__internal__\": {\n\t\t\"other\": 1\n\t}\n}"
+      }
+    ]
+  },
+  {
+    "name": "clear without __internal__",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"theme\":\"dark\",\"zzz\":1}",
+        "file": "{\"theme\":\"dark\",\"zzz\":1}"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"dark\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false,\"zzz\":1}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"dark\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false,\n\t\"zzz\": 1\n}"
+      },
+      {
+        "op": "clear",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "top-level [1,2]",
+    "steps": [
+      {
+        "op": "write",
+        "text": "[1,2]",
+        "file": "[1,2]"
+      },
+      {
+        "op": "start",
+        "result": "{\"0\":1,\"1\":2,\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"0\": 1,\n\t\"1\": 2,\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "top-level \"ab\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "\"ab\"",
+        "file": "\"ab\""
+      },
+      {
+        "op": "start",
+        "result": "{\"0\":\"a\",\"1\":\"b\",\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"0\": \"a\",\n\t\"1\": \"b\",\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "top-level \"\\ud800x\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "\"\\ud800x\"",
+        "file": "\"\\ud800x\""
+      },
+      {
+        "op": "start",
+        "result": "{\"0\":\"\\ud800\",\"1\":\"x\",\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"0\": \"\\ud800\",\n\t\"1\": \"x\",\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "top-level null",
+    "steps": [
+      {
+        "op": "write",
+        "text": "null",
+        "file": "null"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "top-level 5",
+    "steps": [
+      {
+        "op": "write",
+        "text": "5",
+        "file": "5"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "top-level true",
+    "steps": [
+      {
+        "op": "write",
+        "text": "true",
+        "file": "true"
+      },
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      }
+    ]
+  },
+  {
+    "name": "file deleted after start",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "delete",
+        "file": null
+      },
+      {
+        "op": "getAll",
+        "result": "{}",
+        "file": null
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"dark\"",
+        "notified": [
+          [
+            "theme",
+            "\"dark\""
+          ]
+        ],
+        "file": "{\n\t\"theme\": \"dark\"\n}"
+      },
+      {
+        "op": "getAll",
+        "result": "{\"theme\":\"dark\"}",
+        "file": "{\n\t\"theme\": \"dark\"\n}"
+      }
+    ]
+  },
+  {
+    "name": "invalid JSON at start \"{\\\"theme\\\":\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"theme\":",
+        "file": "{\"theme\":"
+      },
+      {
+        "op": "start",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Unexpected end of JSON input"
+        },
+        "file": "{\"theme\":"
+      }
+    ]
+  },
+  {
+    "name": "invalid JSON at start \"\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "",
+        "file": ""
+      },
+      {
+        "op": "start",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Unexpected end of JSON input"
+        },
+        "file": ""
+      }
+    ]
+  },
+  {
+    "name": "invalid JSON at start \"﻿{}\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "﻿{}",
+        "file": "﻿{}"
+      },
+      {
+        "op": "start",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Unexpected token '﻿', \"﻿{}\" is not valid JSON"
+        },
+        "file": "﻿{}"
+      }
+    ]
+  },
+  {
+    "name": "invalid JSON at start \"{\\\"a\\\":1}x\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"a\":1}x",
+        "file": "{\"a\":1}x"
+      },
+      {
+        "op": "start",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Unexpected non-whitespace character after JSON at position 7 (line 1 column 8)"
+        },
+        "file": "{\"a\":1}x"
+      }
+    ]
+  },
+  {
+    "name": "invalid JSON at start \"{\\\"a\\\":\\\"\\\\x\\\"}\"",
+    "steps": [
+      {
+        "op": "write",
+        "text": "{\"a\":\"\\x\"}",
+        "file": "{\"a\":\"\\x\"}"
+      },
+      {
+        "op": "start",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Bad escaped character in JSON at position 7 (line 1 column 8)"
+        },
+        "file": "{\"a\":\"\\x\"}"
+      }
+    ]
+  },
+  {
+    "name": "invalid JSON after start",
+    "steps": [
+      {
+        "op": "start",
+        "result": "{\"autoSync\":false,\"theme\":\"system\",\"currentKeyboardLayout\":\"qwerty\",\"defaultKeyboardLayout\":\"qwerty\",\"defaultAutoAdvance\":true,\"defaultLayerPanelOpen\":true,\"autoLockTime\":10,\"language\":\"builtin:en\",\"hubEnabled\":false,\"defaultBasicViewType\":\"ansi\",\"defaultSplitKeyMode\":\"split\",\"defaultQuickSelect\":false,\"maxKeymapHistory\":100,\"typingHeatmapWindowMin\":5,\"typingRecordingConsentAccepted\":false,\"typingMonitorAppEnabled\":true,\"zoomFactor\":100,\"autoLaunch\":false,\"trayResident\":false,\"startInTray\":false,\"restoreLastSession\":true,\"packsPulledOnce\":false}",
+        "file": "{\n\t\"autoSync\": false,\n\t\"theme\": \"system\",\n\t\"currentKeyboardLayout\": \"qwerty\",\n\t\"defaultKeyboardLayout\": \"qwerty\",\n\t\"defaultAutoAdvance\": true,\n\t\"defaultLayerPanelOpen\": true,\n\t\"autoLockTime\": 10,\n\t\"language\": \"builtin:en\",\n\t\"hubEnabled\": false,\n\t\"defaultBasicViewType\": \"ansi\",\n\t\"defaultSplitKeyMode\": \"split\",\n\t\"defaultQuickSelect\": false,\n\t\"maxKeymapHistory\": 100,\n\t\"typingHeatmapWindowMin\": 5,\n\t\"typingRecordingConsentAccepted\": false,\n\t\"typingMonitorAppEnabled\": true,\n\t\"zoomFactor\": 100,\n\t\"autoLaunch\": false,\n\t\"trayResident\": false,\n\t\"startInTray\": false,\n\t\"restoreLastSession\": true,\n\t\"packsPulledOnce\": false\n}"
+      },
+      {
+        "op": "write",
+        "text": "{\"theme\":",
+        "file": "{\"theme\":"
+      },
+      {
+        "op": "getAll",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Unexpected end of JSON input"
+        },
+        "file": "{\"theme\":"
+      },
+      {
+        "op": "ipcSet",
+        "key": "theme",
+        "value": "\"dark\"",
+        "error": {
+          "name": "SyntaxError",
+          "message": "Unexpected end of JSON input"
+        },
+        "notified": [],
+        "file": "{\"theme\":"
+      }
+    ]
+  }
+]

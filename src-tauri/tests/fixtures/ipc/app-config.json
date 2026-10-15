@@ -1,0 +1,92 @@
+[
+  {
+    "member": "appConfigGetAll",
+    "args": [],
+    "command": "app_config_get_all",
+    "invokeArgs": {},
+    "response": {
+      "autoSync": false,
+      "theme": "system",
+      "currentKeyboardLayout": "qwerty",
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true,
+      "defaultLayerPanelOpen": true,
+      "autoLockTime": 10,
+      "language": "builtin:en",
+      "hubEnabled": false,
+      "defaultBasicViewType": "ansi",
+      "defaultSplitKeyMode": "split",
+      "defaultQuickSelect": false,
+      "maxKeymapHistory": 100,
+      "typingHeatmapWindowMin": 5,
+      "typingRecordingConsentAccepted": false,
+      "typingMonitorAppEnabled": true,
+      "zoomFactor": 100,
+      "autoLaunch": false,
+      "trayResident": false,
+      "startInTray": false,
+      "restoreLastSession": true,
+      "packsPulledOnce": false
+    }
+  },
+  {
+    "member": "appConfigSet",
+    "args": [
+      "theme",
+      "dark"
+    ],
+    "command": "app_config_set",
+    "invokeArgs": {
+      "key": "theme",
+      "value": "\"dark\""
+    },
+    "response": null
+  },
+  {
+    "member": "appConfigSet",
+    "args": [
+      "lastDevice",
+      null
+    ],
+    "command": "app_config_set",
+    "invokeArgs": {
+      "key": "lastDevice",
+      "value": "null"
+    },
+    "response": null
+  },
+  {
+    "member": "appConfigSet",
+    "args": [
+      "lastDevice",
+      {
+        "vendorId": 31353,
+        "productId": 61539
+      }
+    ],
+    "command": "app_config_set",
+    "invokeArgs": {
+      "key": "lastDevice",
+      "value": "{\"vendorId\":31353,\"productId\":61539}"
+    },
+    "response": null
+  },
+  {
+    "member": "appConfigSet",
+    "args": [
+      "windowState",
+      {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    ],
+    "command": "app_config_set",
+    "invokeArgs": {
+      "key": "windowState",
+      "value": "{\"x\":0,\"y\":0,\"width\":1,\"height\":1}"
+    },
+    "response": null
+  }
+]

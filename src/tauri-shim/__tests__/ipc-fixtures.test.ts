@@ -31,6 +31,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
   .flatMap((name) => JSON.parse(readFileSync(resolve(FIXTURE_DIR, name), 'utf8')) as Entry[])
 
 interface Shim {
+  appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
   transport: typeof import('../hid-transport')
 }
@@ -38,7 +39,11 @@ interface Shim {
 /** Fresh modules for each entry: the transport keeps the open flag. */
 async function load(): Promise<Shim> {
   vi.resetModules()
-  return { device: await import('../api/device'), transport: await import('../hid-transport') }
+  return {
+    appConfig: await import('../api/app-config'),
+    device: await import('../api/device'),
+    transport: await import('../hid-transport'),
+  }
 }
 
 interface Caller {
@@ -67,6 +72,11 @@ const CALLERS: Record<string, Caller> = {
     run: async ({ transport }, [data]) => Array.from(await transport.sendReceive(bytes(data))),
   },
   'hid-transport.send': { run: ({ transport }, [data]) => transport.send(bytes(data)), void: true },
+  appConfigGetAll: { run: ({ appConfig }) => appConfig.appConfigApi.appConfigGetAll() },
+  appConfigSet: {
+    run: ({ appConfig }, [key, value]) => appConfig.appConfigApi.appConfigSet(key as string, value),
+    void: true,
+  },
   'device.decompressDefinition': {
     run: ({ device }, [data]) => device.decompressDefinition(data as number[]),
   },

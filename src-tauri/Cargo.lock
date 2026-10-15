@@ -2317,18 +2317,34 @@ dependencies = [
  "hex",
  "log",
  "lzma-rs",
+ "pipette-app-config",
  "pipette-fs",
  "pipette-hid",
+ "pipette-js-json",
  "pipette-logger",
  "serde",
  "serde_json",
  "sha2",
  "tauri",
  "tauri-build",
+ "tempfile",
  "tokio",
  "ts-rs",
  "webkit2gtk",
  "xz4rust",
+]
+
+[[package]]
+name = "pipette-app-config"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-fs",
+ "pipette-js-json",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2340,6 +2356,7 @@ dependencies = [
  "rustix",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 
@@ -2354,6 +2371,17 @@ dependencies = [
  "pipette-logger",
  "pipette-protocol",
  "pipette-virtual-device",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "pipette-js-json"
+version = "0.0.0"
+dependencies = [
+ "indexmap 2.14.2",
+ "ryu-js",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2751,6 +2779,12 @@ name = "rustversion"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
+
+[[package]]
+name = "ryu-js"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04d056b875a9d2e6cb9a61d127afee9ac5999b9f87bcb32079d1318e505be714"
 
 [[package]]
 name = "same-file"
@@ -3499,6 +3533,19 @@ dependencies = [
  "dunce",
  "embed-resource",
  "toml 1.1.8+spec-1.1.0",
+]
+
+[[package]]
+name = "tempfile"
+version = "3.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d31c77bdf42a745371d260a26ca7163f1e0924b64afa0b688e61b5a9fa02f16"
+dependencies = [
+ "fastrand",
+ "getrandom 0.3.4",
+ "once_cell",
+ "rustix",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

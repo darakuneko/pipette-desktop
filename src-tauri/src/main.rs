@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Tauri entry point: one window that loads the renderer build, the HID
-// and definition commands its vialAPI shim calls, and the tray and quit
-// handling of lifecycle.rs. Before any of that it settles the userData
-// directory, refuses to start while the Electron build holds it, and starts
-// the log in it.
+// Tauri entry point: one window that loads the renderer build, the HID,
+// definition and app config commands its vialAPI shim calls, and the tray
+// and quit handling of lifecycle.rs. Before any of that it settles the
+// userData directory, refuses to start while the Electron build holds it,
+// starts the log in it and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from
@@ -11,6 +11,7 @@
 // every build with the development tools keeps its console.
 #![cfg_attr(release_profile, windows_subsystem = "windows")]
 
+mod app_config;
 mod command_error;
 mod definition;
 mod dev_commands;
@@ -24,8 +25,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use pipette_hid::{HidService, VirtualDeviceMode};
-use tauri::Runtime;
 use tauri::ipc::Invoke;
+use tauri::{Manager, Runtime};
 
 use crate::hid_commands::Hid;
 
@@ -45,6 +46,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         hid_commands::hid_probe_send_receive,
         hid_commands::hid_probe_close,
         definition::decompress_definition,
+        app_config::app_config_get_all,
+        app_config::app_config_set,
     ]
 }
 
@@ -85,11 +88,17 @@ fn main() {
         log::error!("the log file is unavailable: {err}");
     }
     log::info!("Pipette starting");
+    let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
     let hid = Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env())));
     let builder = tauri::Builder::default()
         .manage(hid)
         .manage(UserDataDir(user_data))
+        .manage(config)
         .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                app_config::apply_stored_zoom(&app.state::<app_config::AppConfig>(), &window);
+            }
+            app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
             Ok(())
         })
