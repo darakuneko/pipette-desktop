@@ -80,6 +80,9 @@ async function patchSettings(uid: string, partial: PipetteSettingsPatch): Promis
         return { success: true }
       }
     }
+    // The renderer's own patches of a keyboard never conflict (they are
+    // queued); the only other writer is a sync merge of the file, so this
+    // means one kept landing between a read and its write.
     console.error(`[vialAPI shim] pipette settings of ${uid} changed during each of ${MAX_PATCH_ATTEMPTS} writes`)
     throw new Error('Settings changed while being written')
   } catch (err) {
