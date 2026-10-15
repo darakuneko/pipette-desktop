@@ -16,7 +16,6 @@ export const fakes = {
   // process reports the sync format status as null.
   syncAuthStatus: () => Promise.resolve({ authenticated: false }),
   syncPasswordStatus: () => Promise.resolve('noPasswordFile' as const),
-  syncHasPendingChanges: () => Promise.resolve(false),
   syncFormatStatus: () => Promise.resolve(null),
 
   // Startup notification.
