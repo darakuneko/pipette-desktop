@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Installs window.vialAPI for the Tauri build. Loaded as a separate module
-// script ahead of the renderer entry, so it runs before any renderer module
-// reads window.vialAPI.
+// Installs window.vialAPI for the Tauri build. Imported first by the Tauri
+// renderer entry (src/renderer/tauri-main.ts), so it runs before any
+// renderer module reads window.vialAPI.
 
-import { createVialApi } from './stub-proxy'
-import { startupApi } from './startup-api'
+import { createVialApi } from './create-vial-api'
+import { implemented } from './implemented'
 
-window.vialAPI = createVialApi({
-  ...startupApi,
-})
+window.vialAPI = createVialApi(implemented)

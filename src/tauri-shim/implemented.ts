@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// VialAPI members the renderer awaits during startup, answered with the
-// values of a fresh install: default app config, no devices, sync signed
-// out, no language packs, window visible.
+// The VialAPI members the Tauri backend answers. Each entry is the member's
+// implementation; members not listed here fall back to the stubs built in
+// create-vial-api.ts.
+//
+// The entries below are the calls the renderer awaits during startup,
+// answered with the values of a fresh install: default app config, no
+// devices, sync signed out, no language packs, window visible.
 
 import type { VialAPI } from '../shared/types/vial-api'
 import { DEFAULT_APP_CONFIG } from '../shared/types/app-config'
 
-export const startupApi: Partial<VialAPI> = {
+export const implemented: Partial<VialAPI> = {
   appConfigGetAll: () => Promise.resolve({ ...DEFAULT_APP_CONFIG }),
   appConfigSet: () => Promise.resolve(),
   trayStatusUpdate: () => Promise.resolve(),
