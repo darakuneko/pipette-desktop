@@ -76,9 +76,11 @@ impl Dialogs {
     }
 }
 
-/// The system's file dialogs (the GTK file chooser on Linux), parented to
-/// the main window, shown the way tauri-plugin-dialog shows them: built on
-/// the main thread and awaited on a thread of their own.
+/// The system's file dialogs (the GTK file chooser on Linux), shown the way
+/// tauri-plugin-dialog shows them: built on the main thread and awaited on a
+/// thread of their own. They are parented to the main window on Windows and
+/// macOS; rfd's GTK backend opens them without a parent, so on Linux the
+/// main window stays usable while one is open.
 pub struct SystemDialogs {
     app: AppHandle<Wry>,
 }
