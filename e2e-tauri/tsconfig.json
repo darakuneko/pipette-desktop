@@ -1,0 +1,16 @@
+{
+  // Type checking only (`pnpm typecheck`); WebdriverIO loads the files
+  // through tsx.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM"],
+    "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["**/*.ts"]
+}
