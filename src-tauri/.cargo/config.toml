@@ -1,6 +1,0 @@
-# SPDX-License-Identifier: GPL-2.0-or-later
-
-[env]
-# Where the ts-rs export tests write the TypeScript declarations
-# (relative to src-tauri).
-TS_RS_EXPORT_DIR = { value = "../src/tauri-shim/generated", relative = true }

@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# At the repository root rather than in src-tauri, so Cargo reads it both when
+# run in src-tauri and when run here with --manifest-path.
+
+[env]
+# Where the ts-rs export tests write the TypeScript declarations (relative
+# to the repository root).
+TS_RS_EXPORT_DIR = { value = "src/tauri-shim/generated", relative = true }
