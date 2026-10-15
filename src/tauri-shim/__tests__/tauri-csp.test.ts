@@ -8,11 +8,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { buildCsp, securityHeaders } from '../../main/csp'
-
-/** Tauri's IPC: the custom protocol and its http fallback on Linux/Windows. */
-const TAURI_ADDITIONS: Record<string, string[]> = {
-  'connect-src': ['ipc:', 'http://ipc.localhost'],
-}
+import viteTauriConfig from '../../../vite.tauri.config'
+import { devServerHeaders, TAURI_IPC_SOURCES } from '../csp-policy'
 
 type Policy = Record<string, string[]>
 
@@ -35,7 +32,7 @@ function sortedPolicy(policy: Policy): Policy {
 
 function expectedPolicy(isDev: boolean): Policy {
   const policy = parseCsp(buildCsp(isDev))
-  for (const [name, sources] of Object.entries(TAURI_ADDITIONS)) {
+  for (const [name, sources] of Object.entries(TAURI_IPC_SOURCES)) {
     policy[name] = [...(policy[name] ?? []), ...sources]
   }
   return sortedPolicy(policy)
@@ -102,4 +99,23 @@ describe('Tauri security headers', () => {
       expect(tauriPolicy('devCsp')[directive]).toEqual(sources)
     },
   )
+})
+
+describe('Tauri dev server headers', () => {
+  const headers = devServerHeaders()
+
+  it('carry the dev policy of tauri.conf.json', () => {
+    expect(sortedPolicy(parseCsp(headers['Content-Security-Policy']))).toEqual(tauriPolicy('devCsp'))
+  })
+
+  it('carry the Electron security headers', () => {
+    const { 'Content-Security-Policy': _csp, ...rest } = headers
+    expect(rest).toEqual(
+      Object.fromEntries(Object.entries(securityHeaders).map(([name, values]) => [name, values.join(', ')])),
+    )
+  })
+
+  it('are what vite.tauri.config.ts serves', () => {
+    expect(viteTauriConfig.server?.headers).toEqual(headers)
+  })
 })
