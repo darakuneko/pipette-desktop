@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Window and app behavior: the tray icon, closing the window into the tray,
-//! and the quit sequence every exit path goes through (src/shutdown.rs).
+//! a launch of the app while it runs, and the quit sequence every exit path
+//! goes through (src/shutdown.rs).
 //!
 //! Exit paths and how each reaches the quit sequence:
 //! - the tray's Quit item and SIGTERM / SIGINT call `AppHandle::exit`, which
@@ -164,6 +165,40 @@ fn show_main_window(app: &AppHandle<Wry>) {
     if let Some(window) = main_window::main_window(app) {
         main_window::reveal(&window);
     }
+}
+
+/// What a launch of another instance did to this one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SecondLaunch {
+    Revealed,
+    /// Setup has not run yet: the startup is about to open the window anyway,
+    /// as the Electron build ignores a relaunch before 'ready'.
+    IgnoredWhileStarting,
+    /// The quit sequence has started; showing the window would not stop it.
+    IgnoredWhileQuitting,
+}
+
+/// Called by the single-instance plugin when the app is launched again while
+/// this instance runs: the other process exits with 0, and this one shows
+/// its main window, as the 'second-instance' handler of src/main/index.ts
+/// does. Runs on the plugin's D-Bus thread on Linux.
+pub fn on_second_launch(app: &AppHandle<Wry>) {
+    let outcome = respond_to_second_launch(app, show_main_window);
+    log::info!("[app] the app was launched again: {outcome:?}");
+}
+
+fn respond_to_second_launch<R: Runtime>(
+    app: &AppHandle<R>,
+    reveal: impl FnOnce(&AppHandle<R>),
+) -> SecondLaunch {
+    let Some(lifecycle) = app.try_state::<Arc<Lifecycle>>() else {
+        return SecondLaunch::IgnoredWhileStarting;
+    };
+    if lifecycle.quit.is_quitting() {
+        return SecondLaunch::IgnoredWhileQuitting;
+    }
+    reveal(app);
+    SecondLaunch::Revealed
 }
 
 /// Whether the tray icon exists, so a hidden window can be shown again.
@@ -372,5 +407,42 @@ mod tests {
     #[test]
     fn the_delay_applies_to_flush_pending() {
         assert_eq!(QUIT_PHASES[DEV_DELAYED_PHASE], "flushPending");
+    }
+
+    /// Runs the second instance handling on a mock app, counting the
+    /// reveals instead of showing a window.
+    fn second_launch(lifecycle: Option<Lifecycle>) -> (SecondLaunch, usize) {
+        let app = tauri::test::mock_app();
+        if let Some(lifecycle) = lifecycle {
+            app.manage(Arc::new(lifecycle));
+        }
+        let mut reveals = 0;
+        let outcome = respond_to_second_launch(app.handle(), |_| reveals += 1);
+        (outcome, reveals)
+    }
+
+    #[test]
+    fn a_second_launch_reveals_the_window_of_the_running_app() {
+        assert_eq!(second_launch(Some(Lifecycle::default())), (SecondLaunch::Revealed, 1));
+    }
+
+    #[test]
+    fn a_second_launch_does_nothing_while_quitting() {
+        let lifecycle = Lifecycle::default();
+        assert_eq!(lifecycle.quit.on_exit_requested(), ExitDecision::StartSequence);
+        assert_eq!(second_launch(Some(lifecycle)), (SecondLaunch::IgnoredWhileQuitting, 0));
+    }
+
+    #[test]
+    fn a_second_launch_does_nothing_after_the_quit_sequence_ends() {
+        let lifecycle = Lifecycle::default();
+        lifecycle.quit.on_exit_requested();
+        lifecycle.quit.finish();
+        assert_eq!(second_launch(Some(lifecycle)), (SecondLaunch::IgnoredWhileQuitting, 0));
+    }
+
+    #[test]
+    fn a_second_launch_does_nothing_before_setup_has_run() {
+        assert_eq!(second_launch(None), (SecondLaunch::IgnoredWhileStarting, 0));
     }
 }

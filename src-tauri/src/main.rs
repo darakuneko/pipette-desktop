@@ -2,8 +2,9 @@
 // Tauri entry point: one window that loads the renderer build, the HID,
 // definition, app config and window commands its vialAPI shim calls, and the tray
 // and quit handling of lifecycle.rs. Before any of that it settles the
-// userData directory, refuses to start while the Electron build holds it,
-// starts the log in it and loads the app config.
+// userData directory and refuses to start while the Electron build holds it;
+// once no other instance of this build runs, it starts the log in the
+// directory and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from
@@ -99,17 +100,12 @@ fn main() {
             std::process::exit(1);
         }
     };
-    if let Err(err) = pipette_logger::init(user_data.join("logs")) {
-        log::error!("the log file is unavailable: {err}");
-    }
-    log::info!("Pipette starting");
-    let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
-    let hid = Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env())));
+    // The single-instance plugin, registered first, runs while the app is
+    // built: a second launch hands over to the running app there and exits
+    // with 0. So the log, the app config and the HID service, which the
+    // running app owns, start only after `build`.
     let builder = tauri::Builder::default()
-        .manage(hid)
-        .manage(UserDataDir(user_data))
-        .manage(config)
-        .manage(ExternalOpener::system())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
         .setup(|app| {
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
@@ -118,11 +114,26 @@ fn main() {
         })
         .on_window_event(lifecycle::on_window_event);
     let builder = dev_commands::install_or_passthrough(builder, app_commands(), lifecycle::on_page_load);
-    match builder.build(tauri::generate_context!()) {
-        Ok(app) => app.run(lifecycle::on_run_event),
+    let built = builder.build(tauri::generate_context!());
+    start_log(&user_data);
+    let app = match built {
+        Ok(app) => app,
         Err(err) => {
             log::error!("failed to run the application: {err}");
             std::process::exit(1);
         }
+    };
+    log::info!("Pipette starting");
+    let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
+    app.manage(Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env()))));
+    app.manage(UserDataDir(user_data));
+    app.manage(config);
+    app.manage(ExternalOpener::system());
+    app.run(lifecycle::on_run_event);
+}
+
+fn start_log(user_data: &Path) {
+    if let Err(err) = pipette_logger::init(user_data.join("logs")) {
+        log::error!("the log file is unavailable: {err}");
     }
 }
