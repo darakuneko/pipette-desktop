@@ -17,6 +17,7 @@ import {
   openToolsOverlay,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
+  waitForGone,
 } from '../helpers/app'
 import { appLogPath } from '../helpers/driver'
 
@@ -50,7 +51,7 @@ describe('Tauri build smoke', () => {
     // Reconnecting reloads the keymap from the device, which keeps it across
     // close and re-open like a powered keyboard.
     await $('[data-testid="disconnect-button"]').click()
-    await $(EDITOR_SELECTOR).waitForDisplayed({ reverse: true })
+    await waitForGone(EDITOR_SELECTOR, 'the keymap editor stayed open after disconnecting')
     await connectVirtualKeyboard()
 
     await openKeycodeHexInput(0, 0)
