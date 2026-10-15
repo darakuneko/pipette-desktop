@@ -3,5 +3,6 @@
 //! store.
 
 pub mod keyboard_data;
+pub mod settings;
 pub mod snapshots;
 pub mod sync_pending;

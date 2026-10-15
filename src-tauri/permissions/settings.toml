@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/settings.rs: the pipette settings of
+# each keyboard.
+
+[[set]]
+identifier = "settings"
+description = "Reads and writes the pipette settings file of a keyboard, creates its directory, and reads the settings of every stored keyboard."
+permissions = [
+  "allow-pipette-settings-read",
+  "allow-pipette-settings-write",
+  "allow-pipette-settings-ensure-dir",
+  "allow-pipette-settings-read-all",
+]

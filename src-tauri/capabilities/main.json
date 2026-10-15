@@ -13,6 +13,7 @@
     "files",
     "keyboard-data",
     "snapshots",
+    "settings",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]
