@@ -379,6 +379,7 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
+    use tempfile::TempDir;
 
     type Log = Arc<Mutex<Vec<String>>>;
 
@@ -416,17 +417,6 @@ mod tests {
         let guard = QuitGuard::default();
         assert_eq!(guard.on_exit_requested(), ExitDecision::StartSequence);
         guard
-    }
-
-    fn temp_dir(tag: &str) -> PathBuf {
-        static N: AtomicUsize = AtomicUsize::new(0);
-        let dir = std::env::temp_dir().join(format!(
-            "pipette-quit-{tag}-{}-{}",
-            std::process::id(),
-            N.fetch_add(1, Ordering::SeqCst)
-        ));
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
     }
 
     #[test]
@@ -518,33 +508,34 @@ mod tests {
     #[test]
     fn the_deadline_writes_the_pending_marker() {
         paused(async {
-            let dir = temp_dir("deadline");
+            let tmp = TempDir::new().unwrap();
+            let dir = tmp.path().to_path_buf();
             let phases = vec![QuitPhase::new("flushPending", std::future::pending())];
             let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &dir, &running_guard()).await;
             assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("flushPending") });
             let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
             assert_eq!(body, r#"{"unfinishedPhase":"flushPending","deadlineMs":30000}"#);
-            std::fs::remove_dir_all(dir).unwrap();
         });
     }
 
     #[test]
     fn a_completed_sequence_removes_a_stale_marker() {
         paused(async {
-            let dir = temp_dir("completed");
+            let tmp = TempDir::new().unwrap();
+            let dir = tmp.path().to_path_buf();
             let marker = dir.join(PENDING_MARKER_FILE);
             std::fs::write(&marker, "{}").unwrap();
             let outcome = run_quit_sequence(Vec::new(), QUIT_DEADLINE, &dir, &running_guard()).await;
             assert!(matches!(outcome, QuitOutcome::Completed { .. }));
             assert!(!marker.exists());
-            std::fs::remove_dir_all(dir).unwrap();
         });
     }
 
     #[test]
     fn the_marker_directory_is_created_when_missing() {
         paused(async {
-            let dir = temp_dir("missing").join("nested");
+            let tmp = TempDir::new().unwrap();
+            let dir = tmp.path().join("nested");
             run_quit_sequence(
                 vec![QuitPhase::new("x", std::future::pending())],
                 Duration::from_secs(1),
@@ -553,7 +544,6 @@ mod tests {
             )
             .await;
             assert!(dir.join(PENDING_MARKER_FILE).exists());
-            std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
         });
     }
 
@@ -579,7 +569,8 @@ mod tests {
 
     #[test]
     fn a_stalled_marker_update_does_not_hold_up_the_end_of_the_sequence() {
-        let dir = temp_dir("stalled");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let deadline = Duration::from_millis(100);
         let marker_timeout = Duration::from_millis(200);
         let started = std::time::Instant::now();
@@ -595,12 +586,12 @@ mod tests {
         assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("flushPending") });
         assert!(elapsed >= deadline + marker_timeout, "ended after {elapsed:?}");
         assert!(elapsed < deadline + marker_timeout + Duration::from_secs(2), "ended after {elapsed:?}");
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn a_failed_marker_update_still_returns_the_outcome() {
-        let dir = temp_dir("failed");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let outcome = real_time(run_quit_sequence_with(
             Vec::new(),
             QUIT_DEADLINE,
@@ -610,7 +601,6 @@ mod tests {
             MARKER_TIMEOUT,
         ));
         assert!(matches!(outcome, QuitOutcome::Completed { .. }));
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
@@ -683,7 +673,8 @@ mod tests {
 
     #[test]
     fn an_interrupted_sequence_that_then_completes_leaves_the_marker_alone() {
-        let dir = temp_dir("interrupt-then-complete");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let guard = running_guard();
         assert_eq!(guard.on_exit_requested(), ExitDecision::ExitNow);
         real_time(async {
@@ -707,12 +698,12 @@ mod tests {
             assert!(matches!(outcome, QuitOutcome::Completed { .. }));
         });
         assert_eq!(recorded_in(&dir), [QuitOutcome::Interrupted { unfinished: Some("flushPending") }]);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn an_interrupted_sequence_that_then_reaches_the_deadline_leaves_the_marker_alone() {
-        let dir = temp_dir("interrupt-then-deadline");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let guard = running_guard();
         assert_eq!(guard.on_exit_requested(), ExitDecision::ExitNow);
         real_time(async {
@@ -736,12 +727,12 @@ mod tests {
             assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("flushPending") });
         });
         assert_eq!(recorded_in(&dir), [QuitOutcome::Interrupted { unfinished: Some("flushPending") }]);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn a_request_after_the_sequence_claimed_the_marker_exits_without_writing() {
-        let dir = temp_dir("complete-then-interrupt");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let guard = running_guard();
         let outcome = real_time(run_quit_sequence_with(
             Vec::new(),
@@ -757,7 +748,6 @@ mod tests {
         assert_eq!(guard.on_exit_requested(), ExitDecision::Exit);
         assert_eq!(recorded_in(&dir).len(), 1);
         assert!(matches!(recorded_in(&dir)[0], QuitOutcome::Completed { .. }));
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
@@ -785,7 +775,8 @@ mod tests {
             tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_time().build().unwrap();
         let mut picks = [0usize; 2];
         for i in 0..200 {
-            let dir = temp_dir("race");
+            let tmp = TempDir::new().unwrap();
+            let dir = tmp.path().to_path_buf();
             let marker = dir.join(PENDING_MARKER_FILE);
             let guard = Arc::new(running_guard());
             let hits_deadline = i % 2 == 1;
@@ -843,14 +834,14 @@ mod tests {
                     }
                 }
             }
-            std::fs::remove_dir_all(dir).unwrap();
         }
         eprintln!("interrupt won {} times, the sequence {} times", picks[0], picks[1]);
     }
 
     #[test]
     fn an_interruption_hands_the_running_phase_to_the_marker_writer() {
-        let dir = temp_dir("interrupt-fake");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         real_time(record_interruption_with(
             Some("flushPending"),
             QUIT_DEADLINE,
@@ -865,12 +856,12 @@ mod tests {
             recorded,
             [(marker, QuitOutcome::Interrupted { unfinished: Some("flushPending") }, QUIT_DEADLINE)]
         );
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn an_interruption_writes_the_interrupted_marker() {
-        let dir = temp_dir("interrupt");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         real_time(record_interruption(Some("flushPending"), QUIT_DEADLINE, &dir));
         let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
         assert_eq!(body, r#"{"unfinishedPhase":"flushPending","deadlineMs":30000,"interrupted":true}"#);
@@ -878,12 +869,12 @@ mod tests {
         real_time(record_interruption(None, QUIT_DEADLINE, &dir));
         let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
         assert_eq!(body, r#"{"unfinishedPhase":null,"deadlineMs":30000,"interrupted":true}"#);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn a_stalled_interruption_write_does_not_hold_up_the_exit() {
-        let dir = temp_dir("interrupt-stalled");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let marker_timeout = Duration::from_millis(200);
         let started = std::time::Instant::now();
         real_time(record_interruption_with(
@@ -896,6 +887,5 @@ mod tests {
         let elapsed = started.elapsed();
         assert!(elapsed >= marker_timeout, "ended after {elapsed:?}");
         assert!(elapsed < marker_timeout + Duration::from_secs(2), "ended after {elapsed:?}");
-        std::fs::remove_dir_all(dir).unwrap();
     }
 }

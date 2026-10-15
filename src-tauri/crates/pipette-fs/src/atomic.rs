@@ -113,34 +113,30 @@ fn truncate_utf8(s: &str, max: usize) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use tempfile::TempDir;
 
-    fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("pipette-atomic-{tag}-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
+    use super::*;
 
     #[test]
     fn writes_the_content_and_leaves_no_temp_file() {
-        let dir = temp_dir("write");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let target = dir.join("a.json");
         write_file_atomic(&target, b"one").unwrap();
         write_file_atomic(&target, b"two").unwrap();
         assert_eq!(std::fs::read(&target).unwrap(), b"two");
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn a_failed_write_removes_the_temp_file() {
-        let dir = temp_dir("fail");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         // Renaming a file onto a non-empty directory fails.
         let target = dir.join("busy");
         std::fs::create_dir_all(target.join("inside")).unwrap();
         assert!(write_file_atomic(&target, b"x").is_err());
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

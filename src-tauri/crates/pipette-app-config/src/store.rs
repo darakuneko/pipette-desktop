@@ -185,28 +185,25 @@ fn check_key(key: &str) -> Result<(), AppConfigError> {
 mod tests {
     use std::sync::Arc;
 
-    use super::*;
+    use tempfile::TempDir;
 
-    fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("pipette-app-config-store-{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
+    use super::*;
 
     #[test]
     fn refuses_keys_conf_reads_as_paths() {
-        let dir = temp_dir("paths");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let store = AppConfigStore::open(&dir);
         for key in ["a.b", "a[0]", "a\\.b", "__proto__", "constructor", "prototype"] {
             assert!(matches!(store.set(key, Value::Null), Err(AppConfigError::PathKey(_))), "{key}");
         }
         assert!(matches!(store.set("__internal__.x", Value::Null), Err(AppConfigError::ReservedKey)));
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn only_renderer_sets_reach_the_listeners() {
-        let dir = temp_dir("listeners");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let store = AppConfigStore::open(&dir);
         let seen = Arc::new(Mutex::new(Vec::new()));
         let sink = Arc::clone(&seen);
@@ -218,6 +215,5 @@ mod tests {
         store.set_from_renderer("zoomFactor", Some("150")).unwrap();
         let seen = seen.lock().unwrap().clone();
         assert_eq!(seen, [("zoomFactor".to_owned(), 150.0.into()), ("zoomFactor".to_owned(), 150.0.into())]);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 }

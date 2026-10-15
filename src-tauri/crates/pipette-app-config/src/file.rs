@@ -86,19 +86,15 @@ fn write_file(path: &Path, content: &[u8]) -> io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use tempfile::TempDir;
 
-    fn temp_dir(tag: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("pipette-app-config-file-{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
+    use super::*;
 
     #[cfg(unix)]
     #[test]
     fn writes_through_a_symlink() {
-        let dir = temp_dir("symlink");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let real = dir.join("real.json");
         let link = dir.join("config.json");
         std::fs::write(&real, "{}").unwrap();
@@ -106,29 +102,28 @@ mod tests {
         write_store(&link, [("a", Value::Null)].into_iter().collect()).unwrap();
         assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
         assert_eq!(std::fs::read_to_string(&real).unwrap(), "{\n\t\"a\": null\n}");
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[cfg(unix)]
     #[test]
     fn a_replaced_file_gets_the_mode_of_a_new_one() {
         use std::os::unix::fs::PermissionsExt;
-        let dir = temp_dir("mode");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let path = dir.join("config.json");
         write_store(&path, Object::new()).unwrap();
         let new_mode = std::fs::metadata(&path).unwrap().permissions().mode();
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
         write_store(&path, Object::new()).unwrap();
         assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode(), new_mode);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn a_missing_file_reads_as_empty_and_creates_the_directory() {
-        let dir = temp_dir("missing");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let path = dir.join("sub/config.json");
         assert!(read_store(&path).unwrap().is_empty());
         assert!(dir.join("sub").is_dir());
-        std::fs::remove_dir_all(dir).unwrap();
     }
 }

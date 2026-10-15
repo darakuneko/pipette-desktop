@@ -66,6 +66,7 @@ tokio = { version = "=1.53.3", features = ["rt", "test-util"] }
 # The mock runtime the IPC contract tests (src/ipc_contract.rs) run the app
 # commands on. Same version as the tauri dependency.
 tauri = { version = "=2.12.1", features = ["tray-icon", "test"] }
+tempfile = { workspace = true }
 
 [lints]
 workspace = true
@@ -88,6 +89,9 @@ thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 lzma-rs = "=0.3.0"
+# Self-removing temporary directories for the tests. 3.23 is the newest
+# release that accepts the rustix pinned by crates/pipette-fs.
+tempfile = "=3.23.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
