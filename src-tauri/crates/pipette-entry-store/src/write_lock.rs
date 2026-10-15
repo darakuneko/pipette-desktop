@@ -14,68 +14,58 @@
 //! not reentrant: taking a key the same thread holds would wait forever.
 
 use std::collections::BTreeMap;
-use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+
+use pipette_fifo::{FifoLock, OwnedFifoGuard};
 
 /// The key of the keyboard-names store (`sync/meta/keyboard-names.json`),
 /// always taken after every other key.
 pub const META_LOCK_KEY: &str = "meta/keyboard-names";
 
-/// FIFO locks per key: a ticket per waiting task, served in ticket order.
-/// A key's entry goes once no task holds or waits for it, so the map stays
-/// bounded by the keys in use.
+/// A FIFO lock per key, served in the order the tasks asked. A key's lock
+/// goes once no task holds or waits for it, so the map stays bounded by the
+/// keys in use.
 #[derive(Debug, Default)]
 pub struct WriteLocks {
-    queues: Mutex<BTreeMap<String, Queue>>,
-    turn: Condvar,
+    queues: Mutex<BTreeMap<String, Arc<FifoLock>>>,
 }
 
-#[derive(Debug, Default)]
-struct Queue {
-    next_ticket: u64,
-    serving: u64,
-}
-
-/// Held while a task runs; releasing it serves the next ticket, also when
-/// the task panics.
+/// Held while a task runs; releasing it serves the next task of the key,
+/// also when the task panics.
 struct Held<'a> {
     locks: &'a WriteLocks,
     key: String,
+    guard: Option<OwnedFifoGuard>,
 }
 
 impl Drop for Held<'_> {
     fn drop(&mut self) {
+        drop(self.guard.take());
         let mut queues = self.locks.queues();
-        if let Some(queue) = queues.get_mut(&self.key) {
-            queue.serving += 1;
-            if queue.serving == queue.next_ticket {
-                queues.remove(&self.key);
-            }
+        // Every task that holds or waits for the key has a clone, taken
+        // under the map's mutex: only the map's own reference left means
+        // the key is idle.
+        if queues.get(&self.key).is_some_and(|lock| Arc::strong_count(lock) == 1) {
+            queues.remove(&self.key);
         }
-        drop(queues);
-        self.locks.turn.notify_all();
     }
 }
 
 impl WriteLocks {
     pub const fn new() -> Self {
-        WriteLocks { queues: Mutex::new(BTreeMap::new()), turn: Condvar::new() }
+        WriteLocks { queues: Mutex::new(BTreeMap::new()) }
     }
 
-    /// The queues; a panic elsewhere never leaves them half-updated (every
-    /// update is a counter step or a removal).
-    fn queues(&self) -> MutexGuard<'_, BTreeMap<String, Queue>> {
+    /// The map; a panic elsewhere never leaves it half-updated (every
+    /// update is one insert or removal).
+    fn queues(&self) -> MutexGuard<'_, BTreeMap<String, Arc<FifoLock>>> {
         self.queues.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     fn acquire(&self, key: &str) -> Held<'_> {
-        let mut queues = self.queues();
-        let queue = queues.entry(key.to_owned()).or_default();
-        let ticket = queue.next_ticket;
-        queue.next_ticket += 1;
-        while queues.get(key).is_some_and(|queue| queue.serving != ticket) {
-            queues = self.turn.wait(queues).unwrap_or_else(PoisonError::into_inner);
-        }
-        Held { locks: self, key: key.to_owned() }
+        let lock = Arc::clone(self.queues().entry(key.to_owned()).or_default());
+        let guard = lock.acquire_owned();
+        Held { locks: self, key: key.to_owned(), guard: Some(guard) }
     }
 
     /// Runs `task` after every task that asked for `key` before it has
@@ -121,7 +111,7 @@ mod tests {
     const TIMEOUT: Duration = Duration::from_secs(5);
 
     fn tickets(locks: &WriteLocks, key: &str) -> u64 {
-        locks.queues().get(key).map_or(0, |queue| queue.next_ticket)
+        locks.queues().get(key).map_or(0, |lock| lock.issued())
     }
 
     /// Starts `task` on a thread and returns once it holds or waits for

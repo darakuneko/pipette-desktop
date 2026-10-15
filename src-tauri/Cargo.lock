@@ -2631,6 +2631,7 @@ name = "pipette-entry-store"
 version = "0.0.0"
 dependencies = [
  "pipette-entry-store",
+ "pipette-fifo",
  "pipette-fs",
  "pipette-js-json",
  "pipette-time",
@@ -2640,6 +2641,10 @@ dependencies = [
  "thiserror 2.0.21",
  "uuid",
 ]
+
+[[package]]
+name = "pipette-fifo"
+version = "0.0.0"
 
 [[package]]
 name = "pipette-fs"
@@ -2661,9 +2666,11 @@ dependencies = [
  "hex",
  "hidapi",
  "log",
+ "pipette-fifo",
  "pipette-hid",
  "pipette-logger",
  "pipette-protocol",
+ "pipette-time",
  "pipette-virtual-device",
  "serde",
  "serde_json",

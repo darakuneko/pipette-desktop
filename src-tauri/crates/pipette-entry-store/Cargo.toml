@@ -13,6 +13,8 @@ rust-version.workspace = true
 test-util = []
 
 [dependencies]
+# The per-key write locks (src/write_lock.rs).
+pipette-fifo = { path = "../pipette-fifo" }
 pipette-fs = { path = "../pipette-fs" }
 pipette-js-json = { path = "../pipette-js-json" }
 pipette-time = { path = "../pipette-time" }
