@@ -7,8 +7,9 @@ import {
   probeDevice,
 } from './hid-transport'
 import * as protocol from './protocol'
+import { createProtocolMembers } from './protocol-members'
 import { IpcChannels } from '../shared/ipc/channels'
-import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
+import type { DeviceInfo, ProbeResult } from '../shared/types/protocol'
 import type { TrayStatus } from '../shared/types/vial-api'
 import type { SnapshotMeta, SnapshotUpdateOptions } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
@@ -103,104 +104,11 @@ const vialAPI = {
   probeDevice: (vendorId: number, productId: number, serialNumber?: string): Promise<ProbeResult> =>
     probeDevice(vendorId, productId, serialNumber),
 
-  // --- VIA Protocol ---
-  getProtocolVersion: (): Promise<number> => protocol.getProtocolVersion(),
-  getLayerCount: (): Promise<number> => protocol.getLayerCount(),
-  getKeymapBuffer: (offset: number, size: number): Promise<number[]> =>
-    protocol.getKeymapBuffer(offset, size),
-  setKeycode: (layer: number, row: number, col: number, keycode: number): Promise<void> =>
-    protocol.setKeycode(layer, row, col, keycode),
-  getLayoutOptions: (): Promise<number> => protocol.getLayoutOptions(),
-  setLayoutOptions: (options: number): Promise<void> => protocol.setLayoutOptions(options),
-
-  // --- Vial Protocol ---
-  getKeyboardId: (): Promise<{ vialProtocol: number; uid: string }> =>
-    protocol.getKeyboardId(),
-  getDefinitionSize: (): Promise<number> => protocol.getDefinitionSize(),
-  getDefinitionRaw: (size: number): Promise<number[]> =>
-    protocol.getDefinitionRaw(size).then((buf) => Array.from(buf)),
-  getDefinition: async (): Promise<KeyboardDefinition | null> => {
-    try {
-      const size = await protocol.getDefinitionSize()
-      const raw = await protocol.getDefinitionRaw(size)
-      const input = Array.from(raw)
-      const result: string | null = await ipcRenderer.invoke(IpcChannels.LZMA_DECOMPRESS, input)
-      if (result === null) {
-        console.warn('LZMA decompression failed')
-        return null
-      }
-      try {
-        return JSON.parse(result) as KeyboardDefinition
-      } catch {
-        console.warn('Failed to parse definition JSON')
-        return null
-      }
-    } catch (err) {
-      console.warn('Failed to fetch definition:', err)
-      return null
-    }
-  },
-  getEncoder: (layer: number, index: number): Promise<[number, number]> =>
-    protocol.getEncoder(layer, index),
-  setEncoder: (layer: number, index: number, direction: number, keycode: number): Promise<void> =>
-    protocol.setEncoder(layer, index, direction, keycode),
-
-  // --- Macro ---
-  getMacroCount: (): Promise<number> => protocol.getMacroCount(),
-  getMacroBufferSize: (): Promise<number> => protocol.getMacroBufferSize(),
-  getMacroBuffer: (totalSize: number): Promise<number[]> =>
-    protocol.getMacroBuffer(totalSize),
-  setMacroBuffer: (data: number[]): Promise<void> => protocol.setMacroBuffer(data),
-
-  // --- Lighting ---
-  getLightingValue: (id: number): Promise<number[]> => protocol.getLightingValue(id),
-  setLightingValue: (id: number, ...args: number[]): Promise<void> =>
-    protocol.setLightingValue(id, ...args),
-  saveLighting: (): Promise<void> => protocol.saveLighting(),
-
-  // --- VialRGB ---
-  getVialRGBInfo: (): Promise<{ version: number; maxBrightness: number }> =>
-    protocol.getVialRGBInfo(),
-  getVialRGBMode: (): Promise<{ mode: number; speed: number; hue: number; sat: number; val: number }> =>
-    protocol.getVialRGBMode(),
-  getVialRGBSupported: (): Promise<number[]> =>
-    protocol.getVialRGBSupported().then((s) => Array.from(s)),
-  setVialRGBMode: (mode: number, speed: number, hue: number, sat: number, val: number): Promise<void> =>
-    protocol.setVialRGBMode(mode, speed, hue, sat, val),
-
-  // --- Lock/Unlock ---
-  getUnlockStatus: (): Promise<{ unlocked: boolean; inProgress: boolean; keys: [number, number][] }> =>
-    protocol.getUnlockStatus(),
-  unlockStart: (): Promise<void> => protocol.unlockStart(),
-  unlockPoll: (): Promise<number[]> => protocol.unlockPoll(),
-  lock: (): Promise<void> => protocol.lock(),
-
-  // --- Dynamic Entries ---
-  getDynamicEntryCount: (): Promise<{ tapDance: number; combo: number; keyOverride: number; altRepeatKey: number; featureFlags: number }> =>
-    protocol.getDynamicEntryCount(),
-  getTapDance: (index: number): Promise<unknown> => protocol.getTapDance(index),
-  setTapDance: (index: number, entry: unknown): Promise<void> =>
-    protocol.setTapDance(index, entry as Parameters<typeof protocol.setTapDance>[1]),
-  getCombo: (index: number): Promise<unknown> => protocol.getCombo(index),
-  setCombo: (index: number, entry: unknown): Promise<void> =>
-    protocol.setCombo(index, entry as Parameters<typeof protocol.setCombo>[1]),
-  getKeyOverride: (index: number): Promise<unknown> => protocol.getKeyOverride(index),
-  setKeyOverride: (index: number, entry: unknown): Promise<void> =>
-    protocol.setKeyOverride(index, entry as Parameters<typeof protocol.setKeyOverride>[1]),
-  getAltRepeatKey: (index: number): Promise<unknown> => protocol.getAltRepeatKey(index),
-  setAltRepeatKey: (index: number, entry: unknown): Promise<void> =>
-    protocol.setAltRepeatKey(index, entry as Parameters<typeof protocol.setAltRepeatKey>[1]),
-
-  // --- QMK Settings ---
-  qmkSettingsQuery: (startId: number): Promise<number[]> =>
-    protocol.qmkSettingsQuery(startId),
-  qmkSettingsGet: (qsid: number): Promise<number[]> => protocol.qmkSettingsGet(qsid),
-  qmkSettingsSet: (qsid: number, data: number[]): Promise<void> =>
-    protocol.qmkSettingsSet(qsid, data),
-  qmkSettingsReset: (): Promise<void> => protocol.qmkSettingsReset(),
-
-  // --- Matrix Tester ---
-  getMatrixState: (): Promise<number[]> => protocol.getMatrixState(),
+  // --- VIA Protocol through Matrix Tester (./protocol-members) ---
+  ...createProtocolMembers(
+    protocol,
+    (compressed): Promise<string | null> => ipcRenderer.invoke(IpcChannels.LZMA_DECOMPRESS, compressed),
+  ),
 
   // --- File I/O (IPC to main for native file dialogs) ---
   saveLayout: (json: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
