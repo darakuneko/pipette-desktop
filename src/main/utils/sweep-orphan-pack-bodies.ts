@@ -20,7 +20,10 @@
 import { readdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
-const TEMP_FILE_PATTERN = /\.json(?:\.\d+\.[0-9a-f]+)?\.tmp$/
+/** Temp files `writeFileAtomic` leaves behind for a `.json` target, and the
+ *  plain `<name>.json.tmp`. The Rust writer (`pipette-fs`) is tested against
+ *  this pattern. */
+export const TEMP_FILE_PATTERN = /\.json(?:\.\d+\.[0-9a-f]+)?\.tmp$/
 
 /** Best-effort: a missing `packsDir` or a per-file unlink failure is
  *  swallowed, returning however many files were actually removed. */

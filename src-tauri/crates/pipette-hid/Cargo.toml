@@ -18,12 +18,16 @@ pipette-protocol = { path = "../pipette-protocol" }
 pipette-virtual-device = { workspace = true }
 hidapi = { workspace = true }
 thiserror = { workspace = true }
+# HID packet logs (src/packet_log.rs), when VIAL_DEBUG_HID is set.
+log = "=0.4.34"
 
 [dev-dependencies]
 pipette-hid = { path = ".", features = ["test-util"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 hex = "0.4"
+log = { version = "=0.4.34", features = ["std"] }
+pipette-logger = { path = "../pipette-logger" }
 
 [lints]
 workspace = true

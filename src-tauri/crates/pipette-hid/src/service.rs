@@ -16,6 +16,7 @@ use crate::device_info::DeviceInfo;
 use crate::error::HidError;
 use crate::fifo::FifoLock;
 use crate::hidapi_backend::HidapiBackend;
+use crate::packet_log::{Direction, log_packet, packet_logging_from_env};
 use crate::timing::Timing;
 use crate::virtual_backend::{DeviceBackends, VirtualBackend};
 
@@ -38,6 +39,8 @@ pub struct HidService {
     open_device: Mutex<Option<OpenDevice>>,
     /// Serializes send/send_receive in arrival order.
     io_queue: FifoLock,
+    /// Whether every report sent and received is logged (`VIAL_DEBUG_HID`).
+    log_packets: bool,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -86,7 +89,15 @@ impl HidService {
             timing,
             open_device: Mutex::new(None),
             io_queue: FifoLock::default(),
+            log_packets: packet_logging_from_env(),
         }
+    }
+
+    /// Turns the packet logs on or off, whatever `VIAL_DEBUG_HID` says.
+    #[cfg(any(test, feature = "test-util"))]
+    pub fn with_packet_logging(mut self, enabled: bool) -> Self {
+        self.log_packets = enabled;
+        self
     }
 
     /// The controller of the virtual keyboard (key presses, unlock counter,
@@ -150,7 +161,9 @@ impl HidService {
                 handle.write(packet)?;
                 let read = handle.read_timeout(&mut buf, HID_TIMEOUT_MS)?;
                 if read > 0 {
-                    return Ok(normalize_response(&buf[..read]));
+                    let report = normalize_response(&buf[..read]);
+                    log_packet(self.log_packets, Direction::Rx, &report);
+                    return Ok(report);
                 }
                 if attempt + 1 < HID_RETRY_COUNT {
                     (self.timing.sleep)(Duration::from_millis(HID_RETRY_DELAY_MS));
@@ -180,9 +193,9 @@ impl HidService {
     }
 
     /// Length check, then `io` on the open device's handle with the framed
-    /// packet, inside the I/O queue. The handle is pinned for the whole
-    /// exchange, retries included: open and close replace it outside the
-    /// queue.
+    /// packet, inside the I/O queue, logging the report as sent. The handle
+    /// is pinned for the whole exchange, retries included: open and close
+    /// replace it outside the queue.
     fn exchange<R>(
         &self,
         data: &[u8],
@@ -194,6 +207,9 @@ impl HidService {
         let _turn = self.io_queue.acquire();
         let handle =
             lock(&self.open_device).as_ref().map(|d| Arc::clone(&d.handle)).ok_or(HidError::NotOpen)?;
-        io(handle.as_ref(), &packet(data))
+        let packet = packet(data);
+        // Once per request, retries included, without the report ID.
+        log_packet(self.log_packets, Direction::Tx, &packet[1..]);
+        io(handle.as_ref(), &packet)
     }
 }

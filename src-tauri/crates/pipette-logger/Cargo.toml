@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-logger"
+description = "The app's log: rotating files under userData/logs in the Electron build's line format"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+log = { version = "=0.4.34", features = ["std"] }
+pipette-time = { path = "../pipette-time" }
+thiserror = "=2.0.21"
+
+[dev-dependencies]
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+
+[lints]
+workspace = true

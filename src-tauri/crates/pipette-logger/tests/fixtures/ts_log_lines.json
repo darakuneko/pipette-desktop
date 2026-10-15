@@ -1,0 +1,234 @@
+{
+  "lines": [
+    {
+      "epochMs": 0,
+      "level": "info",
+      "message": "Pipette starting",
+      "line": "[1970-01-01T00:00:00.000Z] [INFO] Pipette starting\n"
+    },
+    {
+      "epochMs": 0,
+      "level": "warn",
+      "message": "a warning with \"quotes\" and \\backslashes\\",
+      "line": "[1970-01-01T00:00:00.000Z] [WARN] a warning with \"quotes\" and \\backslashes\\\n"
+    },
+    {
+      "epochMs": 0,
+      "level": "error",
+      "message": "Ü✓ キーボード ⌨️",
+      "line": "[1970-01-01T00:00:00.000Z] [ERROR] Ü✓ キーボード ⌨️\n"
+    },
+    {
+      "epochMs": 0,
+      "level": "debug",
+      "message": "two\nlines",
+      "line": "[1970-01-01T00:00:00.000Z] [DEBUG] two\nlines\n"
+    },
+    {
+      "epochMs": 0,
+      "level": "info",
+      "message": "",
+      "line": "[1970-01-01T00:00:00.000Z] [INFO] \n"
+    },
+    {
+      "epochMs": 946684799999,
+      "level": "info",
+      "message": "Pipette starting",
+      "line": "[1999-12-31T23:59:59.999Z] [INFO] Pipette starting\n"
+    },
+    {
+      "epochMs": 946684799999,
+      "level": "warn",
+      "message": "a warning with \"quotes\" and \\backslashes\\",
+      "line": "[1999-12-31T23:59:59.999Z] [WARN] a warning with \"quotes\" and \\backslashes\\\n"
+    },
+    {
+      "epochMs": 946684799999,
+      "level": "error",
+      "message": "Ü✓ キーボード ⌨️",
+      "line": "[1999-12-31T23:59:59.999Z] [ERROR] Ü✓ キーボード ⌨️\n"
+    },
+    {
+      "epochMs": 946684799999,
+      "level": "debug",
+      "message": "two\nlines",
+      "line": "[1999-12-31T23:59:59.999Z] [DEBUG] two\nlines\n"
+    },
+    {
+      "epochMs": 946684799999,
+      "level": "info",
+      "message": "",
+      "line": "[1999-12-31T23:59:59.999Z] [INFO] \n"
+    },
+    {
+      "epochMs": 1709208000007,
+      "level": "info",
+      "message": "Pipette starting",
+      "line": "[2024-02-29T12:00:00.007Z] [INFO] Pipette starting\n"
+    },
+    {
+      "epochMs": 1709208000007,
+      "level": "warn",
+      "message": "a warning with \"quotes\" and \\backslashes\\",
+      "line": "[2024-02-29T12:00:00.007Z] [WARN] a warning with \"quotes\" and \\backslashes\\\n"
+    },
+    {
+      "epochMs": 1709208000007,
+      "level": "error",
+      "message": "Ü✓ キーボード ⌨️",
+      "line": "[2024-02-29T12:00:00.007Z] [ERROR] Ü✓ キーボード ⌨️\n"
+    },
+    {
+      "epochMs": 1709208000007,
+      "level": "debug",
+      "message": "two\nlines",
+      "line": "[2024-02-29T12:00:00.007Z] [DEBUG] two\nlines\n"
+    },
+    {
+      "epochMs": 1709208000007,
+      "level": "info",
+      "message": "",
+      "line": "[2024-02-29T12:00:00.007Z] [INFO] \n"
+    },
+    {
+      "epochMs": 1792112523456,
+      "level": "info",
+      "message": "Pipette starting",
+      "line": "[2026-10-16T01:02:03.456Z] [INFO] Pipette starting\n"
+    },
+    {
+      "epochMs": 1792112523456,
+      "level": "warn",
+      "message": "a warning with \"quotes\" and \\backslashes\\",
+      "line": "[2026-10-16T01:02:03.456Z] [WARN] a warning with \"quotes\" and \\backslashes\\\n"
+    },
+    {
+      "epochMs": 1792112523456,
+      "level": "error",
+      "message": "Ü✓ キーボード ⌨️",
+      "line": "[2026-10-16T01:02:03.456Z] [ERROR] Ü✓ キーボード ⌨️\n"
+    },
+    {
+      "epochMs": 1792112523456,
+      "level": "debug",
+      "message": "two\nlines",
+      "line": "[2026-10-16T01:02:03.456Z] [DEBUG] two\nlines\n"
+    },
+    {
+      "epochMs": 1792112523456,
+      "level": "info",
+      "message": "",
+      "line": "[2026-10-16T01:02:03.456Z] [INFO] \n"
+    },
+    {
+      "epochMs": 4107542400050,
+      "level": "info",
+      "message": "Pipette starting",
+      "line": "[2100-03-01T00:00:00.050Z] [INFO] Pipette starting\n"
+    },
+    {
+      "epochMs": 4107542400050,
+      "level": "warn",
+      "message": "a warning with \"quotes\" and \\backslashes\\",
+      "line": "[2100-03-01T00:00:00.050Z] [WARN] a warning with \"quotes\" and \\backslashes\\\n"
+    },
+    {
+      "epochMs": 4107542400050,
+      "level": "error",
+      "message": "Ü✓ キーボード ⌨️",
+      "line": "[2100-03-01T00:00:00.050Z] [ERROR] Ü✓ キーボード ⌨️\n"
+    },
+    {
+      "epochMs": 4107542400050,
+      "level": "debug",
+      "message": "two\nlines",
+      "line": "[2100-03-01T00:00:00.050Z] [DEBUG] two\nlines\n"
+    },
+    {
+      "epochMs": 4107542400050,
+      "level": "info",
+      "message": "",
+      "line": "[2100-03-01T00:00:00.050Z] [INFO] \n"
+    }
+  ],
+  "packets": [
+    {
+      "epochMs": 1792112523456,
+      "direction": "TX",
+      "data": [
+        254,
+        0,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "line": "[2026-10-16T01:02:03.456Z] [DEBUG] HID TX: fe 00 0a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n"
+    },
+    {
+      "epochMs": 1792112523456,
+      "direction": "RX",
+      "data": [
+        0,
+        37,
+        74,
+        111,
+        148,
+        185,
+        222,
+        3,
+        40,
+        77,
+        114,
+        151,
+        188,
+        225,
+        6,
+        43,
+        80,
+        117,
+        154,
+        191,
+        228,
+        9,
+        46,
+        83,
+        120,
+        157,
+        194,
+        231,
+        12,
+        49,
+        86,
+        123
+      ],
+      "line": "[2026-10-16T01:02:03.456Z] [DEBUG] HID RX: 00 25 4a 6f 94 b9 de 03 28 4d 72 97 bc e1 06 2b 50 75 9a bf e4 09 2e 53 78 9d c2 e7 0c 31 56 7b\n"
+    }
+  ]
+}

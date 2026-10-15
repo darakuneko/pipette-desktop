@@ -20,6 +20,7 @@
 //! SIGKILL cannot be caught, and on Linux this build has no menu, so no
 //! keyboard shortcut quits it.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -28,6 +29,7 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
 
+use crate::UserDataDir;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
@@ -78,7 +80,7 @@ pub fn setup(app: &mut App<Wry>) {
     if tray_resident() {
         match build_tray(app) {
             Ok(()) => lifecycle.tray_active.store(true, Ordering::Release),
-            Err(err) => eprintln!("failed to create the tray icon: {err}"),
+            Err(err) => log::error!("failed to create the tray icon: {err}"),
         }
     }
     #[cfg(unix)]
@@ -132,7 +134,7 @@ fn show_main_window(app: &AppHandle<Wry>) {
     };
     let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());
     if let Err(err) = result {
-        eprintln!("failed to show the main window: {err}");
+        log::error!("failed to show the main window: {err}");
     }
 }
 
@@ -146,7 +148,7 @@ pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
     if lifecycle.tray_active.load(Ordering::Acquire) && !lifecycle.quit.is_quitting() {
         api.prevent_close();
         if let Err(err) = window.hide() {
-            eprintln!("failed to hide the main window: {err}");
+            log::error!("failed to hide the main window: {err}");
         }
     }
 }
@@ -159,26 +161,22 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
             match lifecycle.quit.on_exit_requested() {
                 ExitDecision::StartSequence => {
                     api.prevent_exit();
-                    eprintln!("[quit] exit requested (code {code:?}); starting the quit sequence");
+                    log::info!("[quit] exit requested (code {code:?}); starting the quit sequence");
                     start_quit_sequence(app.clone(), lifecycle);
                 }
                 ExitDecision::ExitNow => {
                     let phase = lifecycle.quit.running_phase();
-                    eprintln!(
+                    log::warn!(
                         "[quit] exit requested (code {code:?}) while quitting during {}; exiting now",
                         phase.unwrap_or("(between phases)")
                     );
                     // Blocks the event loop for at most MARKER_TIMEOUT; the
                     // exit goes through when this returns.
-                    let data_dir = app_data_dir(app);
-                    tauri::async_runtime::block_on(record_interruption(
-                        phase,
-                        QUIT_DEADLINE,
-                        data_dir.as_deref(),
-                    ));
+                    let data_dir = user_data_dir(app);
+                    tauri::async_runtime::block_on(record_interruption(phase, QUIT_DEADLINE, &data_dir));
                 }
                 ExitDecision::Exit => {
-                    eprintln!("[quit] exiting (code {code:?})");
+                    log::info!("[quit] exiting (code {code:?})");
                     // While the sequence updates the marker, waits for that
                     // update (at most MARKER_TIMEOUT) so the exit does not cut
                     // it short; otherwise returns at once.
@@ -186,29 +184,23 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                 }
             }
         }
-        RunEvent::Exit => eprintln!("[quit] event loop ended"),
+        RunEvent::Exit => log::info!("[quit] event loop ended"),
         _ => {}
     }
 }
 
-/// The directory of the pending marker, `None` (logged) when there is none.
-fn app_data_dir(app: &AppHandle<Wry>) -> Option<std::path::PathBuf> {
-    match app.path().app_data_dir() {
-        Ok(dir) => Some(dir),
-        Err(err) => {
-            eprintln!("[quit] no app data directory for the pending marker: {err}");
-            None
-        }
-    }
+/// The directory of the pending marker: the userData directory.
+fn user_data_dir(app: &AppHandle<Wry>) -> PathBuf {
+    app.state::<UserDataDir>().0.clone()
 }
 
 fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
-    let data_dir = app_data_dir(&app);
+    let data_dir = user_data_dir(&app);
     let durations = phase_durations();
     tauri::async_runtime::spawn(async move {
         let phases = stub_phases(durations);
-        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, data_dir.as_deref(), &lifecycle.quit).await;
-        eprintln!("[quit] sequence ended: {outcome:?}");
+        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit).await;
+        log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
         app.exit(0);
     });
@@ -237,7 +229,7 @@ fn dev_quit_delay() -> Option<Duration> {
     match value.to_string_lossy().trim().parse::<u64>() {
         Ok(ms) => Some(Duration::from_millis(ms)),
         Err(_) => {
-            eprintln!("[quit] ignoring {DEV_QUIT_DELAY_MS_ENV}: {value:?} is not a number of milliseconds");
+            log::warn!("[quit] ignoring {DEV_QUIT_DELAY_MS_ENV}: {value:?} is not a number of milliseconds");
             None
         }
     }
@@ -268,14 +260,14 @@ fn listen_for_termination(app: AppHandle<Wry>) {
         let mut stream = match signal(kind) {
             Ok(stream) => stream,
             Err(err) => {
-                eprintln!("failed to listen for {name}: {err}");
+                log::error!("failed to listen for {name}: {err}");
                 continue;
             }
         };
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
             while stream.recv().await.is_some() {
-                eprintln!("[quit] {name} received");
+                log::info!("[quit] {name} received");
                 app.exit(0);
             }
         });
@@ -289,13 +281,17 @@ mod tests {
     #[test]
     fn the_stub_phases_wait_one_after_another() {
         let durations = [100, 200, 300, 400, 500].map(Duration::from_millis);
+        // A completed sequence only removes the marker, so the directory
+        // need not exist.
+        let dir = std::env::temp_dir().join(format!("pipette-lifecycle-{}", std::process::id()));
         let outcome = tokio::runtime::Builder::new_current_thread()
             .enable_time()
             .start_paused(true)
             .build()
             .unwrap()
-            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, None, &QuitGuard::default()));
+            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, &dir, &QuitGuard::default()));
         assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
+        assert!(!dir.exists());
     }
 
     #[test]

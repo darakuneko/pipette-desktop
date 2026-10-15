@@ -102,11 +102,11 @@ pub fn virtual_device_reset(hid: State<'_, Hid>) {
     hid.0.virtual_device().reset();
 }
 
-/// Prints a line from the WebView to stderr; WebKitGTK does not forward the
-/// console of the page to the terminal.
+/// Logs a line from the WebView (the log also goes to stderr); WebKitGTK
+/// does not forward the console of the page to the terminal.
 #[tauri::command]
 pub fn dev_log(message: String) {
-    eprintln!("[webview] {message}");
+    log::info!("[webview] {message}");
 }
 
 /// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
@@ -213,14 +213,14 @@ fn run_dev_script(webview: &Webview<Wry>, payload: &PageLoadPayload<'_>) {
         return;
     }
     let path = path.to_string_lossy();
-    eprintln!("[dev] warning: {DEV_SCRIPT_ENV} is set; evaluating {path} in the window");
+    log::warn!("[dev] {DEV_SCRIPT_ENV} is set; evaluating {path} in the window");
     match std::fs::read_to_string(&*path) {
         Ok(script) => {
             if let Err(err) = webview.eval(script) {
-                eprintln!("[dev] failed to evaluate {path}: {err}");
+                log::error!("[dev] failed to evaluate {path}: {err}");
             }
         }
-        Err(err) => eprintln!("[dev] failed to read {path}: {err}"),
+        Err(err) => log::error!("[dev] failed to read {path}: {err}"),
     }
 }
 
