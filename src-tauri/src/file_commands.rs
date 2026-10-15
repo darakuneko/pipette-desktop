@@ -190,8 +190,10 @@ fn csv_file_name(name: &str) -> String {
     if safe.to_lowercase().ends_with(".csv") { safe } else { format!("{safe}.csv") }
 }
 
-/// Asks for a directory once and writes every file of `files` into it, one
-/// after another; the first failure stops the rest.
+/// Asks for a directory once and writes every file of `files` into it. As
+/// with the Electron handler, which starts every write at once, a failed
+/// write does not stop the others; the result is then the first error and
+/// the files that were written.
 fn export_csv_bundle(dialogs: &Dialogs, files: Option<&Value>) -> CsvBundleResult {
     let entries = match csv_bundle_entries(files) {
         Ok(entries) => entries,
@@ -204,19 +206,27 @@ fn export_csv_bundle(dialogs: &Dialogs, files: Option<&Value>) -> CsvBundleResul
     };
     let Some(dir) = dialogs.show(request) else { return CsvBundleResult::failed(CANCELLED) };
     let mut written = Vec::new();
+    let mut first_error = None;
     for (name, content) in entries {
         let path = dir.join(csv_file_name(name));
-        if let Err(err) = std::fs::write(&path, content) {
-            return CsvBundleResult {
-                success: false,
-                dir_path: None,
-                files: Some(written),
-                error: Some(err.to_string()),
-            };
+        match std::fs::write(&path, content) {
+            Ok(()) => written.push(path_text(&path)),
+            Err(err) => {
+                first_error.get_or_insert_with(|| err.to_string());
+            }
         }
-        written.push(path_text(&path));
     }
-    CsvBundleResult { success: true, dir_path: Some(path_text(&dir)), files: Some(written), error: None }
+    match first_error {
+        None => CsvBundleResult {
+            success: true,
+            dir_path: Some(path_text(&dir)),
+            files: Some(written),
+            error: None,
+        },
+        Some(error) => {
+            CsvBundleResult { success: false, dir_path: None, files: Some(written), error: Some(error) }
+        }
+    }
 }
 
 /// The longest title the page may give an open dialog.
@@ -375,14 +385,16 @@ fn base64_value(c: u8) -> Option<u32> {
     }
 }
 
-/// Decodes `data` as Node's `Buffer.from(data, 'base64')`: both alphabets,
-/// any other character skipped, decoding stops at the first `=`, and a
-/// trailing group of 2 or 3 characters gives 1 or 2 bytes (1 gives none).
+/// Decodes `data` as Node's `Buffer.from(data, 'base64')`: it reads the low
+/// byte of each UTF-16 code unit, takes both alphabets, skips any other
+/// byte, stops at the first `=`, and a trailing group of 2 or 3 characters
+/// gives 1 or 2 bytes (1 gives none).
 fn decode_base64_as_node(data: &str) -> Vec<u8> {
     let mut out = Vec::with_capacity(data.len() / 4 * 3 + 2);
     let mut bits: u32 = 0;
     let mut count = 0;
-    for byte in data.bytes().take_while(|&b| b != b'=') {
+    let low_bytes = data.encode_utf16().map(|unit| unit.to_le_bytes()[0]);
+    for byte in low_bytes.take_while(|&b| b != b'=') {
         let Some(value) = base64_value(byte) else { continue };
         bits = (bits << 6) | value;
         count += 1;

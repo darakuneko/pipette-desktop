@@ -323,7 +323,7 @@ fn a_cancelled_csv_bundle_writes_nothing() {
 }
 
 #[test]
-fn a_failed_csv_write_answers_the_files_written_before_it() {
+fn a_failed_csv_write_answers_its_error_and_the_other_files_written() {
     let dir = TempDir::new().unwrap();
     // A directory where the second file would go.
     std::fs::create_dir(dir.path().join("b.csv")).unwrap();
@@ -337,9 +337,10 @@ fn a_failed_csv_write_answers_the_files_written_before_it() {
     let result = export_csv_bundle(&dialogs.dialogs, Some(&files));
 
     assert!(!result.success && result.dir_path.is_none());
-    assert_eq!(result.files, Some(vec![path_text(&dir.path().join("a.csv"))]));
+    let written = ["a.csv", "c.csv"].map(|name| path_text(&dir.path().join(name)));
+    assert_eq!(result.files, Some(written.to_vec()));
     assert!(result.error.is_some_and(|error| !error.is_empty()));
-    assert!(!dir.path().join("c.csv").exists());
+    assert_eq!(std::fs::read_to_string(dir.path().join("c.csv")).unwrap(), "3");
 }
 
 #[test]
@@ -376,6 +377,12 @@ fn base64_decodes_as_node_buffer_does() {
         ("YWJjZA", b"abcd"),
         ("YWJjZ", b"abc"),
         ("", b""),
+        // The low byte of each UTF-16 code unit: U+0159 reads as `Y`, U+0100
+        // as NUL, and U+1F600 as `=` and NUL.
+        ("\u{159}Q==", b"a"),
+        ("YW\u{100}Jj", b"abc"),
+        ("Y\u{e9}WJj", b"abc"),
+        ("\u{1f600}YWJj", b""),
     ] {
         assert_eq!(decode_base64_as_node(input), expected, "{input:?}");
     }
