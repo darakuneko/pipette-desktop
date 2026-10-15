@@ -7,11 +7,6 @@ use pipette_js_json::Value;
 
 use crate::defaults::DEFAULTS;
 
-/// `Boolean(value)`, with `None` for a missing key (`undefined`).
-pub fn truthy(value: Option<&Value>) -> bool {
-    value.is_some_and(Value::is_truthy)
-}
-
 /// `clampZoomFactor(value)` of src/shared/types/app-config.ts: a number
 /// rounded as `Math.round` does (halves up) and clamped to the zoom range;
 /// the default for anything else.

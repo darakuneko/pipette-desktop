@@ -13,7 +13,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use pipette_app_config::{AppConfigStore, CONFIG_FILE_NAME, Value, clamp_zoom_factor, truthy};
+use pipette_app_config::{AppConfigStore, CONFIG_FILE_NAME, Value, clamp_zoom_factor};
 use pipette_js_json::{parse, stringify};
 use serde::Deserialize;
 
@@ -221,6 +221,6 @@ fn coercions_match_typescript() {
     for case in fixture::<Vec<Coercion>>("coercions.json") {
         let value = (case.input != "undefined").then(|| parse(&case.input).unwrap());
         assert_eq!(clamp_zoom_factor(value.as_ref()), case.zoom_factor, "clampZoomFactor({})", case.input);
-        assert_eq!(truthy(value.as_ref()), case.boolean, "Boolean({})", case.input);
+        assert_eq!(value.as_ref().is_some_and(Value::is_truthy), case.boolean, "Boolean({})", case.input);
     }
 }

@@ -74,7 +74,7 @@ pub fn setup(app: &mut App<Wry>) {
         log::error!("failed to read trayResident: {err}");
         None
     });
-    if pipette_app_config::truthy(tray_resident.as_ref()) {
+    if tray_resident.as_ref().is_some_and(pipette_app_config::Value::is_truthy) {
         add_tray(app.handle());
     }
     #[cfg(unix)]

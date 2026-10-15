@@ -14,7 +14,7 @@ mod defaults;
 mod file;
 mod store;
 
-pub use coerce::{clamp_zoom_factor, truthy};
+pub use coerce::clamp_zoom_factor;
 pub use defaults::{DEFAULTS, Defaults};
 pub use pipette_js_json::{JsString, Object, Value};
 pub use store::{AppConfigStore, CONFIG_FILE_NAME};
