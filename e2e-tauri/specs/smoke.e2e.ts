@@ -154,6 +154,13 @@ async function pageZoom(): Promise<number> {
   return width / (await browser.execute(() => window.innerWidth))
 }
 
+/** Where the window is moved before a restart: inside an Xvfb screen of
+ *  1920x1200 (the CI's), clear of the centered default placement, and at
+ *  least the window's minimum size (1280x1024). */
+const MOVED_BOUNDS = { x: 100, y: 60, width: 1500, height: 1100 }
+/** Under Wayland the app neither reads nor sets its window's position. */
+const positionsKnown = !process.env.WAYLAND_DISPLAY || process.env.GDK_BACKEND === 'x11'
+
 // Checks of the app lifecycle. A restart quits the app through its quit
 // sequence and starts it again on the same userData directory.
 describe('Tauri build lifecycle', () => {
@@ -182,6 +189,33 @@ describe('Tauri build lifecycle', () => {
       expect(await pageZoom()).toBeCloseTo(ZOOM_PERCENT / 100, 2)
     } finally {
       await invokeCommand('app_config_set', { key: 'zoomFactor', value: '100' })
+    }
+  })
+
+  it('opens the window at the size and position it had when the app quit', async function () {
+    const screen = await browser.execute(() => ({ width: window.screen.width, height: window.screen.height }))
+    if (
+      screen.width < MOVED_BOUNDS.x + MOVED_BOUNDS.width ||
+      screen.height < MOVED_BOUNDS.y + MOVED_BOUNDS.height
+    ) {
+      console.warn(`the screen (${screen.width}x${screen.height}) is too small to move the window; skipped`)
+      this.skip()
+    }
+    const { x, y, width, height } = MOVED_BOUNDS
+    await browser.setWindowRect(positionsKnown ? x : null, positionsKnown ? y : null, width, height)
+    const moved = await browser.getWindowRect()
+    expect({ width: moved.width, height: moved.height }).toEqual({ width, height })
+    if (positionsKnown) expect({ x: moved.x, y: moved.y }).toEqual({ x, y })
+
+    await restartApp()
+
+    const saved = readAppConfig().windowState as Record<string, number>
+    const restored = await browser.getWindowRect()
+    expect({ width: saved.width, height: saved.height }).toEqual({ width, height })
+    expect({ width: restored.width, height: restored.height }).toEqual({ width, height })
+    if (positionsKnown) {
+      expect({ x: saved.x, y: saved.y }).toEqual({ x, y })
+      expect({ x: restored.x, y: restored.y }).toEqual({ x, y })
     }
   })
 
