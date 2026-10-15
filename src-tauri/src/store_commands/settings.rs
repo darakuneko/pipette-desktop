@@ -14,6 +14,7 @@ use tauri::State;
 use tauri::ipc::Response;
 
 use crate::command_error::CommandError;
+use crate::store_commands::blocking;
 
 /// A settings file as read: `content` is null when there is none.
 #[derive(Debug, Serialize)]
@@ -35,18 +36,6 @@ impl From<SettingsFile> for SettingsFileDto {
 pub enum SettingsWriteDto {
     Written,
     Conflict,
-}
-
-/// Runs `io` on a blocking-task thread: the store waits for its write lock
-/// and syncs its writes to disk.
-async fn blocking<T, E, F>(stores: &State<'_, StoreContext>, io: F) -> Result<T, CommandError>
-where
-    T: Send + 'static,
-    E: std::error::Error + Send + 'static,
-    F: FnOnce(&StoreContext) -> Result<T, E> + Send + 'static,
-{
-    let stores = stores.inner().clone();
-    Ok(tauri::async_runtime::spawn_blocking(move || io(&stores)).await??)
 }
 
 #[tauri::command]
