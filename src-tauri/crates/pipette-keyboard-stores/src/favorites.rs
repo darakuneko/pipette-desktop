@@ -25,7 +25,7 @@
 //!
 //! Every operation answers like its handler: failures are values
 //! ([`FavoriteError`], whose text is the handler's `String(err)`), turned
-//! into the `{success, …}` response by [`favorite_response_json`].
+//! into the `{success, …}` response by [`crate::response_json`].
 
 use std::fs;
 use std::io;
@@ -114,25 +114,6 @@ fn entry_error_text(err: &EntryError) -> String {
         EntryError::TimeOutOfRange => format!("RangeError: {err}"),
         EntryError::UnattendedRevive => format!("Error: {err}"),
     }
-}
-
-/// The handler's response as JSON text: `{"success":true}` followed by
-/// `fields`, or `{"success":false,"error":…}`.
-pub fn favorite_response_json(result: Result<Object, FavoriteError>) -> String {
-    let mut response = Object::new();
-    match result {
-        Ok(fields) => {
-            response.insert("success", true.into());
-            for (key, value) in fields.iter() {
-                response.insert(key.clone(), value.clone());
-            }
-        }
-        Err(err) => {
-            response.insert("success", false.into());
-            response.insert("error", err.to_string().into());
-        }
-    }
-    pipette_js_json::stringify(&Value::Object(response))
 }
 
 /// The index file: its top-level object, whose `entries` holds the place

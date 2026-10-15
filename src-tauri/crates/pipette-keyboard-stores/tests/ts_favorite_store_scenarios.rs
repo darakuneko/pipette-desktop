@@ -25,9 +25,9 @@ use std::path::Path;
 use common::{Harness, build, ms, recorded, tree_of};
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::{
-    FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, favorite_response_json,
-    import_favorites, list_favorites, load_favorite, read_favorites_for_export, rename_favorite,
-    save_favorite, set_favorite_hub_post_id, set_favorite_hub_private,
+    FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, import_favorites,
+    list_favorites, load_favorite, read_favorites_for_export, rename_favorite, response_json, save_favorite,
+    set_favorite_hub_post_id, set_favorite_hub_private,
 };
 
 fn text(step: &Object, key: &str) -> String {
@@ -54,7 +54,7 @@ fn fields(pairs: Vec<(&str, Value)>) -> Object {
 }
 
 fn response(result: Result<Object, FavoriteError>) -> String {
-    as_recorded(favorite_response_json(result))
+    as_recorded(response_json(result))
 }
 
 /// `got` with a file-system error's text replaced as the fixture records it.
@@ -71,7 +71,7 @@ fn as_recorded(got: String) -> String {
 }
 
 fn done(result: Result<(), FavoriteError>) -> String {
-    response(result.map(|()| Object::new()))
+    response(pipette_keyboard_stores::done(result))
 }
 
 fn failed(error: &str) -> String {

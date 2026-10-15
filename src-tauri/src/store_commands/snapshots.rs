@@ -8,39 +8,25 @@
 //! the renderer as `JSON.stringify` writes them. A failure of the store is
 //! such an answer too; a command fails only when its task cannot run.
 
-use pipette_js_json::Value;
-use pipette_keyboard_stores::{SnapshotError, StoreContext, snapshot_response_json};
+use pipette_js_json::{Object, Value};
+use pipette_keyboard_stores::{SnapshotError, StoreContext, done, field};
 use tauri::State;
 use tauri::ipc::Response;
 
+use super::answer;
 use crate::command_error::CommandError;
 
 /// What a store operation answers besides `success`.
-type Answer = Result<Option<(&'static str, Value)>, SnapshotError>;
-
-/// Runs `io` on a blocking-task thread (the store waits for its write lock
-/// and syncs its writes to disk) and answers its result.
-async fn answer<F>(stores: &State<'_, StoreContext>, io: F) -> Result<Response, CommandError>
-where
-    F: FnOnce(&StoreContext) -> Answer + Send + 'static,
-{
-    let stores = stores.inner().clone();
-    let result = tauri::async_runtime::spawn_blocking(move || io(&stores)).await?;
-    Ok(Response::new(snapshot_response_json(result)))
-}
-
-fn done(result: Result<(), SnapshotError>) -> Answer {
-    result.map(|()| None)
-}
+type Answer = Result<Object, SnapshotError>;
 
 #[tauri::command]
 pub async fn snapshot_store_list(
     stores: State<'_, StoreContext>,
     uid: String,
 ) -> Result<Response, CommandError> {
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let entries = pipette_keyboard_stores::list_snapshots(stores, &uid)?;
-        Ok(Some(("entries", Value::Array(entries.into_iter().map(Value::from).collect()))))
+        Ok(field("entries", Value::Array(entries.into_iter().map(Value::from).collect())))
     })
     .await
 }
@@ -55,10 +41,10 @@ pub async fn snapshot_store_save(
     label: String,
     vil_version: Option<f64>,
 ) -> Result<Response, CommandError> {
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let entry =
             pipette_keyboard_stores::save_snapshot(stores, &uid, &json, &device_name, &label, vil_version)?;
-        Ok(Some(("entry", entry.into())))
+        Ok(field("entry", entry))
     })
     .await
 }
@@ -69,9 +55,9 @@ pub async fn snapshot_store_load(
     uid: String,
     entry_id: String,
 ) -> Result<Response, CommandError> {
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let data = pipette_keyboard_stores::load_snapshot(stores, &uid, &entry_id)?;
-        Ok(Some(("data", data.into())))
+        Ok(field("data", data))
     })
     .await
 }

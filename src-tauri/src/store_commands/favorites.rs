@@ -20,14 +20,16 @@
 
 use pipette_entry_store::sanitize_filename;
 use pipette_js_json::{Object, Value};
-use pipette_keyboard_stores::{
-    FavoriteError, FavoriteImport, FavoriteType, StoreContext, favorite_response_json,
-};
+use pipette_keyboard_stores::{FavoriteError, FavoriteImport, FavoriteType, StoreContext, done, field};
 use serde::{Deserialize, Deserializer};
 use tauri::State;
 use tauri::ipc::Response;
 
+use super::answer;
 use crate::command_error::CommandError;
+
+/// What a store operation answers besides `success`.
+type Answer = Result<Object, FavoriteError>;
 use crate::dialog::{DialogKind, DialogRequest, Dialogs, FileFilter};
 use crate::file_commands::{
     FileOpenResult, FileSaveResult, open_with_dialog_command, write_with_dialog_command,
@@ -47,28 +49,13 @@ impl<'de> Deserialize<'de> for TypeArg {
     }
 }
 
-/// Runs `io` on a blocking-task thread (the store waits for its write lock
-/// and syncs its writes to disk) and answers its result.
-async fn answer<F>(stores: &State<'_, StoreContext>, io: F) -> Result<Response, CommandError>
-where
-    F: FnOnce(&StoreContext) -> Result<Object, FavoriteError> + Send + 'static,
-{
-    let stores = stores.inner().clone();
-    let result = tauri::async_runtime::spawn_blocking(move || io(&stores)).await?;
-    Ok(Response::new(favorite_response_json(result)))
-}
-
-fn field(key: &str, value: impl Into<Value>) -> Object {
-    std::iter::once((key, value.into())).collect()
-}
-
 #[tauri::command]
 pub async fn favorite_store_list(
     stores: State<'_, StoreContext>,
     favorite_type: TypeArg,
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let entries = pipette_keyboard_stores::list_favorites(stores, ty?)?;
         Ok(field("entries", Value::Array(entries.into_iter().map(Value::from).collect())))
     })
@@ -83,7 +70,7 @@ pub async fn favorite_store_save(
     label: String,
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let entry = pipette_keyboard_stores::save_favorite(stores, ty?, &json, &label)?;
         Ok(field("entry", entry))
     })
@@ -97,7 +84,7 @@ pub async fn favorite_store_load(
     entry_id: String,
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         Ok(field("data", pipette_keyboard_stores::load_favorite(stores, ty?, &entry_id)?))
     })
     .await
@@ -112,8 +99,7 @@ pub async fn favorite_store_rename(
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
-        pipette_keyboard_stores::rename_favorite(stores, ty?, &entry_id, &new_label)?;
-        Ok(Object::new())
+        done(pipette_keyboard_stores::rename_favorite(stores, ty?, &entry_id, &new_label))
     })
     .await
 }
@@ -125,11 +111,8 @@ pub async fn favorite_store_delete(
     entry_id: String,
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
-    answer(&stores, move |stores| {
-        pipette_keyboard_stores::delete_favorite(stores, ty?, &entry_id)?;
-        Ok(Object::new())
-    })
-    .await
+    answer(&stores, move |stores| done(pipette_keyboard_stores::delete_favorite(stores, ty?, &entry_id)))
+        .await
 }
 
 #[tauri::command]
@@ -141,8 +124,12 @@ pub async fn favorite_store_set_hub_post_id(
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
-        pipette_keyboard_stores::set_favorite_hub_post_id(stores, ty?, &entry_id, hub_post_id.as_deref())?;
-        Ok(Object::new())
+        done(pipette_keyboard_stores::set_favorite_hub_post_id(
+            stores,
+            ty?,
+            &entry_id,
+            hub_post_id.as_deref(),
+        ))
     })
     .await
 }
@@ -159,8 +146,7 @@ pub async fn favorite_store_set_hub_private(
     let TypeArg(ty) = favorite_type;
     let link = link.as_deref().map(pipette_js_json::parse).transpose()?.filter(|link| *link != Value::Null);
     answer(&stores, move |stores| {
-        pipette_keyboard_stores::set_favorite_hub_private(stores, ty?, &entry_id, link)?;
-        Ok(Object::new())
+        done(pipette_keyboard_stores::set_favorite_hub_private(stores, ty?, &entry_id, link))
     })
     .await
 }
@@ -174,7 +160,7 @@ pub async fn favorite_store_read_for_export(
     entry_id: Option<String>,
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let bodies = pipette_keyboard_stores::read_favorites_for_export(stores, ty?, entry_id.as_deref())?;
         Ok(field("entries", Value::Array(bodies)))
     })
@@ -248,7 +234,7 @@ pub async fn favorite_store_import_batch(
 ) -> Result<Response, CommandError> {
     let TypeArg(ty) = favorite_type;
     let favorites = import_entries(&entries)?;
-    answer(&stores, move |stores| {
+    answer(&stores, move |stores| -> Answer {
         let counts = pipette_keyboard_stores::import_favorites(stores, ty?, &favorites)?;
         // Counts stay far below 2^53.
         #[allow(clippy::cast_precision_loss)]
