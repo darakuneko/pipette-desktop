@@ -16,10 +16,9 @@ use std::pin::Pin;
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
+use pipette_fs::write_file_atomic;
 use serde::Serialize;
 use tokio::time::Instant;
-
-use crate::fs_atomic::write_file_atomic;
 
 /// How long the quit sequence may run before the app exits anyway. Same
 /// value as `QUIT_SYNC_DEADLINE_MS` in src/main/sync/sync-flush.ts: a
@@ -29,7 +28,7 @@ pub const QUIT_DEADLINE: Duration = Duration::from_secs(30);
 
 /// File name of the marker written when the sequence does not finish (the
 /// deadline cuts it short, or a second exit request ends the app while it
-/// runs), in the app data directory.
+/// runs), in the userData directory.
 pub const PENDING_MARKER_FILE: &str = "quit-pending.json";
 
 /// One step of the quit sequence. The future must not start its work
@@ -199,9 +198,9 @@ async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration, guard: &QuitGuar
             current = Some(phase.name);
             guard.set_running_phase(current);
             let phase_started = Instant::now();
-            eprintln!("[quit] +{}ms phase {} started", started.elapsed().as_millis(), phase.name);
+            log::info!("[quit] +{}ms phase {} started", started.elapsed().as_millis(), phase.name);
             phase.run.await;
-            eprintln!(
+            log::info!(
                 "[quit] +{}ms phase {} finished in {}ms",
                 started.elapsed().as_millis(),
                 phase.name,
@@ -215,7 +214,7 @@ async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration, guard: &QuitGuar
     match result {
         Ok(()) => QuitOutcome::Completed { elapsed: started.elapsed() },
         Err(_) => {
-            eprintln!(
+            log::warn!(
                 "[quit] +{}ms deadline of {}ms reached during {}",
                 started.elapsed().as_millis(),
                 deadline.as_millis(),
@@ -239,15 +238,15 @@ type MarkerUpdate = fn(&Path, &QuitOutcome, Duration) -> std::io::Result<()>;
 
 /// Runs the phases, then records what is left for the next launch: the
 /// marker in `data_dir` is written when the deadline cut the sequence short
-/// and removed when every phase ended. Without a data directory no marker
-/// is kept, and when a second exit request has claimed the marker in
-/// `guard` the sequence leaves it as that request wrote it. The sequence's
+/// and removed when every phase ended. When a second exit request has
+/// claimed the marker in `guard` the sequence leaves it as that request
+/// wrote it. The sequence's
 /// outcome is returned whether the marker update succeeded, failed or ran
 /// past [`MARKER_TIMEOUT`].
 pub async fn run_quit_sequence(
     phases: Vec<QuitPhase>,
     deadline: Duration,
-    data_dir: Option<&Path>,
+    data_dir: &Path,
     guard: &QuitGuard,
 ) -> QuitOutcome {
     run_quit_sequence_with(phases, deadline, data_dir, guard, update_marker, MARKER_TIMEOUT).await
@@ -256,19 +255,17 @@ pub async fn run_quit_sequence(
 async fn run_quit_sequence_with(
     phases: Vec<QuitPhase>,
     deadline: Duration,
-    data_dir: Option<&Path>,
+    data_dir: &Path,
     guard: &QuitGuard,
     update: MarkerUpdate,
     marker_timeout: Duration,
 ) -> QuitOutcome {
     let outcome = run_phases(phases, deadline, guard).await;
     if !guard.claim_marker() {
-        eprintln!("[quit] the marker belongs to the exit request that interrupted the sequence");
+        log::info!("[quit] the marker belongs to the exit request that interrupted the sequence");
         return outcome;
     }
-    if let Some(data_dir) = data_dir {
-        update_marker_bounded(data_dir, &outcome, deadline, update, marker_timeout).await;
-    }
+    update_marker_bounded(data_dir, &outcome, deadline, update, marker_timeout).await;
     outcome
 }
 
@@ -276,28 +273,22 @@ async fn run_quit_sequence_with(
 /// `unfinished` runs, before the app exits. Only the request that got
 /// [`ExitDecision::ExitNow`] calls this: that decision hands it the marker,
 /// and the sequence no longer touches it. Returns within [`MARKER_TIMEOUT`]
-/// whether the write succeeded, failed or stalled; without a data directory
-/// nothing is written.
+/// whether the write succeeded, failed or stalled.
 ///
 /// A request that lands after the last phase ended but before the sequence
 /// claims the marker writes it too; it only makes the next launch look at
 /// work that is already done.
-pub async fn record_interruption(
-    unfinished: Option<&'static str>,
-    deadline: Duration,
-    data_dir: Option<&Path>,
-) {
+pub async fn record_interruption(unfinished: Option<&'static str>, deadline: Duration, data_dir: &Path) {
     record_interruption_with(unfinished, deadline, data_dir, update_marker, MARKER_TIMEOUT).await;
 }
 
 async fn record_interruption_with(
     unfinished: Option<&'static str>,
     deadline: Duration,
-    data_dir: Option<&Path>,
+    data_dir: &Path,
     update: MarkerUpdate,
     marker_timeout: Duration,
 ) {
-    let Some(data_dir) = data_dir else { return };
     let outcome = QuitOutcome::Interrupted { unfinished };
     update_marker_bounded(data_dir, &outcome, deadline, update, marker_timeout).await;
 }
@@ -320,9 +311,9 @@ async fn update_marker_bounded(
     // cancelled, and the process exit ends it.
     match tokio::time::timeout(marker_timeout, task).await {
         Ok(Ok(Ok(()))) => {}
-        Ok(Ok(Err(err))) => eprintln!("[quit] failed to update {}: {err}", marker.display()),
-        Ok(Err(err)) => eprintln!("[quit] the update of {} did not finish: {err}", marker.display()),
-        Err(_) => eprintln!(
+        Ok(Ok(Err(err))) => log::error!("[quit] failed to update {}: {err}", marker.display()),
+        Ok(Err(err)) => log::error!("[quit] the update of {} did not finish: {err}", marker.display()),
+        Err(_) => log::error!(
             "[quit] gave up on updating {} after {}ms",
             marker.display(),
             marker_timeout.as_millis()
@@ -529,7 +520,7 @@ mod tests {
         paused(async {
             let dir = temp_dir("deadline");
             let phases = vec![QuitPhase::new("flushPending", std::future::pending())];
-            let outcome = run_quit_sequence(phases, QUIT_DEADLINE, Some(&dir), &running_guard()).await;
+            let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &dir, &running_guard()).await;
             assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("flushPending") });
             let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
             assert_eq!(body, r#"{"unfinishedPhase":"flushPending","deadlineMs":30000}"#);
@@ -543,7 +534,7 @@ mod tests {
             let dir = temp_dir("completed");
             let marker = dir.join(PENDING_MARKER_FILE);
             std::fs::write(&marker, "{}").unwrap();
-            let outcome = run_quit_sequence(Vec::new(), QUIT_DEADLINE, Some(&dir), &running_guard()).await;
+            let outcome = run_quit_sequence(Vec::new(), QUIT_DEADLINE, &dir, &running_guard()).await;
             assert!(matches!(outcome, QuitOutcome::Completed { .. }));
             assert!(!marker.exists());
             std::fs::remove_dir_all(dir).unwrap();
@@ -557,22 +548,12 @@ mod tests {
             run_quit_sequence(
                 vec![QuitPhase::new("x", std::future::pending())],
                 Duration::from_secs(1),
-                Some(&dir),
+                &dir,
                 &running_guard(),
             )
             .await;
             assert!(dir.join(PENDING_MARKER_FILE).exists());
             std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
-        });
-    }
-
-    #[test]
-    fn without_a_data_directory_the_outcome_is_still_returned() {
-        paused(async {
-            let phases = vec![QuitPhase::new("stuck", std::future::pending())];
-            let outcome =
-                run_quit_sequence(phases, Duration::from_secs(1), None, &QuitGuard::default()).await;
-            assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("stuck") });
         });
     }
 
@@ -605,7 +586,7 @@ mod tests {
         let outcome = real_time(run_quit_sequence_with(
             vec![QuitPhase::new("flushPending", std::future::pending())],
             deadline,
-            Some(&dir),
+            &dir,
             &running_guard(),
             stalled_writer,
             marker_timeout,
@@ -623,7 +604,7 @@ mod tests {
         let outcome = real_time(run_quit_sequence_with(
             Vec::new(),
             QUIT_DEADLINE,
-            Some(&dir),
+            &dir,
             &running_guard(),
             failing_writer,
             MARKER_TIMEOUT,
@@ -709,7 +690,7 @@ mod tests {
             record_interruption_with(
                 Some("flushPending"),
                 QUIT_DEADLINE,
-                Some(&dir),
+                &dir,
                 recording_writer,
                 MARKER_TIMEOUT,
             )
@@ -717,7 +698,7 @@ mod tests {
             let outcome = run_quit_sequence_with(
                 Vec::new(),
                 QUIT_DEADLINE,
-                Some(&dir),
+                &dir,
                 &guard,
                 recording_writer,
                 MARKER_TIMEOUT,
@@ -738,7 +719,7 @@ mod tests {
             record_interruption_with(
                 Some("flushPending"),
                 QUIT_DEADLINE,
-                Some(&dir),
+                &dir,
                 recording_writer,
                 MARKER_TIMEOUT,
             )
@@ -746,7 +727,7 @@ mod tests {
             let outcome = run_quit_sequence_with(
                 vec![QuitPhase::new("flushPending", std::future::pending())],
                 Duration::from_millis(10),
-                Some(&dir),
+                &dir,
                 &guard,
                 recording_writer,
                 MARKER_TIMEOUT,
@@ -765,7 +746,7 @@ mod tests {
         let outcome = real_time(run_quit_sequence_with(
             Vec::new(),
             QUIT_DEADLINE,
-            Some(&dir),
+            &dir,
             &guard,
             recording_writer,
             MARKER_TIMEOUT,
@@ -816,7 +797,7 @@ mod tests {
             let sequence = {
                 let (guard, dir) = (Arc::clone(&guard), dir.clone());
                 runtime.spawn(async move {
-                    run_quit_sequence(phases, Duration::from_millis(1), Some(&dir), &guard).await;
+                    run_quit_sequence(phases, Duration::from_millis(1), &dir, &guard).await;
                     guard.finish();
                 })
             };
@@ -831,7 +812,7 @@ mod tests {
             match decision {
                 ExitDecision::ExitNow => {
                     let phase = guard.running_phase();
-                    runtime.block_on(record_interruption(phase, QUIT_DEADLINE, Some(&dir)));
+                    runtime.block_on(record_interruption(phase, QUIT_DEADLINE, &dir));
                 }
                 ExitDecision::Exit => guard.wait_until_finished(MARKER_TIMEOUT),
                 ExitDecision::StartSequence => unreachable!(),
@@ -873,7 +854,7 @@ mod tests {
         real_time(record_interruption_with(
             Some("flushPending"),
             QUIT_DEADLINE,
-            Some(&dir),
+            &dir,
             recording_writer,
             MARKER_TIMEOUT,
         ));
@@ -890,11 +871,11 @@ mod tests {
     #[test]
     fn an_interruption_writes_the_interrupted_marker() {
         let dir = temp_dir("interrupt");
-        real_time(record_interruption(Some("flushPending"), QUIT_DEADLINE, Some(&dir)));
+        real_time(record_interruption(Some("flushPending"), QUIT_DEADLINE, &dir));
         let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
         assert_eq!(body, r#"{"unfinishedPhase":"flushPending","deadlineMs":30000,"interrupted":true}"#);
 
-        real_time(record_interruption(None, QUIT_DEADLINE, Some(&dir)));
+        real_time(record_interruption(None, QUIT_DEADLINE, &dir));
         let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
         assert_eq!(body, r#"{"unfinishedPhase":null,"deadlineMs":30000,"interrupted":true}"#);
         std::fs::remove_dir_all(dir).unwrap();
@@ -908,7 +889,7 @@ mod tests {
         real_time(record_interruption_with(
             Some("flushPending"),
             QUIT_DEADLINE,
-            Some(&dir),
+            &dir,
             stalled_writer,
             marker_timeout,
         ));

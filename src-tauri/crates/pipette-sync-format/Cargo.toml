@@ -19,6 +19,7 @@ test-util = []
 aes-gcm = { version = "=0.10.3", default-features = false, features = ["aes", "alloc", "getrandom"] }
 base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
 pbkdf2 = { version = "=0.12.2", default-features = false, features = ["hmac"] }
+pipette-time = { path = "../pipette-time" }
 regex = "=1.12.2"
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"

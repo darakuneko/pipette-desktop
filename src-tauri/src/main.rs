@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Tauri entry point: one window that loads the renderer build, the HID
 // and definition commands its vialAPI shim calls, and the tray and quit
-// handling of lifecycle.rs.
+// handling of lifecycle.rs. Before any of that it settles the userData
+// directory, refuses to start while the Electron build holds it, and starts
+// the log in it.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from
@@ -12,13 +14,13 @@
 mod command_error;
 mod definition;
 mod dev_commands;
-mod fs_atomic;
 mod hid_commands;
 #[cfg(test)]
 mod ipc_contract;
 mod lifecycle;
 mod shutdown;
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use pipette_hid::{HidService, VirtualDeviceMode};
@@ -41,10 +43,47 @@ fn app_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
     ]
 }
 
+/// The userData directory (`pipette_fs::user_data_dir`), the root of all the
+/// app keeps on disk.
+pub struct UserDataDir(pub PathBuf);
+
+/// The userData directory, or the reason the app cannot start, for stderr.
+/// Runs before the log exists, so nothing is written to the directory of a
+/// running Electron build.
+fn startup_user_data() -> Result<PathBuf, String> {
+    let dir = pipette_fs::user_data_dir().map_err(|err| format!("cannot start: {err}"))?;
+    refuse_if_electron_holds(&dir)?;
+    Ok(dir)
+}
+
+fn refuse_if_electron_holds(dir: &Path) -> Result<(), String> {
+    match pipette_fs::electron_lock_holder(dir) {
+        Some(holder) => Err(format!(
+            "cannot start: the Electron build of Pipette (pid {}) is running with the data directory {}. \
+             Quit it first.",
+            holder.pid,
+            dir.display()
+        )),
+        None => Ok(()),
+    }
+}
+
 fn main() {
+    let user_data = match startup_user_data() {
+        Ok(dir) => dir,
+        Err(message) => {
+            eprintln!("{message}");
+            std::process::exit(1);
+        }
+    };
+    if let Err(err) = pipette_logger::init(user_data.join("logs")) {
+        log::error!("the log file is unavailable: {err}");
+    }
+    log::info!("Pipette starting");
     let hid = Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env())));
     let builder = tauri::Builder::default()
         .manage(hid)
+        .manage(UserDataDir(user_data))
         .setup(|app| {
             lifecycle::setup(app);
             Ok(())
@@ -54,7 +93,7 @@ fn main() {
     match builder.build(tauri::generate_context!()) {
         Ok(app) => app.run(lifecycle::on_run_event),
         Err(err) => {
-            eprintln!("failed to run the application: {err}");
+            log::error!("failed to run the application: {err}");
             std::process::exit(1);
         }
     }
