@@ -1,0 +1,2 @@
+{"id":"c1","kind":"char-minute","updated_at":1790895605000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789333200000,"char":"q","count":1}}
+{"id":"c2","kind":"char-minute","updated_at":1790895605000,"payload":{"scopeId":"missing-scope","minuteTs":1789333200000,"char":"q","count":1}}

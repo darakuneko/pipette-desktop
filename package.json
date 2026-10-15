@@ -31,6 +31,7 @@
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
     "generate:virtual-device-fixtures": "vitest run --config scripts/virtual-device-fixtures/vitest.config.ts",
     "generate:sync-format-fixtures": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts record-sync-format-fixtures",
+    "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
     "doc:guide": "node docs/build-guide.mjs"
