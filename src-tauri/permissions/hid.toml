@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The raw HID commands of src/hid_commands.rs.
+
+[[set]]
+identifier = "hid"
+description = "Lists, opens and closes HID devices, exchanges reports with the open one, and probes a device through a handle of its own."
+permissions = [
+  "allow-list-devices",
+  "allow-open-device",
+  "allow-close-device",
+  "allow-send-receive",
+  "allow-send",
+  "allow-is-device-open",
+  "allow-hid-probe-open",
+  "allow-hid-probe-send-receive",
+  "allow-hid-probe-close",
+]

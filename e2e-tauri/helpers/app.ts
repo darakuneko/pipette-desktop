@@ -61,6 +61,27 @@ async function findDeviceButton(name: string): Promise<WebdriverIO.Element> {
   return found
 }
 
+/** Waits until no element matching `selector` is displayed. Each poll
+ *  queries the selector afresh: an element that is removed between being
+ *  found and being checked (WebKitWebDriver then reports a stale element)
+ *  only ends that poll, and the next query no longer finds it. */
+export async function waitForGone(selector: string, timeoutMsg: string): Promise<void> {
+  await browser.waitUntil(
+    async () => {
+      try {
+        for (const element of await $$(selector)) {
+          if (await element.isDisplayed()) return false
+        }
+        return true
+      } catch (err) {
+        if (err instanceof Error && /stale element/i.test(err.message)) return false
+        throw err
+      }
+    },
+    { timeoutMsg },
+  )
+}
+
 /** Connects the virtual keyboard from the device list and waits for its
  *  keymap editor. */
 export async function connectVirtualKeyboard(): Promise<void> {

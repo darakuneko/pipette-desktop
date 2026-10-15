@@ -12,6 +12,8 @@
 #![cfg_attr(release_profile, windows_subsystem = "windows")]
 
 mod app_config;
+#[cfg(test)]
+mod capability_files;
 mod command_error;
 mod definition;
 mod dev_commands;
@@ -19,6 +21,9 @@ mod hid_commands;
 #[cfg(test)]
 mod ipc_contract;
 mod lifecycle;
+mod main_window;
+mod navigation;
+mod shell;
 mod shutdown;
 
 use std::path::{Path, PathBuf};
@@ -29,6 +34,7 @@ use tauri::ipc::Invoke;
 use tauri::{Manager, Runtime};
 
 use crate::hid_commands::Hid;
+use crate::shell::ExternalOpener;
 
 /// The handler of the app commands; their permissions are listed in
 /// build.rs and granted in capabilities/main.json. Generic over the runtime
@@ -48,6 +54,7 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         definition::decompress_definition,
         app_config::app_config_get_all,
         app_config::app_config_set,
+        shell::open_external,
     ]
 }
 
@@ -94,10 +101,10 @@ fn main() {
         .manage(hid)
         .manage(UserDataDir(user_data))
         .manage(config)
+        .manage(ExternalOpener::system())
         .setup(|app| {
-            if let Some(window) = app.get_webview_window("main") {
-                app_config::apply_stored_zoom(&app.state::<app_config::AppConfig>(), &window);
-            }
+            let window = main_window::main_window_builder(app.handle())?.build()?;
+            app_config::apply_stored_zoom(&app.state::<app_config::AppConfig>(), &window);
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
             Ok(())

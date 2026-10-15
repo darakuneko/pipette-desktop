@@ -33,6 +33,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
 interface Shim {
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
+  shell: typeof import('../api/shell')
   transport: typeof import('../hid-transport')
 }
 
@@ -42,6 +43,7 @@ async function load(): Promise<Shim> {
   return {
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
+    shell: await import('../api/shell'),
     transport: await import('../hid-transport'),
   }
 }
@@ -88,6 +90,7 @@ const CALLERS: Record<string, Caller> = {
     run: ({ device }, [id, data]) => device.probeSendReceive(id as number, data as number[]),
   },
   'device.probeClose': { run: ({ device }, [id]) => device.probeClose(id as number), void: true },
+  openExternal: { run: ({ shell }, [url]) => shell.shellApi.openExternal(url as string), void: true },
 }
 
 afterEach(() => {

@@ -5,8 +5,14 @@
 //! (src/tauri-shim/__tests__/ipc-fixtures.test.ts) replay them against the
 //! shim. Here each entry runs through the app's own command handler
 //! (`app_commands` in main.rs) on Tauri's mock runtime, with a new app
-//! config in a temp directory: the command must be registered, take
-//! `invokeArgs` as its arguments, and respond with `response`.
+//! config in a temp directory and a browser that records what it is asked
+//! to open: the command must be registered, take `invokeArgs` as its
+//! arguments, and respond with `response`.
+//!
+//! The app is built with the app's own context, so every call also passes
+//! the access control the build generates from capabilities/: the tests
+//! below check that it lets the main window's pages call every app command
+//! and nothing else.
 //!
 //! The HID service lists only the virtual keyboard. The virtual keyboard
 //! cannot be probed, so behind it sits one scripted hardware keyboard
@@ -23,13 +29,15 @@ use std::sync::{Arc, Mutex, PoisonError};
 use pipette_app_config::AppConfigStore;
 use pipette_hid::{HidBackend, HidError, HidHandle, HidService, RawDeviceInfo, Timing, VirtualDeviceMode};
 use serde_json::{Value, json};
-use tauri::WebviewWindow;
 use tauri::ipc::{CallbackFn, InvokeBody};
-use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets};
+use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder};
 use tauri::webview::InvokeRequest;
+use tauri::{App, WebviewWindow};
 use tempfile::TempDir;
 
 use crate::hid_commands::Hid;
+use crate::main_window::{MAIN_WINDOW, main_window_builder};
+use crate::shell::ExternalOpener;
 
 include!("app_command_names.rs");
 
@@ -120,34 +128,76 @@ fn entries() -> Vec<Entry> {
         .collect()
 }
 
+/// The page every call comes from unless a test says otherwise.
+const APP_PAGE: &str = "tauri://localhost/tauri.html";
+
 /// A HID service that lists only the virtual keyboard, with
 /// [`PROBE_KEYBOARD`] as its hardware.
 pub(crate) fn probe_keyboard_service() -> HidService {
     HidService::with_backend(Box::new(ProbeKeyboard), VirtualDeviceMode::Only, Timing::new(|| 0, |_| {}))
 }
 
-/// A fresh app with the app commands and the state they use, with
-/// `user_data` as its userData directory, and its window.
-fn app_window(user_data: &Path) -> WebviewWindow<MockRuntime> {
+/// A fresh app with the app commands, the state they use, `opener` as the
+/// browser and `user_data` as its userData directory, and the access control
+/// the app's build generates.
+fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
-    let app = mock_builder()
+    mock_builder()
         .manage(Hid(Arc::new(probe_keyboard_service())))
         .manage(config)
+        .manage(opener)
         .invoke_handler(crate::app_commands())
-        .build(mock_context(noop_assets()))
-        .unwrap();
-    tauri::WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap()
+        .build(tauri::generate_context!(test = true))
+        .unwrap()
+}
+
+/// The main window of `app`, built as the app builds it. The mock runtime
+/// does not load pages, so the window's navigation and new-window handlers
+/// never run here; navigation.rs tests the rule they apply.
+fn main_window(app: &App<MockRuntime>) -> WebviewWindow<MockRuntime> {
+    main_window_builder(app).unwrap().build().unwrap()
+}
+
+/// The main window of a fresh app whose browser opens nothing, and the
+/// userData directory of the app, removed when this is dropped.
+struct TestWindow {
+    window: WebviewWindow<MockRuntime>,
+    _user_data: TempDir,
+}
+
+impl std::ops::Deref for TestWindow {
+    type Target = WebviewWindow<MockRuntime>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.window
+    }
+}
+
+fn app_window() -> TestWindow {
+    window_with(ExternalOpener::new(|_| Ok(())))
+}
+
+/// The main window of a fresh app with `opener` as its browser.
+fn window_with(opener: ExternalOpener) -> TestWindow {
+    let user_data = TempDir::new().unwrap();
+    let window = main_window(&mock_app(opener, user_data.path()));
+    TestWindow { window, _user_data: user_data }
 }
 
 /// The command's response, or its error (a deserialization failure for
-/// arguments that do not fit, "command ... not found" for one that is not
-/// registered).
-fn invoke(window: &WebviewWindow<MockRuntime>, command: &str, args: &Value) -> Result<Value, Value> {
+/// arguments that do not fit, "... not allowed ..." for a command the
+/// capabilities do not grant to `page` in this window).
+fn invoke_from(
+    window: &WebviewWindow<MockRuntime>,
+    page: &str,
+    command: &str,
+    args: &Value,
+) -> Result<Value, Value> {
     let request = InvokeRequest {
         cmd: command.into(),
         callback: CallbackFn(0),
         error: CallbackFn(1),
-        url: "tauri://localhost".parse().unwrap(),
+        url: page.parse().unwrap(),
         body: InvokeBody::Json(args.clone()),
         headers: Default::default(),
         invoke_key: INVOKE_KEY.to_string(),
@@ -155,13 +205,20 @@ fn invoke(window: &WebviewWindow<MockRuntime>, command: &str, args: &Value) -> R
     get_ipc_response(window, request).map(|body| body.deserialize::<Value>().unwrap())
 }
 
+fn invoke(window: &WebviewWindow<MockRuntime>, command: &str, args: &Value) -> Result<Value, Value> {
+    invoke_from(window, APP_PAGE, command, args)
+}
+
+fn rejected_by_acl(result: &Result<Value, Value>) -> bool {
+    matches!(result, Err(Value::String(message)) if message.contains("not allowed"))
+}
+
 /// Why `entry` does not match the command, if it does not.
 fn mismatch(entry: &Entry) -> Option<String> {
     if !APP_COMMANDS.contains(&entry.command.as_str()) {
         return Some("not in APP_COMMANDS".into());
     }
-    let user_data = TempDir::new().unwrap();
-    run_entry(entry, &app_window(user_data.path()))
+    run_entry(entry, &app_window())
 }
 
 fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<String> {
@@ -225,4 +282,88 @@ fn export_app_command_names() {
     );
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(&path, text).unwrap();
+}
+
+#[test]
+fn the_main_window_may_call_every_app_command() {
+    let window = app_window();
+    let rejected: Vec<&str> = APP_COMMANDS
+        .iter()
+        .copied()
+        .filter(|command| rejected_by_acl(&invoke(&window, command, &json!({}))))
+        .collect();
+    assert!(rejected.is_empty(), "rejected: {rejected:?}");
+}
+
+#[test]
+fn the_main_window_is_the_one_the_capabilities_name() {
+    assert_eq!(app_window().label(), MAIN_WINDOW);
+}
+
+/// The shim's `subscribe` (src/tauri-shim/ipc.ts) listens through the event
+/// plugin.
+#[test]
+fn the_main_window_may_listen_to_events() {
+    let window = app_window();
+    let target = json!({ "kind": "Any" });
+    let listened =
+        invoke(&window, "plugin:event|listen", &json!({ "event": "e", "target": target, "handler": 1 }));
+    let Ok(Value::Number(event_id)) = listened else { panic!("listen: {listened:?}") };
+    let unlistened = invoke(&window, "plugin:event|unlisten", &json!({ "event": "e", "eventId": event_id }));
+    assert_eq!(unlistened, Ok(Value::Null));
+}
+
+#[test]
+fn commands_the_capabilities_do_not_grant_are_rejected() {
+    let window = app_window();
+    for (command, args) in [
+        ("no_such_command", json!({})),
+        ("plugin:opener|open_url", json!({ "url": "https://example.com/" })),
+        // Registered by Tauri itself, but not granted.
+        ("plugin:event|emit", json!({ "event": "e", "payload": null })),
+    ] {
+        let result = invoke(&window, command, &args);
+        assert!(rejected_by_acl(&result), "{command}: {result:?}");
+    }
+}
+
+#[test]
+fn other_windows_and_remote_pages_are_rejected() {
+    let user_data = TempDir::new().unwrap();
+    let app = mock_app(ExternalOpener::new(|_| Ok(())), user_data.path());
+    let main = main_window(&app);
+    let other = tauri::WebviewWindowBuilder::new(&app, "other", Default::default()).build().unwrap();
+    assert!(rejected_by_acl(&invoke(&other, "list_devices", &json!({}))));
+    for page in ["https://example.com/", "http://tauri.localhost.example.com/tauri.html"] {
+        let result = invoke_from(&main, page, "list_devices", &json!({}));
+        assert!(rejected_by_acl(&result), "{page}: {result:?}");
+    }
+}
+
+#[test]
+fn open_external_hands_only_web_urls_to_the_browser() {
+    let opened = Arc::new(Mutex::new(Vec::<String>::new()));
+    let record = Arc::clone(&opened);
+    let opener = ExternalOpener::new(move |url| {
+        record.lock().unwrap().push(url.to_owned());
+        Ok(())
+    });
+    let window = window_with(opener);
+    let open = |url: &str| invoke(&window, "open_external", &json!({ "url": url }));
+
+    assert_eq!(open("HTTPS://Example.com"), Ok(Value::Null));
+    assert_eq!(open("file:///etc/passwd"), Err(json!("Invalid URL scheme")));
+    assert_eq!(open("javascript:alert(1)"), Err(json!("Invalid URL scheme")));
+    assert_eq!(open("example.com"), Err(json!("Invalid URL")));
+    assert_eq!(*opened.lock().unwrap(), ["https://example.com/"]);
+}
+
+#[test]
+fn open_external_reports_a_browser_that_fails_to_start() {
+    let opener = ExternalOpener::new(|_| Err(std::io::Error::other("no browser").into()));
+    let window = window_with(opener);
+    assert_eq!(
+        invoke(&window, "open_external", &json!({ "url": "https://example.com/" })),
+        Err(json!("no browser"))
+    );
 }

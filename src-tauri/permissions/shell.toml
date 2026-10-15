@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/shell.rs that hand things to the system.
+
+[[set]]
+identifier = "shell"
+description = "Opens http and https links in the user's browser."
+permissions = ["allow-open-external"]

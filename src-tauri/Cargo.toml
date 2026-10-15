@@ -45,6 +45,10 @@ xz4rust = { version = "=0.2.3", default-features = false, features = ["std", "no
 # dependency: the derives sit on the production types, and as a
 # dev-dependency every derive and #[ts] attribute would need cfg_attr(test).
 ts-rs = "=12.0.1"
+# Opens links in the browser (src/shell.rs). Only its Rust functions are
+# used: the plugin is not registered, so the page gets none of its commands.
+tauri-plugin-opener = "=2.7.2"
+thiserror = "=2.0.21"
 
 # The WebKitGTK view behind the Linux window, for the window screenshots of
 # the development tools (src/dev_commands/tools.rs). Same versions as wry uses.
@@ -64,6 +68,8 @@ dev-tools = ["dep:webkit2gtk", "dep:cairo-rs"]
 pipette-hid = { path = "crates/pipette-hid", features = ["test-util"] }
 sha2 = { version = "=0.10.9", default-features = false }
 hex = "=0.4.3"
+# The permission sets (permissions/*.toml) the capability tests read.
+toml = "=1.1.8"
 # Paused time for the quit sequence tests.
 tokio = { version = "=1.53.3", features = ["rt", "test-util"] }
 # The mock runtime the IPC contract tests (src/ipc_contract.rs) run the app

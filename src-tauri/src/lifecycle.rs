@@ -34,6 +34,7 @@ use tauri::{App, AppHandle, Manager, RunEvent, Webview, Window, WindowEvent, Wry
 use crate::UserDataDir;
 use crate::app_config::AppConfig;
 use crate::hid_commands::Hid;
+use crate::main_window::MAIN_WINDOW;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
@@ -179,9 +180,6 @@ pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
         }
     }
 }
-
-/// The label of the window the renderer runs in.
-const MAIN_WINDOW: &str = "main";
 
 /// Closes the HID probe handle when the main window starts loading a page.
 /// The renderer closes its probe handle when the probe ends, but a reload or

@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The keyboard definition commands of src/definition.rs.
+
+[[set]]
+identifier = "definition"
+description = "Decompresses the keyboard definition a keyboard reports."
+permissions = ["allow-decompress-definition"]

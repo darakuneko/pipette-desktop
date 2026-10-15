@@ -5,6 +5,7 @@
 // tests share one app session and run in order: each starts where the
 // previous one left the window.
 
+import { existsSync, readFileSync } from 'node:fs'
 import { $, browser, expect } from '@wdio/globals'
 import {
   closeKeyPopover,
@@ -16,7 +17,9 @@ import {
   openToolsOverlay,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
+  waitForGone,
 } from '../helpers/app'
+import { appLogPath } from '../helpers/driver'
 
 const UNLOCK_TIMEOUT_MS = 15_000
 const KC_Z = '001D'
@@ -48,7 +51,7 @@ describe('Tauri build smoke', () => {
     // Reconnecting reloads the keymap from the device, which keeps it across
     // close and re-open like a powered keyboard.
     await $('[data-testid="disconnect-button"]').click()
-    await $(EDITOR_SELECTOR).waitForDisplayed({ reverse: true })
+    await waitForGone(EDITOR_SELECTOR, 'the keymap editor stayed open after disconnecting')
     await connectVirtualKeyboard()
 
     await openKeycodeHexInput(0, 0)
@@ -85,10 +88,50 @@ describe('Tauri build smoke', () => {
   })
 })
 
+/** Waits until the app's log has a line containing `text`. */
+async function waitForLogLine(text: string): Promise<void> {
+  const path = appLogPath()
+  await browser.waitUntil(() => existsSync(path) && readFileSync(path, 'utf8').includes(text), {
+    timeoutMsg: `the app log has no line with "${text}"`,
+  })
+}
+
+describe('Tauri build window guard', () => {
+  it('keeps the window on the app when a page navigates away or opens a window', async () => {
+    const appUrl = await browser.getUrl()
+    const windows = await browser.getWindowHandles()
+
+    await browser.execute(() => {
+      window.location.href = 'https://example.com/e2e-navigation'
+    })
+    await waitForLogLine('blocked navigation to https://example.com/e2e-navigation')
+    expect(await browser.getUrl()).toBe(appUrl)
+
+    // window.open from a script stops at WebKit's popup blocker; a link with
+    // a target clicked by the user reaches the window's new-window handler.
+    await browser.execute(() => {
+      const link = document.createElement('a')
+      link.id = 'e2e-blank-link'
+      link.href = 'https://example.com/e2e-new-window'
+      link.target = '_blank'
+      link.textContent = 'e2e link'
+      Object.assign(link.style, { position: 'fixed', left: '0px', top: '0px', zIndex: '2147483647', fontSize: '32px' })
+      document.body.append(link)
+    })
+    try {
+      await $('#e2e-blank-link').click()
+      await waitForLogLine('blocked a new window for https://example.com/e2e-new-window')
+    } finally {
+      await browser.execute(() => document.getElementById('e2e-blank-link')?.remove())
+    }
+    expect(await browser.getWindowHandles()).toEqual(windows)
+    expect(await browser.getUrl()).toBe(appUrl)
+  })
+})
+
 // Checks of the app lifecycle, pending until the backend has what they need:
-// the app config store (theme) and the single-instance and navigation guards.
+// the app config store (theme) and the single-instance guard.
 describe('Tauri build lifecycle', () => {
   it('keeps the theme set in the settings across a restart')
   it('brings the first window forward when a second instance starts, and the second exits with 0')
-  it('blocks navigation to an external page and window.open')
 })
