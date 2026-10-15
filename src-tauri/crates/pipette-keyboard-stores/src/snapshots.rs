@@ -62,8 +62,9 @@ pub enum SnapshotError {
     NotFound,
     #[error("Entry has been deleted")]
     Deleted,
-    /// A body migration found a body other than the one it was computed
-    /// from.
+    /// An update with `migrate_from` (the v1 → v2 rewrite of a body's
+    /// content) found a stored body other than `migrate_from`. Unrelated to
+    /// the move of legacy body filenames.
     #[error("Entry changed since it was read")]
     Changed,
     #[error("max entries reached")]
