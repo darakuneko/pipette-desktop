@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Cargo workspace for the Rust backend.
+#
+# Library crates live under crates/*. The Tauri application crate is meant to
+# be this directory itself (src-tauri/, the Tauri default): when it is added,
+# a [package] section goes into this same file next to [workspace], which
+# makes the app the root member while crates/* stay members. Until then this
+# is a virtual manifest.
+
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.4.27"
+edition = "2024"
+license = "GPL-2.0-or-later"
+publish = false
+rust-version = "1.85"
+
+[workspace.dependencies]
+pipette-virtual-device = { path = "crates/pipette-virtual-device" }
+hidapi = { version = "2.6", default-features = false, features = ["linux-static-hidraw"] }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+lzma-rs = "0.3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
