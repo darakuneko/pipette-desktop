@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Window and app behavior: the tray icon, closing the window into the tray,
-//! and the quit sequence every exit path goes through (src/shutdown.rs).
+//! a launch of the app while it runs, and the quit sequence every exit path
+//! goes through (src/shutdown.rs).
 //!
 //! Exit paths and how each reaches the quit sequence:
 //! - the tray's Quit item and SIGTERM / SIGINT call `AppHandle::exit`, which
@@ -33,7 +34,7 @@ use pipette_hid::HidService;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
-use tauri::{App, AppHandle, Manager, RunEvent, Runtime, Webview, Window, WindowEvent, Wry};
+use tauri::{App, AppHandle, Manager, RunEvent, Runtime, State, Webview, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
 use crate::app_config::AppConfig;
@@ -65,6 +66,17 @@ pub struct Lifecycle {
     /// Set once the tray icon exists. Closing hides the window only then:
     /// a hidden window with no tray icon to restore it would be unreachable.
     tray_active: AtomicBool,
+}
+
+impl Lifecycle {
+    fn is_tray_active(&self) -> bool {
+        self.tray_active.load(Ordering::Acquire)
+    }
+}
+
+/// The shared lifecycle state; `None` before setup has run.
+fn lifecycle_state<R: Runtime, M: Manager<R>>(manager: &M) -> Option<State<'_, Arc<Lifecycle>>> {
+    manager.try_state::<Arc<Lifecycle>>()
 }
 
 /// The tray icon's id.
@@ -110,7 +122,7 @@ pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
 
 fn add_tray(app: &AppHandle<Wry>) {
     let lifecycle = app.state::<Arc<Lifecycle>>();
-    if lifecycle.tray_active.load(Ordering::Acquire) {
+    if lifecycle.is_tray_active() {
         return;
     }
     match build_tray(app) {
@@ -166,9 +178,43 @@ fn show_main_window(app: &AppHandle<Wry>) {
     }
 }
 
+/// What a launch of another instance did to this one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SecondLaunch {
+    Revealed,
+    /// Setup has not run yet: the startup is about to open the window anyway,
+    /// as the Electron build ignores a relaunch before 'ready'.
+    IgnoredWhileStarting,
+    /// The quit sequence has started; showing the window would not stop it.
+    IgnoredWhileQuitting,
+}
+
+/// Called by the single-instance plugin when the app is launched again while
+/// this instance runs: the other process exits with 0, and this one shows
+/// its main window, as the 'second-instance' handler of src/main/index.ts
+/// does. Runs on the plugin's D-Bus thread on Linux.
+pub fn on_second_launch(app: &AppHandle<Wry>) {
+    let outcome = respond_to_second_launch(app, show_main_window);
+    log::info!("[app] the app was launched again: {outcome:?}");
+}
+
+fn respond_to_second_launch<R: Runtime>(
+    app: &AppHandle<R>,
+    reveal: impl FnOnce(&AppHandle<R>),
+) -> SecondLaunch {
+    let Some(lifecycle) = lifecycle_state(app) else {
+        return SecondLaunch::IgnoredWhileStarting;
+    };
+    if lifecycle.quit.is_quitting() {
+        return SecondLaunch::IgnoredWhileQuitting;
+    }
+    reveal(app);
+    SecondLaunch::Revealed
+}
+
 /// Whether the tray icon exists, so a hidden window can be shown again.
 pub fn is_tray_active<R: Runtime>(app: &AppHandle<R>) -> bool {
-    app.try_state::<Arc<Lifecycle>>().is_some_and(|lifecycle| lifecycle.tray_active.load(Ordering::Acquire))
+    lifecycle_state(app).is_some_and(|lifecycle| lifecycle.is_tray_active())
 }
 
 /// Saves the window state when the window is asked to close, then hides
@@ -179,8 +225,9 @@ pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
     match event {
         WindowEvent::CloseRequested { api, .. } => {
             main_window::save_window_state(window, &window.state::<AppConfig>());
-            let lifecycle = window.state::<Arc<Lifecycle>>();
-            if lifecycle.tray_active.load(Ordering::Acquire) && !lifecycle.quit.is_quitting() {
+            let hide = lifecycle_state(window)
+                .is_some_and(|lifecycle| lifecycle.is_tray_active() && !lifecycle.quit.is_quitting());
+            if hide {
                 api.prevent_close();
                 main_window::conceal(window);
             }
@@ -372,5 +419,42 @@ mod tests {
     #[test]
     fn the_delay_applies_to_flush_pending() {
         assert_eq!(QUIT_PHASES[DEV_DELAYED_PHASE], "flushPending");
+    }
+
+    /// Runs the second instance handling on a mock app, counting the
+    /// reveals instead of showing a window.
+    fn second_launch(lifecycle: Option<Lifecycle>) -> (SecondLaunch, usize) {
+        let app = tauri::test::mock_app();
+        if let Some(lifecycle) = lifecycle {
+            app.manage(Arc::new(lifecycle));
+        }
+        let mut reveals = 0;
+        let outcome = respond_to_second_launch(app.handle(), |_| reveals += 1);
+        (outcome, reveals)
+    }
+
+    #[test]
+    fn a_second_launch_reveals_the_window_of_the_running_app() {
+        assert_eq!(second_launch(Some(Lifecycle::default())), (SecondLaunch::Revealed, 1));
+    }
+
+    #[test]
+    fn a_second_launch_does_nothing_while_quitting() {
+        let lifecycle = Lifecycle::default();
+        assert_eq!(lifecycle.quit.on_exit_requested(), ExitDecision::StartSequence);
+        assert_eq!(second_launch(Some(lifecycle)), (SecondLaunch::IgnoredWhileQuitting, 0));
+    }
+
+    #[test]
+    fn a_second_launch_does_nothing_after_the_quit_sequence_ends() {
+        let lifecycle = Lifecycle::default();
+        lifecycle.quit.on_exit_requested();
+        lifecycle.quit.finish();
+        assert_eq!(second_launch(Some(lifecycle)), (SecondLaunch::IgnoredWhileQuitting, 0));
+    }
+
+    #[test]
+    fn a_second_launch_does_nothing_before_setup_has_run() {
+        assert_eq!(second_launch(None), (SecondLaunch::IgnoredWhileStarting, 0));
     }
 }

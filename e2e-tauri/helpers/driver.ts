@@ -61,6 +61,41 @@ export function appLogPath(): string {
   return join(session.userDataDir, 'logs', 'pipette-0.log')
 }
 
+/** The environment the app of a session runs with: the virtual keyboard
+ *  only, and the session's userData directory. */
+function appEnv(userDataDir: string): NodeJS.ProcessEnv {
+  return { ...process.env, PIPETTE_VIRTUAL_DEVICE: 'only', PIPETTE_USER_DATA_DIR: userDataDir }
+}
+
+export interface LaunchResult {
+  code: number | null
+  signal: NodeJS.Signals | null
+  /** stdout and stderr, for the failure message. */
+  output: string
+}
+
+/** Starts the app binary again, outside WebDriver, with the environment of
+ *  the running session's app, and resolves when that process exits. A
+ *  process still running after `timeoutMs` is killed. */
+export function launchAppAgain(timeoutMs: number): Promise<LaunchResult> {
+  if (!session) throw new Error('no session is running')
+  const child = spawn(APP_BINARY, [], { env: appEnv(session.userDataDir), stdio: ['ignore', 'pipe', 'pipe'] })
+  let output = ''
+  child.stdout.on('data', (chunk) => { output += chunk })
+  child.stderr.on('data', (chunk) => { output += chunk })
+  const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs)
+  return new Promise((resolvePromise, reject) => {
+    child.once('error', (err) => {
+      clearTimeout(timer)
+      reject(new Error(`${APP_BINARY} could not be started: ${err.message}`))
+    })
+    child.once('close', (code, signal) => {
+      clearTimeout(timer)
+      resolvePromise({ code, signal, output })
+    })
+  })
+}
+
 /** Starts tauri-driver for one session with a fresh userData directory, and
  *  resolves once it accepts connections. */
 export async function startDriver(): Promise<DriverSession> {
@@ -68,11 +103,7 @@ export async function startDriver(): Promise<DriverSession> {
   const userDataDir = mkdtempSync(join(tmpdir(), 'pipette-e2e-tauri-'))
   stopping = false
   const driver = spawn(DRIVER_COMMAND, ['--port', String(DRIVER_PORT), '--native-port', String(NATIVE_DRIVER_PORT)], {
-    env: {
-      ...process.env,
-      PIPETTE_VIRTUAL_DEVICE: 'only',
-      PIPETTE_USER_DATA_DIR: userDataDir,
-    },
+    env: appEnv(userDataDir),
     stdio: ['ignore', 'inherit', 'inherit'],
   })
   driver.on('exit', (code, signal) => {
