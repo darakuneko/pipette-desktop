@@ -4,6 +4,7 @@ import tsparser from '@typescript-eslint/parser'
 export default [
   {
     // The fixture generators under scripts/ get the same TypeScript rules as src/.
+    // Their globs must match the include list in tsconfig.scripts.json.
     files: ['src/**/*.{ts,tsx}', 'scripts/*-fixtures/**/*.ts', 'scripts/fixture-*.ts'],
     languageOptions: {
       parser: tsparser,
