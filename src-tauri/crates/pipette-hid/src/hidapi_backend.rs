@@ -63,8 +63,9 @@ impl HidBackend for HidapiBackend {
 }
 
 /// `HidDevice` is `Send` but not `Sync`; the mutex makes the handle
-/// shareable. The service already serializes all I/O, so it is never
-/// contended.
+/// shareable. Each handle has one caller at a time (the main connection's
+/// requests are serialized by the service's queue, a probe's by the
+/// WebView awaiting each one), so it is not contended.
 struct HidapiHandle {
     device: Mutex<HidDevice>,
 }

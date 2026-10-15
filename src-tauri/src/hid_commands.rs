@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The raw HID commands behind the vialAPI shim's device members and the
-//! WebView-side transport (src/tauri-shim/hid-transport.ts). Only bytes cross
-//! here; the Vial protocol runs in the WebView.
+//! The raw HID commands behind the vialAPI shim's device members, the
+//! WebView-side transport (src/tauri-shim/hid-transport.ts) and the probe
+//! (src/tauri-shim/api/device.ts). Only bytes cross here; the Vial protocol
+//! runs in the WebView.
 
 use std::sync::Arc;
 
@@ -128,6 +129,37 @@ pub async fn send(hid: State<'_, Hid>, data: HidData) -> Result<(), CommandError
 #[tauri::command]
 pub async fn is_device_open(hid: State<'_, Hid>) -> Result<bool, CommandError> {
     blocking(&hid, |service| service.is_device_open()).await
+}
+
+/// Opens a keyboard other than the main connection for a probe (see
+/// `HidService::probe_open`) and returns the probe handle's id.
+#[tauri::command]
+pub async fn hid_probe_open(
+    hid: State<'_, Hid>,
+    vendor_id: u16,
+    product_id: u16,
+    serial_number: Option<String>,
+) -> Result<u32, CommandError> {
+    blocking(&hid, move |service| service.probe_open(vendor_id, product_id, serial_number.as_deref())).await
+}
+
+/// One report over the probe handle `id`, one read, no retries.
+#[tauri::command]
+pub async fn hid_probe_send_receive(
+    hid: State<'_, Hid>,
+    id: u32,
+    data: HidData,
+) -> Result<Vec<u8>, CommandError> {
+    blocking(&hid, move |service| service.probe_send_receive(id, &data.0).map(|report| report.to_vec())).await
+}
+
+#[tauri::command]
+pub async fn hid_probe_close(hid: State<'_, Hid>, id: u32) -> Result<(), CommandError> {
+    blocking(&hid, move |service| {
+        service.probe_close(id);
+        Ok(())
+    })
+    .await
 }
 
 #[cfg(test)]

@@ -163,17 +163,26 @@ pub async fn dev_screenshot(window: tauri::WebviewWindow, name: String) -> Resul
         .map_err(|_| CommandError::new("the snapshot was cancelled"))?
 }
 
-/// Adds the development tools to `builder`: the script hook, and an invoke
+/// Adds the development tools to `builder`: a page load hook that runs
+/// `on_page_load`, the app's, and then the script hook, and an invoke
 /// handler that routes the development commands to their handler and
 /// everything else to `app`, the handler of the app commands.
-pub fn install<F>(builder: Builder<Wry>, app: F) -> Builder<Wry>
+pub fn install<F, P>(builder: Builder<Wry>, app: F, on_page_load: P) -> Builder<Wry>
 where
     F: Fn(Invoke<Wry>) -> bool + Send + Sync + 'static,
+    P: Fn(&Webview<Wry>, &PageLoadPayload<'_>) + Send + Sync + 'static,
 {
     let dev = dev_commands();
-    builder.on_page_load(run_dev_script).invoke_handler(move |invoke: Invoke<Wry>| {
-        if is_dev_command(invoke.message.command()) { dev(invoke) } else { app(invoke) }
-    })
+    builder
+        .on_page_load(move |webview, payload| {
+            on_page_load(webview, payload);
+            run_dev_script(webview, payload);
+        })
+        .invoke_handler(
+            move |invoke: Invoke<Wry>| {
+                if is_dev_command(invoke.message.command()) { dev(invoke) } else { app(invoke) }
+            },
+        )
 }
 
 fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {

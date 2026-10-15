@@ -84,11 +84,10 @@ describe('implemented', () => {
     expect(invoke).toHaveBeenCalledWith('list_devices', undefined)
   })
 
-  it('leaves probeDevice to the stub without calling the backend', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  it('asks the backend for a probe handle', async () => {
     invoke.mockClear()
-    expect(implemented.probeDevice).toBeUndefined()
-    await expect(createVialApi(implemented).probeDevice(1, 2)).resolves.toBeUndefined()
-    expect(invoke).not.toHaveBeenCalled()
+    invoke.mockRejectedValueOnce('Probe target device not found')
+    await expect(createVialApi(implemented).probeDevice(1, 2)).rejects.toThrow('Probe target device not found')
+    expect(invoke).toHaveBeenCalledWith('hid_probe_open', { vendorId: 1, productId: 2, serialNumber: undefined })
   })
 })
