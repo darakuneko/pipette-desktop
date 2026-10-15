@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/snapshots.rs: the snapshots of each
+# keyboard.
+
+[[set]]
+identifier = "snapshots"
+description = "Lists, saves, loads, updates, renames and deletes the snapshots of a keyboard, and links them to Hub posts."
+permissions = [
+  "allow-snapshot-store-list",
+  "allow-snapshot-store-save",
+  "allow-snapshot-store-load",
+  "allow-snapshot-store-update",
+  "allow-snapshot-store-rename",
+  "allow-snapshot-store-delete",
+  "allow-snapshot-store-set-hub-post-id",
+  "allow-snapshot-store-set-hub-private",
+]

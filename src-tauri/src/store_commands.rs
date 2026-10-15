@@ -4,4 +4,5 @@
 
 pub mod favorites;
 pub mod keyboard_data;
+pub mod snapshots;
 pub mod sync_pending;

@@ -88,6 +88,8 @@ dev-tools = ["dep:webkit2gtk", "dep:cairo-rs"]
 # A scripted hardware keyboard behind the IPC contract tests' HID service
 # (src/ipc_contract.rs), for the probe commands.
 pipette-hid = { path = "crates/pipette-hid", features = ["test-util"] }
+# Fixed entry ids for the store command tests (src/store_commands/).
+pipette-entry-store = { path = "crates/pipette-entry-store", features = ["test-util"] }
 sha2 = { version = "=0.10.9", default-features = false }
 hex = "=0.4.3"
 # The permission sets (permissions/*.toml) the capability tests read.

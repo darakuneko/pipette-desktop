@@ -11,6 +11,7 @@ import { favoritesApi } from './api/favorites'
 import { filesApi } from './api/files'
 import { keyboardDataApi } from './api/keyboard-data'
 import { shellApi } from './api/shell'
+import { snapshotsApi } from './api/snapshots'
 import { syncPendingApi } from './api/sync-pending'
 import { windowApi } from './api/window'
 import { fakes } from './fakes'
@@ -25,6 +26,7 @@ export const real = {
   ...filesApi,
   ...keyboardDataApi,
   ...favoritesApi,
+  ...snapshotsApi,
 } satisfies Partial<VialAPI>
 
 export const implemented: Partial<VialAPI> = { ...real, ...fakes }

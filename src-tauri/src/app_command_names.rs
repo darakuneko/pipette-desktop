@@ -59,4 +59,13 @@ pub const APP_COMMANDS: &[&str] = &[
     "favorite_store_save_export",
     "favorite_store_open_import",
     "favorite_store_import_batch",
+    // src/store_commands/snapshots.rs
+    "snapshot_store_list",
+    "snapshot_store_save",
+    "snapshot_store_load",
+    "snapshot_store_update",
+    "snapshot_store_rename",
+    "snapshot_store_delete",
+    "snapshot_store_set_hub_post_id",
+    "snapshot_store_set_hub_private",
 ];

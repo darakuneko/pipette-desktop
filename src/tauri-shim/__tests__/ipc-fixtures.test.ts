@@ -17,6 +17,7 @@ import { APP_COMMANDS } from '../generated/app-command-names'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
+import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 
 interface Entry {
   member: string
@@ -40,6 +41,7 @@ interface Shim {
   files: typeof import('../api/files')
   keyboardData: typeof import('../api/keyboard-data')
   shell: typeof import('../api/shell')
+  snapshots: typeof import('../api/snapshots')
   syncPending: typeof import('../api/sync-pending')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
@@ -55,6 +57,7 @@ async function load(): Promise<Shim> {
     files: await import('../api/files'),
     keyboardData: await import('../api/keyboard-data'),
     shell: await import('../api/shell'),
+    snapshots: await import('../api/snapshots'),
     syncPending: await import('../api/sync-pending'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
@@ -161,6 +164,32 @@ const CALLERS: Record<string, Caller> = {
   'favorites.openImport': { run: ({ favorites }) => favorites.openImport() },
   'favorites.importBatch': {
     run: ({ favorites }, [type, entries]) => favorites.importBatch(type as FavoriteType, entries as FavoriteImportEntry[]),
+  },
+  snapshotStoreList: { run: ({ snapshots }, [uid]) => snapshots.snapshotsApi.snapshotStoreList(uid as string) },
+  snapshotStoreSave: {
+    run: ({ snapshots }, [uid, json, deviceName, label, vilVersion]) =>
+      snapshots.snapshotsApi.snapshotStoreSave(uid as string, json as string, deviceName as string, label as string, vilVersion as number),
+  },
+  snapshotStoreLoad: {
+    run: ({ snapshots }, [uid, entryId]) => snapshots.snapshotsApi.snapshotStoreLoad(uid as string, entryId as string),
+  },
+  snapshotStoreUpdate: {
+    run: ({ snapshots }, [uid, entryId, json, vilVersion, options]) =>
+      snapshots.snapshotsApi.snapshotStoreUpdate(uid as string, entryId as string, json as string, vilVersion as number, options as SnapshotUpdateOptions),
+  },
+  snapshotStoreRename: {
+    run: ({ snapshots }, [uid, entryId, label]) => snapshots.snapshotsApi.snapshotStoreRename(uid as string, entryId as string, label as string),
+  },
+  snapshotStoreDelete: {
+    run: ({ snapshots }, [uid, entryId]) => snapshots.snapshotsApi.snapshotStoreDelete(uid as string, entryId as string),
+  },
+  snapshotStoreSetHubPostId: {
+    run: ({ snapshots }, [uid, entryId, postId]) =>
+      snapshots.snapshotsApi.snapshotStoreSetHubPostId(uid as string, entryId as string, postId as string | null),
+  },
+  snapshotStoreSetHubPrivate: {
+    run: ({ snapshots }, [uid, entryId, link]) =>
+      snapshots.snapshotsApi.snapshotStoreSetHubPrivate(uid as string, entryId as string, link as HubPrivateLink | null),
   },
 }
 

@@ -9,7 +9,9 @@
 //!   keyboard gets when it connects, and the name a snapshot save or the
 //!   stored-keyboard list records;
 //! - the list of stored keyboards (`sync/keyboards/{uid}`) of the
-//!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts.
+//!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts;
+//! - the snapshots of a keyboard (`sync/keyboards/{uid}/snapshots`, the
+//!   sync unit of the same name) of src/main/snapshot-store.ts.
 //!
 //! Every store works through a [`StoreContext`]: the userData directory,
 //! the clock, the ids of new entries, the process-wide write locks shared
@@ -18,6 +20,8 @@
 
 mod favorites;
 mod keyboard_meta;
+mod snapshot_filename;
+mod snapshots;
 mod stored_keyboards;
 
 use std::path::{Path, PathBuf};
@@ -33,6 +37,14 @@ pub use favorites::{
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
+};
+pub use snapshot_filename::{
+    MAX_SNAPSHOT_DEVICE_NAME_BYTES, build_snapshot_filename, cap_snapshot_device_name,
+};
+pub use snapshots::{
+    MAX_SNAPSHOTS_PER_KEYBOARD, SnapshotError, delete_snapshot, list_snapshots, load_snapshot,
+    rename_snapshot, save_snapshot, set_snapshot_hub_post_id, set_snapshot_hub_private,
+    snapshot_response_json, snapshots_sync_unit, update_snapshot,
 };
 pub use stored_keyboards::{StoredKeyboard, list_stored_keyboards, stored_keyboards_json};
 
