@@ -141,15 +141,23 @@ export async function closeKeyPopover(): Promise<void> {
   await $('[data-testid="key-popover"]').waitForDisplayed({ reverse: true })
 }
 
-/** Opens the Tools tab of the keycodes overlay. With Tools as its only tab
- *  the panel draws no tab bar, and Tools is already showing. */
-export async function openToolsOverlay(): Promise<void> {
+/** Opens the `tab` tab of the keycodes overlay (`tools`, or `data` for the
+ *  Import / Save tab). With one tab the panel draws no tab bar, and that tab
+ *  is already showing. */
+export async function openOverlayTab(tab: 'tools' | 'data'): Promise<void> {
   const toggle = $('button[aria-controls="keycodes-overlay-panel"]')
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
   await $('[data-testid="keycodes-overlay-panel"]').waitForDisplayed()
-  const tab = $('[data-testid="overlay-tab-tools"]')
-  if ((await tab.isExisting()) && (await tab.getAttribute('aria-selected')) !== 'true') await tab.click()
+  const button = $(`[data-testid="overlay-tab-${tab}"]`)
+  if ((await button.isExisting()) && (await button.getAttribute('aria-selected')) !== 'true') await button.click()
 }
+
+export const openToolsOverlay = (): Promise<void> => openOverlayTab('tools')
+
+/** Answers the next file dialog of the app with `path`, or cancels it for
+ *  null (`dev_dialog_respond` of the development tools). */
+export const respondToFileDialog = (path: string | null): Promise<void> =>
+  invokeCommand('dev_dialog_respond', { path })
 
 /** Quits the app and starts it again in a new WebDriver session, with the
  *  same userData directory. Linux only, as {@link quitApp}. */
