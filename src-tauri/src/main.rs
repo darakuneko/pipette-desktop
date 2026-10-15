@@ -94,7 +94,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(lifecycle::on_window_event);
-    let builder = dev_commands::install_or_passthrough(builder, app_commands());
+    let builder = dev_commands::install_or_passthrough(builder, app_commands(), lifecycle::on_page_load);
     match builder.build(tauri::generate_context!()) {
         Ok(app) => app.run(lifecycle::on_run_event),
         Err(err) => {

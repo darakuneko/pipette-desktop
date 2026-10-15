@@ -52,7 +52,7 @@ const NEED_OPEN_DEVICE: &[&str] = &["send_receive", "send"];
 
 /// The vendor ID, product ID and serial number of the scripted hardware
 /// keyboard.
-const PROBE_KEYBOARD: (u16, u16, &str) = (0x1234, 0x5678, "vial:f64c2b3c:probe");
+pub(crate) const PROBE_KEYBOARD: (u16, u16, &str) = (0x1234, 0x5678, "vial:f64c2b3c:probe");
 
 /// Commands that need an open probe handle; their entries run after the
 /// scripted keyboard is opened for a probe, as handle 1.
@@ -118,14 +118,16 @@ fn entries() -> Vec<Entry> {
         .collect()
 }
 
+/// A HID service that lists only the virtual keyboard, with
+/// [`PROBE_KEYBOARD`] as its hardware.
+pub(crate) fn probe_keyboard_service() -> HidService {
+    HidService::with_backend(Box::new(ProbeKeyboard), VirtualDeviceMode::Only, Timing::new(|| 0, |_| {}))
+}
+
 /// A fresh app with the app commands and the state they use, and its window.
 fn app_window() -> WebviewWindow<MockRuntime> {
     let app = mock_builder()
-        .manage(Hid(Arc::new(HidService::with_backend(
-            Box::new(ProbeKeyboard),
-            VirtualDeviceMode::Only,
-            Timing::new(|| 0, |_| {}),
-        ))))
+        .manage(Hid(Arc::new(probe_keyboard_service())))
         .invoke_handler(crate::app_commands())
         .build(mock_context(noop_assets()))
         .unwrap();

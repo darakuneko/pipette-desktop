@@ -43,8 +43,9 @@ async function probeDevice(vendorId: number, productId: number, serialNumber?: s
   try {
     return await runProbeSequence((data) => probeSendReceive(id, data), decompressDefinition)
   } finally {
-    // A handle left open is closed by the backend at the next probe and at
-    // quit, so a failed close does not change the probe's outcome.
+    // A handle left open is closed by the backend at the next probe, when
+    // the page loads again and at quit, so a failed close does not change
+    // the probe's outcome.
     await probeClose(id).catch(() => {})
   }
 }

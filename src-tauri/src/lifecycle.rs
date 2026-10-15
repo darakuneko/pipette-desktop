@@ -25,9 +25,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use pipette_hid::HidService;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
+use tauri::webview::{PageLoadEvent, PageLoadPayload};
+use tauri::{App, AppHandle, Manager, RunEvent, Webview, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
 use crate::hid_commands::Hid;
@@ -130,7 +132,7 @@ fn build_tray(app: &App<Wry>) -> tauri::Result<()> {
 
 /// Restores, shows and focuses the main window.
 fn show_main_window(app: &AppHandle<Wry>) {
-    let Some(window) = app.get_webview_window("main") else {
+    let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
         return;
     };
     let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());
@@ -151,6 +153,25 @@ pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
         if let Err(err) = window.hide() {
             log::error!("failed to hide the main window: {err}");
         }
+    }
+}
+
+/// The label of the window the renderer runs in.
+const MAIN_WINDOW: &str = "main";
+
+/// Closes the HID probe handle when the main window starts loading a page.
+/// The renderer closes its probe handle when the probe ends, but a reload or
+/// navigation in the middle of a probe drops that step with the old page;
+/// the new page has no probe running, so any open handle is left over.
+pub fn on_page_load(webview: &Webview<Wry>, payload: &PageLoadPayload<'_>) {
+    if let Some(hid) = webview.try_state::<Hid>() {
+        close_probe_on_page_load(&hid.0, webview.label(), payload.event());
+    }
+}
+
+fn close_probe_on_page_load(hid: &HidService, label: &str, event: PageLoadEvent) {
+    if label == MAIN_WINDOW && event == PageLoadEvent::Started {
+        hid.close_probe();
     }
 }
 
@@ -298,6 +319,21 @@ mod tests {
             .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, &dir, &QuitGuard::default()));
         assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
         assert!(!dir.exists());
+    }
+
+    #[test]
+    fn a_page_load_starting_in_the_main_window_closes_the_probe() {
+        let hid = crate::ipc_contract::probe_keyboard_service();
+        let (vendor_id, product_id, _) = crate::ipc_contract::PROBE_KEYBOARD;
+        let probe = |hid: &HidService| hid.probe_open(vendor_id, product_id, None).unwrap();
+
+        let id = probe(&hid);
+        close_probe_on_page_load(&hid, MAIN_WINDOW, PageLoadEvent::Finished);
+        close_probe_on_page_load(&hid, "other", PageLoadEvent::Started);
+        assert!(hid.probe_send_receive(id, &[0x01]).is_ok());
+
+        close_probe_on_page_load(&hid, MAIN_WINDOW, PageLoadEvent::Started);
+        assert_eq!(hid.probe_send_receive(id, &[0x01]).unwrap_err().to_string(), "No probe device is open");
     }
 
     #[test]
