@@ -13,23 +13,30 @@
 //! Electron build keeps them: a monitor or window rectangle is converted
 //! from physical pixels with its own scale factor. That is the logical
 //! coordinate space of Tauri itself, so the builder takes the stored values
-//! as they are. On Linux (X11, one scale for every monitor) and macOS this
-//! is the Electron space exactly; on Windows with monitors of different
-//! scales, a monitor's origin in it can differ from Chromium's, so a
-//! position saved by one build can open elsewhere, or centered, in the
-//! other. The saved size is the size inside the window frame, which is also
-//! what the builder sets, so a window keeps its size from launch to launch.
+//! as they are.
+//!
+//! Positions are in Electron's DIP space on Linux (X11, one scale for every
+//! monitor) and macOS. On Windows with monitors of different scales, a
+//! monitor's origin can differ from Chromium's, so a position saved by one
+//! build can open elsewhere, or centered, in the other.
+//!
+//! The saved size is the size inside the window frame, which is also what
+//! the builder sets, so a window keeps its size from launch to launch.
+//! Electron's bounds include the frame where the window system draws one
+//! into the window (Windows, macOS), so with a config.json shared with the
+//! Electron build the window opens one frame larger or smaller once, and
+//! keeps that size from then on.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use pipette_app_config::{AppConfigStore, Object, Value};
 use tauri::{
-    AppHandle, Emitter, LogicalSize, Manager, Monitor, Runtime, WebviewWindow, WebviewWindowBuilder, Window,
+    AppHandle, Emitter, LogicalSize, Manager, Monitor, PhysicalPosition, PhysicalSize, Runtime,
+    WebviewWindow, WebviewWindowBuilder, Window,
 };
 
 use crate::navigation;
-use crate::window_bounds::{MIN_SIZE, Size, effective_min_size};
+use crate::window_bounds::{MIN_SIZE, Rect, Size, effective_min_size};
 use crate::window_state::{self, Display, WindowReadout};
 
 /// The label of the main window, the only window the capabilities grant the
@@ -42,21 +49,40 @@ pub const MAIN_WINDOW: &str = "main";
 /// (src/tauri-shim/api/window.ts) listens to.
 pub const VISIBILITY_CHANGED: &str = "window:visibility-changed";
 
-/// What the window commands and handlers keep about the main window.
-#[derive(Default)]
-pub struct MainWindowState {
+/// What the handlers keep about the main window.
+struct MainWindowState {
     /// Whether this launch opened the window hidden. Fixed at startup; it
     /// does not follow the window's visibility.
-    started_hidden: AtomicBool,
-    /// The minimum size last applied, so moves within one display do not
-    /// apply it again.
-    min_size: Mutex<Option<Size>>,
+    started_hidden: bool,
+    min_size: Mutex<AppliedMinSize>,
 }
 
-impl MainWindowState {
-    pub fn started_hidden(&self) -> bool {
-        self.started_hidden.load(Ordering::Acquire)
+/// The minimum size last applied, and the monitor it was derived from:
+/// moves within that monitor leave it alone.
+struct AppliedMinSize {
+    /// None until the window first moves: the window opens on the monitor
+    /// [`window_state::place`] picked, which is not tied to a [`Monitor`].
+    monitor: Option<MonitorKey>,
+    min_size: Size,
+}
+
+/// What tells monitors apart.
+#[derive(PartialEq)]
+struct MonitorKey {
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+    scale: f64,
+}
+
+impl MonitorKey {
+    fn of(monitor: &Monitor) -> Self {
+        Self { position: *monitor.position(), size: *monitor.size(), scale: monitor.scale_factor() }
     }
+}
+
+/// Whether this launch opened the main window hidden.
+pub fn started_hidden<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<MainWindowState>().is_some_and(|state| state.started_hidden)
 }
 
 /// The builder of the main window: its entry in tauri.conf.json (which has
@@ -76,7 +102,7 @@ pub fn main_window_builder<R: Runtime, M: Manager<R>>(
     Ok(navigation::guard(builder, navigation::dev_url(manager.config())))
 }
 
-/// Opens the main window, and manages [`MainWindowState`]. The window starts
+/// Opens the main window, and keeps what the handlers need about it. The window starts
 /// hidden when the config's `startInTray` and `trayResident` are both on
 /// (`Boolean()` of each, as the Electron build reads them): the tray, set up
 /// from the same `trayResident`, is then the way to show it.
@@ -106,25 +132,15 @@ pub fn open_main_window<R: Runtime>(
         builder.center()
     };
     let window = builder.build()?;
-    let state = MainWindowState {
-        started_hidden: AtomicBool::new(start_hidden),
-        min_size: Mutex::new(Some(placement.min_size)),
-    };
-    app.manage(state);
+    app.manage(MainWindowState {
+        started_hidden: start_hidden,
+        min_size: Mutex::new(AppliedMinSize { monitor: None, min_size: placement.min_size }),
+    });
     crate::app_config::apply_stored_zoom(config, &window);
     if !start_hidden {
         reveal(&window.as_ref().window());
     }
     Ok(window)
-}
-
-/// The config value of `key`; none when the file cannot be read, which is
-/// logged.
-fn read(config: &AppConfigStore, key: &str) -> Option<Value> {
-    config.get(key).unwrap_or_else(|err| {
-        log::error!("[window] failed to read {key}: {err}");
-        None
-    })
 }
 
 /// The monitors in DIP, and which of them is the primary one.
@@ -143,24 +159,16 @@ fn displays<R: Runtime>(app: &AppHandle<R>) -> (Vec<Display>, Option<usize>) {
 
 fn display(monitor: &Monitor) -> Display {
     let scale = monitor.scale_factor();
-    let (position, size) = (monitor.position(), monitor.size());
     let work_area = monitor.work_area();
     Display {
-        bounds: window_state::to_dip(
-            position.x.into(),
-            position.y.into(),
-            size.width.into(),
-            size.height.into(),
-            scale,
-        ),
-        work_area: window_state::to_dip(
-            work_area.position.x.into(),
-            work_area.position.y.into(),
-            work_area.size.width.into(),
-            work_area.size.height.into(),
-            scale,
-        ),
+        bounds: dip_rect(*monitor.position(), *monitor.size(), scale),
+        work_area: dip_rect(work_area.position, work_area.size, scale),
     }
+}
+
+/// The rectangle at `position` of `size`, physical pixels at `scale`, in DIP.
+fn dip_rect(position: PhysicalPosition<i32>, size: PhysicalSize<u32>, scale: f64) -> Rect {
+    window_state::to_dip(position.x.into(), position.y.into(), size.width.into(), size.height.into(), scale)
 }
 
 /// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:
@@ -168,17 +176,9 @@ fn display(monitor: &Monitor) -> Display {
 /// logged. A hidden or minimized window keeps the state saved before
 /// ([`window_state::state_to_save`]).
 pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore) {
-    let bounds = window.scale_factor().and_then(|scale| {
-        let position = window.outer_position()?;
-        let size = window.inner_size()?;
-        Ok(window_state::to_dip(
-            position.x.into(),
-            position.y.into(),
-            size.width.into(),
-            size.height.into(),
-            scale,
-        ))
-    });
+    let bounds = window
+        .scale_factor()
+        .and_then(|scale| Ok(dip_rect(window.outer_position()?, window.inner_size()?, scale)));
     let bounds = match bounds {
         Ok(bounds) => bounds,
         Err(err) => {
@@ -188,11 +188,18 @@ pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore
     };
     let readout = WindowReadout {
         bounds,
-        visible: window.is_visible().unwrap_or(false),
+        visible: is_visible(window),
         minimized: window.is_minimized().unwrap_or(false),
         position_known: position_known(window),
     };
-    let previous = if readout.position_known { None } else { read(config, "windowState") };
+    let previous = if readout.position_known {
+        None
+    } else {
+        config.get("windowState").unwrap_or_else(|err| {
+            log::error!("[window] failed to read windowState: {err}");
+            None
+        })
+    };
     let Some(state) = window_state::state_to_save(readout, previous.as_ref()) else {
         return;
     };
@@ -233,8 +240,9 @@ fn position_known<R: Runtime>(_window: &Window<R>) -> bool {
     true
 }
 
-/// Applies the minimum size the window's display allows, when it is not the
-/// one applied last: after the window moves, maybe onto another display.
+/// Applies the minimum size the window's display allows after the window
+/// moved onto another monitor, when it differs from the one applied last.
+/// Runs for every move event, so within one monitor it only compares.
 pub fn update_min_size<R: Runtime>(window: &Window<R>) {
     let Some(state) = window.try_state::<MainWindowState>() else {
         return;
@@ -247,21 +255,30 @@ pub fn update_min_size<R: Runtime>(window: &Window<R>) {
             return;
         }
     };
-    let min_size = effective_min_size(display(&monitor).work_area.size(), MIN_SIZE.width, MIN_SIZE.height);
+    let key = MonitorKey::of(&monitor);
     let mut applied = state.min_size.lock().unwrap_or_else(PoisonError::into_inner);
-    if *applied == Some(min_size) {
+    if applied.monitor.as_ref() == Some(&key) {
+        return;
+    }
+    applied.monitor = Some(key);
+    let min_size = effective_min_size(display(&monitor).work_area.size(), MIN_SIZE.width, MIN_SIZE.height);
+    if applied.min_size == min_size {
         return;
     }
     match window.set_min_size(Some(LogicalSize::new(min_size.width, min_size.height))) {
-        Ok(()) => *applied = Some(min_size),
-        Err(err) => log::error!("[window] failed to set the minimum size: {err}"),
+        Ok(()) => applied.min_size = min_size,
+        Err(err) => {
+            // Tried again on the next move.
+            applied.monitor = None;
+            log::error!("[window] failed to set the minimum size: {err}");
+        }
     }
 }
 
 /// Restores, shows and focuses `window`, as `showWindow` of
 /// src/main/app-behavior.ts does. Whether it was hidden before.
 pub fn reveal<R: Runtime>(window: &Window<R>) -> bool {
-    let was_visible = window.is_visible().unwrap_or(false);
+    let was_visible = is_visible(window);
     let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());
     if let Err(err) = result {
         log::error!("[window] failed to show the main window: {err}");
@@ -274,7 +291,7 @@ pub fn reveal<R: Runtime>(window: &Window<R>) -> bool {
 
 /// Hides `window`.
 pub fn conceal<R: Runtime>(window: &Window<R>) {
-    let was_visible = window.is_visible().unwrap_or(true);
+    let was_visible = is_visible(window);
     if let Err(err) = window.hide() {
         log::error!("[window] failed to hide the main window: {err}");
         return;
@@ -282,6 +299,15 @@ pub fn conceal<R: Runtime>(window: &Window<R>) {
     if was_visible {
         notify_visibility(window, false);
     }
+}
+
+/// Whether `window` is shown; false when that cannot be read, which is
+/// logged.
+pub fn is_visible<R: Runtime>(window: &Window<R>) -> bool {
+    window.is_visible().unwrap_or_else(|err| {
+        log::error!("[window] failed to read the window's visibility: {err}");
+        false
+    })
 }
 
 /// The Electron window's `show` / `hide` events, pushed to the renderer:

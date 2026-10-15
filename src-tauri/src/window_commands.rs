@@ -6,7 +6,7 @@
 use pipette_app_config::{Value, clamp_zoom_factor};
 use tauri::{AppHandle, Runtime, WebviewWindow};
 
-use crate::main_window::{self, MainWindowState};
+use crate::main_window;
 
 /// Zooms the calling window to `zoom` percent, clamped as
 /// `clampZoomFactor` does; the default zoom for anything but a number.
@@ -37,11 +37,10 @@ pub fn window_hide<R: Runtime>(app: AppHandle<R>) {
 /// Whether this launch opened the main window hidden.
 #[tauri::command]
 pub fn window_started_hidden<R: Runtime>(app: AppHandle<R>) -> bool {
-    use tauri::Manager;
-    app.try_state::<MainWindowState>().is_some_and(|state| state.started_hidden())
+    main_window::started_hidden(&app)
 }
 
 #[tauri::command]
 pub fn window_is_visible<R: Runtime>(app: AppHandle<R>) -> bool {
-    main_window::main_window(&app).is_some_and(|window| window.is_visible().unwrap_or(false))
+    main_window::main_window(&app).is_some_and(|window| main_window::is_visible(&window))
 }
