@@ -6,31 +6,21 @@
     "invokeArgs": {},
     "response": [
       {
-        "vendorId": 20553,
-        "productId": 1,
+        "vendorId": 31353,
+        "productId": 61539,
         "productName": "Virtual Keyboard",
-        "serialNumber": "vial:f64c2b3c",
+        "serialNumber": "vial:f64c2b3c:virtual",
         "type": "vial"
-      },
-      {
-        "vendorId": 1155,
-        "productId": 22337,
-        "productName": "",
-        "serialNumber": "",
-        "type": "bootloader"
       }
     ]
   },
   {
     "member": "openDevice",
-    "args": [
-      20553,
-      1
-    ],
+    "args": [31353, 61539],
     "command": "open_device",
     "invokeArgs": {
-      "vendorId": 20553,
-      "productId": 1
+      "vendorId": 31353,
+      "productId": 61539
     },
     "response": true
   },
@@ -51,117 +41,44 @@
   {
     "member": "hid-transport.sendReceive",
     "args": [
-      [
-        18,
-        0,
-        0,
-        0
-      ]
+      [1]
     ],
     "command": "send_receive",
     "invokeArgs": {
-      "data": [
-        18,
-        0,
-        0,
-        0
-      ]
+      "data": [1]
     },
-    "response": [
-      18,
-      0,
-      0,
-      0,
-      9,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ]
+    "response": [1, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   },
   {
     "member": "hid-transport.send",
     "args": [
-      [
-        5,
-        0,
-        1,
-        4
-      ]
+      [5, 0, 0, 1, 0, 4]
     ],
     "command": "send",
     "invokeArgs": {
-      "data": [
-        5,
-        0,
-        1,
-        4
-      ]
+      "data": [5, 0, 0, 1, 0, 4]
     },
     "response": null
   },
   {
     "member": "device.decompressDefinition",
     "args": [
-      [
-        93,
-        0,
-        0,
-        128,
-        0
-      ]
+      [253, 55, 122, 88, 90, 0, 0, 4, 230, 214, 180, 70, 2, 0, 33, 1, 22, 0, 0, 0, 116, 47, 229, 163, 1, 0, 40, 123, 34, 110, 97, 109, 101, 34, 58, 34, 75, 34, 44, 34, 109, 97, 116, 114, 105, 120, 34, 58, 123, 34, 114, 111, 119, 115, 34, 58, 49, 44, 34, 99, 111, 108, 115, 34, 58, 49, 125, 125, 0, 0, 0, 0, 53, 244, 228, 167, 184, 215, 198, 55, 0, 1, 65, 41, 3, 83, 86, 139, 31, 182, 243, 125, 1, 0, 0, 0, 0, 4, 89, 90]
     ],
     "command": "decompress_definition",
     "invokeArgs": {
-      "data": [
-        93,
-        0,
-        0,
-        128,
-        0
-      ]
+      "data": [253, 55, 122, 88, 90, 0, 0, 4, 230, 214, 180, 70, 2, 0, 33, 1, 22, 0, 0, 0, 116, 47, 229, 163, 1, 0, 40, 123, 34, 110, 97, 109, 101, 34, 58, 34, 75, 34, 44, 34, 109, 97, 116, 114, 105, 120, 34, 58, 123, 34, 114, 111, 119, 115, 34, 58, 49, 44, 34, 99, 111, 108, 115, 34, 58, 49, 125, 125, 0, 0, 0, 0, 53, 244, 228, 167, 184, 215, 198, 55, 0, 1, 65, 41, 3, 83, 86, 139, 31, 182, 243, 125, 1, 0, 0, 0, 0, 4, 89, 90]
     },
     "response": "{\"name\":\"K\",\"matrix\":{\"rows\":1,\"cols\":1}}"
   },
   {
     "member": "device.decompressDefinition",
     "args": [
-      [
-        1,
-        2,
-        3
-      ]
+      [1, 2, 3]
     ],
     "command": "decompress_definition",
     "invokeArgs": {
-      "data": [
-        1,
-        2,
-        3
-      ]
+      "data": [1, 2, 3]
     },
     "response": null
   }

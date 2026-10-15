@@ -2,8 +2,9 @@
 //
 // The app commands by name, the one list of them. build.rs includes this
 // file to generate their permissions. The IPC contract tests
-// (src/ipc_contract.rs) check the invoke fixtures against it and export it
-// for the shim's command table (src/tauri-shim/commands.ts); the tests of
+// (src/ipc_contract.rs) run every invoke fixture through the handler of
+// these commands and export the list for the shim
+// (src/tauri-shim/generated/app-command-names.ts); the tests of
 // src/dev_commands/tools.rs check that none of these is routed as a
 // development command.
 

@@ -1,9 +1,0 @@
-[
-  "list_devices",
-  "open_device",
-  "close_device",
-  "send_receive",
-  "send",
-  "is_device_open",
-  "decompress_definition"
-]

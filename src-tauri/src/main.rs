@@ -24,14 +24,16 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use pipette_hid::{HidService, VirtualDeviceMode};
-use tauri::Wry;
+use tauri::Runtime;
 use tauri::ipc::Invoke;
 
 use crate::hid_commands::Hid;
 
 /// The handler of the app commands; their permissions are listed in
-/// build.rs and granted in capabilities/main.json.
-fn app_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
+/// build.rs and granted in capabilities/main.json. Generic over the runtime
+/// so the IPC contract tests (ipc_contract.rs) run these same commands on
+/// Tauri's mock runtime.
+fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         hid_commands::list_devices,
         hid_commands::open_device,
