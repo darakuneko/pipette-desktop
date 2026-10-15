@@ -10,11 +10,14 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use ts_rs::TS;
 
+use crate::command_error::CommandError;
+
 /// The process-wide HID service, shared with the blocking I/O tasks.
 pub struct Hid(pub Arc<HidService>);
 
 /// Same values as `DeviceType` in src/shared/types/protocol.ts.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, TS)]
+#[cfg_attr(test, derive(Deserialize))]
 #[serde(rename_all = "lowercase")]
 #[ts(export, rename = "DeviceType")]
 pub enum DeviceTypeDto {
@@ -35,6 +38,7 @@ impl From<DeviceType> for DeviceTypeDto {
 
 /// Same shape as `DeviceInfo` in src/shared/types/protocol.ts.
 #[derive(Debug, PartialEq, Eq, Serialize, TS)]
+#[cfg_attr(test, derive(Deserialize))]
 #[serde(rename_all = "camelCase")]
 #[ts(export, rename = "DeviceInfo")]
 pub struct DeviceInfoDto {
@@ -80,20 +84,17 @@ impl TryFrom<Vec<u8>> for HidData {
 /// Runs `io` on a blocking-task thread: hidapi calls block (reads wait up to
 /// the HID timeout and are retried), and must stay off the async runtime and
 /// the UI thread.
-async fn blocking<R, F>(hid: &State<'_, Hid>, io: F) -> Result<R, String>
+async fn blocking<R, F>(hid: &State<'_, Hid>, io: F) -> Result<R, CommandError>
 where
     R: Send + 'static,
     F: FnOnce(&HidService) -> Result<R, HidError> + Send + 'static,
 {
     let service = Arc::clone(&hid.0);
-    tauri::async_runtime::spawn_blocking(move || io(&service))
-        .await
-        .map_err(|err| err.to_string())?
-        .map_err(|err| err.to_string())
+    Ok(tauri::async_runtime::spawn_blocking(move || io(&service)).await??)
 }
 
 #[tauri::command]
-pub async fn list_devices(hid: State<'_, Hid>) -> Result<Vec<DeviceInfoDto>, String> {
+pub async fn list_devices(hid: State<'_, Hid>) -> Result<Vec<DeviceInfoDto>, CommandError> {
     blocking(&hid, |service| {
         service.list_devices().map(|devices| devices.into_iter().map(DeviceInfoDto::from).collect())
     })
@@ -101,12 +102,12 @@ pub async fn list_devices(hid: State<'_, Hid>) -> Result<Vec<DeviceInfoDto>, Str
 }
 
 #[tauri::command]
-pub async fn open_device(hid: State<'_, Hid>, vendor_id: u16, product_id: u16) -> Result<bool, String> {
+pub async fn open_device(hid: State<'_, Hid>, vendor_id: u16, product_id: u16) -> Result<bool, CommandError> {
     blocking(&hid, move |service| service.open_device(vendor_id, product_id)).await
 }
 
 #[tauri::command]
-pub async fn close_device(hid: State<'_, Hid>) -> Result<(), String> {
+pub async fn close_device(hid: State<'_, Hid>) -> Result<(), CommandError> {
     blocking(&hid, |service| {
         service.close_device();
         Ok(())
@@ -115,17 +116,17 @@ pub async fn close_device(hid: State<'_, Hid>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn send_receive(hid: State<'_, Hid>, data: HidData) -> Result<Vec<u8>, String> {
+pub async fn send_receive(hid: State<'_, Hid>, data: HidData) -> Result<Vec<u8>, CommandError> {
     blocking(&hid, move |service| service.send_receive(&data.0).map(|report| report.to_vec())).await
 }
 
 #[tauri::command]
-pub async fn send(hid: State<'_, Hid>, data: HidData) -> Result<(), String> {
+pub async fn send(hid: State<'_, Hid>, data: HidData) -> Result<(), CommandError> {
     blocking(&hid, move |service| service.send(&data.0)).await
 }
 
 #[tauri::command]
-pub async fn is_device_open(hid: State<'_, Hid>) -> Result<bool, String> {
+pub async fn is_device_open(hid: State<'_, Hid>) -> Result<bool, CommandError> {
     blocking(&hid, |service| service.is_device_open()).await
 }
 

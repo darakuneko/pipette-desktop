@@ -9,10 +9,13 @@
 // every build with the development tools keeps its console.
 #![cfg_attr(release_profile, windows_subsystem = "windows")]
 
+mod command_error;
 mod definition;
 mod dev_commands;
 mod fs_atomic;
 mod hid_commands;
+#[cfg(test)]
+mod ipc_contract;
 mod lifecycle;
 mod shutdown;
 

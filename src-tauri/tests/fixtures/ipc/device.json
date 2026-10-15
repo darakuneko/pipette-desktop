@@ -1,0 +1,168 @@
+[
+  {
+    "member": "listDevices",
+    "args": [],
+    "command": "list_devices",
+    "invokeArgs": {},
+    "response": [
+      {
+        "vendorId": 20553,
+        "productId": 1,
+        "productName": "Virtual Keyboard",
+        "serialNumber": "vial:f64c2b3c",
+        "type": "vial"
+      },
+      {
+        "vendorId": 1155,
+        "productId": 22337,
+        "productName": "",
+        "serialNumber": "",
+        "type": "bootloader"
+      }
+    ]
+  },
+  {
+    "member": "openDevice",
+    "args": [
+      20553,
+      1
+    ],
+    "command": "open_device",
+    "invokeArgs": {
+      "vendorId": 20553,
+      "productId": 1
+    },
+    "response": true
+  },
+  {
+    "member": "closeDevice",
+    "args": [],
+    "command": "close_device",
+    "invokeArgs": {},
+    "response": null
+  },
+  {
+    "member": "isDeviceOpen",
+    "args": [],
+    "command": "is_device_open",
+    "invokeArgs": {},
+    "response": false
+  },
+  {
+    "member": "hid-transport.sendReceive",
+    "args": [
+      [
+        18,
+        0,
+        0,
+        0
+      ]
+    ],
+    "command": "send_receive",
+    "invokeArgs": {
+      "data": [
+        18,
+        0,
+        0,
+        0
+      ]
+    },
+    "response": [
+      18,
+      0,
+      0,
+      0,
+      9,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "member": "hid-transport.send",
+    "args": [
+      [
+        5,
+        0,
+        1,
+        4
+      ]
+    ],
+    "command": "send",
+    "invokeArgs": {
+      "data": [
+        5,
+        0,
+        1,
+        4
+      ]
+    },
+    "response": null
+  },
+  {
+    "member": "device.decompressDefinition",
+    "args": [
+      [
+        93,
+        0,
+        0,
+        128,
+        0
+      ]
+    ],
+    "command": "decompress_definition",
+    "invokeArgs": {
+      "data": [
+        93,
+        0,
+        0,
+        128,
+        0
+      ]
+    },
+    "response": "{\"name\":\"K\",\"matrix\":{\"rows\":1,\"cols\":1}}"
+  },
+  {
+    "member": "device.decompressDefinition",
+    "args": [
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "command": "decompress_definition",
+    "invokeArgs": {
+      "data": [
+        1,
+        2,
+        3
+      ]
+    },
+    "response": null
+  }
+]

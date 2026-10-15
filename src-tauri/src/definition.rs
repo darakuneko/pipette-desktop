@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use xz4rust::{XzDecoder, XzReader};
 
+use crate::command_error::CommandError;
+
 /// Largest compressed definition accepted (`MAX_COMPRESSED_SIZE` in
 /// src/main/lzma.ts).
 const MAX_COMPRESSED_SIZE: usize = 1024 * 1024;
@@ -100,16 +102,17 @@ pub struct CompressedDefinition(Vec<u8>);
 /// What `DecompressDefinition` in src/preload/protocol-members.ts resolves
 /// to: the definition JSON text, or null when `decompress` gives up.
 #[derive(Debug, PartialEq, Eq, Serialize, TS)]
+#[cfg_attr(test, derive(Deserialize))]
 #[ts(export)]
 pub struct DecompressedDefinition(Option<String>);
 
 /// Runs on a blocking-task thread: a definition near the output limit takes
 /// long enough to stall the UI thread a synchronous command would run on.
 #[tauri::command]
-pub async fn decompress_definition(data: CompressedDefinition) -> Result<DecompressedDefinition, String> {
-    tauri::async_runtime::spawn_blocking(move || DecompressedDefinition(decompress(&data.0)))
-        .await
-        .map_err(|err| err.to_string())
+pub async fn decompress_definition(
+    data: CompressedDefinition,
+) -> Result<DecompressedDefinition, CommandError> {
+    Ok(tauri::async_runtime::spawn_blocking(move || DecompressedDefinition(decompress(&data.0))).await?)
 }
 
 #[cfg(test)]
