@@ -2332,6 +2332,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-app-config"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-fs",
+ "pipette-js-json",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "pipette-fs"
 version = "0.0.0"
 dependencies = [

@@ -1,0 +1,132 @@
+[
+  {
+    "input": "undefined",
+    "zoomFactor": 100,
+    "boolean": false
+  },
+  {
+    "input": "null",
+    "zoomFactor": 100,
+    "boolean": false
+  },
+  {
+    "input": "true",
+    "zoomFactor": 100,
+    "boolean": true
+  },
+  {
+    "input": "false",
+    "zoomFactor": 100,
+    "boolean": false
+  },
+  {
+    "input": "0",
+    "zoomFactor": 50,
+    "boolean": false
+  },
+  {
+    "input": "-0",
+    "zoomFactor": 50,
+    "boolean": false
+  },
+  {
+    "input": "1",
+    "zoomFactor": 50,
+    "boolean": true
+  },
+  {
+    "input": "49.4",
+    "zoomFactor": 50,
+    "boolean": true
+  },
+  {
+    "input": "49.5",
+    "zoomFactor": 50,
+    "boolean": true
+  },
+  {
+    "input": "50.5",
+    "zoomFactor": 51,
+    "boolean": true
+  },
+  {
+    "input": "99.5",
+    "zoomFactor": 100,
+    "boolean": true
+  },
+  {
+    "input": "100.5",
+    "zoomFactor": 101,
+    "boolean": true
+  },
+  {
+    "input": "-0.5",
+    "zoomFactor": 50,
+    "boolean": true
+  },
+  {
+    "input": "0.49999999999999994",
+    "zoomFactor": 50,
+    "boolean": true
+  },
+  {
+    "input": "150.49999999999997",
+    "zoomFactor": 150,
+    "boolean": true
+  },
+  {
+    "input": "199.5",
+    "zoomFactor": 200,
+    "boolean": true
+  },
+  {
+    "input": "200.5",
+    "zoomFactor": 200,
+    "boolean": true
+  },
+  {
+    "input": "250",
+    "zoomFactor": 200,
+    "boolean": true
+  },
+  {
+    "input": "1e400",
+    "zoomFactor": 200,
+    "boolean": true
+  },
+  {
+    "input": "-1e400",
+    "zoomFactor": 50,
+    "boolean": true
+  },
+  {
+    "input": "\"100\"",
+    "zoomFactor": 100,
+    "boolean": true
+  },
+  {
+    "input": "\"false\"",
+    "zoomFactor": 100,
+    "boolean": true
+  },
+  {
+    "input": "\"\"",
+    "zoomFactor": 100,
+    "boolean": false
+  },
+  {
+    "input": "[]",
+    "zoomFactor": 100,
+    "boolean": true
+  },
+  {
+    "input": "{}",
+    "zoomFactor": 100,
+    "boolean": true
+  },
+  {
+    "input": "[0]",
+    "zoomFactor": 100,
+    "boolean": true
+  }
+]
