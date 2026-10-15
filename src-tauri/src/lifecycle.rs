@@ -83,7 +83,9 @@ pub fn setup(app: &mut App<Wry>) {
 
 /// Adds the tray (`on`) or removes it, on the main thread, as `setupTray` /
 /// `destroyTray` of src/main/app-behavior.ts do when the renderer changes
-/// `trayResident`; nothing happens when the tray already is that way.
+/// `trayResident`; nothing happens when the tray already is that way. Called
+/// off the main thread, it queues the change there and returns without
+/// waiting for it.
 pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
     let handle = app.clone();
     let result = app.run_on_main_thread(move || {

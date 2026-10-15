@@ -125,6 +125,11 @@ impl AppConfigStore {
     pub fn set(&self, key: &str, value: Value) -> Result<(), AppConfigError> {
         check_key(key)?;
         let _guard = self.lock();
+        self.set_locked(key, value)
+    }
+
+    /// [`set`](Self::set) for a caller holding the store lock.
+    fn set_locked(&self, key: &str, value: Value) -> Result<(), AppConfigError> {
         let mut store = read_store(&self.path)?;
         store.insert(key, value);
         write_store(&self.path, store)
@@ -134,13 +139,19 @@ impl AppConfigStore {
     /// `SETTABLE_APP_CONFIG_KEYS` is ignored; otherwise the value (the
     /// renderer's `JSON.stringify` of it, `None` for `undefined`) is set and
     /// the listeners are told, even when it did not change.
+    ///
+    /// The listeners run under the store lock, so they hear concurrent sets
+    /// in the order the sets were saved, and the last one heard is the one
+    /// stored.
     pub fn set_from_renderer(&self, key: &str, value_json: Option<&str>) -> Result<(), AppConfigError> {
         if !DEFAULTS.is_settable(key) {
             return Ok(());
         }
         let value_json = value_json.ok_or(AppConfigError::Undefined)?;
         let value = pipette_js_json::parse(value_json).map_err(AppConfigError::InvalidValue)?;
-        self.set(key, value.clone())?;
+        check_key(key)?;
+        let _guard = self.lock();
+        self.set_locked(key, value.clone())?;
         let listeners = self.listeners.lock().unwrap_or_else(PoisonError::into_inner);
         for listener in listeners.iter() {
             listener(key, &value);
@@ -162,7 +173,8 @@ impl AppConfigStore {
 
     /// `onAppConfigChange`: `listener` gets each key and value
     /// [`set_from_renderer`](Self::set_from_renderer) stores, and nothing
-    /// else.
+    /// else. It runs under the store lock: it must not use the store, which
+    /// would deadlock, nor wait for work that does.
     pub fn subscribe(&self, listener: impl Fn(&str, &Value) + Send + Sync + 'static) {
         self.listeners.lock().unwrap_or_else(PoisonError::into_inner).push(Box::new(listener));
     }
@@ -215,5 +227,41 @@ mod tests {
         store.set_from_renderer("zoomFactor", Some("150")).unwrap();
         let seen = seen.lock().unwrap().clone();
         assert_eq!(seen, [("zoomFactor".to_owned(), 150.0.into()), ("zoomFactor".to_owned(), 150.0.into())]);
+    }
+
+    /// Sets from several threads at once: each listener call finds its own
+    /// value in the file, so no other set was saved between the save and the
+    /// notification, and the listeners hear the sets in the order they were
+    /// saved; the last value heard is the one stored.
+    #[test]
+    fn listeners_hear_the_sets_in_the_order_they_were_saved() {
+        let tmp = TempDir::new().unwrap();
+        let store = Arc::new(AppConfigStore::open(tmp.path()));
+        let path = store.path().to_owned();
+        let heard = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&heard);
+        store.subscribe(move |_, value| {
+            // Leaves time for another thread's set to come in.
+            std::thread::sleep(std::time::Duration::from_micros(200));
+            let on_disk = read_store(&path).unwrap().get("zoomFactor").cloned();
+            assert_eq!(on_disk.as_ref(), Some(value), "a later set was saved before this one was heard");
+            sink.lock().unwrap().push(value.clone());
+        });
+        let threads: Vec<_> = (0..8)
+            .map(|t| {
+                let store = Arc::clone(&store);
+                std::thread::spawn(move || {
+                    for i in 0..20 {
+                        store.set_from_renderer("zoomFactor", Some(&(t * 1000 + i).to_string())).unwrap();
+                    }
+                })
+            })
+            .collect();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+        let heard = heard.lock().unwrap();
+        assert_eq!(heard.len(), 8 * 20);
+        assert_eq!(heard.last(), store.get("zoomFactor").unwrap().as_ref());
     }
 }
