@@ -1,0 +1,30 @@
+[
+  {
+    "member": "settings.readSettingsFile",
+    "args": ["0xA1B2"],
+    "command": "pipette_settings_read",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": { "content": null, "etag": "absent" }
+  },
+  {
+    "member": "settings.writeSettingsFile",
+    "args": ["0xA1B2", "{\"_rev\":1}", "absent"],
+    "command": "pipette_settings_write",
+    "invokeArgs": { "uid": "0xA1B2", "content": "{\"_rev\":1}", "etag": "absent" },
+    "response": "written"
+  },
+  {
+    "member": "settings.ensureSettingsDir",
+    "args": ["0xA1B2"],
+    "command": "pipette_settings_ensure_dir",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": null
+  },
+  {
+    "member": "settings.readAllSettingsFiles",
+    "args": [],
+    "command": "pipette_settings_read_all",
+    "invokeArgs": {},
+    "response": []
+  }
+]

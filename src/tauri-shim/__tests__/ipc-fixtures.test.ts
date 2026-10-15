@@ -40,6 +40,7 @@ interface Shim {
   favorites: typeof import('../api/favorites')
   files: typeof import('../api/files')
   keyboardData: typeof import('../api/keyboard-data')
+  settings: typeof import('../api/settings')
   shell: typeof import('../api/shell')
   snapshots: typeof import('../api/snapshots')
   syncPending: typeof import('../api/sync-pending')
@@ -56,6 +57,7 @@ async function load(): Promise<Shim> {
     favorites: await import('../api/favorites'),
     files: await import('../api/files'),
     keyboardData: await import('../api/keyboard-data'),
+    settings: await import('../api/settings'),
     shell: await import('../api/shell'),
     snapshots: await import('../api/snapshots'),
     syncPending: await import('../api/sync-pending'),
@@ -191,6 +193,12 @@ const CALLERS: Record<string, Caller> = {
     run: ({ snapshots }, [uid, entryId, link]) =>
       snapshots.snapshotsApi.snapshotStoreSetHubPrivate(uid as string, entryId as string, link as HubPrivateLink | null),
   },
+  'settings.readSettingsFile': { run: ({ settings }, [uid]) => settings.readSettingsFile(uid as string) },
+  'settings.writeSettingsFile': {
+    run: ({ settings }, [uid, content, etag]) => settings.writeSettingsFile(uid as string, content as string, etag as string),
+  },
+  'settings.ensureSettingsDir': { run: ({ settings }, [uid]) => settings.ensureSettingsDir(uid as string), void: true },
+  'settings.readAllSettingsFiles': { run: ({ settings }) => settings.readAllSettingsFiles() },
 }
 
 afterEach(() => {

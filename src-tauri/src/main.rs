@@ -98,6 +98,10 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::snapshots::snapshot_store_delete,
         store_commands::snapshots::snapshot_store_set_hub_post_id,
         store_commands::snapshots::snapshot_store_set_hub_private,
+        store_commands::settings::pipette_settings_read,
+        store_commands::settings::pipette_settings_write,
+        store_commands::settings::pipette_settings_ensure_dir,
+        store_commands::settings::pipette_settings_read_all,
     ]
 }
 

@@ -8,13 +8,14 @@ use std::path::Path;
 use std::sync::Arc;
 
 use pipette_entry_store::{SystemClock, WriteLocks};
-use pipette_keyboard_stores::{StoreContext, StoreError};
+use pipette_keyboard_stores::StoreContext;
 use pipette_sync_pending::PendingStore;
 use serde_json::Value;
 use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, Runtime, State};
 
 use crate::command_error::CommandError;
+use crate::store_commands::blocking;
 
 /// Manages the stores of `user_data`, reporting their changes to the
 /// pending sync units, which must be managed already.
@@ -26,17 +27,6 @@ pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
         Arc::new(WriteLocks::new()),
         Arc::new(move |unit: &str| pending.notify_change(unit)),
     ));
-}
-
-/// Runs `io` on a blocking-task thread: the stores wait for their write
-/// locks and sync their writes to disk.
-async fn blocking<T, F>(stores: &State<'_, StoreContext>, io: F) -> Result<T, CommandError>
-where
-    T: Send + 'static,
-    F: FnOnce(&StoreContext) -> Result<T, StoreError> + Send + 'static,
-{
-    let stores = stores.inner().clone();
-    Ok(tauri::async_runtime::spawn_blocking(move || io(&stores)).await??)
 }
 
 /// `[{uid, name}, …]` as JSON text: a name read from the keyboard names is

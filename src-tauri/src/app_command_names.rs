@@ -68,4 +68,9 @@ pub const APP_COMMANDS: &[&str] = &[
     "snapshot_store_delete",
     "snapshot_store_set_hub_post_id",
     "snapshot_store_set_hub_private",
+    // src/store_commands/settings.rs
+    "pipette_settings_read",
+    "pipette_settings_write",
+    "pipette_settings_ensure_dir",
+    "pipette_settings_read_all",
 ];

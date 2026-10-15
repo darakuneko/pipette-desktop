@@ -1,0 +1,1678 @@
+[
+  {
+    "name": "a new file from the defaults, then patches that add, merge and delete keys",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "ensureDir",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "layerNames": [
+            "Base",
+            "Fn"
+          ]
+        }
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "autoAdvance": false,
+          "quickSelect": true,
+          "keymapScale": 1.25
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "typingTestMemory": {
+            "textId": "t1",
+            "currentWordIndex": 1,
+            "currentInput": "a",
+            "wordResults": [],
+            "correctChars": 1,
+            "incorrectChars": 0,
+            "elapsedMs": 10,
+            "wpmHistory": [],
+            "savedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "unknownField": {
+            "kept": [
+              1,
+              2.5,
+              "é😀"
+            ]
+          }
+        }
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "typingTestMemory": null
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "analyze": {
+            "filters": {
+              "deviceScopes": [
+                "own"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "analyze": {
+            "goalDays": 3
+          }
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "analyze": {
+            "fingerAssignments": {}
+          }
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "typingTestResults": [
+            {
+              "date": "2026-01-01T00:00:00.000Z",
+              "wpm": 50,
+              "accuracy": 95,
+              "wordCount": 30,
+              "correctChars": 100,
+              "incorrectChars": 5,
+              "durationSeconds": 30
+            }
+          ],
+          "basicViewType": "iso"
+        }
+      },
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "null",
+      "{\"success\":true}",
+      "null",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"basicViewType\":\"iso\",\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3,\"fingerAssignments\":{}}}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"basicViewType\":\"iso\",\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3,\"fingerAssignments\":{}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": null
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[\"Base\",\"Fn\"],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "absent"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[\"Base\",\"Fn\"],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "f95ca2e0143e5da8363c6005b3e5e5573d8795351217c6f20ae2fc524ee1bd5e"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"_updatedAt\":\"2026-10-16T12:01:00.000Z\"}",
+          "etag": "f95ca2e0143e5da8363c6005b3e5e5573d8795351217c6f20ae2fc524ee1bd5e"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"_updatedAt\":\"2026-10-16T12:01:00.000Z\"}",
+          "etag": "91ef0207ccad663b4538dda3d70e3b56577cf2495be4c92f9577649671700453"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"typingTestMemory\":{\"textId\":\"t1\",\"currentWordIndex\":1,\"currentInput\":\"a\",\"wordResults\":[],\"correctChars\":1,\"incorrectChars\":0,\"elapsedMs\":10,\"wpmHistory\":[],\"savedAt\":\"2026-01-01T00:00:00.000Z\"},\"unknownField\":{\"kept\":[1,2.5,\"é😀\"]},\"_updatedAt\":\"2026-10-16T12:01:00.000Z\"}",
+          "etag": "91ef0207ccad663b4538dda3d70e3b56577cf2495be4c92f9577649671700453"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"typingTestMemory\":{\"textId\":\"t1\",\"currentWordIndex\":1,\"currentInput\":\"a\",\"wordResults\":[],\"correctChars\":1,\"incorrectChars\":0,\"elapsedMs\":10,\"wpmHistory\":[],\"savedAt\":\"2026-01-01T00:00:00.000Z\"},\"unknownField\":{\"kept\":[1,2.5,\"é😀\"]},\"_updatedAt\":\"2026-10-16T12:01:00.000Z\"}",
+          "etag": "d923c16f2fba211f7995bc2961abcdaf823403882c42b1636ea167091417fe84"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "d923c16f2fba211f7995bc2961abcdaf823403882c42b1636ea167091417fe84"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "abc7328a47d6af806c99d70323ebae7a8ccf216e5c28495be88e50a61a81d987"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "abc7328a47d6af806c99d70323ebae7a8ccf216e5c28495be88e50a61a81d987"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "591dd39706c8540f71c38f7d7f3156155e5a1593b48078461c77617fcd6dc9b6"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "591dd39706c8540f71c38f7d7f3156155e5a1593b48078461c77617fcd6dc9b6"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "f38ae106cb2aaf02d6a12729dca037860ab16647d9e1e7926ea0159947b19398"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3,\"fingerAssignments\":{}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "f38ae106cb2aaf02d6a12729dca037860ab16647d9e1e7926ea0159947b19398"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3,\"fingerAssignments\":{}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "6cce267d56d9481e71d03cd4bbc69242a368ce92f33dbcb106ef8572e2d0ee9b"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"basicViewType\":\"iso\",\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3,\"fingerAssignments\":{}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "6cce267d56d9481e71d03cd4bbc69242a368ce92f33dbcb106ef8572e2d0ee9b"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"basicViewType\":\"iso\",\"quickSelect\":true,\"keymapScale\":1.25,\"layerNames\":[\"Base\",\"Fn\"],\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}],\"analyze\":{\"filters\":{\"deviceScopes\":[\"own\"]},\"goalDays\":3,\"fingerAssignments\":{}},\"_updatedAt\":\"2026-10-16T12:02:00.000Z\"}",
+          "etag": "832bf3debe8c044fdc8249873919e1e8cc860a16fd013e7c0f2e3340919abae8"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a new file takes the app-wide layout and auto-advance",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "dvorak",
+      "defaultAutoAdvance": false
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true}",
+      "{\"_rev\":1,\"keyboardLayout\":\"dvorak\",\"autoAdvance\":false,\"quickSelect\":true,\"layerNames\":[]}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"dvorak\",\"autoAdvance\":false,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"dvorak\",\"autoAdvance\":false,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "absent"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"dvorak\",\"autoAdvance\":false,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "a64d8a3cea37a9daed6f78ec4421ac708238d22f1c2143036714437b6876953f"
+        }
+      }
+    ]
+  },
+  {
+    "name": "an empty app-wide layout falls back to qwerty",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "",
+      "defaultAutoAdvance": false
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "splitKeyMode": "flat"
+        }
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"layerNames\":[],\"splitKeyMode\":\"flat\",\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":false,\"layerNames\":[],\"splitKeyMode\":\"flat\",\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "absent"
+        },
+        "response": "written"
+      }
+    ]
+  },
+  {
+    "name": "an app-wide auto-advance that is not a boolean makes the new file invalid",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "colemak",
+      "defaultAutoAdvance": "yes"
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "autoAdvance": true
+        }
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":true}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"colemak\",\"autoAdvance\":true,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"colemak\",\"autoAdvance\":true,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "absent"
+        },
+        "response": "written"
+      }
+    ]
+  },
+  {
+    "name": "an existing file is rewritten with its known fields in their order",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"zzz\":\"unknown\",\"viewMode\":\"typingTest\",\"appliedKeymapLayout\":\"stale\",\"layerNames\":[\"A\"],\"autoAdvance\":false,\"keyboardLayout\":\"german\",\"_updatedAt\":\"2026-10-16T11:59:00.000Z\",\"keymapScale\":0.75,\"_rev\":1}"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 1,
+          "layerPanelOpen": true
+        }
+      },
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"_rev\":1,\"keyboardLayout\":\"german\",\"autoAdvance\":false,\"keymapScale\":0.75,\"layerNames\":[\"A\"],\"viewMode\":\"typingTest\"}",
+      "{\"success\":true}",
+      "{\"_rev\":1,\"keyboardLayout\":\"german\",\"autoAdvance\":false,\"layerPanelOpen\":true,\"keymapScale\":0.75,\"layerNames\":[\"A\"],\"viewMode\":\"typingTest\"}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"german\",\"autoAdvance\":false,\"layerPanelOpen\":true,\"keymapScale\":0.75,\"layerNames\":[\"A\"],\"viewMode\":\"typingTest\",\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"zzz\":\"unknown\",\"viewMode\":\"typingTest\",\"appliedKeymapLayout\":\"stale\",\"layerNames\":[\"A\"],\"autoAdvance\":false,\"keyboardLayout\":\"german\",\"_updatedAt\":\"2026-10-16T11:59:00.000Z\",\"keymapScale\":0.75,\"_rev\":1}",
+          "etag": "02b3e61358689572e7a0f0672f367bfec78401a76e5e512612cb331456c7beb3"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"zzz\":\"unknown\",\"viewMode\":\"typingTest\",\"appliedKeymapLayout\":\"stale\",\"layerNames\":[\"A\"],\"autoAdvance\":false,\"keyboardLayout\":\"german\",\"_updatedAt\":\"2026-10-16T11:59:00.000Z\",\"keymapScale\":0.75,\"_rev\":1}",
+          "etag": "02b3e61358689572e7a0f0672f367bfec78401a76e5e512612cb331456c7beb3"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"german\",\"autoAdvance\":false,\"layerPanelOpen\":true,\"keymapScale\":0.75,\"layerNames\":[\"A\"],\"viewMode\":\"typingTest\",\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "02b3e61358689572e7a0f0672f367bfec78401a76e5e512612cb331456c7beb3"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"german\",\"autoAdvance\":false,\"layerPanelOpen\":true,\"keymapScale\":0.75,\"layerNames\":[\"A\"],\"viewMode\":\"typingTest\",\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "90d347745983e71c0835a26f212a479f0fbff362db080eb0a7c6c81ac1d65041"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a file without layer names reads and writes them as empty",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "dvorak",
+      "defaultAutoAdvance": false
+    },
+    "tree": {
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"keyboardLayout\":\"jis\",\"autoAdvance\":true}"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "quickSelect": false
+        }
+      }
+    ],
+    "outcomes": [
+      "{\"_rev\":1,\"keyboardLayout\":\"jis\",\"autoAdvance\":true,\"layerNames\":[]}",
+      "{\"success\":true}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"jis\",\"autoAdvance\":true,\"quickSelect\":false,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"keyboardLayout\":\"jis\",\"autoAdvance\":true}",
+          "etag": "a81458d84c15b93fbbd20bbfaaa580137e2ccc87a6009c9307f442437411aa41"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"keyboardLayout\":\"jis\",\"autoAdvance\":true}",
+          "etag": "a81458d84c15b93fbbd20bbfaaa580137e2ccc87a6009c9307f442437411aa41"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"jis\",\"autoAdvance\":true,\"quickSelect\":false,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "a81458d84c15b93fbbd20bbfaaa580137e2ccc87a6009c9307f442437411aa41"
+        },
+        "response": "written"
+      }
+    ]
+  },
+  {
+    "name": "patches that make the settings invalid are refused",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}"
+    },
+    "steps": [
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "keyboardLayout": 5
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "_rev": 2
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "layerNames": [
+            "a",
+            1
+          ]
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "keymapScale": 9
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "autoAdvance": null
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "viewMatrix": {
+            "0,0": {
+              "row": -1,
+              "col": 0
+            }
+          }
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": [
+          "not",
+          "an",
+          "object"
+        ]
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": null
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": "text"
+      },
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid prefs\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid patch\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid patch\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid patch\"}",
+      "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}"
+    ],
+    "notified": [],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[]}",
+          "etag": "9b1616e61586fe1077992e04c6c8270616a9541050f1ab746430dd764d98e6b1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "files that are not valid settings read as none and are replaced by the next patch",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {
+      "sync/keyboards/0xA1B2/pipette_settings.json": "not json",
+      "sync/keyboards/bom/pipette_settings.json": "﻿{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true}",
+      "sync/keyboards/invalid/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\"}",
+      "sync/keyboards/array/pipette_settings.json": "[1]",
+      "sync/keyboards/utf8/pipette_settings.json": {
+        "hex": "7b226b6579626f6172644c61796f7574223a22ffe6222c226175746f416476616e6365223a747275657d"
+      }
+    },
+    "steps": [
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "patch",
+        "uid": "0xA1B2",
+        "patch": {
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "get",
+        "uid": "bom"
+      },
+      {
+        "op": "patch",
+        "uid": "bom",
+        "patch": {
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "get",
+        "uid": "invalid"
+      },
+      {
+        "op": "patch",
+        "uid": "invalid",
+        "patch": {
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "get",
+        "uid": "array"
+      },
+      {
+        "op": "patch",
+        "uid": "array",
+        "patch": {
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "get",
+        "uid": "utf8"
+      },
+      {
+        "op": "patch",
+        "uid": "utf8",
+        "patch": {
+          "quickSelect": true
+        }
+      }
+    ],
+    "outcomes": [
+      "null",
+      "{\"success\":true}",
+      "null",
+      "{\"success\":true}",
+      "null",
+      "{\"success\":true}",
+      "null",
+      "{\"success\":true}",
+      "{\"_rev\":1,\"keyboardLayout\":\"��\",\"autoAdvance\":true,\"layerNames\":[]}",
+      "{\"success\":true}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings",
+      "keyboards/bom/settings",
+      "keyboards/invalid/settings",
+      "keyboards/array/settings",
+      "keyboards/utf8/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+      "sync/keyboards/array/": null,
+      "sync/keyboards/array/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+      "sync/keyboards/bom/": null,
+      "sync/keyboards/bom/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+      "sync/keyboards/invalid/": null,
+      "sync/keyboards/invalid/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+      "sync/keyboards/utf8/": null,
+      "sync/keyboards/utf8/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"��\",\"autoAdvance\":true,\"quickSelect\":true,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "not json",
+          "etag": "7ccfa1fbf3940e6f0c0375d87c0f9235a50514e14cb427bdfaf5077987b26ccf"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "not json",
+          "etag": "7ccfa1fbf3940e6f0c0375d87c0f9235a50514e14cb427bdfaf5077987b26ccf"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "7ccfa1fbf3940e6f0c0375d87c0f9235a50514e14cb427bdfaf5077987b26ccf"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "bom"
+        },
+        "response": {
+          "content": "﻿{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true}",
+          "etag": "018956f447f76aaacf513e2638e690a37157573e65af85d97227877a16e97cc2"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "bom"
+        },
+        "response": {
+          "content": "﻿{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true}",
+          "etag": "018956f447f76aaacf513e2638e690a37157573e65af85d97227877a16e97cc2"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "bom",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "018956f447f76aaacf513e2638e690a37157573e65af85d97227877a16e97cc2"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "invalid"
+        },
+        "response": {
+          "content": "{\"keyboardLayout\":\"qwerty\"}",
+          "etag": "cc6d430f88aa9cff9e774129702eb71139284b0980e6380a097c85da6f8b0fe8"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "invalid"
+        },
+        "response": {
+          "content": "{\"keyboardLayout\":\"qwerty\"}",
+          "etag": "cc6d430f88aa9cff9e774129702eb71139284b0980e6380a097c85da6f8b0fe8"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "invalid",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "cc6d430f88aa9cff9e774129702eb71139284b0980e6380a097c85da6f8b0fe8"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "array"
+        },
+        "response": {
+          "content": "[1]",
+          "etag": "080a9ed428559ef602668b4c00f114f1a11c3f6b02a435f0bdc154578e4d7f22"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "array"
+        },
+        "response": {
+          "content": "[1]",
+          "etag": "080a9ed428559ef602668b4c00f114f1a11c3f6b02a435f0bdc154578e4d7f22"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "array",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"layerNames\":[],\"quickSelect\":true,\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "080a9ed428559ef602668b4c00f114f1a11c3f6b02a435f0bdc154578e4d7f22"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "utf8"
+        },
+        "response": {
+          "content": "{\"keyboardLayout\":\"��\",\"autoAdvance\":true}",
+          "etag": "9773a98ebfc2579e8c6f72385211b4f25f715aa09b87efe8c866431c389462fd"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "utf8"
+        },
+        "response": {
+          "content": "{\"keyboardLayout\":\"��\",\"autoAdvance\":true}",
+          "etag": "9773a98ebfc2579e8c6f72385211b4f25f715aa09b87efe8c866431c389462fd"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "utf8",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"��\",\"autoAdvance\":true,\"quickSelect\":true,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "9773a98ebfc2579e8c6f72385211b4f25f715aa09b87efe8c866431c389462fd"
+        },
+        "response": "written"
+      }
+    ]
+  },
+  {
+    "name": "uids that are not one path segment",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "get",
+        "uid": ""
+      },
+      {
+        "op": "patch",
+        "uid": "",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "",
+        "patch": null
+      },
+      {
+        "op": "ensureDir",
+        "uid": ""
+      },
+      {
+        "op": "get",
+        "uid": "."
+      },
+      {
+        "op": "patch",
+        "uid": ".",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": ".",
+        "patch": null
+      },
+      {
+        "op": "ensureDir",
+        "uid": "."
+      },
+      {
+        "op": "get",
+        "uid": ".."
+      },
+      {
+        "op": "patch",
+        "uid": "..",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "..",
+        "patch": null
+      },
+      {
+        "op": "ensureDir",
+        "uid": ".."
+      },
+      {
+        "op": "get",
+        "uid": "a/b"
+      },
+      {
+        "op": "patch",
+        "uid": "a/b",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "a/b",
+        "patch": null
+      },
+      {
+        "op": "ensureDir",
+        "uid": "a/b"
+      },
+      {
+        "op": "get",
+        "uid": "a\\b"
+      },
+      {
+        "op": "patch",
+        "uid": "a\\b",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "a\\b",
+        "patch": null
+      },
+      {
+        "op": "ensureDir",
+        "uid": "a\\b"
+      },
+      {
+        "op": "get",
+        "uid": "../x"
+      },
+      {
+        "op": "patch",
+        "uid": "../x",
+        "patch": {
+          "_rev": 1,
+          "quickSelect": true
+        }
+      },
+      {
+        "op": "patch",
+        "uid": "../x",
+        "patch": null
+      },
+      {
+        "op": "ensureDir",
+        "uid": "../x"
+      }
+    ],
+    "outcomes": [
+      "null",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "null",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "null",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "null",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "null",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "null",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}"
+    ],
+    "notified": [],
+    "after": {},
+    "commands": [
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": ""
+        },
+        "error": "Invalid uid"
+      },
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": "."
+        },
+        "error": "Invalid uid"
+      },
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": ".."
+        },
+        "error": "Invalid uid"
+      },
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": "a/b"
+        },
+        "error": "Invalid uid"
+      },
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": "a\\b"
+        },
+        "error": "Invalid uid"
+      },
+      {
+        "command": "pipette_settings_ensure_dir",
+        "args": {
+          "uid": "../x"
+        },
+        "error": "Invalid uid"
+      }
+    ]
+  },
+  {
+    "name": "patches of one keyboard made together all apply, in call order",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "patches",
+        "uid": "0xA1B2",
+        "patches": [
+          {
+            "_rev": 1,
+            "keyboardLayout": "colemak"
+          },
+          {
+            "_rev": 1,
+            "autoAdvance": false
+          },
+          {
+            "_rev": 1,
+            "keyboardLayout": "workman",
+            "layerNames": [
+              "L0"
+            ]
+          },
+          {
+            "_rev": 1,
+            "keyboardLayout": 5
+          }
+        ]
+      },
+      {
+        "op": "get",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "[{\"success\":true},{\"success\":true},{\"success\":true},{\"success\":false,\"error\":\"Error: Invalid prefs\"}]",
+      "{\"_rev\":1,\"keyboardLayout\":\"workman\",\"autoAdvance\":false,\"layerNames\":[\"L0\"]}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings",
+      "keyboards/0xA1B2/settings"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"_rev\":1,\"keyboardLayout\":\"workman\",\"autoAdvance\":false,\"layerNames\":[\"L0\"],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": null,
+          "etag": "absent"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"colemak\",\"autoAdvance\":true,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "absent"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"colemak\",\"autoAdvance\":true,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "e5a9425fc4a8278729418ffd6cbb6783466bc8ca1d59c2d5c4fab8881f908df4"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"colemak\",\"autoAdvance\":false,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "e5a9425fc4a8278729418ffd6cbb6783466bc8ca1d59c2d5c4fab8881f908df4"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"colemak\",\"autoAdvance\":false,\"layerNames\":[],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "abb2dbf5672620c2a92087128db405954048d77e9b6a49fb1245ebb17c6e070b"
+        }
+      },
+      {
+        "command": "pipette_settings_write",
+        "args": {
+          "uid": "0xA1B2",
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"workman\",\"autoAdvance\":false,\"layerNames\":[\"L0\"],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "abb2dbf5672620c2a92087128db405954048d77e9b6a49fb1245ebb17c6e070b"
+        },
+        "response": "written"
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"workman\",\"autoAdvance\":false,\"layerNames\":[\"L0\"],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "832ec4263ce9f6328989e09e282407eaf342748692a7fe51af7b5fa0be84705f"
+        }
+      },
+      {
+        "command": "pipette_settings_read",
+        "args": {
+          "uid": "0xA1B2"
+        },
+        "response": {
+          "content": "{\"_rev\":1,\"keyboardLayout\":\"workman\",\"autoAdvance\":false,\"layerNames\":[\"L0\"],\"_updatedAt\":\"2026-10-16T12:00:00.000Z\"}",
+          "etag": "832ec4263ce9f6328989e09e282407eaf342748692a7fe51af7b5fa0be84705f"
+        }
+      }
+    ]
+  },
+  {
+    "name": "the typing test results of every keyboard, with their names",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"named\",\n      \"deviceName\": \"Named Board\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"self\",\n      \"deviceName\": \"self\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"gone\",\n      \"deviceName\": \"Gone Board\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"number\",\n      \"deviceName\": 42,\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"empty\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/named/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":1,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":11,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"named\"}]}",
+      "sync/keyboards/self/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":2,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":12,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"self\"}]}",
+      "sync/keyboards/gone/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":3,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":13,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"gone\"}]}",
+      "sync/keyboards/number/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":4,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":14,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"number\"}]}",
+      "sync/keyboards/empty/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":5,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":15,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"empty\"}]}",
+      "sync/keyboards/snap/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":6,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":16,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"snap\"}]}",
+      "sync/keyboards/bare/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":7,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":17,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"bare\"}]}",
+      "sync/keyboards/a b/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":8,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":18,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"a b\"}]}",
+      "sync/keyboards/self/snapshots/index.json": "{\n  \"uid\": \"self\",\n  \"entries\": [\n    {\n      \"id\": \"d\",\n      \"filename\": \"Old_2026-01-01T00-00-00.000Z_d.pipette\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"filename\": \"Self Snap_2026-01-02T00-00-00.000Z_s.pipette\"\n    }\n  ]\n}",
+      "sync/keyboards/gone/snapshots/index.json": "{\n  \"uid\": \"gone\",\n  \"entries\": [\n    {\n      \"id\": \"d\",\n      \"filename\": \"Old_2026-01-01T00-00-00.000Z_d.pipette\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"filename\": \"Gone Snap_2026-01-02T00-00-00.000Z_s.pipette\"\n    }\n  ]\n}",
+      "sync/keyboards/snap/snapshots/index.json": "{\n  \"uid\": \"snap\",\n  \"entries\": [\n    {\n      \"id\": \"d\",\n      \"filename\": \"Old_2026-01-01T00-00-00.000Z_d.pipette\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"filename\": \"Snap Board_2026-01-02T00-00-00.000Z_s.pipette\"\n    }\n  ]\n}",
+      "sync/keyboards/bare/snapshots/index.json": "{\"uid\":\"bare\",\"entries\":[{\"id\":\"x\",\"filename\":\"no-date-here.pipette\"}]}",
+      "sync/keyboards/no-results/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[]}",
+      "sync/keyboards/invalid/pipette_settings.json": "{\"keyboardLayout\":1,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}]}",
+      "sync/keyboards/no-file/": null,
+      "sync/keyboards/dir-file/pipette_settings.json/": null,
+      "sync/keyboards/loose-file": "x"
+    },
+    "steps": [
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":8,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"a b\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":18,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"a b\",\"keyboardName\":\"a b\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":7,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"bare\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":17,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"bare\",\"keyboardName\":\"bare\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":5,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"empty\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":15,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"empty\",\"keyboardName\":\"empty\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":3,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"Gone Snap\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":13,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"gone\",\"keyboardName\":\"Gone Snap\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":1,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"Named Board\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":11,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"named\",\"keyboardName\":\"Named Board\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":4,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":42},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":14,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"number\",\"keyboardName\":42},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":2,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"Self Snap\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":12,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"self\",\"keyboardName\":\"Self Snap\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":6,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"keyboardName\":\"Snap Board\"},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":16,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"snap\",\"keyboardName\":\"Snap Board\"}]"
+    ],
+    "notified": [],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/a b/": null,
+      "sync/keyboards/a b/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":8,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":18,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"a b\"}]}",
+      "sync/keyboards/bare/": null,
+      "sync/keyboards/bare/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":7,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":17,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"bare\"}]}",
+      "sync/keyboards/bare/snapshots/": null,
+      "sync/keyboards/bare/snapshots/index.json": "{\"uid\":\"bare\",\"entries\":[{\"id\":\"x\",\"filename\":\"no-date-here.pipette\"}]}",
+      "sync/keyboards/dir-file/": null,
+      "sync/keyboards/dir-file/pipette_settings.json/": null,
+      "sync/keyboards/empty/": null,
+      "sync/keyboards/empty/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":5,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":15,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"empty\"}]}",
+      "sync/keyboards/gone/": null,
+      "sync/keyboards/gone/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":3,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":13,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"gone\"}]}",
+      "sync/keyboards/gone/snapshots/": null,
+      "sync/keyboards/gone/snapshots/index.json": "{\n  \"uid\": \"gone\",\n  \"entries\": [\n    {\n      \"id\": \"d\",\n      \"filename\": \"Old_2026-01-01T00-00-00.000Z_d.pipette\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"filename\": \"Gone Snap_2026-01-02T00-00-00.000Z_s.pipette\"\n    }\n  ]\n}",
+      "sync/keyboards/invalid/": null,
+      "sync/keyboards/invalid/pipette_settings.json": "{\"keyboardLayout\":1,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}]}",
+      "sync/keyboards/loose-file": "x",
+      "sync/keyboards/named/": null,
+      "sync/keyboards/named/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":1,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":11,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"named\"}]}",
+      "sync/keyboards/no-file/": null,
+      "sync/keyboards/no-results/": null,
+      "sync/keyboards/no-results/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[]}",
+      "sync/keyboards/number/": null,
+      "sync/keyboards/number/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":4,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":14,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"number\"}]}",
+      "sync/keyboards/self/": null,
+      "sync/keyboards/self/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":2,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":12,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"self\"}]}",
+      "sync/keyboards/self/snapshots/": null,
+      "sync/keyboards/self/snapshots/index.json": "{\n  \"uid\": \"self\",\n  \"entries\": [\n    {\n      \"id\": \"d\",\n      \"filename\": \"Old_2026-01-01T00-00-00.000Z_d.pipette\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"filename\": \"Self Snap_2026-01-02T00-00-00.000Z_s.pipette\"\n    }\n  ]\n}",
+      "sync/keyboards/snap/": null,
+      "sync/keyboards/snap/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":6,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":16,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"snap\"}]}",
+      "sync/keyboards/snap/snapshots/": null,
+      "sync/keyboards/snap/snapshots/index.json": "{\n  \"uid\": \"snap\",\n  \"entries\": [\n    {\n      \"id\": \"d\",\n      \"filename\": \"Old_2026-01-01T00-00-00.000Z_d.pipette\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"filename\": \"Snap Board_2026-01-02T00-00-00.000Z_s.pipette\"\n    }\n  ]\n}",
+      "sync/meta/": null,
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"named\",\n      \"deviceName\": \"Named Board\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"self\",\n      \"deviceName\": \"self\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"gone\",\n      \"deviceName\": \"Gone Board\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"number\",\n      \"deviceName\": 42,\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"uid\": \"empty\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read_all",
+        "args": {},
+        "response": [
+          {
+            "uid": "a b",
+            "name": "a b",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":8,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":18,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"a b\"}]}"
+          },
+          {
+            "uid": "bare",
+            "name": "bare",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":7,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":17,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"bare\"}]}"
+          },
+          {
+            "uid": "empty",
+            "name": "empty",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":5,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":15,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"empty\"}]}"
+          },
+          {
+            "uid": "gone",
+            "name": "Gone Snap",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":3,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":13,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"gone\"}]}"
+          },
+          {
+            "uid": "invalid",
+            "name": "invalid",
+            "content": "{\"keyboardLayout\":1,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}]}"
+          },
+          {
+            "uid": "named",
+            "name": "Named Board",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":1,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":11,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"named\"}]}"
+          },
+          {
+            "uid": "no-results",
+            "name": "no-results",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[]}"
+          },
+          {
+            "uid": "number",
+            "name": 42,
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":4,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":14,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"number\"}]}"
+          },
+          {
+            "uid": "self",
+            "name": "Self Snap",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":2,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":12,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"self\"}]}"
+          },
+          {
+            "uid": "snap",
+            "name": "Snap Board",
+            "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":6,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":16,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"snap\"}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "no keyboards directory pools nothing",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {},
+    "steps": [
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "[]"
+    ],
+    "notified": [],
+    "after": {},
+    "commands": [
+      {
+        "command": "pipette_settings_read_all",
+        "args": {},
+        "response": []
+      }
+    ]
+  },
+  {
+    "name": "a null entry in the keyboard names fails the pool",
+    "time": "2026-10-16T12:00:00.000Z",
+    "config": {
+      "defaultKeyboardLayout": "qwerty",
+      "defaultAutoAdvance": true
+    },
+    "tree": {
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    null\n  ]\n}",
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}]}"
+    },
+    "steps": [
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "<rejected>"
+    ],
+    "notified": [],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/pipette_settings.json": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}]}",
+      "sync/meta/": null,
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    null\n  ]\n}"
+    },
+    "commands": [
+      {
+        "command": "pipette_settings_read_all",
+        "args": {},
+        "error": "Cannot read properties of null (reading 'deletedAt')"
+      }
+    ]
+  }
+]

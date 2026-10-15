@@ -30,11 +30,6 @@ export const fakes = {
   // Key label store.
   keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
 
-  // Keyboard settings store.
-  pipetteSettingsGet: () => Promise.resolve(null),
-  pipetteSettingsEnsureDir: () => Promise.resolve({ success: true }),
-  pipetteSettingsPatch: () => Promise.resolve({ success: true }),
-
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
 } satisfies Partial<VialAPI>

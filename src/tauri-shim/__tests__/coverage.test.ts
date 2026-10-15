@@ -20,9 +20,6 @@ const EXPECTED_FAKES = [
   'i18nPackList',
   'themePackList',
   'keyLabelStoreList',
-  'pipetteSettingsGet',
-  'pipetteSettingsEnsureDir',
-  'pipetteSettingsPatch',
   'typingRunLogList',
 ]
 

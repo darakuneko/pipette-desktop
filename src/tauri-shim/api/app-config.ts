@@ -21,6 +21,13 @@ import { enqueue } from '../key-queue'
 // rejects its own call and does not hold up the ones after it.
 const SET_QUEUE_KEY = 'app-config'
 
+/** The app config once every set made before this call has finished, as
+ *  the Electron main process reads it after applying the sets that came
+ *  before. */
+export function readAppConfigAfterSets(): Promise<AppConfig> {
+  return enqueue(SET_QUEUE_KEY, () => call<AppConfig>('app_config_get_all'))
+}
+
 export const appConfigApi = {
   appConfigGetAll: () => call<AppConfig>('app_config_get_all'),
   appConfigSet: (key, value) =>
