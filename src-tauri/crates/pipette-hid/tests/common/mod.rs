@@ -48,6 +48,9 @@ pub struct MockHandle {
     /// Called inside every read, before it returns (blocking hooks, ordering).
     pub on_read: Mutex<Option<Box<dyn Fn() + Send>>>,
     pub read_calls: AtomicUsize,
+    /// Timeouts each read was given.
+    pub read_timeouts: Mutex<Vec<i32>>,
+    pub close_calls: AtomicUsize,
 }
 
 impl HidHandle for MockHandle {
@@ -59,8 +62,9 @@ impl HidHandle for MockHandle {
         Ok(data.len())
     }
 
-    fn read_timeout(&self, buf: &mut [u8], _timeout_ms: i32) -> Result<usize, HidError> {
+    fn read_timeout(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, HidError> {
         self.read_calls.fetch_add(1, Ordering::SeqCst);
+        self.read_timeouts.lock().unwrap().push(timeout_ms);
         if let Some(hook) = self.on_read.lock().unwrap().as_ref() {
             hook();
         }
@@ -73,16 +77,29 @@ impl HidHandle for MockHandle {
         buf[..bytes.len()].copy_from_slice(&bytes);
         Ok(bytes.len())
     }
+
+    fn close(&self) {
+        self.close_calls.fetch_add(1, Ordering::SeqCst);
+    }
 }
 
 #[derive(Default)]
 pub struct MockBackend {
     pub devices: Mutex<Vec<MockDevice>>,
+    /// Opened for every path without its own entry in `path_handles`.
     pub handle: Arc<MockHandle>,
+    /// A handle of its own for a path, created on first open and reused.
+    pub path_handles: Mutex<Vec<(CString, Arc<MockHandle>)>>,
+    /// Paths given to open_path, failed attempts included.
+    pub opened_paths: Mutex<Vec<CString>>,
+    /// When set, enumeration fails with this message.
+    pub enumerate_error: Mutex<Option<String>>,
     pub enumerate_calls: AtomicUsize,
     pub open_calls: AtomicUsize,
     /// open_path fails this many times before succeeding.
     pub open_failures: AtomicUsize,
+    /// The message of those failures; "open failed" when unset.
+    pub open_error: Mutex<Option<String>>,
 }
 
 /// Shares one `MockBackend` between the service and the test. Enumeration
@@ -92,6 +109,9 @@ pub struct SharedBackend(pub Arc<MockBackend>);
 impl HidBackend for SharedBackend {
     fn enumerate(&self) -> Result<Vec<RawDeviceInfo>, HidError> {
         self.0.enumerate_calls.fetch_add(1, Ordering::SeqCst);
+        if let Some(message) = self.0.enumerate_error.lock().unwrap().clone() {
+            return Err(HidError::Backend(message));
+        }
         let devices = self.0.devices.lock().unwrap();
         Ok(devices
             .iter()
@@ -100,14 +120,17 @@ impl HidBackend for SharedBackend {
             .collect())
     }
 
-    fn open_path(&self, _path: &CString) -> Result<Arc<dyn HidHandle>, HidError> {
+    fn open_path(&self, path: &CString) -> Result<Arc<dyn HidHandle>, HidError> {
         self.0.open_calls.fetch_add(1, Ordering::SeqCst);
+        self.0.opened_paths.lock().unwrap().push(path.clone());
         let remaining = self.0.open_failures.load(Ordering::SeqCst);
         if remaining > 0 {
             self.0.open_failures.store(remaining - 1, Ordering::SeqCst);
-            return Err(HidError::Backend("open failed".into()));
+            let message = self.0.open_error.lock().unwrap().clone().unwrap_or_else(|| "open failed".into());
+            return Err(HidError::Backend(message));
         }
-        Ok(self.0.handle.clone())
+        let own = self.0.path_handles.lock().unwrap().iter().find(|(p, _)| p == path).map(|(_, h)| h.clone());
+        Ok(own.unwrap_or_else(|| self.0.handle.clone()))
     }
 }
 
@@ -131,6 +154,20 @@ pub fn fixture(mode: VirtualDeviceMode) -> Fixture {
     );
     let service = HidService::with_backend(Box::new(SharedBackend(backend.clone())), mode, timing);
     Fixture { service, backend, sleeps }
+}
+
+impl MockBackend {
+    /// The handle open_path returns for `path`, created on first use.
+    pub fn handle_for(&self, path: &str) -> Arc<MockHandle> {
+        let path = CString::new(path).unwrap();
+        let mut handles = self.path_handles.lock().unwrap();
+        if let Some((_, handle)) = handles.iter().find(|(p, _)| *p == path) {
+            return handle.clone();
+        }
+        let handle = Arc::new(MockHandle::default());
+        handles.push((path, handle.clone()));
+        handle
+    }
 }
 
 /// Enumerate one real (mock) keyboard and open it.

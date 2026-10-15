@@ -117,6 +117,11 @@ impl DeviceBackends {
         Self { hardware, virtual_device, mode }
     }
 
+    /// Real hardware alone, whatever the mode.
+    pub(crate) fn hardware(&self) -> &dyn HidBackend {
+        self.hardware.as_ref()
+    }
+
     fn is_virtual(&self, path: &CString) -> bool {
         self.mode != VirtualDeviceMode::Off && path.as_c_str() == VIRTUAL_DEVICE_PATH
     }

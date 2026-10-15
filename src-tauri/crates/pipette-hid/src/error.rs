@@ -10,6 +10,16 @@ pub enum HidError {
     /// write errors, disconnects and I/O errors fail at once.
     #[error("HID read timeout")]
     ReadTimeout,
+    /// No Vial interface other than the main connection matches the probe's
+    /// VID/PID (and serial number, when one is given).
+    #[error("Probe target device not found")]
+    ProbeTargetNotFound,
+    /// The probe handle with this id is not the open one.
+    #[error("No probe device is open")]
+    ProbeNotOpen,
+    /// A probe read timed out. Probes never retry.
+    #[error("HID read timeout during probe")]
+    ProbeReadTimeout,
     #[error("HID data exceeds maximum length of {max}")]
     DataTooLong { max: usize },
     /// Any failure reported by the HID library (enumeration, open, write, read).

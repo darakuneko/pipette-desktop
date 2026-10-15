@@ -17,6 +17,7 @@ use crate::error::HidError;
 use crate::fifo::FifoLock;
 use crate::hidapi_backend::HidapiBackend;
 use crate::packet_log::{Direction, log_packet, packet_logging_from_env};
+use crate::probe::ProbeSlot;
 use crate::timing::Timing;
 use crate::virtual_backend::{DeviceBackends, VirtualBackend};
 
@@ -41,6 +42,8 @@ pub struct HidService {
     io_queue: FifoLock,
     /// Whether every report sent and received is logged (`VIAL_DEBUG_HID`).
     log_packets: bool,
+    /// The temporary handle of a probe, next to the main connection.
+    probe: ProbeSlot,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -55,6 +58,13 @@ fn normalize_response(buf: &[u8]) -> Report {
         return pad_report(&buf[1..]);
     }
     pad_report(buf)
+}
+
+/// Logs why a device could not be opened, in the words of `logOpenFailure`
+/// in src/main/hid-service.ts, so the cause is not lost behind the message
+/// the renderer shows.
+fn log_open_failure(vendor_id: u16, product_id: u16, err: &HidError) {
+    log::error!("Failed to open HID device 0x{vendor_id:04x}:0x{product_id:04x}: {err}");
 }
 
 /// Report ID 0 followed by the zero-padded 32-byte report.
@@ -90,6 +100,7 @@ impl HidService {
             open_device: Mutex::new(None),
             io_queue: FifoLock::default(),
             log_packets: packet_logging_from_env(),
+            probe: ProbeSlot::default(),
         }
     }
 
@@ -116,11 +127,15 @@ impl HidService {
     /// Close whatever is open, then open the first Vial interface matching
     /// `vendor_id`/`product_id`. Returns `Ok(false)` when none is present.
     /// Opening is retried (transient failures happen on every platform);
-    /// the last error is returned.
+    /// the last error is returned. A failed enumeration and the last failed
+    /// attempt are logged.
     pub fn open_device(&self, vendor_id: u16, product_id: u16) -> Result<bool, HidError> {
         self.close_device();
 
-        let Some(RawDeviceInfo { path, .. }) = self.backend.find(vendor_id, product_id)? else {
+        let found = self.backend.find(vendor_id, product_id).inspect_err(|err| {
+            log_open_failure(vendor_id, product_id, err);
+        })?;
+        let Some(RawDeviceInfo { path, .. }) = found else {
             return Ok(false);
         };
 
@@ -134,6 +149,7 @@ impl HidService {
                 Err(err) => {
                     attempt += 1;
                     if attempt >= HID_OPEN_RETRY_COUNT {
+                        log_open_failure(vendor_id, product_id, &err);
                         return Err(err);
                     }
                     (self.timing.sleep)(Duration::from_millis(HID_OPEN_RETRY_DELAY_MS));
@@ -190,6 +206,66 @@ impl HidService {
             self.close_device();
         }
         Ok(present)
+    }
+
+    /// Opens the first Vial interface on real hardware with this VID/PID that
+    /// is not the main connection — and, when `serial_number` is given and
+    /// not empty, whose serial number is exactly that — as the probe handle,
+    /// closing any probe handle open before. Returns the new handle's id.
+    /// The virtual keyboard is never a candidate, and hardware is searched
+    /// even when the device list shows only the virtual keyboard: the
+    /// Electron main process probes over node-hid's own enumeration. One
+    /// attempt, nothing logged.
+    pub fn probe_open(
+        &self,
+        vendor_id: u16,
+        product_id: u16,
+        serial_number: Option<&str>,
+    ) -> Result<u32, HidError> {
+        self.probe.close(None);
+        let serial_number = serial_number.filter(|s| !s.is_empty());
+        let main_path = lock(&self.open_device).as_ref().map(|d| d.path.clone());
+        let hardware = self.backend.hardware();
+        let target = hardware
+            .enumerate()?
+            .into_iter()
+            .find(|d| {
+                d.vendor_id == vendor_id
+                    && d.product_id == product_id
+                    && main_path.as_ref() != Some(&d.path)
+                    && serial_number.is_none_or(|s| d.serial_number.as_deref().unwrap_or_default() == s)
+            })
+            .ok_or(HidError::ProbeTargetNotFound)?;
+        let handle = hardware.open_path(&target.path)?;
+        Ok(self.probe.replace(handle))
+    }
+
+    /// Sends one report (zero-padded to 32 bytes) over the probe handle `id`
+    /// and reads the response once, waiting HID_TIMEOUT_MS. No retries and
+    /// no packet logs; probe requests do not queue behind the main
+    /// connection's.
+    pub fn probe_send_receive(&self, id: u32, data: &[u8]) -> Result<Report, HidError> {
+        if data.len() > MSG_LEN {
+            return Err(HidError::DataTooLong { max: MSG_LEN });
+        }
+        let handle = self.probe.handle(id).ok_or(HidError::ProbeNotOpen)?;
+        handle.write(&packet(data))?;
+        let mut buf = [0u8; READ_BUFFER_LEN];
+        let read = handle.read_timeout(&mut buf, HID_TIMEOUT_MS)?;
+        if read == 0 {
+            return Err(HidError::ProbeReadTimeout);
+        }
+        Ok(normalize_response(&buf[..read]))
+    }
+
+    /// Closes the probe handle `id`; nothing when it is no longer the open one.
+    pub fn probe_close(&self, id: u32) {
+        self.probe.close(Some(id));
+    }
+
+    /// Closes the probe handle, whichever is open (when the app quits).
+    pub fn close_probe(&self) {
+        self.probe.close(None);
     }
 
     /// Length check, then `io` on the open device's handle with the framed
