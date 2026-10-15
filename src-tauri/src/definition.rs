@@ -8,6 +8,8 @@
 
 use std::io::{self, Read, Write};
 
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 use xz4rust::{XzDecoder, XzReader};
 
 /// Largest compressed definition accepted (`MAX_COMPRESSED_SIZE` in
@@ -89,18 +91,31 @@ impl Write for LimitedWriter {
     }
 }
 
+/// The `compressed` argument of `DecompressDefinition` in
+/// src/preload/protocol-members.ts: the raw bytes as an array of numbers.
+#[derive(Debug, PartialEq, Eq, Deserialize, TS)]
+#[ts(export)]
+pub struct CompressedDefinition(Vec<u8>);
+
+/// What `DecompressDefinition` in src/preload/protocol-members.ts resolves
+/// to: the definition JSON text, or null when `decompress` gives up.
+#[derive(Debug, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct DecompressedDefinition(Option<String>);
+
 /// Runs on a blocking-task thread: a definition near the output limit takes
 /// long enough to stall the UI thread a synchronous command would run on.
 #[tauri::command]
-pub async fn decompress_definition(data: Vec<u8>) -> Result<Option<String>, String> {
-    tauri::async_runtime::spawn_blocking(move || decompress(&data)).await.map_err(|err| err.to_string())
+pub async fn decompress_definition(data: CompressedDefinition) -> Result<DecompressedDefinition, String> {
+    tauri::async_runtime::spawn_blocking(move || DecompressedDefinition(decompress(&data.0)))
+        .await
+        .map_err(|err| err.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use serde::Deserialize;
     use sha2::{Digest, Sha256};
 
     use super::*;
@@ -168,5 +183,14 @@ mod tests {
         out.write_all(b"abcd").unwrap();
         assert!(out.write_all(b"e").is_err());
         assert_eq!(out.buf, b"abcd");
+    }
+
+    #[test]
+    fn crosses_the_ipc_boundary_as_a_byte_array_and_text_or_null() {
+        let data: CompressedDefinition = serde_json::from_value(serde_json::json!([0x5d, 0, 255])).unwrap();
+        assert_eq!(data, CompressedDefinition(vec![0x5d, 0, 255]));
+        assert!(serde_json::from_value::<CompressedDefinition>(serde_json::json!([256])).is_err());
+        assert_eq!(serde_json::to_value(DecompressedDefinition(None)).unwrap(), serde_json::Value::Null);
+        assert_eq!(serde_json::to_value(DecompressedDefinition(Some("{}".into()))).unwrap(), "{}");
     }
 }

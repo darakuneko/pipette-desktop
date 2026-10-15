@@ -20,5 +20,7 @@
     // of depending on that implicit behavior again.
     "types": ["node"]
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "src/tauri-shim/**/*"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/tauri-shim/**/*"],
+  // Checked by tsconfig.main.json.
+  "exclude": ["src/tauri-shim/__tests__/contract-types.ts"]
 }

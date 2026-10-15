@@ -19,6 +19,7 @@ use serde::Serialize;
 use tauri::ipc::Invoke;
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
 use tauri::{Builder, State, Webview, Wry};
+use ts_rs::TS;
 
 use crate::hid_commands::Hid;
 
@@ -34,8 +35,9 @@ const DEV_SHOT_DIR_ENV: &str = "PIPETTE_DEV_SHOT_DIR";
 
 /// Same shape as `VirtualDeviceControllerState` in
 /// src/main/virtual-device/index.ts.
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "VirtualDeviceControllerState")]
 pub struct ControllerStateDto {
     open: bool,
     unlocked: bool,

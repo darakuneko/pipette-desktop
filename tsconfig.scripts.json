@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.main.json",
+  // The fixture globs must match the generator entry in eslint.config.js.
+  // lzma.d.ts types the 'lzma' package for the src/main files the generators import.
+  "include": ["scripts/*-fixtures/**/*.ts", "scripts/fixture-*.ts", "src/preload/lzma.d.ts"]
+}
