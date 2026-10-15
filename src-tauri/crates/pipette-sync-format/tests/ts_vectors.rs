@@ -2,7 +2,8 @@
 //! TypeScript → Rust: the deterministic vectors of
 //! `tests/fixtures/ts_vectors.json`, produced by the real TypeScript
 //! functions. Each envelope case is its own test so the 600,000-iteration
-//! key derivations run in parallel.
+//! key derivations run in parallel, and each password and salt pair is
+//! derived once (`common::key`).
 
 // Test helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]
@@ -10,7 +11,7 @@
 mod common;
 
 use common::{fixture, hex_array, str_of};
-use pipette_sync_format::crypto::encrypt_with;
+use pipette_sync_format::crypto::{decrypt_with_key, encrypt_with_key};
 use pipette_sync_format::drive_names::{
     KEYBOARD_META_SYNC_UNIT, PASSWORD_CHANGE_LOCK_FILE, SYNC_FORMAT_FILE_PREFIX, drive_file_name,
     drive_filename_prefix, is_data_file_name, parse_sync_format_file_name, sync_format_file_name,
@@ -19,7 +20,7 @@ use pipette_sync_format::drive_names::{
 use pipette_sync_format::password_check::{
     PASSWORD_CHECK_PAYLOAD, PASSWORD_CHECK_UNIT, password_check_matches,
 };
-use pipette_sync_format::{Envelope, content_hash, decrypt, machine_hash};
+use pipette_sync_format::{Envelope, content_hash, machine_hash};
 use serde_json::Value;
 
 fn vectors() -> Value {
@@ -37,10 +38,11 @@ fn check_envelope_case(name: &str) {
     let password = str_of(&case, "password");
     let plaintext = str_of(&case, "plaintext");
     let envelope: Envelope = serde_json::from_value(case["envelope"].clone()).unwrap();
+    let key = common::key(password, &envelope.salt);
 
-    let ours = encrypt_with(
+    let ours = encrypt_with_key(
         plaintext,
-        password,
+        &key,
         str_of(&case, "syncUnit"),
         &hex_array(str_of(&case, "saltHex")),
         &hex_array(str_of(&case, "ivHex")),
@@ -48,7 +50,7 @@ fn check_envelope_case(name: &str) {
     )
     .unwrap();
     assert_eq!(serde_json::to_string(&ours).unwrap(), str_of(&case, "json"));
-    assert_eq!(decrypt(&envelope, password).unwrap(), plaintext);
+    assert_eq!(decrypt_with_key(&envelope, &key).unwrap(), plaintext);
 }
 
 #[test]
@@ -76,21 +78,33 @@ fn envelope_password_check() {
     check_envelope_case("password-check");
 }
 
-#[test]
-fn password_check_opens_only_with_its_password() {
-    let case = envelope_case("password-check");
-    let envelope: Envelope = serde_json::from_value(case["envelope"].clone()).unwrap();
+fn password_check_envelope() -> Envelope {
+    let envelope: Envelope =
+        serde_json::from_value(envelope_case("password-check")["envelope"].clone()).unwrap();
     assert_eq!(envelope.sync_unit, PASSWORD_CHECK_UNIT);
-    assert!(password_check_matches(&envelope, str_of(&case, "password")));
-    assert!(!password_check_matches(&envelope, "not the password"));
+    envelope
+}
+
+#[test]
+fn password_check_opens_with_its_password() {
+    let password = str_of(&envelope_case("password-check"), "password").to_owned();
+    assert!(password_check_matches(&password_check_envelope(), &password));
+}
+
+#[test]
+fn password_check_rejects_another_password() {
+    assert!(!password_check_matches(&password_check_envelope(), "not the password"));
 }
 
 /// Same inputs, same failure, same message as the TypeScript `decrypt`.
+/// The rejected envelopes share one salt and mostly one password, so the
+/// key comes from `common::key`; `decrypt_with_key` runs the same checks.
 fn check_rejection(name: &str) {
     let all = vectors();
     let case = all["rejections"].as_array().unwrap().iter().find(|c| c["name"] == name).unwrap();
     let envelope: Envelope = serde_json::from_value(case["envelope"].clone()).unwrap();
-    let error = decrypt(&envelope, str_of(case, "password")).unwrap_err();
+    let key = common::key(str_of(case, "password"), &envelope.salt);
+    let error = decrypt_with_key(&envelope, &key).unwrap_err();
     assert_eq!(error.to_string(), str_of(case, "message"));
 }
 

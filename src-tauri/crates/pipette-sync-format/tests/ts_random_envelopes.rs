@@ -2,7 +2,8 @@
 //! TypeScript → Rust: envelopes from the real random `encrypt`
 //! (`tests/fixtures/ts_random_envelopes.json`, new bytes on every generator
 //! run). Rust decrypts them, and a wrong password or another sync unit does
-//! not open them.
+//! not open them. The right password's key is derived once per envelope;
+//! the wrong password goes through the full `decrypt`.
 
 // Test helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]
@@ -10,6 +11,7 @@
 mod common;
 
 use common::{fixture, str_of};
+use pipette_sync_format::crypto::decrypt_with_key;
 use pipette_sync_format::{CryptoError, Envelope, decrypt};
 
 fn check(name: &str) {
@@ -17,12 +19,18 @@ fn check(name: &str) {
     let case = all.as_array().unwrap().iter().find(|c| c["name"] == name).unwrap();
     let envelope: Envelope = serde_json::from_value(case["envelope"].clone()).unwrap();
     let password = str_of(case, "password");
-    assert_eq!(decrypt(&envelope, password).unwrap(), str_of(case, "plaintext"));
-
     let wrong_password = format!("{password}!");
-    assert_eq!(decrypt(&envelope, &wrong_password), Err(CryptoError::Authentication));
-    let retargeted = Envelope { sync_unit: format!("{}/other", envelope.sync_unit), ..envelope };
-    assert_eq!(decrypt(&retargeted, password), Err(CryptoError::Authentication));
+    // The wrong password's derivation runs beside the right one's.
+    std::thread::scope(|scope| {
+        let wrong = scope.spawn(|| decrypt(&envelope, &wrong_password));
+
+        let key = common::key(password, &envelope.salt);
+        assert_eq!(decrypt_with_key(&envelope, &key).unwrap(), str_of(case, "plaintext"));
+        let retargeted = Envelope { sync_unit: format!("{}/other", envelope.sync_unit), ..envelope.clone() };
+        assert_eq!(decrypt_with_key(&retargeted, &key), Err(CryptoError::Authentication));
+
+        assert_eq!(wrong.join().unwrap(), Err(CryptoError::Authentication));
+    });
 }
 
 #[test]

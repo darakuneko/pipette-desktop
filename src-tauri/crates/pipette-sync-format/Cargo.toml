@@ -9,8 +9,10 @@ publish.workspace = true
 rust-version.workspace = true
 
 [features]
-# Encryption with a caller-chosen salt, IV and timestamp. Tests only; real
-# envelopes always take fresh random bytes.
+# Tests only: encryption with a caller-chosen salt, IV and timestamp (real
+# envelopes always take fresh random bytes), and encryption / decryption
+# with a key derived once, so a test does not repeat the 600,000-iteration
+# PBKDF2 for every call on the same password and salt.
 test-util = []
 
 [dependencies]
@@ -24,6 +26,7 @@ sha2 = { version = "=0.10.9", default-features = false }
 thiserror = "=2.0.21"
 
 [dev-dependencies]
+hex = "=0.4.3"
 pipette-sync-format = { path = ".", features = ["test-util"] }
 
 [lints]

@@ -290,6 +290,7 @@ version = "0.4.27"
 dependencies = [
  "aes-gcm",
  "base64",
+ "hex",
  "pbkdf2",
  "pipette-sync-format",
  "regex",
