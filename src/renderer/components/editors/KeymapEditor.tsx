@@ -267,7 +267,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   // paste into whatever `selectedKey`/`selectedEncoder` the shared state
   // holds, or start a picker multi-select, regardless of what's selected
   // on THIS surface). Same `packTabReadOnly` gate as every other edit path.
-  const { layoutPickerContent } = useLayoutPicker({
+  const { layoutPickerContent, setKeyboardTabVisible } = useLayoutPicker({
     layout, layers, layerNames, keymap, effectiveLayoutOptions, advancableKeys, remapLabel,
     scale: scaleProp, onScaleChange,
     devices, connectedDevice, onDeviceListActiveChange,
@@ -458,7 +458,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <KeymapPickerRegion
           {...props}
           layerPanelCollapsed={layerPanelCollapsed} toggleLayerPanel={toggleLayerPanel}
-          layoutPickerContent={layoutPickerContent} packTabReadOnly={packTabReadOnly}
+          layoutPickerContent={layoutPickerContent} onKeyboardTabVisibleChange={setKeyboardTabVisible} packTabReadOnly={packTabReadOnly}
           gatedHandleKeycodeSelect={gatedHandleKeycodeSelect} handlePickerMultiSelect={handlePickerMultiSelect}
           pickerSelectedIndices={pickerSelectedIndices} selectedKey={selectedKey} selectedEncoder={selectedEncoder}
           handleDeselect={handleDeselect} clearPickerSelection={multiSelect.clearPickerSelection}

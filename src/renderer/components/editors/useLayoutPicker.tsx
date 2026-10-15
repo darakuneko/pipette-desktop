@@ -68,6 +68,10 @@ export interface UseLayoutPickerOptions {
 
 export interface UseLayoutPickerReturn {
   layoutPickerContent: React.ReactNode
+  /** Wired to `TabbedKeycodes`' `onKeyboardTabVisibleChange`: the tab's
+   *  content stays mounted while hidden, so only `TabbedKeycodes` knows
+   *  whether it is on screen. */
+  setKeyboardTabVisible: (visible: boolean) => void
 }
 
 // Encoder indices can be sparse, so this walks the parsed layout's actual
@@ -108,6 +112,7 @@ export function useLayoutPicker({
   const [pickerLoadError, setPickerLoadError] = useState<string | null>(null)
   const [probeStatus, setProbeStatus] = useState<'idle' | 'probing' | 'error'>('idle')
   const [deviceBrowsing, setDeviceBrowsing] = useState(true)
+  const [keyboardTabVisible, setKeyboardTabVisible] = useState(false)
   const [pickerScale, setPickerScale] = useState<number | undefined>(undefined)
   // Canonicalized shared bubble (same BUBBLE_BASE skin, computeBubblePosition
   // viewport clamping, and 300ms open delay as the canonical `Tooltip`)
@@ -122,9 +127,13 @@ export function useLayoutPicker({
   }, [showPickerTooltip])
 
   // --- Notify parent when device list browsing state changes ---
+  // Active only while the device list is actually on screen: the parent lists
+  // USB devices every second while this is true, even when connected. The
+  // cleanup resets it when the editor unmounts (e.g. switching to Analyze).
   useEffect(() => {
-    onDeviceListActiveChange?.(pickerSource === 'device' && deviceBrowsing)
-  }, [pickerSource, deviceBrowsing, onDeviceListActiveChange])
+    onDeviceListActiveChange?.(pickerSource === 'device' && deviceBrowsing && keyboardTabVisible)
+    return () => { onDeviceListActiveChange?.(false) }
+  }, [pickerSource, deviceBrowsing, keyboardTabVisible, onDeviceListActiveChange])
 
   // A sync merge of the loaded keyboard's settings re-reads its zoom. Read
   // paths (file load, probe, this reload) set the state directly; only the
@@ -433,5 +442,5 @@ export function useLayoutPicker({
     />
   )
 
-  return { layoutPickerContent }
+  return { layoutPickerContent, setKeyboardTabVisible }
 }

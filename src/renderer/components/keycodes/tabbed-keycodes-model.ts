@@ -121,6 +121,7 @@ export interface TabbedKeycodesProps {
   pickerMultiSelectEnabled?: boolean
   onBackgroundClick?: () => void
   onTabChange?: () => void
+  onKeyboardTabVisibleChange?: (visible: boolean) => void // Whether the "Keyboard" tab is the one on screen; false on unmount
   onClose?: () => void
   highlightedKeycodes?: Set<string>
   maskOnly?: boolean // When true, only show keycodes with value < 0xFF (for mask inner byte editing)
