@@ -3,15 +3,13 @@
 // and definition commands its vialAPI shim calls, and the tray and quit
 // handling of lifecycle.rs.
 
-// Release builds on Windows must not open a console next to the window.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-// The development tools serve debug builds only (see Cargo.toml).
-#[cfg(all(feature = "dev-tools", not(debug_assertions)))]
-compile_error!("the dev-tools feature is for builds with debug assertions only");
+// Builds in the release profile (the ones that get bundled) must not open a
+// console next to the window on Windows. build.rs sets `release_profile`, from
+// the same check that keeps the dev-tools feature out of that profile, so
+// every build with the development tools keeps its console.
+#![cfg_attr(release_profile, windows_subsystem = "windows")]
 
 mod definition;
-#[cfg(feature = "dev-tools")]
 mod dev_commands;
 mod fs_atomic;
 mod hid_commands;
@@ -49,10 +47,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(lifecycle::on_window_event);
-    #[cfg(feature = "dev-tools")]
-    let builder = dev_commands::install(builder, app_commands());
-    #[cfg(not(feature = "dev-tools"))]
-    let builder = builder.invoke_handler(app_commands());
+    let builder = dev_commands::install_or_passthrough(builder, app_commands());
     match builder.build(tauri::generate_context!()) {
         Ok(app) => app.run(lifecycle::on_run_event),
         Err(err) => {
