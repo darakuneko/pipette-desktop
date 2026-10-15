@@ -30,7 +30,7 @@ use tauri::{
 
 use crate::navigation;
 use crate::window_bounds::{MIN_SIZE, Size, effective_min_size};
-use crate::window_state::{self, Display};
+use crate::window_state::{self, Display, WindowReadout};
 
 /// The label of the main window, the only window the capabilities grant the
 /// commands to.
@@ -165,13 +165,9 @@ fn display(monitor: &Monitor) -> Display {
 
 /// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:
 /// directly, without telling the config listeners, and a failure is only
-/// logged. A minimized window keeps the state saved before: where a
-/// minimized window reports a position (off-screen, on Windows), it is not
-/// one to open at.
+/// logged. A hidden or minimized window keeps the state saved before
+/// ([`window_state::state_to_save`]).
 pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore) {
-    if window.is_minimized().unwrap_or(false) {
-        return;
-    }
     let bounds = window.scale_factor().and_then(|scale| {
         let position = window.outer_position()?;
         let size = window.inner_size()?;
@@ -183,16 +179,23 @@ pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore
             scale,
         ))
     });
-    let current = match bounds {
-        Ok(current) => current,
+    let bounds = match bounds {
+        Ok(bounds) => bounds,
         Err(err) => {
             log::error!("[window] failed to read the window bounds: {err}");
             return;
         }
     };
-    let position_known = position_known(window);
-    let previous = if position_known { None } else { read(config, "windowState") };
-    let state = window_state::state_to_save(current, position_known, previous.as_ref());
+    let readout = WindowReadout {
+        bounds,
+        visible: window.is_visible().unwrap_or(false),
+        minimized: window.is_minimized().unwrap_or(false),
+        position_known: position_known(window),
+    };
+    let previous = if readout.position_known { None } else { read(config, "windowState") };
+    let Some(state) = window_state::state_to_save(readout, previous.as_ref()) else {
+        return;
+    };
     if let Err(err) = config.set("windowState", window_state::to_value(state)) {
         log::error!("[window] failed to save the window state: {err}");
     }

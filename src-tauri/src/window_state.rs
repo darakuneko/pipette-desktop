@@ -124,17 +124,35 @@ fn intersection_area(a: &Rect, b: &Rect) -> f64 {
     if width > 0.0 && height > 0.0 { width * height } else { 0.0 }
 }
 
-/// The state to save for a window at `current` (DIP), rounded to whole
-/// pixels as Electron's bounds are. Without a known position (Wayland, where
-/// a window cannot read its position), the position of `previous`, the
-/// stored state, is kept, or the no-position marker when there is none.
-pub fn state_to_save(current: Rect, position_known: bool, previous: Option<&Value>) -> Rect {
-    let (x, y) = if position_known {
+/// What a window reports when its state is about to be saved.
+#[derive(Clone, Copy, Debug)]
+pub struct WindowReadout {
+    /// In DIP.
+    pub bounds: Rect,
+    pub visible: bool,
+    pub minimized: bool,
+    /// False where the window system does not let a window read its own
+    /// position (Wayland).
+    pub position_known: bool,
+}
+
+/// The state to save for `window`, rounded to whole pixels as Electron's
+/// bounds are, or none to keep the stored one: for a hidden window (closed
+/// into the tray; an unmapped window can report a stale position) and a
+/// minimized one (which reports an off-screen position on Windows). Without
+/// a known position, the position of `previous`, the stored state, is kept,
+/// or the no-position marker when there is none.
+pub fn state_to_save(window: WindowReadout, previous: Option<&Value>) -> Option<Rect> {
+    if !window.visible || window.minimized {
+        return None;
+    }
+    let current = window.bounds;
+    let (x, y) = if window.position_known {
         (current.x.round(), current.y.round())
     } else {
         stored_rect(previous).map_or((DEFAULT_STATE.x, DEFAULT_STATE.y), |state| (state.x, state.y))
     };
-    Rect { x, y, width: current.width.round(), height: current.height.round() }
+    Some(Rect { x, y, width: current.width.round(), height: current.height.round() })
 }
 
 /// `{x, y, width, height}`, the stored form.
@@ -269,9 +287,13 @@ mod tests {
         assert_eq!(to_dip(1000.0, 500.0, 1600.0, 1280.0, 1.25), rect(800.0, 400.0, 1280.0, 1024.0));
     }
 
+    fn shown(bounds: Rect) -> WindowReadout {
+        WindowReadout { bounds, visible: true, minimized: false, position_known: true }
+    }
+
     #[test]
     fn the_saved_state_is_rounded_to_whole_pixels() {
-        let saved = state_to_save(rect(800.8, -0.4, 1280.4, 1023.6), true, None);
+        let saved = state_to_save(shown(rect(800.8, -0.4, 1280.4, 1023.6)), None).unwrap();
         assert_eq!(saved, rect(801.0, -0.0, 1280.0, 1024.0));
         assert_eq!(
             pipette_js_json::stringify(&to_value(saved)),
@@ -280,12 +302,26 @@ mod tests {
     }
 
     #[test]
-    fn without_a_known_position_the_stored_one_is_kept() {
-        let current = rect(0.0, 0.0, 1500.0, 1100.0);
+    fn a_hidden_or_minimized_window_keeps_the_stored_state() {
+        let bounds = rect(10.0, 20.0, 1500.0, 1100.0);
         let previous = parse(r#"{"x":-1500,"y":300,"width":1400,"height":1050}"#);
-        assert_eq!(state_to_save(current, false, Some(&previous)), rect(-1500.0, 300.0, 1500.0, 1100.0));
+        for window in [
+            WindowReadout { visible: false, ..shown(bounds) },
+            WindowReadout { minimized: true, ..shown(bounds) },
+            WindowReadout { visible: false, minimized: true, ..shown(bounds) },
+        ] {
+            assert_eq!(state_to_save(window, Some(&previous)), None, "{window:?}");
+        }
+        assert_eq!(state_to_save(shown(bounds), Some(&previous)), Some(bounds));
+    }
+
+    #[test]
+    fn without_a_known_position_the_stored_one_is_kept() {
+        let window = WindowReadout { position_known: false, ..shown(rect(0.0, 0.0, 1500.0, 1100.0)) };
+        let previous = parse(r#"{"x":-1500,"y":300,"width":1400,"height":1050}"#);
+        assert_eq!(state_to_save(window, Some(&previous)), Some(rect(-1500.0, 300.0, 1500.0, 1100.0)));
         for previous in [None, Some(parse("null")), Some(parse(r#"{"x":"1","y":2,"width":3,"height":4}"#))] {
-            assert_eq!(state_to_save(current, false, previous.as_ref()), rect(-1.0, -1.0, 1500.0, 1100.0));
+            assert_eq!(state_to_save(window, previous.as_ref()), Some(rect(-1.0, -1.0, 1500.0, 1100.0)));
         }
     }
 
