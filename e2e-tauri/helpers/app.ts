@@ -5,11 +5,14 @@
 
 import { $, $$, browser } from '@wdio/globals'
 import type { VirtualDeviceControllerState } from '../../src/tauri-shim/generated/VirtualDeviceControllerState'
+import { quitApp } from './driver'
 
 export const VIRTUAL_DEVICE_NAME = 'Virtual Keyboard'
 export const EDITOR_SELECTOR = '[data-testid="editor-content"]'
 export const UNLOCK_DIALOG_HEADING = 'h2=Unlock Keyboard'
 const CONNECT_TIMEOUT_MS = 20_000
+// Longer than the deadline of the app's own quit sequence (30 s).
+const QUIT_TIMEOUT_MS = 40_000
 
 type ChainablePromiseElement = ReturnType<typeof $>
 
@@ -126,4 +129,11 @@ export async function openToolsOverlay(): Promise<void> {
   await $('[data-testid="keycodes-overlay-panel"]').waitForDisplayed()
   const tab = $('[data-testid="overlay-tab-tools"]')
   if ((await tab.isExisting()) && (await tab.getAttribute('aria-selected')) !== 'true') await tab.click()
+}
+
+/** Quits the app and starts it again in a new WebDriver session, with the
+ *  same userData directory. Linux only, as {@link quitApp}. */
+export async function restartApp(): Promise<void> {
+  await quitApp(QUIT_TIMEOUT_MS)
+  await browser.reloadSession()
 }

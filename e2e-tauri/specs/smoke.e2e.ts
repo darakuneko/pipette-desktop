@@ -16,11 +16,12 @@ import {
   invokeCommand,
   openKeycodeHexInput,
   openToolsOverlay,
+  restartApp,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
   waitForGone,
 } from '../helpers/app'
-import { appLogPath, launchAppAgain } from '../helpers/driver'
+import { appLogPath, launchAppAgain, readAppConfig } from '../helpers/driver'
 
 const UNLOCK_TIMEOUT_MS = 15_000
 const KC_Z = '001D'
@@ -96,14 +97,17 @@ function readAppLog(): string {
   return existsSync(path) ? readFileSync(path, 'utf8') : ''
 }
 
+/** How many times `text` is in the app's log. */
+function countLogLines(text: string): number {
+  return readAppLog().split(text).length - 1
+}
+
 /** Waits until the app's log has a line containing `text`. */
 async function waitForLogLine(text: string): Promise<void> {
   await browser.waitUntil(() => readAppLog().includes(text), {
     timeoutMsg: `the app log has no line with "${text}"`,
   })
 }
-
-const isWindowVisible = () => invokeCommand<boolean>('window_is_visible')
 
 describe('Tauri build window guard', () => {
   it('keeps the window on the app when a page navigates away or opens a window', async () => {
@@ -138,10 +142,48 @@ describe('Tauri build window guard', () => {
   })
 })
 
-// Checks of the app lifecycle. The theme one is pending until the backend
-// keeps the theme.
+const isWindowVisible = () => invokeCommand<boolean>('window_is_visible')
+
+const THEME_SELECT = 'button[aria-label="Theme Packs"][aria-haspopup="listbox"]'
+const isDarkTheme = () => browser.execute(() => document.documentElement.classList.contains('dark'))
+const ZOOM_PERCENT = 125
+/** The window's width in CSS pixels over its width on screen: the zoom
+ *  factor the page is drawn at. */
+async function pageZoom(): Promise<number> {
+  const { width } = await browser.getWindowRect()
+  return width / (await browser.execute(() => window.innerWidth))
+}
+
+// Checks of the app lifecycle. A restart quits the app through its quit
+// sequence and starts it again on the same userData directory.
 describe('Tauri build lifecycle', () => {
-  it('keeps the theme set in the settings across a restart')
+  before(function () {
+    // The restart finds the app's process through /proc.
+    if (process.platform !== 'linux') this.skip()
+  })
+
+  it('keeps the theme and the zoom set in the app across a restart', async () => {
+    // The status bar of the keymap editor, where the previous tests left the
+    // window, has the theme select.
+    expect(await isDarkTheme()).toBe(false)
+    await $(THEME_SELECT).click()
+    await $('[role="option"]=Dark').click()
+    await browser.waitUntil(isDarkTheme, { timeoutMsg: 'the dark theme was not applied' })
+    await invokeCommand('app_config_set', { key: 'zoomFactor', value: String(ZOOM_PERCENT) })
+    try {
+      await browser.waitUntil(async () => Math.abs((await pageZoom()) - ZOOM_PERCENT / 100) < 0.01, {
+        timeoutMsg: 'the zoom was not applied',
+      })
+
+      await restartApp()
+
+      await browser.waitUntil(isDarkTheme, { timeoutMsg: 'the dark theme was not applied after the restart' })
+      expect(readAppConfig().theme).toBe('dark')
+      expect(await pageZoom()).toBeCloseTo(ZOOM_PERCENT / 100, 2)
+    } finally {
+      await invokeCommand('app_config_set', { key: 'zoomFactor', value: '100' })
+    }
+  })
 
   it('brings the first window forward when a second instance starts, and the second exits with 0', async () => {
     // The window hides only while the tray icon is there to show it again;
@@ -156,6 +198,7 @@ describe('Tauri build lifecycle', () => {
         { timeoutMsg: 'the window did not hide into the tray' },
       )
 
+      const starts = countLogLines('Pipette starting')
       const second = await launchAppAgain(SECOND_LAUNCH_TIMEOUT_MS)
       if (second.code !== 0) {
         throw new Error(`the second launch ended with code ${second.code} (signal ${second.signal}):\n${second.output}`)
@@ -164,7 +207,7 @@ describe('Tauri build lifecycle', () => {
       await waitForLogLine('the app was launched again: Revealed')
       // The second launch exits before it starts the log, which belongs to
       // the running app.
-      expect(readAppLog().split('Pipette starting').length - 1).toBe(1)
+      expect(countLogLines('Pipette starting')).toBe(starts)
     } finally {
       await invokeCommand('app_config_set', { key: 'trayResident', value: 'false' })
     }
