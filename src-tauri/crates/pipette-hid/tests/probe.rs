@@ -4,10 +4,11 @@
 
 mod common;
 
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use common::{fixture, open_real, raw_device};
-use pipette_hid::{HID_TIMEOUT_MS, HidError, MSG_LEN, VirtualDeviceMode};
+use common::{MockBackend, SharedBackend, fixture, open_real, raw_device};
+use pipette_hid::{HID_TIMEOUT_MS, HidError, HidService, MSG_LEN, Timing, VirtualDeviceMode};
 use pipette_virtual_device::dataset::{VIRTUAL_DEVICE_PID, VIRTUAL_DEVICE_VID};
 
 fn device_with_serial(path: &str, serial: Option<&str>) -> common::MockDevice {
@@ -297,4 +298,43 @@ fn opening_the_main_connection_keeps_a_probe_on_another_interface() {
 
     assert_eq!(probe_handle.close_calls.load(Ordering::SeqCst), 0);
     assert!(f.service.probe_send_receive(id, &[0x01]).is_ok());
+}
+
+#[test]
+fn a_close_while_the_probe_is_opening_closes_the_new_handle() {
+    let backend = Arc::new(MockBackend::default());
+    backend.devices.lock().unwrap().push(raw_device("/dev/hidraw1"));
+    let handle = backend.handle_for("/dev/hidraw1");
+    let service = Arc::new(HidService::with_backend(
+        Box::new(SharedBackend(backend.clone())),
+        VirtualDeviceMode::Off,
+        Timing::new(|| 0, |_| {}),
+    ));
+    // The page load lands after the interface is chosen, before the handle
+    // is registered.
+    let weak = Arc::downgrade(&service);
+    *backend.on_open.lock().unwrap() = Some(Box::new(move || {
+        if let Some(service) = weak.upgrade() {
+            service.close_probe();
+        }
+    }));
+
+    let err = service.probe_open(0x1234, 0x5678, None).unwrap_err();
+    assert!(matches!(err, HidError::ProbeNotOpen));
+    assert_eq!(handle.close_calls.load(Ordering::SeqCst), 1);
+
+    *backend.on_open.lock().unwrap() = None;
+    let id = service.probe_open(0x1234, 0x5678, None).unwrap();
+    assert!(matches!(service.probe_send_receive(id, &[0x01]), Err(HidError::ProbeReadTimeout)));
+}
+
+#[test]
+fn a_read_error_is_not_retried_even_when_it_is_a_timeout_error() {
+    let f = fixture(VirtualDeviceMode::Off);
+    f.backend.devices.lock().unwrap().push(raw_device("/dev/hidraw1"));
+    let handle = f.backend.handle_for("/dev/hidraw1");
+    handle.read_timeout_errors.store(1, Ordering::SeqCst);
+    let id = f.service.probe_open(0x1234, 0x5678, None).unwrap();
+    assert!(matches!(f.service.probe_send_receive(id, &[0x01]), Err(HidError::ReadTimeout)));
+    assert_eq!(handle.read_calls.load(Ordering::SeqCst), 1);
 }

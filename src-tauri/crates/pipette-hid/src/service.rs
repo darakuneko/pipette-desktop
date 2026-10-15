@@ -67,17 +67,18 @@ fn log_open_failure(vendor_id: u16, product_id: u16, err: &HidError) {
     log::error!("Failed to open HID device 0x{vendor_id:04x}:0x{product_id:04x}: {err}");
 }
 
-/// Writes `packet` and reads the response once, waiting HID_TIMEOUT_MS. An
-/// empty read is [`HidError::ReadTimeout`]. Every exchange, the main
-/// connection's and the probe's, goes through here.
-fn write_and_read_once(handle: &dyn HidHandle, packet: &Packet) -> Result<Report, HidError> {
+/// Writes `packet` and reads the response once, waiting HID_TIMEOUT_MS.
+/// `None` is an empty read (the timeout passed), kept apart from every error
+/// the handle returns: only an empty read is ever retried. Every exchange,
+/// the main connection's and the probe's, goes through here.
+fn write_and_read_once(handle: &dyn HidHandle, packet: &Packet) -> Result<Option<Report>, HidError> {
     handle.write(packet)?;
     // Larger than any report, so the length read is the report's own length
     // and normalize_response sees what the device sent.
     let mut buf = [0u8; READ_BUFFER_LEN];
     match handle.read_timeout(&mut buf, HID_TIMEOUT_MS)? {
-        0 => Err(HidError::ReadTimeout),
-        read => Ok(normalize_response(&buf[..read])),
+        0 => Ok(None),
+        read => Ok(Some(normalize_response(&buf[..read]))),
     }
 }
 
@@ -189,15 +190,12 @@ impl HidService {
     pub fn send_receive(&self, data: &[u8]) -> Result<Report, HidError> {
         self.exchange(data, |handle, packet| {
             for attempt in 0..HID_RETRY_COUNT {
-                match write_and_read_once(handle, packet) {
-                    Ok(report) => {
-                        log_packet(self.log_packets, Direction::Rx, &report);
-                        return Ok(report);
-                    }
-                    Err(HidError::ReadTimeout) if attempt + 1 < HID_RETRY_COUNT => {
-                        (self.timing.sleep)(Duration::from_millis(HID_RETRY_DELAY_MS));
-                    }
-                    Err(err) => return Err(err),
+                if let Some(report) = write_and_read_once(handle, packet)? {
+                    log_packet(self.log_packets, Direction::Rx, &report);
+                    return Ok(report);
+                }
+                if attempt + 1 < HID_RETRY_COUNT {
+                    (self.timing.sleep)(Duration::from_millis(HID_RETRY_DELAY_MS));
                 }
             }
             Err(HidError::ReadTimeout)
@@ -236,12 +234,17 @@ impl HidService {
     /// the probe handle is in place; together with [`HidService::open_device`]
     /// closing a probe on the interface it opens, the probe and the main
     /// connection never hold the same interface.
+    ///
+    /// A [`HidService::close_probe`] while this runs (the page that asked
+    /// for the probe is going away) wins: the new handle is closed at once
+    /// and the open fails with [`HidError::ProbeNotOpen`].
     pub fn probe_open(
         &self,
         vendor_id: u16,
         product_id: u16,
         serial_number: Option<&str>,
     ) -> Result<u32, HidError> {
+        let epoch = self.probe.epoch();
         self.probe.close(None);
         let serial_number = serial_number.filter(|s| !s.is_empty());
         let open_device = lock(&self.open_device);
@@ -258,7 +261,7 @@ impl HidService {
             })
             .ok_or(HidError::ProbeTargetNotFound)?;
         let handle = hardware.open_path(&target.path)?;
-        Ok(self.probe.replace(handle, target.path))
+        self.probe.replace(handle, target.path, epoch).ok_or(HidError::ProbeNotOpen)
     }
 
     /// Sends one report (zero-padded to 32 bytes) over the probe handle `id`
@@ -271,10 +274,7 @@ impl HidService {
             return Err(HidError::DataTooLong { max: MSG_LEN });
         }
         let handle = self.probe.handle(id).ok_or(HidError::ProbeNotOpen)?;
-        write_and_read_once(handle.as_ref(), &packet(data)).map_err(|err| match err {
-            HidError::ReadTimeout => HidError::ProbeReadTimeout,
-            err => err,
-        })
+        write_and_read_once(handle.as_ref(), &packet(data))?.ok_or(HidError::ProbeReadTimeout)
     }
 
     /// Closes the probe handle `id`; nothing when it is no longer the open one.
@@ -282,9 +282,10 @@ impl HidService {
         self.probe.close(Some(id));
     }
 
-    /// Closes the probe handle, whichever is open (when the app quits).
+    /// Closes the probe handle, whichever is open, and makes every probe
+    /// being opened now fail (when the page loads again, and at quit).
     pub fn close_probe(&self) {
-        self.probe.close(None);
+        self.probe.supersede();
     }
 
     /// Length check, then `io` on the open device's handle with the framed

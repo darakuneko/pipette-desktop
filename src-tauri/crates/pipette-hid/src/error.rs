@@ -14,11 +14,12 @@ pub enum HidError {
     /// VID/PID (and serial number, when one is given).
     #[error("Probe target device not found")]
     ProbeTargetNotFound,
-    /// The probe handle with this id is not the open one.
+    /// The probe handle with this id is not the open one, or it was closed
+    /// by `close_probe` while being opened.
     #[error("No probe device is open")]
     ProbeNotOpen,
-    /// [`HidError::ReadTimeout`] on the probe handle, in the words of the
-    /// Electron main process's probe. Probes never retry.
+    /// An empty read on the probe handle, in the words of the Electron main
+    /// process's probe. Probes never retry.
     #[error("HID read timeout during probe")]
     ProbeReadTimeout,
     #[error("HID data exceeds maximum length of {max}")]

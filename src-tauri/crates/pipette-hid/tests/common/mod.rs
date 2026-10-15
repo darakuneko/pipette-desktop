@@ -48,6 +48,9 @@ pub struct MockHandle {
     /// Called inside every read, before it returns (blocking hooks, ordering).
     pub on_read: Mutex<Option<Box<dyn Fn() + Send>>>,
     pub read_calls: AtomicUsize,
+    /// This many reads fail with `HidError::ReadTimeout` (an error the
+    /// handle returns, not an empty read).
+    pub read_timeout_errors: AtomicUsize,
     /// Timeouts each read was given.
     pub read_timeouts: Mutex<Vec<i32>>,
     pub close_calls: AtomicUsize,
@@ -65,6 +68,10 @@ impl HidHandle for MockHandle {
     fn read_timeout(&self, buf: &mut [u8], timeout_ms: i32) -> Result<usize, HidError> {
         self.read_calls.fetch_add(1, Ordering::SeqCst);
         self.read_timeouts.lock().unwrap().push(timeout_ms);
+        if self.read_timeout_errors.load(Ordering::SeqCst) > 0 {
+            self.read_timeout_errors.fetch_sub(1, Ordering::SeqCst);
+            return Err(HidError::ReadTimeout);
+        }
         if let Some(hook) = self.on_read.lock().unwrap().as_ref() {
             hook();
         }
@@ -92,6 +99,8 @@ pub struct MockBackend {
     pub path_handles: Mutex<Vec<(CString, Arc<MockHandle>)>>,
     /// Paths given to open_path, failed attempts included.
     pub opened_paths: Mutex<Vec<CString>>,
+    /// Called inside open_path, before it returns.
+    pub on_open: Mutex<Option<Box<dyn Fn() + Send>>>,
     /// When set, enumeration fails with this message.
     pub enumerate_error: Mutex<Option<String>>,
     pub enumerate_calls: AtomicUsize,
@@ -123,6 +132,9 @@ impl HidBackend for SharedBackend {
     fn open_path(&self, path: &CString) -> Result<Arc<dyn HidHandle>, HidError> {
         self.0.open_calls.fetch_add(1, Ordering::SeqCst);
         self.0.opened_paths.lock().unwrap().push(path.clone());
+        if let Some(hook) = self.0.on_open.lock().unwrap().as_ref() {
+            hook();
+        }
         let remaining = self.0.open_failures.load(Ordering::SeqCst);
         if remaining > 0 {
             self.0.open_failures.store(remaining - 1, Ordering::SeqCst);

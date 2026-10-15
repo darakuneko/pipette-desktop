@@ -26,6 +26,9 @@ pub(crate) struct ProbeSlot {
 struct SlotState {
     current: Option<ProbeDevice>,
     last_id: u32,
+    /// Advanced by [`ProbeSlot::supersede`]; a probe opened across a change
+    /// is not registered.
+    epoch: u64,
 }
 
 impl ProbeSlot {
@@ -33,19 +36,41 @@ impl ProbeSlot {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// The epoch to pass to [`ProbeSlot::replace`], taken before opening.
+    pub(crate) fn epoch(&self) -> u64 {
+        self.lock().epoch
+    }
+
     /// Makes `handle` the probe handle, closing the one it replaces, and
-    /// returns its id.
-    pub(crate) fn replace(&self, handle: Arc<dyn HidHandle>, path: CString) -> u32 {
-        let (id, replaced) = {
+    /// returns its id. When the slot has been superseded since `epoch` was
+    /// taken, closes `handle` instead and returns `None`.
+    pub(crate) fn replace(&self, handle: Arc<dyn HidHandle>, path: CString, epoch: u64) -> Option<u32> {
+        let (id, to_close) = {
             let mut state = self.lock();
-            state.last_id = state.last_id.wrapping_add(1);
-            let id = state.last_id;
-            (id, state.current.replace(ProbeDevice { id, handle, path }))
+            if state.epoch != epoch {
+                (None, Some(handle))
+            } else {
+                state.last_id = state.last_id.wrapping_add(1);
+                let id = state.last_id;
+                (Some(id), state.current.replace(ProbeDevice { id, handle, path }).map(|d| d.handle))
+            }
         };
-        if let Some(device) = replaced {
-            device.handle.close();
+        if let Some(handle) = to_close {
+            handle.close();
         }
         id
+    }
+
+    /// Closes the probe handle and refuses every probe being opened now.
+    pub(crate) fn supersede(&self) {
+        let closed = {
+            let mut state = self.lock();
+            state.epoch = state.epoch.wrapping_add(1);
+            state.current.take()
+        };
+        if let Some(device) = closed {
+            device.handle.close();
+        }
     }
 
     /// The handle with this id, while it is the open one.
