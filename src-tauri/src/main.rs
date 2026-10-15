@@ -69,6 +69,14 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::sync_pending::sync_has_pending_changes,
         store_commands::keyboard_data::list_stored_keyboards,
         store_commands::keyboard_data::keyboard_meta_name_if_missing,
+        store_commands::snapshots::snapshot_store_list,
+        store_commands::snapshots::snapshot_store_save,
+        store_commands::snapshots::snapshot_store_load,
+        store_commands::snapshots::snapshot_store_update,
+        store_commands::snapshots::snapshot_store_rename,
+        store_commands::snapshots::snapshot_store_delete,
+        store_commands::snapshots::snapshot_store_set_hub_post_id,
+        store_commands::snapshots::snapshot_store_set_hub_private,
     ]
 }
 
