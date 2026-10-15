@@ -1,0 +1,89 @@
+[
+  {
+    "member": "favoriteStoreList",
+    "args": ["tapDance"],
+    "command": "favorite_store_list",
+    "invokeArgs": { "favoriteType": "tapDance" },
+    "response": { "success": true, "entries": [] }
+  },
+  {
+    "member": "favoriteStoreSave",
+    "args": ["qmkSettings", "{}", "My combo"],
+    "command": "favorite_store_save",
+    "invokeArgs": { "favoriteType": "qmkSettings", "json": "{}", "label": "My combo" },
+    "response": { "success": false, "error": "Error: Invalid favorite type" }
+  },
+  {
+    "member": "favoriteStoreLoad",
+    "args": ["tapDance", "entry-1"],
+    "command": "favorite_store_load",
+    "invokeArgs": { "favoriteType": "tapDance", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "favoriteStoreRename",
+    "args": ["combo", "entry-1", "New name"],
+    "command": "favorite_store_rename",
+    "invokeArgs": { "favoriteType": "combo", "entryId": "entry-1", "newLabel": "New name" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "favoriteStoreDelete",
+    "args": ["macro", "entry-1"],
+    "command": "favorite_store_delete",
+    "invokeArgs": { "favoriteType": "macro", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "favoriteStoreSetHubPostId",
+    "args": ["keyOverride", "entry-1", "post-1"],
+    "command": "favorite_store_set_hub_post_id",
+    "invokeArgs": { "favoriteType": "keyOverride", "entryId": "entry-1", "hubPostId": "post-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "favoriteStoreSetHubPrivate",
+    "args": ["altRepeatKey", "entry-1", { "id": "p1", "url": "/files/p1?token=t", "expiresAt": null }],
+    "command": "favorite_store_set_hub_private",
+    "invokeArgs": {
+      "favoriteType": "altRepeatKey",
+      "entryId": "entry-1",
+      "link": "{\"id\":\"p1\",\"url\":\"/files/p1?token=t\",\"expiresAt\":null}"
+    },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "favorites.readForExport",
+    "args": ["tapDance", "entry-1"],
+    "command": "favorite_store_read_for_export",
+    "invokeArgs": { "favoriteType": "tapDance", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "favorites.saveExport",
+    "args": ["pipette-fav-td-2026-10-16-120000.json", "{\n  \"app\": \"pipette\"\n}"],
+    "command": "favorite_store_save_export",
+    "invokeArgs": {
+      "defaultFilename": "pipette-fav-td-2026-10-16-120000.json",
+      "content": "{\n  \"app\": \"pipette\"\n}"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "favorites.openImport",
+    "args": [],
+    "command": "favorite_store_open_import",
+    "invokeArgs": {},
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "favorites.importBatch",
+    "args": ["tapDance", [{ "label": "Imported", "savedAt": "2026-01-01T00:00:00.000Z", "body": "{\"type\":\"tapDance\",\"data\":{}}" }]],
+    "command": "favorite_store_import_batch",
+    "invokeArgs": {
+      "favoriteType": "tapDance",
+      "entries": "[{\"label\":\"Imported\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"body\":\"{\\\"type\\\":\\\"tapDance\\\",\\\"data\\\":{}}\"}]"
+    },
+    "response": { "success": true, "imported": 1, "skipped": 0 }
+  }
+]

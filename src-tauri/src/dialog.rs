@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The native file dialogs of the file commands (file_commands.rs). A command
+//! The native file dialogs of the file commands (file_commands.rs) and of the
+//! favorite export and import (store_commands/favorites.rs). A command
 //! describes its dialog in a [`DialogRequest`] and gets back the path the
 //! user chose; the page never names a path itself. Which provider answers is
 //! managed state ([`Dialogs`]): the system's dialogs in the app

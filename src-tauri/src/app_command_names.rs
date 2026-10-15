@@ -47,6 +47,18 @@ pub const APP_COMMANDS: &[&str] = &[
     // src/store_commands/keyboard_data.rs
     "list_stored_keyboards",
     "keyboard_meta_name_if_missing",
+    // src/store_commands/favorites.rs
+    "favorite_store_list",
+    "favorite_store_save",
+    "favorite_store_load",
+    "favorite_store_rename",
+    "favorite_store_delete",
+    "favorite_store_set_hub_post_id",
+    "favorite_store_set_hub_private",
+    "favorite_store_read_for_export",
+    "favorite_store_save_export",
+    "favorite_store_open_import",
+    "favorite_store_import_batch",
     // src/store_commands/snapshots.rs
     "snapshot_store_list",
     "snapshot_store_save",
