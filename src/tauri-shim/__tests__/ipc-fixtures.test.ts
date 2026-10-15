@@ -33,6 +33,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
 interface Shim {
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
+  files: typeof import('../api/files')
   shell: typeof import('../api/shell')
   syncPending: typeof import('../api/sync-pending')
   window: typeof import('../api/window')
@@ -45,6 +46,7 @@ async function load(): Promise<Shim> {
   return {
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
+    files: await import('../api/files'),
     shell: await import('../api/shell'),
     syncPending: await import('../api/sync-pending'),
     window: await import('../api/window'),
@@ -101,6 +103,20 @@ const CALLERS: Record<string, Caller> = {
   windowStartedHidden: { run: ({ window }) => window.windowApi.windowStartedHidden() },
   windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
   syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
+  saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
+  loadLayout: {
+    run: ({ files }, [title, extensions]) => files.filesApi.loadLayout(title as string, extensions as string[]),
+  },
+  exportKeymapC: {
+    run: ({ files }, [content, name]) => files.filesApi.exportKeymapC(content as string, name as string),
+  },
+  exportPdf: { run: ({ files }, [data, name]) => files.filesApi.exportPdf(data as string, name as string) },
+  exportCsv: { run: ({ files }, [content, name]) => files.filesApi.exportCsv(content as string, name as string) },
+  exportCsvBundle: {
+    run: ({ files }, [list]) => files.filesApi.exportCsvBundle(list as { name: string; content: string }[]),
+  },
+  exportJson: { run: ({ files }, [content, name]) => files.filesApi.exportJson(content as string, name as string) },
+  sideloadJson: { run: ({ files }, [title]) => files.filesApi.sideloadJson(title as string) },
 }
 
 afterEach(() => {
