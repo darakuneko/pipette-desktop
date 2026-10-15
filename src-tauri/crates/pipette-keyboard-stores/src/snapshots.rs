@@ -348,8 +348,10 @@ fn change_entry(
     mutation: EntryMutation,
     mutate: impl FnOnce(&mut Entry),
 ) -> Result<(), SnapshotError> {
+    // The handler checks the uid inside the lock; the answer is the same,
+    // and an invalid uid then never takes a lock.
+    validate_uid(uid)?;
     ctx.locks.with_write_lock(uid, || {
-        validate_uid(uid)?;
         let dir = snapshot_dir(ctx, uid);
         let mut index = read_index_locked(&dir, uid)?;
         let id = JsString::from(id);
