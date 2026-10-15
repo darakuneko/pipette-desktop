@@ -5,7 +5,9 @@
 // byte-identical. Controller operations and recorded controller states are
 // replayed and checked in the same order.
 
-use pipette_virtual_device::{MSG_LEN, VirtualDevice};
+use std::sync::{Arc, Mutex};
+
+use pipette_virtual_device::{MSG_LEN, VirtualDevice, VirtualDeviceController};
 use serde::Deserialize;
 
 const TRANSCRIPT: &str = include_str!("fixtures/transcript.json");
@@ -40,33 +42,25 @@ enum Event {
     Report { now: u64, request: String, response: String },
 }
 
-fn decode_hex(hex: &str) -> Vec<u8> {
-    assert_eq!(hex.len() % 2, 0, "odd hex length");
-    (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).expect("invalid hex")).collect()
-}
-
-fn encode_hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
-}
-
 #[test]
 fn replays_the_typescript_transcript_byte_for_byte() {
     let transcript: Transcript = serde_json::from_str(TRANSCRIPT).unwrap();
-    let mut device = VirtualDevice::new();
+    let device = Arc::new(Mutex::new(VirtualDevice::new()));
+    let controller = VirtualDeviceController::new(device.clone());
     let mut reports = 0;
 
     for (i, event) in transcript.events.iter().enumerate() {
         match event {
-            Event::Open => device.open(),
-            Event::Close => device.close(),
-            Event::Reset => device.reset(),
-            Event::PressKey { row, col } => device.press_key(*row, *col),
-            Event::ReleaseKey { row, col } => device.release_key(*row, *col),
-            Event::ReleaseAll => device.release_all(),
-            Event::HoldKeys { pairs } => device.hold_keys(pairs),
-            Event::SetUnlockCounterMax { value } => device.set_unlock_counter_max(*value),
+            Event::Open => device.lock().unwrap().open(),
+            Event::Close => device.lock().unwrap().close(),
+            Event::Reset => controller.reset(),
+            Event::PressKey { row, col } => controller.press_key(*row, *col),
+            Event::ReleaseKey { row, col } => controller.release_key(*row, *col),
+            Event::ReleaseAll => controller.release_all(),
+            Event::HoldKeys { pairs } => controller.hold_keys(pairs),
+            Event::SetUnlockCounterMax { value } => controller.set_unlock_counter_max(*value),
             Event::State { expected } => {
-                let actual = device.controller_state();
+                let actual = controller.get_state();
                 assert_eq!(
                     (actual.open, actual.unlocked, actual.unlock_in_progress, actual.unlock_counter),
                     (expected.open, expected.unlocked, expected.unlock_in_progress, expected.unlock_counter),
@@ -74,14 +68,14 @@ fn replays_the_typescript_transcript_byte_for_byte() {
                 );
             }
             Event::Report { now, request, response } => {
-                let request = decode_hex(request);
+                let request = hex::decode(request).unwrap();
                 assert_eq!(request.len(), MSG_LEN, "request length at event {i}");
-                let actual = device.handle_report(&request, *now).unwrap();
+                let actual = device.lock().unwrap().handle_report(&request, *now).unwrap();
                 assert_eq!(
-                    encode_hex(&actual),
+                    hex::encode(actual),
                     *response,
                     "response mismatch at event {i} for request {}",
-                    encode_hex(&request)
+                    hex::encode(&request)
                 );
                 reports += 1;
             }

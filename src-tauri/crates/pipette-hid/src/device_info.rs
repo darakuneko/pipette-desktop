@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-use pipette_virtual_device::dataset::{
-    VIRTUAL_DEVICE_NAME, VIRTUAL_DEVICE_PID, VIRTUAL_DEVICE_SERIAL, VIRTUAL_DEVICE_VID,
-};
-
+use crate::backend::RawDeviceInfo;
 use crate::constants::BOOTLOADER_SERIAL_MAGIC;
 
 /// Same values as `DeviceType` in `src/shared/types/protocol.ts`.
@@ -41,12 +38,16 @@ pub fn classify_device(serial_number: &str) -> DeviceType {
     if serial_number.contains(BOOTLOADER_SERIAL_MAGIC) { DeviceType::Bootloader } else { DeviceType::Vial }
 }
 
-pub fn virtual_device_info() -> DeviceInfo {
-    DeviceInfo {
-        vendor_id: VIRTUAL_DEVICE_VID,
-        product_id: VIRTUAL_DEVICE_PID,
-        product_name: VIRTUAL_DEVICE_NAME.to_owned(),
-        serial_number: VIRTUAL_DEVICE_SERIAL.to_owned(),
-        device_type: DeviceType::Vial,
+/// Missing strings become empty.
+impl From<RawDeviceInfo> for DeviceInfo {
+    fn from(d: RawDeviceInfo) -> Self {
+        let serial_number = d.serial_number.unwrap_or_default();
+        Self {
+            vendor_id: d.vendor_id,
+            product_id: d.product_id,
+            product_name: d.product.unwrap_or_default(),
+            device_type: classify_device(&serial_number),
+            serial_number,
+        }
     }
 }

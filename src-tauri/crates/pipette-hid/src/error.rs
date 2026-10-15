@@ -15,12 +15,17 @@ pub enum HidError {
     /// Any failure reported by the HID library (enumeration, open, write, read).
     #[error("{0}")]
     Backend(String),
-    #[error(transparent)]
-    Virtual(#[from] NotOpenError),
 }
 
 impl From<hidapi::HidError> for HidError {
     fn from(err: hidapi::HidError) -> Self {
         Self::Backend(err.to_string())
+    }
+}
+
+/// A report reached the virtual device after it was closed.
+impl From<NotOpenError> for HidError {
+    fn from(_: NotOpenError) -> Self {
+        Self::NotOpen
     }
 }

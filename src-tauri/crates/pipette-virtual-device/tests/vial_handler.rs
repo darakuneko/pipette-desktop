@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+mod common;
+
+use common::req;
+
 use pipette_virtual_device::byte_utils::{read_le16, write_le16, write_le32};
 use pipette_virtual_device::dataset::{VIAL_PROTOCOL, VIRTUAL_DEVICE_UID_BYTES, VIRTUAL_DEVICE_UNLOCK_COMBO};
 use pipette_virtual_device::dynamic_entries::{
-    ALT_REPEAT_KEY_ENTRY_COUNT, COMBO_ENTRY_COUNT, DYNAMIC_ENTRY_FEATURE_FLAGS, KEY_OVERRIDE_ENTRY_COUNT,
-    TAP_DANCE_ENTRY_COUNT,
+    AltRepeatKeyEntry, ComboEntry, DYNAMIC_ENTRY_FEATURE_FLAGS, DynamicEntry, KeyOverrideEntry, TapDanceEntry,
 };
-use pipette_virtual_device::protocol::{MSG_LEN, Report, pad_report};
+use pipette_virtual_device::protocol::{MSG_LEN, Report};
 use pipette_virtual_device::qmk_settings::SUPPORTED_QSIDS;
 use pipette_virtual_device::state::VirtualDeviceState;
 use pipette_virtual_device::vial_handler::handle_vial_report;
-
-fn req(bytes: &[u8]) -> Report {
-    pad_report(bytes)
-}
 
 fn fake_compressed() -> Vec<u8> {
     (0..70u32).map(|i| ((i * 3 + 7) % 256) as u8).collect()
@@ -168,10 +167,10 @@ fn qmk_settings_reset_restores_defaults_and_echoes_the_request() {
 fn dynamic_entry_counts_report_the_32_entry_tier_and_feature_flags() {
     let mut state = VirtualDeviceState::new();
     let resp = handle(&mut state, &req(&[0xfe, 0x0d, 0x00]));
-    assert_eq!(usize::from(resp[0]), TAP_DANCE_ENTRY_COUNT);
-    assert_eq!(usize::from(resp[1]), COMBO_ENTRY_COUNT);
-    assert_eq!(usize::from(resp[2]), KEY_OVERRIDE_ENTRY_COUNT);
-    assert_eq!(usize::from(resp[3]), ALT_REPEAT_KEY_ENTRY_COUNT);
+    assert_eq!(usize::from(resp[0]), TapDanceEntry::COUNT);
+    assert_eq!(usize::from(resp[1]), ComboEntry::COUNT);
+    assert_eq!(usize::from(resp[2]), KeyOverrideEntry::COUNT);
+    assert_eq!(usize::from(resp[3]), AltRepeatKeyEntry::COUNT);
     assert_eq!(resp[MSG_LEN - 1], DYNAMIC_ENTRY_FEATURE_FLAGS);
 }
 

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+mod common;
+
+use common::req;
+
 use pipette_virtual_device::byte_utils::{read_le16, write_le16};
 use pipette_virtual_device::dataset::VIALRGB_SUPPORTED_EFFECTS;
 use pipette_virtual_device::protocol::{
-    MSG_LEN, Report, VIALRGB_GET_INFO, VIALRGB_GET_MODE, VIALRGB_GET_SUPPORTED, VIALRGB_SET_MODE, pad_report,
+    MSG_LEN, Report, VIALRGB_GET_INFO, VIALRGB_GET_MODE, VIALRGB_GET_SUPPORTED, VIALRGB_SET_MODE,
 };
 use pipette_virtual_device::state::{VialRgbState, VirtualDeviceState};
 use pipette_virtual_device::vialrgb_handler::{get_lighting_value, set_lighting_value};
-
-fn req(bytes: &[u8]) -> Report {
-    pad_report(bytes)
-}
 
 fn get(state: &VirtualDeviceState, r: &Report) -> Report {
     let mut resp = *r;

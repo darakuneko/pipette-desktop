@@ -13,6 +13,7 @@
 //! already LZMA-compressed (`data/definition.lzma`).
 
 pub mod byte_utils;
+pub mod controller;
 pub mod dataset;
 pub mod device;
 pub mod dynamic_entries;
@@ -24,6 +25,7 @@ pub mod via_handler;
 pub mod vial_handler;
 pub mod vialrgb_handler;
 
-pub use device::{ControllerState, NotOpenError, VirtualDevice};
+pub use controller::{ControllerState, VirtualDeviceController};
+pub use device::{NotOpenError, VirtualDevice};
 pub use mode::VirtualDeviceMode;
 pub use protocol::{MSG_LEN, Report};

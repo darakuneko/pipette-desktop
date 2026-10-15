@@ -105,15 +105,14 @@ fn exclusive_mode_still_opens_the_virtual_device() {
 }
 
 #[test]
-fn close_device_clears_the_virtual_open_flag_even_after_the_mode_is_turned_off() {
+fn close_device_closes_the_virtual_device() {
     let f = fixture(VirtualDeviceMode::Append);
     f.service.open_device(VIRTUAL_DEVICE_VID, VIRTUAL_DEVICE_PID).unwrap();
-    assert!(f.service.with_virtual_device(|d| d.is_open()));
+    assert!(f.service.virtual_device().get_state().open);
 
-    // The mode is turned off under an already-open virtual device.
-    f.mode.set(VirtualDeviceMode::Off);
     f.service.close_device();
 
-    assert!(!f.service.with_virtual_device(|d| d.is_open()));
+    assert!(!f.service.virtual_device().get_state().open);
+    assert!(!f.service.is_device_open().unwrap());
     assert!(matches!(f.service.send_receive(&[0x01]), Err(HidError::NotOpen)));
 }

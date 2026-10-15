@@ -11,8 +11,7 @@ use crate::dataset::{
     build_default_keymap, build_default_macro_buffer,
 };
 use crate::dynamic_entries::{
-    AltRepeatKeyEntry, ComboEntry, KeyOverrideEntry, TapDanceEntry, create_default_alt_repeat_key_entries,
-    create_default_combo_entries, create_default_key_override_entries, create_default_tap_dance_entries,
+    AltRepeatKeyEntry, ComboEntry, DynamicEntry, KeyOverrideEntry, TapDanceEntry, default_entries,
 };
 use crate::qmk_settings::QmkSettingsStore;
 
@@ -63,15 +62,6 @@ impl VirtualDeviceState {
     /// and the doc screenshots — show configured tiles. A real factory reset
     /// leaves them all empty.
     pub fn new() -> Self {
-        let mut tap_dance_entries = create_default_tap_dance_entries();
-        let mut combo_entries = create_default_combo_entries();
-        let mut key_override_entries = create_default_key_override_entries();
-        let mut alt_repeat_key_entries = create_default_alt_repeat_key_entries();
-        tap_dance_entries[0] = SAMPLE_TAP_DANCE;
-        combo_entries[0] = SAMPLE_COMBO;
-        key_override_entries[0] = SAMPLE_KEY_OVERRIDE;
-        alt_repeat_key_entries[0] = SAMPLE_ALT_REPEAT_KEY;
-
         Self {
             keymap: build_default_keymap(),
             macro_buffer: build_default_macro_buffer(),
@@ -89,10 +79,10 @@ impl VirtualDeviceState {
                 sat: 255,
                 val: 128,
             },
-            tap_dance_entries,
-            combo_entries,
-            key_override_entries,
-            alt_repeat_key_entries,
+            tap_dance_entries: entries_with_sample(SAMPLE_TAP_DANCE),
+            combo_entries: entries_with_sample(SAMPLE_COMBO),
+            key_override_entries: entries_with_sample(SAMPLE_KEY_OVERRIDE),
+            alt_repeat_key_entries: entries_with_sample(SAMPLE_ALT_REPEAT_KEY),
             qmk_settings: QmkSettingsStore::default(),
         }
     }
@@ -167,6 +157,13 @@ impl VirtualDeviceState {
         }
         bytes
     }
+}
+
+/// A factory-reset store with `sample` in slot 0.
+fn entries_with_sample<T: DynamicEntry>(sample: T) -> Vec<T> {
+    let mut entries = default_entries::<T>();
+    entries[0] = sample;
+    entries
 }
 
 pub fn keymap_index(layer: usize, row: usize, col: usize) -> usize {

@@ -4,15 +4,26 @@ use pipette_virtual_device::dataset::{
     VIRTUAL_DEVICE_NAME, VIRTUAL_DEVICE_PID, VIRTUAL_DEVICE_SERIAL, VIRTUAL_DEVICE_VID,
 };
 use pipette_virtual_device::device::matches_virtual_device;
-use pipette_virtual_device::{MSG_LEN, NotOpenError, VirtualDevice, VirtualDeviceMode};
+use pipette_virtual_device::{
+    MSG_LEN, NotOpenError, VirtualDevice, VirtualDeviceController, VirtualDeviceMode,
+};
+use std::sync::{Arc, Mutex};
+
+/// An open device and a controller on it.
+fn open_device() -> (Arc<Mutex<VirtualDevice>>, VirtualDeviceController) {
+    let mut device = VirtualDevice::new();
+    device.open();
+    let device = Arc::new(Mutex::new(device));
+    let controller = VirtualDeviceController::new(device.clone());
+    (device, controller)
+}
 
 #[test]
 fn mode_follows_the_env_value() {
-    assert!(VirtualDeviceMode::from_env_value(Some("1")).is_enabled());
-    assert!(!VirtualDeviceMode::from_env_value(Some("0")).is_enabled());
-    assert!(!VirtualDeviceMode::from_env_value(None).is_enabled());
-    assert!(VirtualDeviceMode::from_env_value(Some("only")).is_exclusive());
-    assert!(!VirtualDeviceMode::from_env_value(Some("1")).is_exclusive());
+    assert_eq!(VirtualDeviceMode::from_env_value(Some("1")), VirtualDeviceMode::Append);
+    assert_eq!(VirtualDeviceMode::from_env_value(Some("0")), VirtualDeviceMode::Off);
+    assert_eq!(VirtualDeviceMode::from_env_value(None), VirtualDeviceMode::Off);
+    assert_eq!(VirtualDeviceMode::from_env_value(Some("only")), VirtualDeviceMode::Only);
 }
 
 #[test]
@@ -58,45 +69,42 @@ fn handle_report_answers_a_protocol_version_request_once_open() {
 
 #[test]
 fn controller_press_and_hold_keys_leave_the_device_locked_until_polled() {
-    let mut device = VirtualDevice::new();
-    device.open();
-    device.reset();
-    device.set_unlock_counter_max(2);
-    device.hold_keys(&[(0, 0), (0, 1)]);
+    let (device, controller) = open_device();
+    controller.reset();
+    controller.set_unlock_counter_max(2);
+    controller.hold_keys(&[(0, 0), (0, 1)]);
 
-    let status = device.controller_state();
+    let status = controller.get_state();
     assert!(status.open);
     assert!(!status.unlocked);
-    assert!(device.state().is_holding_unlock_combo());
+    assert!(device.lock().unwrap().state().is_holding_unlock_combo());
 
-    device.release_all();
-    assert!(!device.state().is_holding_unlock_combo());
+    controller.release_all();
+    assert!(!device.lock().unwrap().state().is_holding_unlock_combo());
 }
 
 #[test]
 fn set_unlock_counter_max_clamps_a_countdown_already_in_progress() {
-    let mut device = VirtualDevice::new();
-    device.open();
-    device.reset();
+    let (device, controller) = open_device();
+    controller.reset();
 
     // Unlock start (0xFE 0x06) arms the countdown at the default max of 50.
-    device.handle_report(&[0xfe, 0x06], 0).unwrap();
-    assert_eq!(device.controller_state().unlock_counter, 50);
+    device.lock().unwrap().handle_report(&[0xfe, 0x06], 0).unwrap();
+    assert_eq!(controller.get_state().unlock_counter, 50);
 
-    device.set_unlock_counter_max(3);
-    assert_eq!(device.controller_state().unlock_counter, 3);
+    controller.set_unlock_counter_max(3);
+    assert_eq!(controller.get_state().unlock_counter, 3);
 }
 
 #[test]
 fn reset_restores_factory_defaults() {
-    let mut device = VirtualDevice::new();
-    device.open();
-    device.press_key(0, 0);
-    device.state_mut().unlocked = true;
-    device.reset();
-    let status = device.controller_state();
+    let (device, controller) = open_device();
+    controller.press_key(0, 0);
+    device.lock().unwrap().state_mut().unlocked = true;
+    controller.reset();
+    let status = controller.get_state();
     assert!(!status.unlocked);
     assert!(!status.unlock_in_progress);
     assert!(status.open);
-    assert!(!device.state().matrix[0][0]);
+    assert!(!device.lock().unwrap().state().matrix[0][0]);
 }

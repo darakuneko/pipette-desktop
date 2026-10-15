@@ -7,17 +7,14 @@
 use crate::byte_utils::{read_le16, read_le32, write_le32};
 use crate::dataset::{VIAL_PROTOCOL, VIRTUAL_DEVICE_UID_BYTES, VIRTUAL_DEVICE_UNLOCK_COMBO, is_boot_keycode};
 use crate::dynamic_entries::{
-    ALT_REPEAT_KEY_ENTRY_COUNT, AltRepeatKeyEntry, COMBO_ENTRY_COUNT, ComboEntry,
-    DYNAMIC_ENTRY_FEATURE_FLAGS, KEY_OVERRIDE_ENTRY_COUNT, KeyOverrideEntry, TAP_DANCE_ENTRY_COUNT,
+    AltRepeatKeyEntry, ComboEntry, DYNAMIC_ENTRY_FEATURE_FLAGS, DynamicEntry, KeyOverrideEntry,
     TapDanceEntry, lookup_entry, store_entry,
 };
 use crate::protocol::{
     CMD_VIAL_DYNAMIC_ENTRY_OP, CMD_VIAL_GET_DEFINITION, CMD_VIAL_GET_KEYBOARD_ID, CMD_VIAL_GET_SIZE,
     CMD_VIAL_GET_UNLOCK_STATUS, CMD_VIAL_LOCK, CMD_VIAL_QMK_SETTINGS_GET, CMD_VIAL_QMK_SETTINGS_QUERY,
     CMD_VIAL_QMK_SETTINGS_RESET, CMD_VIAL_QMK_SETTINGS_SET, CMD_VIAL_UNLOCK_POLL, CMD_VIAL_UNLOCK_START,
-    DYNAMIC_VIAL_ALT_REPEAT_KEY_GET, DYNAMIC_VIAL_ALT_REPEAT_KEY_SET, DYNAMIC_VIAL_COMBO_GET,
-    DYNAMIC_VIAL_COMBO_SET, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES, DYNAMIC_VIAL_KEY_OVERRIDE_GET,
-    DYNAMIC_VIAL_KEY_OVERRIDE_SET, DYNAMIC_VIAL_TAP_DANCE_GET, DYNAMIC_VIAL_TAP_DANCE_SET, MSG_LEN, Report,
+    DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES, MSG_LEN, Report,
 };
 use crate::qmk_settings::{qmk_settings_get, qmk_settings_query, qmk_settings_set};
 use crate::state::VirtualDeviceState;
@@ -74,89 +71,47 @@ fn handle_unlock_poll(state: &mut VirtualDeviceState, now: u64) -> Report {
     resp
 }
 
-/// vial_keycode_firewall(): QK_BOOT becomes KC_NO while locked.
-fn gate_boot_keycode(state: &VirtualDeviceState, keycode: u16) -> u16 {
-    if !state.unlocked && is_boot_keycode(keycode) { 0 } else { keycode }
-}
-
 fn handle_get_number_of_entries() -> Report {
     let mut resp = [0u8; MSG_LEN];
-    resp[0] = TAP_DANCE_ENTRY_COUNT as u8;
-    resp[1] = COMBO_ENTRY_COUNT as u8;
-    resp[2] = KEY_OVERRIDE_ENTRY_COUNT as u8;
-    resp[3] = ALT_REPEAT_KEY_ENTRY_COUNT as u8;
+    resp[0] = TapDanceEntry::COUNT as u8;
+    resp[1] = ComboEntry::COUNT as u8;
+    resp[2] = KeyOverrideEntry::COUNT as u8;
+    resp[3] = AltRepeatKeyEntry::COUNT as u8;
     resp[MSG_LEN - 1] = DYNAMIC_ENTRY_FEATURE_FLAGS;
     resp
 }
 
-/// Every dynamic-entry GET: echo the request, look the entry up by req[3],
-/// status at offset 0, wire entry from offset 1.
-fn handle_entry_get<T: Copy + Default>(
-    req: &Report,
-    entries: &[T],
-    write: impl Fn(&T, &mut [u8], usize),
-) -> Report {
+/// The GET or SET of kind `T`, or `None` when `req[2]` is neither. Both echo
+/// the request with the status at offset 0 and use req[3] as the index. GET
+/// writes the entry from offset 1; SET reads it from offset 4 and stores it
+/// after vial_keycode_firewall(), which turns QK_BOOT into KC_NO while locked.
+fn handle_entry_op<T: DynamicEntry>(state: &mut VirtualDeviceState, req: &Report) -> Option<Report> {
     let mut resp = *req;
-    let (status, entry) = lookup_entry(entries, usize::from(req[3]));
-    resp[0] = status;
-    write(&entry, &mut resp, 1);
-    resp
-}
-
-/// Every dynamic-entry SET: echo the request with the status at offset 0.
-/// Each kind gates a different subset of its fields against QK_BOOT, so the
-/// caller passes the entry already firewalled.
-fn entry_set_response<T>(req: &Report, entries: &mut [T], entry: T) -> Report {
-    let mut resp = *req;
-    resp[0] = store_entry(entries, usize::from(req[3]), entry);
-    resp
+    let index = usize::from(req[3]);
+    if req[2] == T::GET {
+        let (status, entry) = lookup_entry(T::store(state), index);
+        resp[0] = status;
+        entry.write(&mut resp, 1);
+    } else if req[2] == T::SET {
+        let unlocked = state.unlocked;
+        let entry = T::read(req, 4).firewall(|kc| if !unlocked && is_boot_keycode(kc) { 0 } else { kc });
+        resp[0] = store_entry(T::store_mut(state), index, entry);
+    } else {
+        return None;
+    }
+    Some(resp)
 }
 
 fn handle_dynamic_entry_op(state: &mut VirtualDeviceState, req: &Report) -> Report {
-    match req[2] {
-        DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES => handle_get_number_of_entries(),
-        DYNAMIC_VIAL_TAP_DANCE_GET => handle_entry_get(req, &state.tap_dance_entries, TapDanceEntry::write),
-        DYNAMIC_VIAL_TAP_DANCE_SET => {
-            let raw = TapDanceEntry::read(req, 4);
-            let entry = TapDanceEntry {
-                on_tap: gate_boot_keycode(state, raw.on_tap),
-                on_hold: gate_boot_keycode(state, raw.on_hold),
-                on_double_tap: gate_boot_keycode(state, raw.on_double_tap),
-                on_tap_hold: gate_boot_keycode(state, raw.on_tap_hold),
-                tapping_term: raw.tapping_term,
-            };
-            entry_set_response(req, &mut state.tap_dance_entries, entry)
-        }
-        DYNAMIC_VIAL_COMBO_GET => handle_entry_get(req, &state.combo_entries, ComboEntry::write),
-        DYNAMIC_VIAL_COMBO_SET => {
-            let raw = ComboEntry::read(req, 4);
-            let entry = ComboEntry { output: gate_boot_keycode(state, raw.output), ..raw };
-            entry_set_response(req, &mut state.combo_entries, entry)
-        }
-        DYNAMIC_VIAL_KEY_OVERRIDE_GET => {
-            handle_entry_get(req, &state.key_override_entries, KeyOverrideEntry::write)
-        }
-        DYNAMIC_VIAL_KEY_OVERRIDE_SET => {
-            let raw = KeyOverrideEntry::read(req, 4);
-            let entry =
-                KeyOverrideEntry { replacement_key: gate_boot_keycode(state, raw.replacement_key), ..raw };
-            entry_set_response(req, &mut state.key_override_entries, entry)
-        }
-        DYNAMIC_VIAL_ALT_REPEAT_KEY_GET => {
-            handle_entry_get(req, &state.alt_repeat_key_entries, AltRepeatKeyEntry::write)
-        }
-        DYNAMIC_VIAL_ALT_REPEAT_KEY_SET => {
-            let raw = AltRepeatKeyEntry::read(req, 4);
-            let entry = AltRepeatKeyEntry {
-                last_key: gate_boot_keycode(state, raw.last_key),
-                alt_key: gate_boot_keycode(state, raw.alt_key),
-                ..raw
-            };
-            entry_set_response(req, &mut state.alt_repeat_key_entries, entry)
-        }
-        // Unknown dynamic-entry sub-op: unsupported, echo.
-        _ => *req,
+    if req[2] == DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES {
+        return handle_get_number_of_entries();
     }
+    handle_entry_op::<TapDanceEntry>(state, req)
+        .or_else(|| handle_entry_op::<ComboEntry>(state, req))
+        .or_else(|| handle_entry_op::<KeyOverrideEntry>(state, req))
+        .or_else(|| handle_entry_op::<AltRepeatKeyEntry>(state, req))
+        // Unknown dynamic-entry sub-op: unsupported, echo.
+        .unwrap_or(*req)
 }
 
 pub fn handle_vial_report(

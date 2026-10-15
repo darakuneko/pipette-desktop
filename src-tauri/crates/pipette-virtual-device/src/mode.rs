@@ -24,17 +24,10 @@ impl VirtualDeviceMode {
         }
     }
 
-    /// Read the environment on every call (not cached), so the mode follows
-    /// the variable for the life of the process.
+    /// The mode named by `PIPETTE_VIRTUAL_DEVICE`. The application reads it
+    /// once at startup and hands the value to the HID service, which keeps
+    /// it for the life of the process.
     pub fn from_env() -> Self {
         Self::from_env_value(std::env::var(VIRTUAL_DEVICE_ENV).ok().as_deref())
-    }
-
-    pub fn is_enabled(self) -> bool {
-        self != Self::Off
-    }
-
-    pub fn is_exclusive(self) -> bool {
-        self == Self::Only
     }
 }

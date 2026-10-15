@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+mod common;
+
+use common::req;
+
 use pipette_virtual_device::byte_utils::{read_be16, read_be32, write_be16, write_be32};
 use pipette_virtual_device::dataset::{COLS, LAYERS, MACRO_BUFFER_SIZE, ROWS, keycodes};
-use pipette_virtual_device::protocol::{BUFFER_FETCH_CHUNK, MSG_LEN, Report, pad_report};
+use pipette_virtual_device::protocol::{BUFFER_FETCH_CHUNK, MSG_LEN, Report};
 use pipette_virtual_device::state::{VirtualDeviceState, keymap_index};
 use pipette_virtual_device::via_handler::handle_via_report;
-
-fn req(bytes: &[u8]) -> Report {
-    pad_report(bytes)
-}
 
 fn chunk_req(cmd: u8, offset: usize, size: usize) -> Report {
     let mut r = [0u8; MSG_LEN];

@@ -17,11 +17,15 @@
 //! does not override it.
 
 use crate::byte_utils::{read_le16, write_le16};
+use crate::protocol::{
+    DYNAMIC_VIAL_ALT_REPEAT_KEY_GET, DYNAMIC_VIAL_ALT_REPEAT_KEY_SET, DYNAMIC_VIAL_COMBO_GET,
+    DYNAMIC_VIAL_COMBO_SET, DYNAMIC_VIAL_KEY_OVERRIDE_GET, DYNAMIC_VIAL_KEY_OVERRIDE_SET,
+    DYNAMIC_VIAL_TAP_DANCE_GET, DYNAMIC_VIAL_TAP_DANCE_SET,
+};
+use crate::state::VirtualDeviceState;
 
-pub const TAP_DANCE_ENTRY_COUNT: usize = 32;
-pub const COMBO_ENTRY_COUNT: usize = 32;
-pub const KEY_OVERRIDE_ENTRY_COUNT: usize = 32;
-pub const ALT_REPEAT_KEY_ENTRY_COUNT: usize = 32;
+/// Entries per kind (the 32-entry tier).
+const ENTRY_COUNT: usize = 32;
 
 /// Feature flags byte of dynamic_vial_get_number_of_entries (bit 0 = Caps
 /// Word, bit 1 = Layer Lock). Both default to yes in build_vial.mk and the
@@ -43,7 +47,7 @@ pub const STATUS_ERROR: u8 = 0xff;
 
 /// `Default` is the all-zero entry, which is what an out-of-range get
 /// returns (see [`lookup_entry`]); the factory-reset value is
-/// [`TapDanceEntry::reset_value`].
+/// [`DynamicEntry::reset_value`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TapDanceEntry {
     pub on_tap: u16,
@@ -83,21 +87,42 @@ pub struct AltRepeatKeyEntry {
     pub enabled: bool,
 }
 
-impl TapDanceEntry {
-    /// dynamic_keymap_reset(): all KC_NO with the default tapping term.
-    pub fn reset_value() -> Self {
+/// One kind of dynamic entry: its store in the device state, its wire
+/// codec, its factory-reset value and the fields the QK_BOOT firewall gates.
+pub trait DynamicEntry: Copy + Default {
+    /// Store size reported by DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES.
+    const COUNT: usize = ENTRY_COUNT;
+    /// DYNAMIC_VIAL_*_GET sub-command.
+    const GET: u8;
+    /// DYNAMIC_VIAL_*_SET sub-command.
+    const SET: u8;
+
+    /// The value dynamic_keymap_reset() writes to every slot.
+    fn reset_value() -> Self;
+    fn read(buf: &[u8], offset: usize) -> Self;
+    fn write(&self, buf: &mut [u8], offset: usize);
+    /// Pass the keycode fields vial_keycode_firewall() checks for this kind
+    /// through `gate`; every other field is kept as is.
+    fn firewall(self, gate: impl Fn(u16) -> u16) -> Self;
+    fn store(state: &VirtualDeviceState) -> &[Self];
+    fn store_mut(state: &mut VirtualDeviceState) -> &mut [Self];
+}
+
+/// A store of `T::COUNT` factory-reset entries.
+pub fn default_entries<T: DynamicEntry>() -> Vec<T> {
+    vec![T::reset_value(); T::COUNT]
+}
+
+impl DynamicEntry for TapDanceEntry {
+    const GET: u8 = DYNAMIC_VIAL_TAP_DANCE_GET;
+    const SET: u8 = DYNAMIC_VIAL_TAP_DANCE_SET;
+
+    /// All KC_NO with the default tapping term.
+    fn reset_value() -> Self {
         Self { tapping_term: TAPPING_TERM_DEFAULT, ..Self::default() }
     }
 
-    pub fn write(&self, buf: &mut [u8], offset: usize) {
-        write_le16(buf, offset, self.on_tap);
-        write_le16(buf, offset + 2, self.on_hold);
-        write_le16(buf, offset + 4, self.on_double_tap);
-        write_le16(buf, offset + 6, self.on_tap_hold);
-        write_le16(buf, offset + 8, self.tapping_term);
-    }
-
-    pub fn read(buf: &[u8], offset: usize) -> Self {
+    fn read(buf: &[u8], offset: usize) -> Self {
         Self {
             on_tap: read_le16(buf, offset),
             on_hold: read_le16(buf, offset + 2),
@@ -106,23 +131,44 @@ impl TapDanceEntry {
             tapping_term: read_le16(buf, offset + 8),
         }
     }
+
+    fn write(&self, buf: &mut [u8], offset: usize) {
+        write_le16(buf, offset, self.on_tap);
+        write_le16(buf, offset + 2, self.on_hold);
+        write_le16(buf, offset + 4, self.on_double_tap);
+        write_le16(buf, offset + 6, self.on_tap_hold);
+        write_le16(buf, offset + 8, self.tapping_term);
+    }
+
+    fn firewall(self, gate: impl Fn(u16) -> u16) -> Self {
+        Self {
+            on_tap: gate(self.on_tap),
+            on_hold: gate(self.on_hold),
+            on_double_tap: gate(self.on_double_tap),
+            on_tap_hold: gate(self.on_tap_hold),
+            ..self
+        }
+    }
+
+    fn store(state: &VirtualDeviceState) -> &[Self] {
+        &state.tap_dance_entries
+    }
+
+    fn store_mut(state: &mut VirtualDeviceState) -> &mut [Self] {
+        &mut state.tap_dance_entries
+    }
 }
 
-impl ComboEntry {
-    /// dynamic_keymap_reset(): all zero.
-    pub fn reset_value() -> Self {
+impl DynamicEntry for ComboEntry {
+    const GET: u8 = DYNAMIC_VIAL_COMBO_GET;
+    const SET: u8 = DYNAMIC_VIAL_COMBO_SET;
+
+    /// All zero.
+    fn reset_value() -> Self {
         Self::default()
     }
 
-    pub fn write(&self, buf: &mut [u8], offset: usize) {
-        write_le16(buf, offset, self.key1);
-        write_le16(buf, offset + 2, self.key2);
-        write_le16(buf, offset + 4, self.key3);
-        write_le16(buf, offset + 6, self.key4);
-        write_le16(buf, offset + 8, self.output);
-    }
-
-    pub fn read(buf: &[u8], offset: usize) -> Self {
+    fn read(buf: &[u8], offset: usize) -> Self {
         Self {
             key1: read_le16(buf, offset),
             key2: read_le16(buf, offset + 2),
@@ -131,26 +177,38 @@ impl ComboEntry {
             output: read_le16(buf, offset + 8),
         }
     }
+
+    fn write(&self, buf: &mut [u8], offset: usize) {
+        write_le16(buf, offset, self.key1);
+        write_le16(buf, offset + 2, self.key2);
+        write_le16(buf, offset + 4, self.key3);
+        write_le16(buf, offset + 6, self.key4);
+        write_le16(buf, offset + 8, self.output);
+    }
+
+    fn firewall(self, gate: impl Fn(u16) -> u16) -> Self {
+        Self { output: gate(self.output), ..self }
+    }
+
+    fn store(state: &VirtualDeviceState) -> &[Self] {
+        &state.combo_entries
+    }
+
+    fn store_mut(state: &mut VirtualDeviceState) -> &mut [Self] {
+        &mut state.combo_entries
+    }
 }
 
-impl KeyOverrideEntry {
-    /// dynamic_keymap_reset(): every layer, activation options set, disabled.
-    pub fn reset_value() -> Self {
+impl DynamicEntry for KeyOverrideEntry {
+    const GET: u8 = DYNAMIC_VIAL_KEY_OVERRIDE_GET;
+    const SET: u8 = DYNAMIC_VIAL_KEY_OVERRIDE_SET;
+
+    /// Every layer, activation options set, disabled.
+    fn reset_value() -> Self {
         Self { layers: 0xffff, options: KEY_OVERRIDE_DEFAULT_OPTIONS, ..Self::default() }
     }
 
-    /// The enabled flag shares a byte with the options (bit 7).
-    pub fn write(&self, buf: &mut [u8], offset: usize) {
-        write_le16(buf, offset, self.trigger_key);
-        write_le16(buf, offset + 2, self.replacement_key);
-        write_le16(buf, offset + 4, self.layers);
-        buf[offset + 6] = self.trigger_mods;
-        buf[offset + 7] = self.negative_mods;
-        buf[offset + 8] = self.suppressed_mods;
-        buf[offset + 9] = (self.options & 0x7f) | if self.enabled { 0x80 } else { 0 };
-    }
-
-    pub fn read(buf: &[u8], offset: usize) -> Self {
+    fn read(buf: &[u8], offset: usize) -> Self {
         let options_byte = buf[offset + 9];
         Self {
             trigger_key: read_le16(buf, offset),
@@ -163,23 +221,41 @@ impl KeyOverrideEntry {
             enabled: options_byte & 0x80 != 0,
         }
     }
+
+    /// The enabled flag shares a byte with the options (bit 7).
+    fn write(&self, buf: &mut [u8], offset: usize) {
+        write_le16(buf, offset, self.trigger_key);
+        write_le16(buf, offset + 2, self.replacement_key);
+        write_le16(buf, offset + 4, self.layers);
+        buf[offset + 6] = self.trigger_mods;
+        buf[offset + 7] = self.negative_mods;
+        buf[offset + 8] = self.suppressed_mods;
+        buf[offset + 9] = (self.options & 0x7f) | if self.enabled { 0x80 } else { 0 };
+    }
+
+    fn firewall(self, gate: impl Fn(u16) -> u16) -> Self {
+        Self { replacement_key: gate(self.replacement_key), ..self }
+    }
+
+    fn store(state: &VirtualDeviceState) -> &[Self] {
+        &state.key_override_entries
+    }
+
+    fn store_mut(state: &mut VirtualDeviceState) -> &mut [Self] {
+        &mut state.key_override_entries
+    }
 }
 
-impl AltRepeatKeyEntry {
-    /// dynamic_keymap_reset(): all zero, disabled.
-    pub fn reset_value() -> Self {
+impl DynamicEntry for AltRepeatKeyEntry {
+    const GET: u8 = DYNAMIC_VIAL_ALT_REPEAT_KEY_GET;
+    const SET: u8 = DYNAMIC_VIAL_ALT_REPEAT_KEY_SET;
+
+    /// All zero, disabled.
+    fn reset_value() -> Self {
         Self::default()
     }
 
-    /// The enabled flag shares a byte with the options (bit 3).
-    pub fn write(&self, buf: &mut [u8], offset: usize) {
-        write_le16(buf, offset, self.last_key);
-        write_le16(buf, offset + 2, self.alt_key);
-        buf[offset + 4] = self.allowed_mods;
-        buf[offset + 5] = (self.options & 0x07) | if self.enabled { 0x08 } else { 0 };
-    }
-
-    pub fn read(buf: &[u8], offset: usize) -> Self {
+    fn read(buf: &[u8], offset: usize) -> Self {
         let options_byte = buf[offset + 5];
         Self {
             last_key: read_le16(buf, offset),
@@ -189,22 +265,26 @@ impl AltRepeatKeyEntry {
             enabled: options_byte & 0x08 != 0,
         }
     }
-}
 
-pub fn create_default_tap_dance_entries() -> Vec<TapDanceEntry> {
-    vec![TapDanceEntry::reset_value(); TAP_DANCE_ENTRY_COUNT]
-}
+    /// The enabled flag shares a byte with the options (bit 3).
+    fn write(&self, buf: &mut [u8], offset: usize) {
+        write_le16(buf, offset, self.last_key);
+        write_le16(buf, offset + 2, self.alt_key);
+        buf[offset + 4] = self.allowed_mods;
+        buf[offset + 5] = (self.options & 0x07) | if self.enabled { 0x08 } else { 0 };
+    }
 
-pub fn create_default_combo_entries() -> Vec<ComboEntry> {
-    vec![ComboEntry::reset_value(); COMBO_ENTRY_COUNT]
-}
+    fn firewall(self, gate: impl Fn(u16) -> u16) -> Self {
+        Self { last_key: gate(self.last_key), alt_key: gate(self.alt_key), ..self }
+    }
 
-pub fn create_default_key_override_entries() -> Vec<KeyOverrideEntry> {
-    vec![KeyOverrideEntry::reset_value(); KEY_OVERRIDE_ENTRY_COUNT]
-}
+    fn store(state: &VirtualDeviceState) -> &[Self] {
+        &state.alt_repeat_key_entries
+    }
 
-pub fn create_default_alt_repeat_key_entries() -> Vec<AltRepeatKeyEntry> {
-    vec![AltRepeatKeyEntry::reset_value(); ALT_REPEAT_KEY_ENTRY_COUNT]
+    fn store_mut(state: &mut VirtualDeviceState) -> &mut [Self] {
+        &mut state.alt_repeat_key_entries
+    }
 }
 
 /// Bounds-checked get, mirroring nvm_dynamic_keymap.c's `index >= COUNT -> -1`

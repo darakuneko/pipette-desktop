@@ -30,10 +30,10 @@ fn list_devices_keeps_only_the_vial_usage_page_and_usage() {
     let mut other_usage = raw_device("/dev/hidraw1");
     other_usage.usage = HID_USAGE + 1;
     let mut bootloader = raw_device("/dev/hidraw2");
-    bootloader.serial_number = Some(BOOTLOADER_SERIAL_MAGIC.into());
+    bootloader.info.serial_number = Some(BOOTLOADER_SERIAL_MAGIC.into());
     let mut no_strings = raw_device("/dev/hidraw3");
-    no_strings.serial_number = None;
-    no_strings.product = None;
+    no_strings.info.serial_number = None;
+    no_strings.info.product = None;
     *f.backend.devices.lock().unwrap() =
         vec![raw_device("/dev/hidraw0"), other_usage, bootloader, no_strings];
 
@@ -259,10 +259,9 @@ fn is_device_open_closes_a_device_that_is_no_longer_enumerated() {
 fn virtual_device_unlocks_through_the_service_with_the_injected_clock() {
     let f = fixture(VirtualDeviceMode::Only);
     assert!(f.service.open_device(VIRTUAL_DEVICE_VID, VIRTUAL_DEVICE_PID).unwrap());
-    f.service.with_virtual_device(|d| {
-        d.set_unlock_counter_max(2);
-        d.hold_keys(&[(0, 0), (0, 1)]);
-    });
+    let controller = f.service.virtual_device();
+    controller.set_unlock_counter_max(2);
+    controller.hold_keys(&[(0, 0), (0, 1)]);
     // The fixture clock is fixed at 0, so polls never pass the 100 ms gate.
     f.service.send_receive(&[0xfe, 0x06]).unwrap();
     let poll = f.service.send_receive(&[0xfe, 0x07]).unwrap();
@@ -282,7 +281,7 @@ fn virtual_device_state_survives_close_and_reopen() {
     let resp = f.service.send_receive(&[0x04, 1, 2, 3]).unwrap();
     assert_eq!(resp[4..6], [0x00, 0x29]);
 
-    f.service.with_virtual_device(|d| d.reset());
+    f.service.virtual_device().reset();
     let resp = f.service.send_receive(&[0x04, 1, 2, 3]).unwrap();
     assert_ne!(resp[4..6], [0x00, 0x29]);
 }
@@ -291,7 +290,7 @@ fn virtual_device_state_survives_close_and_reopen() {
 #[test]
 #[ignore]
 fn real_backend_enumerates_without_error() {
-    let service = pipette_hid::HidService::new().with_mode_source(|| VirtualDeviceMode::Off);
+    let service = pipette_hid::HidService::new(VirtualDeviceMode::Off);
     let devices = service.list_devices().unwrap();
     println!("{} Vial interface(s): {devices:?}", devices.len());
 }

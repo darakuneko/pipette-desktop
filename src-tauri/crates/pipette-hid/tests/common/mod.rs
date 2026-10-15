@@ -5,22 +5,33 @@
 
 use std::collections::VecDeque;
 use std::ffi::CString;
-use std::sync::atomic::{AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use pipette_hid::{
-    HID_USAGE, HID_USAGE_PAGE, HidBackend, HidError, HidHandle, HidService, RawDeviceInfo, VirtualDeviceMode,
+    HID_USAGE, HID_USAGE_PAGE, HidBackend, HidError, HidHandle, HidService, RawDeviceInfo, Timing,
+    VirtualDeviceMode, is_vial_interface,
 };
 
-pub fn raw_device(path: &str) -> RawDeviceInfo {
-    RawDeviceInfo {
-        path: CString::new(path).unwrap(),
-        vendor_id: 0x1234,
-        product_id: 0x5678,
+/// One HID interface as the OS lists it, Vial or not.
+#[derive(Clone)]
+pub struct MockDevice {
+    pub info: RawDeviceInfo,
+    pub usage_page: u16,
+    pub usage: u16,
+}
+
+pub fn raw_device(path: &str) -> MockDevice {
+    MockDevice {
+        info: RawDeviceInfo {
+            path: CString::new(path).unwrap(),
+            vendor_id: 0x1234,
+            product_id: 0x5678,
+            serial_number: Some("vial:f64c2b3c".into()),
+            product: Some("Real Test Keyboard".into()),
+        },
         usage_page: HID_USAGE_PAGE,
         usage: HID_USAGE,
-        serial_number: Some("vial:f64c2b3c".into()),
-        product: Some("Real Test Keyboard".into()),
     }
 }
 
@@ -66,7 +77,7 @@ impl HidHandle for MockHandle {
 
 #[derive(Default)]
 pub struct MockBackend {
-    pub devices: Mutex<Vec<RawDeviceInfo>>,
+    pub devices: Mutex<Vec<MockDevice>>,
     pub handle: Arc<MockHandle>,
     pub enumerate_calls: AtomicUsize,
     pub open_calls: AtomicUsize,
@@ -74,13 +85,19 @@ pub struct MockBackend {
     pub open_failures: AtomicUsize,
 }
 
-/// Shares one `MockBackend` between the service and the test.
+/// Shares one `MockBackend` between the service and the test. Enumeration
+/// keeps only Vial interfaces, with the same filter as the hidapi backend.
 pub struct SharedBackend(pub Arc<MockBackend>);
 
 impl HidBackend for SharedBackend {
     fn enumerate(&self) -> Result<Vec<RawDeviceInfo>, HidError> {
         self.0.enumerate_calls.fetch_add(1, Ordering::SeqCst);
-        Ok(self.0.devices.lock().unwrap().clone())
+        let devices = self.0.devices.lock().unwrap();
+        Ok(devices
+            .iter()
+            .filter(|d| is_vial_interface(d.usage_page, d.usage))
+            .map(|d| d.info.clone())
+            .collect())
     }
 
     fn open_path(&self, _path: &CString) -> Result<Arc<dyn HidHandle>, HidError> {
@@ -94,51 +111,26 @@ impl HidBackend for SharedBackend {
     }
 }
 
-/// Mode switch the test can flip while the service is running.
-#[derive(Clone, Default)]
-pub struct ModeSwitch(Arc<AtomicU8>);
-
-impl ModeSwitch {
-    pub fn set(&self, mode: VirtualDeviceMode) {
-        let v = match mode {
-            VirtualDeviceMode::Off => 0,
-            VirtualDeviceMode::Append => 1,
-            VirtualDeviceMode::Only => 2,
-        };
-        self.0.store(v, Ordering::SeqCst);
-    }
-
-    pub fn get(&self) -> VirtualDeviceMode {
-        match self.0.load(Ordering::SeqCst) {
-            1 => VirtualDeviceMode::Append,
-            2 => VirtualDeviceMode::Only,
-            _ => VirtualDeviceMode::Off,
-        }
-    }
-}
-
 pub struct Fixture {
     pub service: HidService,
     pub backend: Arc<MockBackend>,
-    pub mode: ModeSwitch,
     pub sleeps: Arc<AtomicUsize>,
 }
 
-/// A service on the mock backend with retry delays skipped (and counted).
+/// A service on the mock backend with the clock fixed at 0 and retry delays
+/// skipped (and counted).
 pub fn fixture(mode: VirtualDeviceMode) -> Fixture {
     let backend = Arc::new(MockBackend::default());
-    let switch = ModeSwitch::default();
-    switch.set(mode);
     let sleeps = Arc::new(AtomicUsize::new(0));
-    let mode_reader = switch.clone();
     let sleep_counter = sleeps.clone();
-    let service = HidService::with_backend(Box::new(SharedBackend(backend.clone())))
-        .with_mode_source(move || mode_reader.get())
-        .with_clock(|| 0)
-        .with_sleeper(move |_| {
+    let timing = Timing::new(
+        || 0,
+        move |_| {
             sleep_counter.fetch_add(1, Ordering::SeqCst);
-        });
-    Fixture { service, backend, mode: switch, sleeps }
+        },
+    );
+    let service = HidService::with_backend(Box::new(SharedBackend(backend.clone())), mode, timing);
+    Fixture { service, backend, sleeps }
 }
 
 /// Enumerate one real (mock) keyboard and open it.
