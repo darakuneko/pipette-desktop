@@ -17,7 +17,8 @@ fn device_with_serial(path: &str, serial: Option<&str>) -> common::MockDevice {
 }
 
 fn opened_paths(f: &common::Fixture) -> Vec<String> {
-    f.backend.opened_paths.lock().unwrap().iter().map(|p| p.to_str().unwrap().to_owned()).collect()
+    let paths = f.backend.opened_paths.lock().expect("not poisoned");
+    paths.iter().map(|p| p.to_string_lossy().into_owned()).collect()
 }
 
 #[test]

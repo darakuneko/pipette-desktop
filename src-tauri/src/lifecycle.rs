@@ -30,6 +30,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
+use crate::hid_commands::Hid;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
@@ -184,7 +185,12 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                 }
             }
         }
-        RunEvent::Exit => log::info!("[quit] event loop ended"),
+        RunEvent::Exit => {
+            if let Some(hid) = app.try_state::<Hid>() {
+                hid.0.close_probe();
+            }
+            log::info!("[quit] event loop ended");
+        }
         _ => {}
     }
 }

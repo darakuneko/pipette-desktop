@@ -123,7 +123,8 @@ fn open_failure_logs() -> Vec<OpenFailureLog> {
         logs: Vec<OpenFailureLog>,
     }
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_open_failure_logs.json");
-    let fixture: Fixture = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let bytes = std::fs::read(path).expect("the fixture is readable");
+    let fixture: Fixture = serde_json::from_slice(&bytes).expect("the fixture parses");
     assert!(!fixture.logs.is_empty());
     for log in &fixture.logs {
         assert_eq!(log.level, "error");

@@ -41,6 +41,9 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         hid_commands::send_receive,
         hid_commands::send,
         hid_commands::is_device_open,
+        hid_commands::hid_probe_open,
+        hid_commands::hid_probe_send_receive,
+        hid_commands::hid_probe_close,
         definition::decompress_definition,
     ]
 }

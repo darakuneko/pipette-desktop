@@ -57,6 +57,9 @@ cairo-rs = { version = "0.18", features = ["png"], optional = true }
 dev-tools = ["dep:webkit2gtk", "dep:cairo-rs"]
 
 [dev-dependencies]
+# A scripted hardware keyboard behind the IPC contract tests' HID service
+# (src/ipc_contract.rs), for the probe commands.
+pipette-hid = { path = "crates/pipette-hid", features = ["test-util"] }
 sha2 = { version = "=0.10.9", default-features = false }
 hex = "=0.4.3"
 # Paused time for the quit sequence tests.
