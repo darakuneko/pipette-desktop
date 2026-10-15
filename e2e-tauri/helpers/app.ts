@@ -122,23 +122,56 @@ export async function openKeycodeHexInput(row: number, col: number): Promise<voi
   await $(HEX_INPUT_SELECTOR).waitForDisplayed()
 }
 
+const KEY_POPOVER_SELECTOR = '[data-testid="key-popover"]'
+
+/** Applies the keycode typed in the Code tab and waits until the keymap
+ *  editor has written it. When the write finishes, the editor closes the
+ *  popover, or with Auto Move moves it on to the next key, so the popover
+ *  of the key being written is gone then. Closing it before that races
+ *  the move: the next key's popover opens where the close click lands.
+ *  Apply is disabled when the key already has the keycode; nothing is
+ *  written then. */
+export async function applyHexKeycode(): Promise<void> {
+  const target = await $(KEY_POPOVER_SELECTOR).getAttribute('data-popover-target-key')
+  if (!target) throw new Error('no key popover is open')
+  const apply = $('[data-testid="popover-code-apply"]')
+  if (!(await apply.isEnabled())) return
+  await apply.click()
+  await waitForGone(
+    `${KEY_POPOVER_SELECTOR}[data-popover-target-key="${target}"]`,
+    `the keycode for ${target} was not written`,
+  )
+}
+
+/** Closes the key popover, whichever key it is on, and waits until none is
+ *  displayed. A click that a re-render of the popover swallows (the close
+ *  button replaced while it is found or clicked, or the popover moved to
+ *  the next key) is tried again on the next poll. */
 export async function closeKeyPopover(): Promise<void> {
-  // A keycode applied from the popover re-renders it, which can replace the
-  // close button while it is being found or clicked; each try finds it
-  // afresh.
   await browser.waitUntil(
     async () => {
       try {
-        await $('[data-testid="popover-close"]').click()
-        return true
+        const popover = $(KEY_POPOVER_SELECTOR)
+        if (!(await popover.isExisting()) || !(await popover.isDisplayed())) return true
+        // Found without waiting: a popover gone by now ends this poll.
+        const [close] = await popover.$$('[data-testid="popover-close"]')
+        if (close) await close.click()
+        return false
       } catch (err) {
         if (isStaleElement(err)) return false
         throw err
       }
     },
-    { timeoutMsg: 'the close button of the key popover could not be clicked' },
+    { interval: 300, timeoutMsg: 'the key popover could not be closed' },
   )
-  await $('[data-testid="key-popover"]').waitForDisplayed({ reverse: true })
+}
+
+/** Writes `keycode` (hex) to the key at `row,col` from the key popover. */
+export async function setKeycode(row: number, col: number, keycode: string): Promise<void> {
+  await openKeycodeHexInput(row, col)
+  await $(HEX_INPUT_SELECTOR).setValue(keycode)
+  await applyHexKeycode()
+  await closeKeyPopover()
 }
 
 /** Whether the keycodes overlay is open and has stopped sliding. A click

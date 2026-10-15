@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import {
+  applyHexKeycode,
   clickIntoFileDialog,
   closeKeyPopover,
   connectVirtualKeyboard,
@@ -21,6 +22,7 @@ import {
   openOverlayTab,
   openToolsOverlay,
   restartApp,
+  setKeycode,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
   waitForGone,
@@ -35,14 +37,6 @@ const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
 /** A key the matrix tester shows pressed. */
 const MATRIX_KEY = { row: 2, col: 3 }
 const SECOND_LAUNCH_TIMEOUT_MS = 30_000
-
-/** Writes `keycode` (hex) to the key at `row,col` from the key popover. */
-async function setKeycode(row: number, col: number, keycode: string): Promise<void> {
-  await openKeycodeHexInput(row, col)
-  await $(HEX_INPUT_SELECTOR).setValue(keycode)
-  await $('[data-testid="popover-code-apply"]').click()
-  await closeKeyPopover()
-}
 
 describe('Tauri build smoke', () => {
   it('lists the virtual keyboard and opens its keymap editor, still locked', async () => {
@@ -60,7 +54,7 @@ describe('Tauri build smoke', () => {
     const target = before.toUpperCase() === KC_Z ? KC_X : KC_Z
 
     await $(HEX_INPUT_SELECTOR).setValue(target)
-    await $('[data-testid="popover-code-apply"]').click()
+    await applyHexKeycode()
     await closeKeyPopover()
 
     // Reconnecting reloads the keymap from the device, which keeps it across
