@@ -1,0 +1,67 @@
+[
+  {
+    "name": "favorite-ascii",
+    "password": "correct horse battery staple",
+    "plaintext": "{\"type\":\"favorite\",\"key\":\"tapDance\",\"index\":{\"entries\":[]},\"files\":{}}",
+    "envelope": {
+      "version": 1,
+      "syncUnit": "favorites/tapDance",
+      "updatedAt": "2026-10-15T08:12:59.506Z",
+      "salt": "yh+dtZFsJ41Nadyx6OSiKg==",
+      "iv": "xSIqvbwJXQV3ya3A",
+      "ciphertext": "YM+YWzJJkzes0ItCuwxkj5C4fD7FQ/HZYeh6HU2jnlzjz5YEIVjm1dxdUB0B79C3+hhGe/eonJVM0IbT0+1zpKfCm6sH63gfFKdO0PXYLlTARf7wMEA="
+    }
+  },
+  {
+    "name": "snapshot-unicode",
+    "password": "パスワード🔑 café ",
+    "plaintext": "{\n  \"type\": \"layout\",\n  \"files\": {\n    \"a.json\": \"日本語 ✓ 😀\\r\\n  spaced  \"\n  }\n}",
+    "envelope": {
+      "version": 1,
+      "syncUnit": "keyboards/0x1234ABCD/snapshots",
+      "updatedAt": "2026-10-15T08:12:59.572Z",
+      "salt": "T3MONBpOhXLjv3IfDzyfxA==",
+      "iv": "Cce6r/d29vJLM5f8",
+      "ciphertext": "dIoJ092NB8lMcrK+lr/mxk3RYQC+sN4yOXFuS6irh1xjydugZ+jJyZnB+DlDojrllB3pFs6Yr7XDIrfxWanLEuSoEcK2xykoU7AF4F4EdXmwNz4y8vuypUvmGHKfD7kxRabaQRSYxTFS"
+    }
+  },
+  {
+    "name": "empty-plaintext-empty-password",
+    "password": "",
+    "plaintext": "",
+    "envelope": {
+      "version": 1,
+      "syncUnit": "meta/keyboard-names",
+      "updatedAt": "2026-10-15T08:12:59.640Z",
+      "salt": "OEhcghAgtAVm9yNgh9LIIA==",
+      "iv": "iFCcMdgdGJjU5KLV",
+      "ciphertext": "3ICp56D5REKfB8DgFlmxLA=="
+    }
+  },
+  {
+    "name": "typing-day-jsonl",
+    "password": "p@ss/word+=",
+    "plaintext": "{\"type\":\"typing-analytics-device\",\"files\":{\"data.jsonl\":\"{\\\"t\\\":\\\"2026-10-14T00:00:00.000Z\\\",\\\"k\\\":\\\"KC_A\\\",\\\"d\\\":12}\\n{\\\"t\\\":\\\"2026-10-14T00:00:00.120Z\\\",\\\"k\\\":\\\"KC_B\\\",\\\"d\\\":9}\\n{\\\"t\\\":\\\"2026-10-14T00:00:00.300Z\\\",\\\"k\\\":\\\"KC_SPACE\\\",\\\"d\\\":30}\"}}",
+    "envelope": {
+      "version": 1,
+      "syncUnit": "keyboards/0xABCD/devices/0123456789abcdef/days/2026-10-14",
+      "updatedAt": "2026-10-15T08:12:59.707Z",
+      "salt": "TbwUu/UFle7XG51o4acp5w==",
+      "iv": "WAdN0Z59W6OA1DAP",
+      "ciphertext": "fZnoCd1NYn+B2pekIK46jTcJ3LpJ/fw78c4TNbhzjYENXl/yhip8Gjxxi76DG1TWbERuIU7UncxQwhRnwEja7JSAEw//1f+gissHeFFw6c3xfr8nRjMhRUFGjYpa1NTDB4qhKw0/N+oPxxwcmwi45IJaYCBSWwJV8T7ERtjgH8Bu6FWpBlugB7qTlRKFXrPCXfuaCXmHOz+sgl/gKsoGX5/cJLiE6u9MhQJZo6O4gHGugRZ3xIOaZhFKBYJa9m75MUe+qKRN8eWomJRUmesbSTCMkrzp5pTciTOrtH2CgyG/LC2ADFpimXuBlLxm81dOoo1N0/gbU2t8ySPo/JpjUVskBeiz/rs="
+    }
+  },
+  {
+    "name": "password-check",
+    "password": "correct horse battery staple",
+    "plaintext": "{\"type\":\"password-check\",\"version\":1}",
+    "envelope": {
+      "version": 1,
+      "syncUnit": "password-check",
+      "updatedAt": "2026-10-15T08:12:59.772Z",
+      "salt": "bR44frc5kS4EP/IZoUSgeA==",
+      "iv": "Q3zH6Pg09TGbl95F",
+      "ciphertext": "BJCG92d6SbgTywT2R797Gs3vMI1ulLEf3ktu9wO11xK7Nbp1FdZKUDkwmCIx8jCZgdVZyoA="
+    }
+  }
+]

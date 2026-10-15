@@ -30,6 +30,8 @@
     "test:e2e:dev": "E2E_MODE=dev playwright test",
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
     "generate:virtual-device-fixtures": "vitest run --config scripts/virtual-device-fixtures/vitest.config.ts",
+    "generate:sync-format-fixtures": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts record-sync-format-fixtures",
+    "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
     "doc:guide": "node docs/build-guide.mjs"
   },

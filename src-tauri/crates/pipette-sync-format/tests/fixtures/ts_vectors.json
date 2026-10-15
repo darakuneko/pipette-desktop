@@ -1,0 +1,610 @@
+{
+  "constants": {
+    "passwordCheckUnit": "password-check",
+    "passwordCheckPayload": "{\"type\":\"password-check\",\"version\":1}",
+    "passwordChangeLockFile": "password-change-lock.json",
+    "syncFormatFilePrefix": "sync-format-v",
+    "keyboardMetaSyncUnit": "meta/keyboard-names"
+  },
+  "envelopes": [
+    {
+      "name": "favorite-ascii",
+      "password": "correct horse battery staple",
+      "syncUnit": "favorites/tapDance",
+      "plaintext": "{\"type\":\"favorite\",\"key\":\"tapDance\",\"index\":{\"entries\":[]},\"files\":{}}",
+      "saltHex": "000102030405060708090a0b0c0d0e0f",
+      "ivHex": "a0a1a2a3a4a5a6a7a8a9aaab",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "favorites/tapDance",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "AAECAwQFBgcICQoLDA0ODw==",
+        "iv": "oKGio6Slpqeoqaqr",
+        "ciphertext": "0EzH+QtQ59IVTHPEa+dkx518wxeSefCXYfBRiE5yQJExpLICkShKmyuDLpupVEBGkuX9bN7+zop4+mWJQLhof6W4ac4XYxS5rYkWsjSvfhp38f2JJwM="
+      },
+      "json": "{\"version\":1,\"syncUnit\":\"favorites/tapDance\",\"updatedAt\":\"2026-10-15T01:02:03.456Z\",\"salt\":\"AAECAwQFBgcICQoLDA0ODw==\",\"iv\":\"oKGio6Slpqeoqaqr\",\"ciphertext\":\"0EzH+QtQ59IVTHPEa+dkx518wxeSefCXYfBRiE5yQJExpLICkShKmyuDLpupVEBGkuX9bN7+zop4+mWJQLhof6W4ac4XYxS5rYkWsjSvfhp38f2JJwM=\"}"
+    },
+    {
+      "name": "snapshot-unicode",
+      "password": "パスワード🔑 café ",
+      "syncUnit": "keyboards/0x1234ABCD/snapshots",
+      "plaintext": "{\n  \"type\": \"layout\",\n  \"files\": {\n    \"a.json\": \"日本語 ✓ 😀\\r\\n  spaced  \"\n  }\n}",
+      "saltHex": "ffeeddccbbaa99887766554433221100",
+      "ivHex": "0102030405060708090a0b0c",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "keyboards/0x1234ABCD/snapshots",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "/+7dzLuqmYh3ZlVEMyIRAA==",
+        "iv": "AQIDBAUGBwgJCgsM",
+        "ciphertext": "ENObM0sKFBWiJEgoDim3npSiKxLVCAF9XB4mJFxnUujcaFfc1ih9a1ajgpRE6GuSr2o7FhEST5aeYn1Vu/mN6jtZBzNiM4BT7fijVppy2WUwMK9qnecSKYhInnm45+U1SADnOclfhtvO"
+      },
+      "json": "{\"version\":1,\"syncUnit\":\"keyboards/0x1234ABCD/snapshots\",\"updatedAt\":\"2026-10-15T01:02:03.456Z\",\"salt\":\"/+7dzLuqmYh3ZlVEMyIRAA==\",\"iv\":\"AQIDBAUGBwgJCgsM\",\"ciphertext\":\"ENObM0sKFBWiJEgoDim3npSiKxLVCAF9XB4mJFxnUujcaFfc1ih9a1ajgpRE6GuSr2o7FhEST5aeYn1Vu/mN6jtZBzNiM4BT7fijVppy2WUwMK9qnecSKYhInnm45+U1SADnOclfhtvO\"}"
+    },
+    {
+      "name": "empty-plaintext-empty-password",
+      "password": "",
+      "syncUnit": "meta/keyboard-names",
+      "plaintext": "",
+      "saltHex": "11111111111111111111111111111111",
+      "ivHex": "222222222222222222222222",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "meta/keyboard-names",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "EREREREREREREREREREREQ==",
+        "iv": "IiIiIiIiIiIiIiIi",
+        "ciphertext": "ZuUDioUo69Yc3juaSDdaWQ=="
+      },
+      "json": "{\"version\":1,\"syncUnit\":\"meta/keyboard-names\",\"updatedAt\":\"2026-10-15T01:02:03.456Z\",\"salt\":\"EREREREREREREREREREREQ==\",\"iv\":\"IiIiIiIiIiIiIiIi\",\"ciphertext\":\"ZuUDioUo69Yc3juaSDdaWQ==\"}"
+    },
+    {
+      "name": "typing-day-jsonl",
+      "password": "p@ss/word+=",
+      "syncUnit": "keyboards/0xABCD/devices/0123456789abcdef/days/2026-10-14",
+      "plaintext": "{\"type\":\"typing-analytics-device\",\"files\":{\"data.jsonl\":\"{\\\"t\\\":\\\"2026-10-14T00:00:00.000Z\\\",\\\"k\\\":\\\"KC_A\\\",\\\"d\\\":12}\\n{\\\"t\\\":\\\"2026-10-14T00:00:00.120Z\\\",\\\"k\\\":\\\"KC_B\\\",\\\"d\\\":9}\\n{\\\"t\\\":\\\"2026-10-14T00:00:00.300Z\\\",\\\"k\\\":\\\"KC_SPACE\\\",\\\"d\\\":30}\"}}",
+      "saltHex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "ivHex": "c3c3c3c3c3c3c3c3c3c3c3c3",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "keyboards/0xABCD/devices/0123456789abcdef/days/2026-10-14",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "WlpaWlpaWlpaWlpaWlpaWg==",
+        "iv": "w8PDw8PDw8PDw8PD",
+        "ciphertext": "+5IGcgB5AN0Oq84+tzb1NxWu6W8Iqrd4Ytgo6Qs6+rNjGqt0/fTQ4yLba+WFajCOSj6rR5kd4kfNX+ANy9A73RGa8843uXBWjU+QLhIXv0uiqa0/JQgdDc4FteglUfYVn2xphkhyAyNxzAFQaf3WMgGFvrt9p1xA6GnfsrSxCJNZCmXV9b4ldCFAyDm1pWh/VHYidzFRQ8xelk9cHGwOZkKtiF9FeOkOuK6Db9LHgdmuNBQKnoayKT5pSFWVvsZm1g2InGMKIkU5osZ5tl/cLLUmMHg5mXfXjPxTlo+724FX/rYgRvm5+yKL8YO2oBTL6Nl8ZFRiAFq5l5LP12YhYqDC1rMdwOg="
+      },
+      "json": "{\"version\":1,\"syncUnit\":\"keyboards/0xABCD/devices/0123456789abcdef/days/2026-10-14\",\"updatedAt\":\"2026-10-15T01:02:03.456Z\",\"salt\":\"WlpaWlpaWlpaWlpaWlpaWg==\",\"iv\":\"w8PDw8PDw8PDw8PD\",\"ciphertext\":\"+5IGcgB5AN0Oq84+tzb1NxWu6W8Iqrd4Ytgo6Qs6+rNjGqt0/fTQ4yLba+WFajCOSj6rR5kd4kfNX+ANy9A73RGa8843uXBWjU+QLhIXv0uiqa0/JQgdDc4FteglUfYVn2xphkhyAyNxzAFQaf3WMgGFvrt9p1xA6GnfsrSxCJNZCmXV9b4ldCFAyDm1pWh/VHYidzFRQ8xelk9cHGwOZkKtiF9FeOkOuK6Db9LHgdmuNBQKnoayKT5pSFWVvsZm1g2InGMKIkU5osZ5tl/cLLUmMHg5mXfXjPxTlo+724FX/rYgRvm5+yKL8YO2oBTL6Nl8ZFRiAFq5l5LP12YhYqDC1rMdwOg=\"}"
+    },
+    {
+      "name": "password-check",
+      "password": "correct horse battery staple",
+      "syncUnit": "password-check",
+      "plaintext": "{\"type\":\"password-check\",\"version\":1}",
+      "saltHex": "9f8e7d6c5b4a39281706f5e4d3c2b1a0",
+      "ivHex": "00000000000000000000000f",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "password-check",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "n459bFtKOSgXBvXk08KxoA==",
+        "iv": "AAAAAAAAAAAAAAAP",
+        "ciphertext": "Nsk77ds04pFaxaCvGWNDJirAqssXTPXCcCwRarwZKr5rOEhZcQDWv63DeiX2jps9u+OEg30="
+      },
+      "json": "{\"version\":1,\"syncUnit\":\"password-check\",\"updatedAt\":\"2026-10-15T01:02:03.456Z\",\"salt\":\"n459bFtKOSgXBvXk08KxoA==\",\"iv\":\"AAAAAAAAAAAAAAAP\",\"ciphertext\":\"Nsk77ds04pFaxaCvGWNDJirAqssXTPXCcCwRarwZKr5rOEhZcQDWv63DeiX2jps9u+OEg30=\"}"
+    }
+  ],
+  "rejections": [
+    {
+      "name": "wrong-password",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "favorites/tapDance",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "AAECAwQFBgcICQoLDA0ODw==",
+        "iv": "oKGio6Slpqeoqaqr",
+        "ciphertext": "0EzH+QtQ59IVTHPEa+dkx518wxeSefCXYfBRiE5yQJExpLICkShKmyuDLpupVEBGkuX9bN7+zop4+mWJQLhof6W4ac4XYxS5rYkWsjSvfhp38f2JJwM="
+      },
+      "password": "correct horse battery staplex",
+      "message": "Unsupported state or unable to authenticate data"
+    },
+    {
+      "name": "other-sync-unit",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "favorites/macro",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "AAECAwQFBgcICQoLDA0ODw==",
+        "iv": "oKGio6Slpqeoqaqr",
+        "ciphertext": "0EzH+QtQ59IVTHPEa+dkx518wxeSefCXYfBRiE5yQJExpLICkShKmyuDLpupVEBGkuX9bN7+zop4+mWJQLhof6W4ac4XYxS5rYkWsjSvfhp38f2JJwM="
+      },
+      "password": "correct horse battery staple",
+      "message": "Unsupported state or unable to authenticate data"
+    },
+    {
+      "name": "other-version",
+      "envelope": {
+        "version": 2,
+        "syncUnit": "favorites/tapDance",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "AAECAwQFBgcICQoLDA0ODw==",
+        "iv": "oKGio6Slpqeoqaqr",
+        "ciphertext": "0EzH+QtQ59IVTHPEa+dkx518wxeSefCXYfBRiE5yQJExpLICkShKmyuDLpupVEBGkuX9bN7+zop4+mWJQLhof6W4ac4XYxS5rYkWsjSvfhp38f2JJwM="
+      },
+      "password": "correct horse battery staple",
+      "message": "Unsupported state or unable to authenticate data"
+    },
+    {
+      "name": "flipped-ciphertext-bit",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "favorites/tapDance",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "AAECAwQFBgcICQoLDA0ODw==",
+        "iv": "oKGio6Slpqeoqaqr",
+        "ciphertext": "0UzH+QtQ59IVTHPEa+dkx518wxeSefCXYfBRiE5yQJExpLICkShKmyuDLpupVEBGkuX9bN7+zop4+mWJQLhof6W4ac4XYxS5rYkWsjSvfhp38f2JJwM="
+      },
+      "password": "correct horse battery staple",
+      "message": "Unsupported state or unable to authenticate data"
+    },
+    {
+      "name": "ciphertext-too-short",
+      "envelope": {
+        "version": 1,
+        "syncUnit": "favorites/tapDance",
+        "updatedAt": "2026-10-15T01:02:03.456Z",
+        "salt": "AAECAwQFBgcICQoLDA0ODw==",
+        "iv": "oKGio6Slpqeoqaqr",
+        "ciphertext": "0EzH+QtQ59IVTHPEa+dk"
+      },
+      "password": "correct horse battery staple",
+      "message": "Ciphertext too short"
+    }
+  ],
+  "driveFileName": [
+    {
+      "syncUnit": "favorites/tapDance",
+      "fileName": "favorites_tapDance.enc"
+    },
+    {
+      "syncUnit": "favorites/macro",
+      "fileName": "favorites_macro.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1234/settings",
+      "fileName": "keyboards_0x1234_settings.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1234/snapshots",
+      "fileName": "keyboards_0x1234_snapshots.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1234/runs",
+      "fileName": "keyboards_0x1234_runs.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1234/analyze_filters",
+      "fileName": "keyboards_0x1234_analyze_filters.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1234/devices/0123abcd/days/2026-10-14",
+      "fileName": "keyboards_0x1234_devices_0123abcd_days_2026-10-14.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1234/devices/0123abcd/deleted-ranges",
+      "fileName": "keyboards_0x1234_devices_0123abcd_deleted-ranges.enc"
+    },
+    {
+      "syncUnit": "keyboards/uid_with_underscores/settings",
+      "fileName": "keyboards_uid_with_underscores_settings.enc"
+    },
+    {
+      "syncUnit": "keyboards/0x1/devices/hash_days_2026-01-01/days/2026-10-14",
+      "fileName": "keyboards_0x1_devices_hash_days_2026-01-01_days_2026-10-14.enc"
+    },
+    {
+      "syncUnit": "meta/keyboard-names",
+      "fileName": "meta_keyboard-names.enc"
+    },
+    {
+      "syncUnit": "key-labels",
+      "fileName": "key-labels.enc"
+    },
+    {
+      "syncUnit": "typing-test-texts",
+      "fileName": "typing-test-texts.enc"
+    },
+    {
+      "syncUnit": "i18n/index",
+      "fileName": "i18n_index.enc"
+    },
+    {
+      "syncUnit": "i18n/packs/0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b",
+      "fileName": "i18n_packs_0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b.enc"
+    },
+    {
+      "syncUnit": "themes/index",
+      "fileName": "themes_index.enc"
+    },
+    {
+      "syncUnit": "themes/packs/0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b",
+      "fileName": "themes_packs_0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b.enc"
+    },
+    {
+      "syncUnit": "password-check",
+      "fileName": "password-check.enc"
+    },
+    {
+      "syncUnit": "unknown/shape",
+      "fileName": "unknown_shape.enc"
+    },
+    {
+      "syncUnit": "",
+      "fileName": ".enc"
+    }
+  ],
+  "driveFilenamePrefix": [
+    {
+      "prefix": "keyboards/0x1234/devices/",
+      "fileNamePrefix": "keyboards_0x1234_devices_"
+    },
+    {
+      "prefix": "favorites/",
+      "fileNamePrefix": "favorites_"
+    },
+    {
+      "prefix": "",
+      "fileNamePrefix": ""
+    }
+  ],
+  "syncFormatFileName": [
+    {
+      "version": 0,
+      "fileName": "sync-format-v0.json"
+    },
+    {
+      "version": 2,
+      "fileName": "sync-format-v2.json"
+    },
+    {
+      "version": 9007199254740991,
+      "fileName": "sync-format-v9007199254740991.json"
+    }
+  ],
+  "fileNames": [
+    {
+      "fileName": "favorites_tapDance.enc",
+      "syncUnit": "favorites/tapDance",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_macro.enc",
+      "syncUnit": "favorites/macro",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1234_settings.enc",
+      "syncUnit": "keyboards/0x1234/settings",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1234_snapshots.enc",
+      "syncUnit": "keyboards/0x1234/snapshots",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1234_runs.enc",
+      "syncUnit": "keyboards/0x1234/runs",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1234_analyze_filters.enc",
+      "syncUnit": "keyboards/0x1234/analyze_filters",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1234_devices_0123abcd_days_2026-10-14.enc",
+      "syncUnit": "keyboards/0x1234/devices/0123abcd/days/2026-10-14",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1234_devices_0123abcd_deleted-ranges.enc",
+      "syncUnit": "keyboards/0x1234/devices/0123abcd/deleted-ranges",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_uid_with_underscores_settings.enc",
+      "syncUnit": "keyboards/uid_with_underscores/settings",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_0x1_devices_hash_days_2026-01-01_days_2026-10-14.enc",
+      "syncUnit": "keyboards/0x1/devices/hash_days_2026-01-01/days/2026-10-14",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "meta_keyboard-names.enc",
+      "syncUnit": "meta/keyboard-names",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "key-labels.enc",
+      "syncUnit": "key-labels",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "typing-test-texts.enc",
+      "syncUnit": "typing-test-texts",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "i18n_index.enc",
+      "syncUnit": "i18n/index",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "i18n_packs_0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b.enc",
+      "syncUnit": "i18n/packs/0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "themes_index.enc",
+      "syncUnit": "themes/index",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "themes_packs_0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b.enc",
+      "syncUnit": "themes/packs/0f8c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "password-check.enc",
+      "syncUnit": null,
+      "isDataFileName": false,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "unknown_shape.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": ".enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_a_b_settings.enc",
+      "syncUnit": "keyboards/a_b/settings",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_a_settings_snapshots.enc",
+      "syncUnit": "keyboards/a_settings/snapshots",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_a_analyze_filters.enc",
+      "syncUnit": "keyboards/a/analyze_filters",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_a_filters.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_x_devices_h_days_2026-1-01.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_x_devices_h_days_2026-10-14_days_2026-10-15.enc",
+      "syncUnit": "keyboards/x/devices/h_days_2026-10-14/days/2026-10-15",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards_x_devices_a_devices_b_deleted-ranges.enc",
+      "syncUnit": "keyboards/x/devices/a_devices_b/deleted-ranges",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "keyboards__settings.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_a_b.enc",
+      "syncUnit": "favorites/a_b",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_日本語.enc",
+      "syncUnit": "favorites/日本語",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_a\nb.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_ab.enc",
+      "syncUnit": "favorites/ab",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "favorites_tapDance.enc.bak",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "i18n_packs_.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "themes_packs_x_y.enc",
+      "syncUnit": "themes/packs/x_y",
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "password-check.enc",
+      "syncUnit": null,
+      "isDataFileName": false,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "password-change-lock.json",
+      "syncUnit": null,
+      "isDataFileName": false,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "sync-format-v2.json",
+      "syncUnit": null,
+      "isDataFileName": false,
+      "syncFormatVersion": 2
+    },
+    {
+      "fileName": "sync-format-v007.json",
+      "syncUnit": null,
+      "isDataFileName": false,
+      "syncFormatVersion": 7
+    },
+    {
+      "fileName": "sync-format-v.json",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "sync-format-v2.enc",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "sync-format-v9007199254740991.json",
+      "syncUnit": null,
+      "isDataFileName": false,
+      "syncFormatVersion": 9007199254740991
+    },
+    {
+      "fileName": "sync-format-v9007199254740992.json",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "sync-format-v123456789012345678901234567890.json",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "sync-format-v٣.json",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    },
+    {
+      "fileName": "",
+      "syncUnit": null,
+      "isDataFileName": true,
+      "syncFormatVersion": null
+    }
+  ],
+  "machineHashes": [
+    {
+      "machineId": "0123456789abcdef0123456789abcdef",
+      "installationId": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+      "machineHash": "8e7e529e87c20d1b6edea51df73baee124faeb611c5995b992b8496643b48eb5"
+    },
+    {
+      "machineId": "",
+      "installationId": "",
+      "machineHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "machineId": "machine",
+      "installationId": "",
+      "machineHash": "bc020a35b7f9cb1382e7b534c68e3c531d849b119bf14f75ddead6cc45c3ccc1"
+    },
+    {
+      "machineId": "",
+      "installationId": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+      "machineHash": "16362f566387b3cf5a6e92fb0a986c76ca20eb3a0c12cbdfbd0b29501e0c18df"
+    },
+    {
+      "machineId": "ホスト名-é",
+      "installationId": "id",
+      "machineHash": "07cf764b255094e5a6a4eeea6b8a3334201847c1074238b62e666eb28eeb1368"
+    }
+  ],
+  "contentHashes": [
+    {
+      "text": "",
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "text": "{\"a\":1,\"b\":2}",
+      "hash": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+    },
+    {
+      "text": "{\"b\":2,\"a\":1}",
+      "hash": "3fb75453225c732a76b7899ea2096dda1455189c89817239732182f73fe5a09f"
+    },
+    {
+      "text": "{\n  \"a\": 1\n}\n",
+      "hash": "5e36b6560513586ced65eca0e8b025fe88edbcab82ba2cb67a5fcb2d7b202383"
+    },
+    {
+      "text": "{\r\n  \"a\": 1\r\n}",
+      "hash": "46b0918a18d7d9aad7167e615b0d5cd327bf1804edeafb83d8daf19f4cbd98d4"
+    },
+    {
+      "text": "日本語 😀",
+      "hash": "fde211ca1a740f4758ae554eb97eca48c2aa74cdf8b656adfa31266d72b6106c"
+    }
+  ]
+}
