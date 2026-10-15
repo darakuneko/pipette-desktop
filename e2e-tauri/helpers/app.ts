@@ -64,6 +64,12 @@ async function findDeviceButton(name: string): Promise<WebdriverIO.Element> {
   return found
 }
 
+/** Whether `err` is WebKitWebDriver's report of an element that left the
+ *  page between being found and being used. */
+function isStaleElement(err: unknown): boolean {
+  return err instanceof Error && /stale element/i.test(err.message)
+}
+
 /** Waits until no element matching `selector` is displayed. Each poll
  *  queries the selector afresh: an element that is removed between being
  *  found and being checked (WebKitWebDriver then reports a stale element)
@@ -77,7 +83,7 @@ export async function waitForGone(selector: string, timeoutMsg: string): Promise
         }
         return true
       } catch (err) {
-        if (err instanceof Error && /stale element/i.test(err.message)) return false
+        if (isStaleElement(err)) return false
         throw err
       }
     },
@@ -117,7 +123,21 @@ export async function openKeycodeHexInput(row: number, col: number): Promise<voi
 }
 
 export async function closeKeyPopover(): Promise<void> {
-  await $('[data-testid="popover-close"]').click()
+  // A keycode applied from the popover re-renders it, which can replace the
+  // close button while it is being found or clicked; each try finds it
+  // afresh.
+  await browser.waitUntil(
+    async () => {
+      try {
+        await $('[data-testid="popover-close"]').click()
+        return true
+      } catch (err) {
+        if (isStaleElement(err)) return false
+        throw err
+      }
+    },
+    { timeoutMsg: 'the close button of the key popover could not be clicked' },
+  )
   await $('[data-testid="key-popover"]').waitForDisplayed({ reverse: true })
 }
 
