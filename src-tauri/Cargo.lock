@@ -2754,6 +2754,9 @@ dependencies = [
 [[package]]
 name = "pipette-time"
 version = "0.0.0"
+dependencies = [
+ "pipette-js-json",
+]
 
 [[package]]
 name = "pipette-typing-analytics-db"

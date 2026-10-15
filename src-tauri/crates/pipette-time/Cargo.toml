@@ -8,5 +8,9 @@ license.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+# The JSON values whose dates `date_value_ms` reads (src/js_value.rs).
+pipette-js-json = { path = "../pipette-js-json" }
+
 [lints]
 workspace = true

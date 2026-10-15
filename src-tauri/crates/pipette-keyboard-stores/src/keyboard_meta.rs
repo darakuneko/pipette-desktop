@@ -21,9 +21,8 @@ use std::path::{Path, PathBuf};
 
 use pipette_entry_store::{META_LOCK_KEY, is_safe_key, trim_js_whitespace};
 use pipette_js_json::{JsString, Object, Value};
-use pipette_time::iso_8601_millis;
+use pipette_time::{date_value_ms, iso_8601_millis};
 
-use crate::js_date::date_value_ms;
 use crate::{StoreContext, StoreError};
 
 /// The sync unit of the keyboard names (`KEYBOARD_META_SYNC_UNIT`).

@@ -13,7 +13,6 @@
 //! the clock, the process-wide write locks shared by all stores, and the
 //! [`ChangeNotifier`] each change of a sync unit is reported to.
 
-mod js_date;
 mod keyboard_meta;
 mod stored_keyboards;
 

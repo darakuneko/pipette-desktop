@@ -1,29 +1,36 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `new Date(value).getTime()` for a JSON value read from a file, where the
-//! stores read a timestamp that may hold anything.
+//! `new Date(value).getTime()` for JSON values read from files: the
+//! timestamps the stores read may hold anything.
 
-use pipette_js_json::Value;
-use pipette_time::{MAX_TIME_MS, parse_date_time_string};
+use pipette_js_json::{JsString, Value};
+
+use crate::{MAX_TIME_MS, parse_date_time_string};
+
+/// `Date.parse` of a JavaScript string ([`parse_date_time_string`]); `None`
+/// for a string with a lone surrogate, which no date string has.
+pub fn date_string_ms(text: &JsString) -> Option<i64> {
+    text.as_str().and_then(parse_date_time_string)
+}
 
 /// The time `new Date(value)` holds, in milliseconds since the epoch, or
 /// `None` where `getTime()` is NaN. A string is read as `Date.parse` reads
 /// it (with the differences of [`parse_date_time_string`]), an array as the
 /// text `String(array)` gives, a number and a boolean as numbers.
-pub(crate) fn date_value_ms(value: &Value) -> Option<f64> {
+pub fn date_value_ms(value: &Value) -> Option<f64> {
     match value {
         Value::Null => time_clip(0.0),
         Value::Bool(b) => time_clip(if *b { 1.0 } else { 0.0 }),
         Value::Number(n) => time_clip(*n),
-        Value::String(s) => parse(s.as_str()?),
-        Value::Array(_) => parse(&to_js_string(value)?),
+        Value::String(s) => date_string_ms(s).map(exact_f64),
+        Value::Array(_) => parse_date_time_string(&to_js_string(value)?).map(exact_f64),
         Value::Object(_) => None,
     }
 }
 
-fn parse(text: &str) -> Option<f64> {
-    // Every result is within ±8.64e15, exact as an f64.
-    #[allow(clippy::cast_precision_loss)]
-    parse_date_time_string(text).map(|ms| ms as f64)
+/// A parsed time as an f64: every one is within ±8.64e15, exact as an f64.
+#[allow(clippy::cast_precision_loss)]
+fn exact_f64(ms: i64) -> f64 {
+    ms as f64
 }
 
 /// ECMAScript TimeClip.
