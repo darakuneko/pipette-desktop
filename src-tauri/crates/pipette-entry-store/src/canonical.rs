@@ -24,19 +24,13 @@ fn sort_value(value: &Value) -> Value {
     match value {
         Value::Array(items) => Value::Array(items.iter().map(sort_value).collect()),
         Value::Object(object) => {
-            let mut keys: Vec<(&JsString, Vec<u16>)> = object
-                .keys()
-                .filter(|key| key.as_str() != Some(PROTO))
-                .map(|key| (key, key.utf16_units()))
+            let mut pairs: Vec<(Vec<u16>, &JsString, &Value)> = object
+                .iter()
+                .filter(|(key, _)| key.as_str() != Some(PROTO))
+                .map(|(key, value)| (key.utf16_units(), key, value))
                 .collect();
-            keys.sort_by(|a, b| a.1.cmp(&b.1));
-            let mut out = Object::new();
-            for (key, _) in keys {
-                if let Some(v) = lookup(object, key) {
-                    out.insert(key.clone(), sort_value(v));
-                }
-            }
-            Value::Object(out)
+            pairs.sort_by(|a, b| a.0.cmp(&b.0));
+            Value::Object(pairs.into_iter().map(|(_, key, value)| (key.clone(), sort_value(value))).collect())
         }
         other => other.clone(),
     }
