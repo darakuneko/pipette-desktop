@@ -3,7 +3,10 @@
 //! write, a current file that has reached the size limit is rotated.
 //!
 //! The current file stays open, and its size is counted as lines are
-//! appended, so a line costs one write. Only one process writes a userData
+//! appended. Before each line the path is checked with one `stat`: when
+//! `pipette-0.log` was deleted, renamed or replaced, the next line goes to a
+//! new `pipette-0.log`, as it does with the per-line open of the TypeScript
+//! logger. Only one process writes a userData
 //! directory's logs: the app's single-instance check stops a second app
 //! process, and src/main.rs refuses to start while the Electron build holds
 //! the directory. Rotation still never loses a line to another writer: a
@@ -28,6 +31,34 @@ fn log_file_name(generation: usize) -> String {
 struct Current {
     file: File,
     size: u64,
+    id: FileId,
+}
+
+/// What tells two files apart: the device and inode on unix. Elsewhere there
+/// is no cheap stable id, and [`Current::is_at`] falls back on the length.
+#[derive(PartialEq, Eq)]
+struct FileId(#[cfg(unix)] (u64, u64));
+
+fn file_id(meta: &std::fs::Metadata) -> FileId {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        FileId((meta.dev(), meta.ino()))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = meta;
+        FileId()
+    }
+}
+
+impl Current {
+    /// Whether the file at the path (`meta`) is still the open one. Without
+    /// a file id, a file shorter than what was written to the open one is
+    /// taken as a new file.
+    fn is_at(&self, meta: &std::fs::Metadata) -> bool {
+        if cfg!(unix) { file_id(meta) == self.id } else { meta.len() >= self.size }
+    }
 }
 
 /// The current file and its older generations in one directory.
@@ -55,6 +86,7 @@ impl RotatingFile {
         if self.current_size()? >= self.max_size {
             self.current = None;
             self.rotate();
+            self.current_size()?;
         }
         let result = self.write(line.as_bytes());
         if result.is_err() {
@@ -63,19 +95,26 @@ impl RotatingFile {
         result
     }
 
-    /// The size of `pipette-0.log`, opening it when it is not open.
+    /// The size of `pipette-0.log`, opening it when it is not open or the
+    /// path no longer leads to the open file.
     fn current_size(&mut self) -> std::io::Result<u64> {
+        let path = self.path(0);
         if let Some(current) = &self.current {
-            return Ok(current.size);
+            match std::fs::metadata(&path) {
+                Ok(meta) if current.is_at(&meta) => return Ok(current.size),
+                _ => self.current = None,
+            }
         }
-        let file = std::fs::OpenOptions::new().create(true).append(true).open(self.path(0))?;
-        let size = file.metadata()?.len();
-        self.current = Some(Current { file, size });
+        let file = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+        let meta = file.metadata()?;
+        let (size, id) = (meta.len(), file_id(&meta));
+        self.current = Some(Current { file, size, id });
         Ok(size)
     }
 
+    /// Appends to the file [`Self::current_size`] opened or checked just
+    /// before.
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<()> {
-        self.current_size()?;
         let Some(current) = self.current.as_mut() else {
             return Err(std::io::Error::other("the log file is not open"));
         };
@@ -185,7 +224,7 @@ mod tests {
         std::fs::remove_dir_all(dir).unwrap();
     }
 
-    /// Another writer rotated first: the line still lands in a fresh
+    /// Another writer rotated first: the line goes to a new
     /// `pipette-0.log`, and nothing is lost.
     #[test]
     fn a_rotation_done_by_another_writer_loses_no_line() {
@@ -195,7 +234,30 @@ mod tests {
         std::fs::rename(dir.join(log_file_name(0)), dir.join(log_file_name(1))).unwrap();
         file.append("new\n").unwrap();
         assert_eq!(read(&dir, 0).as_deref(), Some("new\n"));
-        assert_eq!(read(&dir, 2).as_deref(), Some("old\n"));
+        assert_eq!(read(&dir, 1).as_deref(), Some("old\n"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_file_deleted_while_open_is_created_again() {
+        let dir = log_dir("deleted");
+        let mut file = RotatingFile::new(dir.clone(), MAX_FILE_SIZE);
+        file.append("a\n").unwrap();
+        std::fs::remove_file(dir.join(log_file_name(0))).unwrap();
+        file.append("b\n").unwrap();
+        assert_eq!(read(&dir, 0).as_deref(), Some("b\n"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_file_renamed_away_while_open_is_left_alone() {
+        let dir = log_dir("renamed");
+        let mut file = RotatingFile::new(dir.clone(), MAX_FILE_SIZE);
+        file.append("a\n").unwrap();
+        std::fs::rename(dir.join(log_file_name(0)), dir.join("moved.log")).unwrap();
+        file.append("b\n").unwrap();
+        assert_eq!(read(&dir, 0).as_deref(), Some("b\n"));
+        assert_eq!(std::fs::read_to_string(dir.join("moved.log")).unwrap(), "a\n");
         std::fs::remove_dir_all(dir).unwrap();
     }
 
