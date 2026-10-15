@@ -3,6 +3,16 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # tauri-migration.yml runs this check on the Tauri migration branches.
+  workflow_call:
+    inputs:
+      check-fixtures:
+        description: >-
+          Also check that the fixtures under src-tauri match their generators.
+          The generators exist only on the Tauri migration branches.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -19,15 +29,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: ./.github/actions/setup-node-pnpm
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      # Native modules build against libusb and libudev; Xvfb runs the
+      # Electron E2E specs.
+      - uses: ./.github/actions/install-linux-deps
         with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install Linux build dependencies for native modules and Xvfb for the Electron E2E specs
-        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev xvfb
+          extra-packages: xvfb
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -35,6 +43,29 @@ jobs:
       - run: npx tsx scripts/check-hook-deps-tdz.ts
       - run: pnpm test
       - run: pnpm build
+
+      # The analytics DB generator runs under Electron acting as Node, with
+      # better-sqlite3 rebuilt for Electron by the install above.
+      - name: Regenerate the fixtures under src-tauri
+        if: inputs.check-fixtures
+        run: |
+          pnpm generate:virtual-device-fixtures
+          pnpm generate:definition-fixtures
+          pnpm generate:sync-format-fixtures
+          pnpm generate:analytics-db-fixtures
+
+      # ts_random_envelopes.json is recorded with real random salts and IVs,
+      # so it differs on every run.
+      - name: Verify the fixtures under src-tauri match their generators
+        if: inputs.check-fixtures
+        run: |
+          git diff --exit-code -- src-tauri ':(exclude)src-tauri/crates/pipette-sync-format/tests/fixtures/ts_random_envelopes.json'
+          untracked="$(git ls-files --others --exclude-standard -- src-tauri)"
+          if [ -n "$untracked" ]; then
+            echo "Untracked files under src-tauri:"
+            echo "$untracked"
+            exit 1
+          fi
 
       - name: Install Playwright OS dependencies for the Electron E2E specs
         run: npx playwright install-deps
