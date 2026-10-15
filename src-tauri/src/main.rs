@@ -25,6 +25,8 @@ mod main_window;
 mod navigation;
 mod shell;
 mod shutdown;
+mod window_bounds;
+mod window_state;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -103,8 +105,7 @@ fn main() {
         .manage(config)
         .manage(ExternalOpener::system())
         .setup(|app| {
-            let window = main_window::main_window_builder(app.handle())?.build()?;
-            app_config::apply_stored_zoom(&app.state::<app_config::AppConfig>(), &window);
+            main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
             Ok(())

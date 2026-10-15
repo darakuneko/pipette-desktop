@@ -17,6 +17,10 @@
 //! at most `MARKER_TIMEOUT`, and writes nothing. The exit the sequence
 //! requests when it ends goes through.
 //!
+//! Every exit that goes through saves the main window's state first, as the
+//! Electron window's close handler does when the app quits; closing the
+//! window saves it too.
+//!
 //! SIGKILL cannot be caught, and on Linux this build has no menu, so no
 //! keyboard shortcut quits it.
 
@@ -34,7 +38,7 @@ use tauri::{App, AppHandle, Manager, RunEvent, Webview, Window, WindowEvent, Wry
 use crate::UserDataDir;
 use crate::app_config::AppConfig;
 use crate::hid_commands::Hid;
-use crate::main_window::MAIN_WINDOW;
+use crate::main_window::{self, MAIN_WINDOW};
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
@@ -157,27 +161,27 @@ fn build_tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
 
 /// Restores, shows and focuses the main window.
 fn show_main_window(app: &AppHandle<Wry>) {
-    let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
-        return;
-    };
-    let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());
-    if let Err(err) = result {
-        log::error!("failed to show the main window: {err}");
+    if let Some(window) = main_window::main_window(app) {
+        main_window::reveal(&window);
     }
 }
 
-/// Hides the window instead of closing it while the tray is active and no
-/// exit has been requested.
+/// Saves the window state when the window is asked to close, then hides
+/// the window instead of closing it while the tray is active and no exit
+/// has been requested. After a move, applies the minimum size of the
+/// display the window is on.
 pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
-    let WindowEvent::CloseRequested { api, .. } = event else {
-        return;
-    };
-    let lifecycle = window.state::<Arc<Lifecycle>>();
-    if lifecycle.tray_active.load(Ordering::Acquire) && !lifecycle.quit.is_quitting() {
-        api.prevent_close();
-        if let Err(err) = window.hide() {
-            log::error!("failed to hide the main window: {err}");
+    match event {
+        WindowEvent::CloseRequested { api, .. } => {
+            main_window::save_window_state(window, &window.state::<AppConfig>());
+            let lifecycle = window.state::<Arc<Lifecycle>>();
+            if lifecycle.tray_active.load(Ordering::Acquire) && !lifecycle.quit.is_quitting() {
+                api.prevent_close();
+                main_window::conceal(window);
+            }
         }
+        WindowEvent::Moved(_) => main_window::update_min_size(window),
+        _ => {}
     }
 }
 
@@ -218,6 +222,7 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     // exit goes through when this returns.
                     let data_dir = user_data_dir(app);
                     tauri::async_runtime::block_on(record_interruption(phase, QUIT_DEADLINE, &data_dir));
+                    main_window::save_main_window_state(app);
                 }
                 ExitDecision::Exit => {
                     log::info!("[quit] exiting (code {code:?})");
@@ -225,6 +230,7 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     // update (at most MARKER_TIMEOUT) so the exit does not cut
                     // it short; otherwise returns at once.
                     lifecycle.quit.wait_until_finished(MARKER_TIMEOUT);
+                    main_window::save_main_window_state(app);
                 }
             }
         }

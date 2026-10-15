@@ -17,12 +17,7 @@
         "label": "main",
         "create": false,
         "url": "tauri.html",
-        "title": "Pipette",
-        "width": 1440,
-        "height": 1024,
-        "minWidth": 1280,
-        "minHeight": 1024,
-        "center": true
+        "title": "Pipette"
       }
     ],
     "security": {
