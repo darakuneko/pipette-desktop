@@ -1,7 +1,7 @@
 {
   "$schema": "../../gen/schemas/desktop-schema.json",
   "identifier": "dev-virtual-device",
-  "description": "Builds with debug assertions only: the virtual keyboard controller, the log sink and the screenshots used to drive the UI during development.",
+  "description": "Builds with debug assertions only: the virtual keyboard controller and the log sink used to drive the UI during development.",
   "windows": ["main"],
   "permissions": [
     "allow-virtual-device-press-key",
@@ -11,7 +11,6 @@
     "allow-virtual-device-set-unlock-counter-max",
     "allow-virtual-device-get-state",
     "allow-virtual-device-reset",
-    "allow-dev-log",
-    "allow-dev-screenshot"
+    "allow-dev-log"
   ]
 }

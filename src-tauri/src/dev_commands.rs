@@ -2,20 +2,28 @@
 //! Development tools, compiled only with debug assertions: the virtual
 //! keyboard controller (the Electron build exposes the same operations to
 //! its E2E tests as `globalThis.__pipetteVirtualDevice`), a log sink, window
-//! screenshots, and a script hook that runs a local file in the window after
-//! each page load so the UI can be driven without a WebDriver.
+//! screenshots (Linux), and a script hook that runs a local file in the
+//! window once the first page has loaded, so the UI can be driven without a
+//! WebDriver.
 //!
-//! Their permissions are generated and granted only in these builds (see
-//! build.rs and capabilities/dev/).
+//! `install` is the only entry point. The permissions of these commands are
+//! generated and granted only in these builds (see build.rs and
+//! capabilities/dev/).
+
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use pipette_hid::ControllerState;
 use serde::Serialize;
+use tauri::ipc::Invoke;
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
-use tauri::{Runtime, State, Webview};
+use tauri::{Builder, State, Webview, Wry};
 
 use crate::hid_commands::Hid;
 
-/// Path of a JavaScript file evaluated in the window after each page load.
+include!("dev_command_names.rs");
+
+/// Path of a JavaScript file evaluated in the window after the first page
+/// load.
 const DEV_SCRIPT_ENV: &str = "PIPETTE_DEV_SCRIPT";
 
 /// Directory the screenshots are written to.
@@ -151,23 +159,64 @@ pub async fn dev_screenshot(window: tauri::WebviewWindow, name: String) -> Resul
         .map_err(|_| "the snapshot was cancelled".to_string())?
 }
 
-/// Evaluates the file named by `PIPETTE_DEV_SCRIPT`, if set, once the page
-/// has loaded. The script runs as the page itself and reaches the commands
-/// above through `window.__TAURI_INTERNALS__.invoke`.
-pub fn run_dev_script<R: Runtime>(webview: &Webview<R>, payload: &PageLoadPayload<'_>) {
+/// Adds the development tools to `builder`: the script hook, and an invoke
+/// handler that routes the development commands to their handler and
+/// everything else to `app`, the handler of the app commands.
+pub fn install<F>(builder: Builder<Wry>, app: F) -> Builder<Wry>
+where
+    F: Fn(Invoke<Wry>) -> bool + Send + Sync + 'static,
+{
+    let dev = dev_commands();
+    builder.on_page_load(run_dev_script).invoke_handler(move |invoke: Invoke<Wry>| {
+        if is_dev_command(invoke.message.command()) { dev(invoke) } else { app(invoke) }
+    })
+}
+
+fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
+    tauri::generate_handler![
+        virtual_device_press_key,
+        virtual_device_release_key,
+        virtual_device_release_all,
+        virtual_device_hold_keys,
+        virtual_device_set_unlock_counter_max,
+        virtual_device_get_state,
+        virtual_device_reset,
+        dev_log,
+        #[cfg(target_os = "linux")]
+        dev_screenshot,
+    ]
+}
+
+fn is_dev_command(command: &str) -> bool {
+    DEV_COMMANDS.contains(&command) || (cfg!(target_os = "linux") && LINUX_DEV_COMMANDS.contains(&command))
+}
+
+/// Whether the dev script has been evaluated in this process.
+static DEV_SCRIPT_RAN: AtomicBool = AtomicBool::new(false);
+
+/// Evaluates the file named by `PIPETTE_DEV_SCRIPT`, if set, once the first
+/// page has loaded, and only that once: a reload does not run it again. The
+/// script runs as the page itself and reaches the commands above through
+/// `window.__TAURI_INTERNALS__.invoke`.
+fn run_dev_script(webview: &Webview<Wry>, payload: &PageLoadPayload<'_>) {
     if payload.event() != PageLoadEvent::Finished {
         return;
     }
     let Some(path) = std::env::var_os(DEV_SCRIPT_ENV) else {
         return;
     };
-    match std::fs::read_to_string(&path) {
+    if DEV_SCRIPT_RAN.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let path = path.to_string_lossy();
+    eprintln!("[dev] warning: {DEV_SCRIPT_ENV} is set; evaluating {path} in the window");
+    match std::fs::read_to_string(&*path) {
         Ok(script) => {
             if let Err(err) = webview.eval(script) {
-                eprintln!("[dev] failed to evaluate {}: {err}", path.to_string_lossy());
+                eprintln!("[dev] failed to evaluate {path}: {err}");
             }
         }
-        Err(err) => eprintln!("[dev] failed to read {}: {err}", path.to_string_lossy()),
+        Err(err) => eprintln!("[dev] failed to read {path}: {err}"),
     }
 }
 
@@ -195,6 +244,17 @@ mod tests {
         for bad in ["", "../x", "a/b", "A", "x.png", "a b"] {
             let err = super::shot_path(bad).unwrap_err();
             assert!(err.starts_with("invalid screenshot name"), "{bad}: {err}");
+        }
+    }
+
+    #[test]
+    fn routes_exactly_the_development_commands_to_their_handler() {
+        for command in DEV_COMMANDS {
+            assert!(is_dev_command(command), "{command}");
+        }
+        assert_eq!(is_dev_command("dev_screenshot"), cfg!(target_os = "linux"));
+        for command in ["list_devices", "send_receive", "decompress_definition", "unknown"] {
+            assert!(!is_dev_command(command), "{command}");
         }
     }
 
