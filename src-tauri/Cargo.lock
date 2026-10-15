@@ -2599,6 +2599,7 @@ dependencies = [
  "pipette-hid",
  "pipette-js-json",
  "pipette-logger",
+ "pipette-sync-pending",
  "serde",
  "serde_json",
  "sha2",
@@ -2720,6 +2721,20 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "pipette-sync-pending"
+version = "0.0.0"
+dependencies = [
+ "indexmap 2.14.2",
+ "log",
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

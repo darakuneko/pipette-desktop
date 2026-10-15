@@ -34,6 +34,7 @@ interface Shim {
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
   shell: typeof import('../api/shell')
+  syncPending: typeof import('../api/sync-pending')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
 }
@@ -45,6 +46,7 @@ async function load(): Promise<Shim> {
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
     shell: await import('../api/shell'),
+    syncPending: await import('../api/sync-pending'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
   }
@@ -98,6 +100,7 @@ const CALLERS: Record<string, Caller> = {
   windowHide: { run: ({ window }) => window.windowApi.windowHide(), void: true },
   windowStartedHidden: { run: ({ window }) => window.windowApi.windowStartedHidden() },
   windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
+  syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
 }
 
 afterEach(() => {

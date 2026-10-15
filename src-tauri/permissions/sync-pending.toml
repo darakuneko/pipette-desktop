@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The command of src/store_commands/sync_pending.rs: whether any sync unit
+# is pending.
+
+[[set]]
+identifier = "sync-pending"
+description = "Reports whether any sync unit is waiting to be uploaded."
+permissions = [
+  "allow-sync-has-pending-changes",
+]

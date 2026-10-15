@@ -15,7 +15,6 @@ const EXPECTED_FAKES = [
   'trayStatusUpdate',
   'syncAuthStatus',
   'syncPasswordStatus',
-  'syncHasPendingChanges',
   'syncFormatStatus',
   'notificationFetch',
   'i18nPackList',

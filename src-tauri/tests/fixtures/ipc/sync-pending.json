@@ -1,0 +1,9 @@
+[
+  {
+    "member": "syncHasPendingChanges",
+    "args": [],
+    "command": "sync_has_pending_changes",
+    "invokeArgs": {},
+    "response": false
+  }
+]
