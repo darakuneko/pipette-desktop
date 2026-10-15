@@ -2348,7 +2348,9 @@ version = "0.0.0"
 dependencies = [
  "hex",
  "hidapi",
+ "log",
  "pipette-hid",
+ "pipette-logger",
  "pipette-protocol",
  "pipette-virtual-device",
  "serde",
