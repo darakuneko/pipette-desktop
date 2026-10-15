@@ -18,6 +18,17 @@ tauri-build = { version = "=2.7.1", features = [] }
 
 [dependencies]
 tauri = { version = "=2.12.1", features = [] }
+pipette-hid = { path = "crates/pipette-hid" }
+serde = { workspace = true }
+
+# The WebKitGTK view behind the Linux window, for the window screenshots of
+# the development tools (src/dev_commands.rs). Same versions as wry uses.
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "=2.0.2"
+cairo-rs = { version = "0.18", features = ["png"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
