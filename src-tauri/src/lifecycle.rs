@@ -25,24 +25,19 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use pipette_hid::HidService;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
+use tauri::webview::{PageLoadEvent, PageLoadPayload};
+use tauri::{App, AppHandle, Manager, RunEvent, Webview, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
+use crate::app_config::AppConfig;
+use crate::hid_commands::Hid;
+use crate::main_window::MAIN_WINDOW;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
-
-/// Whether the app keeps running in the tray when the window is closed.
-/// The Electron build reads this from `AppConfig.trayResident`, whose
-/// default (`DEFAULT_APP_CONFIG` in src/main/app-config.ts) is off; this
-/// build has no app config yet, so the default applies.
-const TRAY_RESIDENT_DEFAULT: bool = false;
-
-/// Builds with debug assertions: `1` turns tray residency on.
-#[cfg(debug_assertions)]
-const DEV_TRAY_RESIDENT_ENV: &str = "PIPETTE_DEV_TRAY_RESIDENT";
 
 /// Builds with debug assertions: how many milliseconds the stub of the
 /// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its
@@ -68,48 +63,81 @@ pub struct Lifecycle {
     tray_active: AtomicBool,
 }
 
+/// The tray icon's id.
+const TRAY_ID: &str = "main";
 /// The tray item ids.
 const TRAY_SHOW: &str = "show";
 const TRAY_QUIT: &str = "quit";
 
-/// Creates the tray when tray residency is on and starts listening for the
+/// Creates the tray when the config's `trayResident` is on (`Boolean()` of
+/// it, as the Electron build reads it) and starts listening for the
 /// termination signals. Called from the app's setup hook.
 pub fn setup(app: &mut App<Wry>) {
-    let lifecycle = Arc::new(Lifecycle::default());
-    app.manage(Arc::clone(&lifecycle));
-    if tray_resident() {
-        match build_tray(app) {
-            Ok(()) => lifecycle.tray_active.store(true, Ordering::Release),
-            Err(err) => log::error!("failed to create the tray icon: {err}"),
-        }
+    app.manage(Arc::new(Lifecycle::default()));
+    let tray_resident = app.state::<AppConfig>().get("trayResident").unwrap_or_else(|err| {
+        log::error!("failed to read trayResident: {err}");
+        None
+    });
+    if tray_resident.as_ref().is_some_and(pipette_app_config::Value::is_truthy) {
+        add_tray(app.handle());
     }
     #[cfg(unix)]
     listen_for_termination(app.handle().clone());
 }
 
-fn tray_resident() -> bool {
-    #[cfg(debug_assertions)]
-    if let Some(value) = std::env::var_os(DEV_TRAY_RESIDENT_ENV) {
-        return value == "1";
+/// Adds the tray (`on`) or removes it, on the main thread, as `setupTray` /
+/// `destroyTray` of src/main/app-behavior.ts do when the renderer changes
+/// `trayResident`; nothing happens when the tray already is that way. Called
+/// off the main thread, it queues the change there and returns without
+/// waiting for it.
+pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
+    let handle = app.clone();
+    let result = app.run_on_main_thread(move || {
+        if on {
+            add_tray(&handle);
+        } else {
+            remove_tray(&handle);
+        }
+    });
+    if let Err(err) = result {
+        log::error!("failed to update the tray icon: {err}");
     }
-    TRAY_RESIDENT_DEFAULT
+}
+
+fn add_tray(app: &AppHandle<Wry>) {
+    let lifecycle = app.state::<Arc<Lifecycle>>();
+    if lifecycle.tray_active.load(Ordering::Acquire) {
+        return;
+    }
+    match build_tray(app) {
+        Ok(()) => lifecycle.tray_active.store(true, Ordering::Release),
+        Err(err) => log::error!("failed to create the tray icon: {err}"),
+    }
+}
+
+fn remove_tray(app: &AppHandle<Wry>) {
+    let lifecycle = app.state::<Arc<Lifecycle>>();
+    lifecycle.tray_active.store(false, Ordering::Release);
+    // The icon goes away with the last handle to it, this one.
+    drop(app.remove_tray_by_id(TRAY_ID));
 }
 
 /// The tray menu: Show, a separator, Quit. The labels are the fixed English
 /// ones of the Electron tray (src/main/app-behavior.ts), which cannot be
 /// localized either: the translations live in the renderer.
-fn build_tray(app: &App<Wry>) -> tauri::Result<()> {
+fn build_tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, TRAY_SHOW, "Show", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, TRAY_QUIT, "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &separator, &quit])?;
-    let mut tray = TrayIconBuilder::new().menu(&menu).tooltip("Pipette").on_menu_event(|app, event| {
-        match event.id().as_ref() {
-            TRAY_SHOW => show_main_window(app),
-            TRAY_QUIT => app.exit(0),
-            _ => {}
-        }
-    });
+    let mut tray =
+        TrayIconBuilder::with_id(TRAY_ID).menu(&menu).tooltip("Pipette").on_menu_event(|app, event| {
+            match event.id().as_ref() {
+                TRAY_SHOW => show_main_window(app),
+                TRAY_QUIT => app.exit(0),
+                _ => {}
+            }
+        });
     // A left click shows the window too, as in the Electron tray. Linux
     // (AppIndicator) reports no clicks; the menu is the only way there.
     tray = tray.on_tray_icon_event(|tray, event| {
@@ -129,7 +157,7 @@ fn build_tray(app: &App<Wry>) -> tauri::Result<()> {
 
 /// Restores, shows and focuses the main window.
 fn show_main_window(app: &AppHandle<Wry>) {
-    let Some(window) = app.get_webview_window(crate::main_window::MAIN_WINDOW) else {
+    let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
         return;
     };
     let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());
@@ -150,6 +178,22 @@ pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
         if let Err(err) = window.hide() {
             log::error!("failed to hide the main window: {err}");
         }
+    }
+}
+
+/// Closes the HID probe handle when the main window starts loading a page.
+/// The renderer closes its probe handle when the probe ends, but a reload or
+/// navigation in the middle of a probe drops that step with the old page;
+/// the new page has no probe running, so any open handle is left over.
+pub fn on_page_load(webview: &Webview<Wry>, payload: &PageLoadPayload<'_>) {
+    if let Some(hid) = webview.try_state::<Hid>() {
+        close_probe_on_page_load(&hid.0, webview.label(), payload.event());
+    }
+}
+
+fn close_probe_on_page_load(hid: &HidService, label: &str, event: PageLoadEvent) {
+    if label == MAIN_WINDOW && event == PageLoadEvent::Started {
+        hid.close_probe();
     }
 }
 
@@ -184,7 +228,12 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                 }
             }
         }
-        RunEvent::Exit => log::info!("[quit] event loop ended"),
+        RunEvent::Exit => {
+            if let Some(hid) = app.try_state::<Hid>() {
+                hid.0.close_probe();
+            }
+            log::info!("[quit] event loop ended");
+        }
         _ => {}
     }
 }
@@ -292,6 +341,21 @@ mod tests {
             .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, &dir, &QuitGuard::default()));
         assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
         assert!(!dir.exists());
+    }
+
+    #[test]
+    fn a_page_load_starting_in_the_main_window_closes_the_probe() {
+        let hid = crate::ipc_contract::probe_keyboard_service();
+        let (vendor_id, product_id, _) = crate::ipc_contract::PROBE_KEYBOARD;
+        let probe = |hid: &HidService| hid.probe_open(vendor_id, product_id, None).unwrap();
+
+        let id = probe(&hid);
+        close_probe_on_page_load(&hid, MAIN_WINDOW, PageLoadEvent::Finished);
+        close_probe_on_page_load(&hid, "other", PageLoadEvent::Started);
+        assert!(hid.probe_send_receive(id, &[0x01]).is_ok());
+
+        close_probe_on_page_load(&hid, MAIN_WINDOW, PageLoadEvent::Started);
+        assert_eq!(hid.probe_send_receive(id, &[0x01]).unwrap_err().to_string(), "No probe device is open");
     }
 
     #[test]

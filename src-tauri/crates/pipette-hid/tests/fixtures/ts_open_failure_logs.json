@@ -1,0 +1,39 @@
+{
+  "logs": [
+    {
+      "vendorId": 4660,
+      "productId": 22136,
+      "error": "cannot enumerate devices",
+      "level": "error",
+      "message": "Failed to open HID device 0x1234:0x5678: cannot enumerate devices"
+    },
+    {
+      "vendorId": 1,
+      "productId": 171,
+      "error": "could not open /dev/hidraw3: Permission denied",
+      "level": "error",
+      "message": "Failed to open HID device 0x0001:0x00ab: could not open /dev/hidraw3: Permission denied"
+    },
+    {
+      "vendorId": 0,
+      "productId": 0,
+      "error": "",
+      "level": "error",
+      "message": "Failed to open HID device 0x0000:0x0000: "
+    },
+    {
+      "vendorId": 65535,
+      "productId": 65535,
+      "error": "Ü✓ キーボード ⌨️",
+      "level": "error",
+      "message": "Failed to open HID device 0xffff:0xffff: Ü✓ キーボード ⌨️"
+    },
+    {
+      "vendorId": 2571,
+      "productId": 3085,
+      "error": "two\nlines",
+      "level": "error",
+      "message": "Failed to open HID device 0x0a0b:0x0c0d: two\nlines"
+    }
+  ]
+}

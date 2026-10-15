@@ -24,8 +24,50 @@ pub const MAX_NAME_BYTES: usize = 255;
 
 /// Writes `content` to `path` through a synced temp file and a rename.
 pub fn write_file_atomic(path: &Path, content: &[u8]) -> std::io::Result<()> {
+    write_through_temp(path, content, |_| {})
+}
+
+/// [`write_file_atomic`] that also tries to give the new file the owner of
+/// the one it replaces, as the `atomically` package does for electron-store:
+/// when an existing `path` belongs to another user or group than this
+/// process, the temp file is handed to them before the rename. A failure to
+/// do so (only a privileged process may give a file away) is ignored.
+pub fn write_file_atomic_keeping_owner(path: &Path, content: &[u8]) -> std::io::Result<()> {
+    let owner = foreign_owner(path);
+    write_through_temp(path, content, |tmp| {
+        #[cfg(unix)]
+        if let Some((uid, gid)) = owner {
+            let _ = std::os::unix::fs::chown(tmp, Some(uid), Some(gid));
+        }
+        #[cfg(not(unix))]
+        let _ = (tmp, owner);
+    })
+}
+
+/// The owner of `path` when it exists and differs from this process's user
+/// or group.
+#[cfg(unix)]
+fn foreign_owner(path: &Path) -> Option<(u32, u32)> {
+    use std::os::unix::fs::MetadataExt;
+    let meta = std::fs::metadata(path).ok()?;
+    let ours = (rustix::process::getuid().as_raw(), rustix::process::getgid().as_raw());
+    let theirs = (meta.uid(), meta.gid());
+    (theirs != ours).then_some(theirs)
+}
+
+#[cfg(not(unix))]
+fn foreign_owner(_path: &Path) -> Option<(u32, u32)> {
+    None
+}
+
+/// Writes the synced temp file, calls `before_rename` with its path, and
+/// renames it over `path`.
+fn write_through_temp(path: &Path, content: &[u8], before_rename: impl FnOnce(&Path)) -> std::io::Result<()> {
     let tmp = temp_path_for(path);
-    let result = write_synced(&tmp, content).and_then(|()| std::fs::rename(&tmp, path));
+    let result = write_synced(&tmp, content).and_then(|()| {
+        before_rename(&tmp);
+        std::fs::rename(&tmp, path)
+    });
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp);
     }
@@ -71,34 +113,30 @@ fn truncate_utf8(s: &str, max: usize) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use tempfile::TempDir;
 
-    fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("pipette-atomic-{tag}-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
+    use super::*;
 
     #[test]
     fn writes_the_content_and_leaves_no_temp_file() {
-        let dir = temp_dir("write");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         let target = dir.join("a.json");
         write_file_atomic(&target, b"one").unwrap();
         write_file_atomic(&target, b"two").unwrap();
         assert_eq!(std::fs::read(&target).unwrap(), b"two");
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
     fn a_failed_write_removes_the_temp_file() {
-        let dir = temp_dir("fail");
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().to_path_buf();
         // Renaming a file onto a non-empty directory fails.
         let target = dir.join("busy");
         std::fs::create_dir_all(target.join("inside")).unwrap();
         assert!(write_file_atomic(&target, b"x").is_err());
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
-        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

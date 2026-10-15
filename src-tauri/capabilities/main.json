@@ -3,5 +3,12 @@
   "identifier": "main",
   "description": "Permissions of the main window's own pages: one permission set per domain (permissions/<domain>.toml), together every app command, and listening to the events the backend emits.",
   "windows": ["main"],
-  "permissions": ["hid", "definition", "shell", "core:event:allow-listen", "core:event:allow-unlisten"]
+  "permissions": [
+    "hid",
+    "definition",
+    "app-config",
+    "shell",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
 }

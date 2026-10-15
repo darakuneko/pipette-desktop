@@ -4,7 +4,7 @@
 
 [[set]]
 identifier = "hid"
-description = "Lists, opens and closes HID devices and exchanges reports with the open one."
+description = "Lists, opens and closes HID devices, exchanges reports with the open one, and probes a device through a handle of its own."
 permissions = [
   "allow-list-devices",
   "allow-open-device",
@@ -12,4 +12,7 @@ permissions = [
   "allow-send-receive",
   "allow-send",
   "allow-is-device-open",
+  "allow-hid-probe-open",
+  "allow-hid-probe-send-receive",
+  "allow-hid-probe-close",
 ]

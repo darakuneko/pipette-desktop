@@ -31,6 +31,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
   .flatMap((name) => JSON.parse(readFileSync(resolve(FIXTURE_DIR, name), 'utf8')) as Entry[])
 
 interface Shim {
+  appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
   shell: typeof import('../api/shell')
   transport: typeof import('../hid-transport')
@@ -40,6 +41,7 @@ interface Shim {
 async function load(): Promise<Shim> {
   vi.resetModules()
   return {
+    appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
     shell: await import('../api/shell'),
     transport: await import('../hid-transport'),
@@ -72,9 +74,22 @@ const CALLERS: Record<string, Caller> = {
     run: async ({ transport }, [data]) => Array.from(await transport.sendReceive(bytes(data))),
   },
   'hid-transport.send': { run: ({ transport }, [data]) => transport.send(bytes(data)), void: true },
+  appConfigGetAll: { run: ({ appConfig }) => appConfig.appConfigApi.appConfigGetAll() },
+  appConfigSet: {
+    run: ({ appConfig }, [key, value]) => appConfig.appConfigApi.appConfigSet(key as string, value),
+    void: true,
+  },
   'device.decompressDefinition': {
     run: ({ device }, [data]) => device.decompressDefinition(data as number[]),
   },
+  'device.probeOpen': {
+    run: ({ device }, [vendorId, productId, serialNumber]) =>
+      device.probeOpen(vendorId as number, productId as number, serialNumber as string),
+  },
+  'device.probeSendReceive': {
+    run: ({ device }, [id, data]) => device.probeSendReceive(id as number, data as number[]),
+  },
+  'device.probeClose': { run: ({ device }, [id]) => device.probeClose(id as number), void: true },
   openExternal: { run: ({ shell }, [url]) => shell.shellApi.openExternal(url as string), void: true },
 }
 

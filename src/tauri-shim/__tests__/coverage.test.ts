@@ -12,8 +12,6 @@ import { VIAL_API_MEMBER_NAMES } from '../vial-api-members'
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
 const EXPECTED_FAKES = [
-  'appConfigGetAll',
-  'appConfigSet',
   'trayStatusUpdate',
   'syncAuthStatus',
   'syncPasswordStatus',

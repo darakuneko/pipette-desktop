@@ -17,8 +17,14 @@ pub const APP_COMMANDS: &[&str] = &[
     "send_receive",
     "send",
     "is_device_open",
+    "hid_probe_open",
+    "hid_probe_send_receive",
+    "hid_probe_close",
     // src/definition.rs
     "decompress_definition",
+    // src/app_config.rs
+    "app_config_get_all",
+    "app_config_set",
     // src/shell.rs
     "open_external",
 ];

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Tauri entry point: one window that loads the renderer build, the HID
-// and definition commands its vialAPI shim calls, and the tray and quit
-// handling of lifecycle.rs. Before any of that it settles the userData
-// directory, refuses to start while the Electron build holds it, and starts
-// the log in it.
+// Tauri entry point: one window that loads the renderer build, the HID,
+// definition and app config commands its vialAPI shim calls, and the tray
+// and quit handling of lifecycle.rs. Before any of that it settles the
+// userData directory, refuses to start while the Electron build holds it,
+// starts the log in it and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from
@@ -11,6 +11,7 @@
 // every build with the development tools keeps its console.
 #![cfg_attr(release_profile, windows_subsystem = "windows")]
 
+mod app_config;
 #[cfg(test)]
 mod capability_files;
 mod command_error;
@@ -29,8 +30,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use pipette_hid::{HidService, VirtualDeviceMode};
-use tauri::Runtime;
 use tauri::ipc::Invoke;
+use tauri::{Manager, Runtime};
 
 use crate::hid_commands::Hid;
 use crate::shell::ExternalOpener;
@@ -47,7 +48,12 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         hid_commands::send_receive,
         hid_commands::send,
         hid_commands::is_device_open,
+        hid_commands::hid_probe_open,
+        hid_commands::hid_probe_send_receive,
+        hid_commands::hid_probe_close,
         definition::decompress_definition,
+        app_config::app_config_get_all,
+        app_config::app_config_set,
         shell::open_external,
     ]
 }
@@ -89,18 +95,22 @@ fn main() {
         log::error!("the log file is unavailable: {err}");
     }
     log::info!("Pipette starting");
+    let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
     let hid = Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env())));
     let builder = tauri::Builder::default()
         .manage(hid)
         .manage(UserDataDir(user_data))
+        .manage(config)
         .manage(ExternalOpener::system())
         .setup(|app| {
-            main_window::main_window_builder(app.handle())?.build()?;
+            let window = main_window::main_window_builder(app.handle())?.build()?;
+            app_config::apply_stored_zoom(&app.state::<app_config::AppConfig>(), &window);
+            app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
             Ok(())
         })
         .on_window_event(lifecycle::on_window_event);
-    let builder = dev_commands::install_or_passthrough(builder, app_commands());
+    let builder = dev_commands::install_or_passthrough(builder, app_commands(), lifecycle::on_page_load);
     match builder.build(tauri::generate_context!()) {
         Ok(app) => app.run(lifecycle::on_run_event),
         Err(err) => {

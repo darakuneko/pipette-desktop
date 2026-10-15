@@ -4,9 +4,9 @@
 //! it invokes, the arguments it passes and the response; the shim's tests
 //! (src/tauri-shim/__tests__/ipc-fixtures.test.ts) replay them against the
 //! shim. Here each entry runs through the app's own command handler
-//! (`app_commands` in main.rs) on Tauri's mock runtime, with the virtual
-//! keyboard as the only HID device and a browser that records what it is
-//! asked to open: the command must be registered, take `invokeArgs` as its
+//! (`app_commands` in main.rs) on Tauri's mock runtime, with a new app
+//! config in a temp directory and a browser that records what it is asked
+//! to open: the command must be registered, take `invokeArgs` as its
 //! arguments, and respond with `response`.
 //!
 //! The app is built with the app's own context, so every call also passes
@@ -14,18 +14,26 @@
 //! below check that it lets the main window's pages call every app command
 //! and nothing else.
 //!
+//! The HID service lists only the virtual keyboard. The virtual keyboard
+//! cannot be probed, so behind it sits one scripted hardware keyboard
+//! ([`PROBE_KEYBOARD`]) for the probe commands: it answers each report with
+//! the report itself, and the first probe handle of a fresh app has id 1.
+//!
 //! The command names are also exported for the shim (`CommandName` in
 //! src/tauri-shim/ipc.ts).
 
+use std::ffi::CString;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
-use pipette_hid::{HidService, VirtualDeviceMode};
+use pipette_app_config::AppConfigStore;
+use pipette_hid::{HidBackend, HidError, HidHandle, HidService, RawDeviceInfo, Timing, VirtualDeviceMode};
 use serde_json::{Value, json};
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder};
 use tauri::webview::InvokeRequest;
 use tauri::{App, WebviewWindow};
+use tempfile::TempDir;
 
 use crate::hid_commands::Hid;
 use crate::main_window::{MAIN_WINDOW, main_window_builder};
@@ -52,6 +60,53 @@ const VIRTUAL_KEYBOARD: (u16, u16) = (0x7a79, 0xf063);
 /// keyboard is opened.
 const NEED_OPEN_DEVICE: &[&str] = &["send_receive", "send"];
 
+/// The vendor ID, product ID and serial number of the scripted hardware
+/// keyboard.
+pub(crate) const PROBE_KEYBOARD: (u16, u16, &str) = (0x1234, 0x5678, "vial:f64c2b3c:probe");
+
+/// Commands that need an open probe handle; their entries run after the
+/// scripted keyboard is opened for a probe, as handle 1.
+const NEED_PROBE: &[&str] = &["hid_probe_send_receive", "hid_probe_close"];
+
+/// The scripted hardware keyboard: always enumerated, never fails to open.
+struct ProbeKeyboard;
+
+impl HidBackend for ProbeKeyboard {
+    fn enumerate(&self) -> Result<Vec<RawDeviceInfo>, HidError> {
+        let (vendor_id, product_id, serial) = PROBE_KEYBOARD;
+        Ok(vec![RawDeviceInfo {
+            path: CString::from(c"/dev/hidraw-probe"),
+            vendor_id,
+            product_id,
+            serial_number: Some(serial.into()),
+            product: Some("Probe Keyboard".into()),
+        }])
+    }
+
+    fn open_path(&self, _path: &CString) -> Result<Arc<dyn HidHandle>, HidError> {
+        Ok(Arc::new(EchoHandle::default()))
+    }
+}
+
+/// Answers each packet with its report (the packet without the report ID).
+#[derive(Default)]
+struct EchoHandle {
+    last: Mutex<Vec<u8>>,
+}
+
+impl HidHandle for EchoHandle {
+    fn write(&self, data: &[u8]) -> Result<usize, HidError> {
+        *self.last.lock().unwrap_or_else(PoisonError::into_inner) = data[1..].to_vec();
+        Ok(data.len())
+    }
+
+    fn read_timeout(&self, buf: &mut [u8], _timeout_ms: i32) -> Result<usize, HidError> {
+        let report = std::mem::take(&mut *self.last.lock().unwrap_or_else(PoisonError::into_inner));
+        buf[..report.len()].copy_from_slice(&report);
+        Ok(report.len())
+    }
+}
+
 fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ipc")
 }
@@ -76,11 +131,20 @@ fn entries() -> Vec<Entry> {
 /// The page every call comes from unless a test says otherwise.
 const APP_PAGE: &str = "tauri://localhost/tauri.html";
 
+/// A HID service that lists only the virtual keyboard, with
+/// [`PROBE_KEYBOARD`] as its hardware.
+pub(crate) fn probe_keyboard_service() -> HidService {
+    HidService::with_backend(Box::new(ProbeKeyboard), VirtualDeviceMode::Only, Timing::new(|| 0, |_| {}))
+}
+
 /// A fresh app with the app commands, the state they use, `opener` as the
-/// browser, and the access control the app's build generates.
-fn mock_app(opener: ExternalOpener) -> App<MockRuntime> {
+/// browser and `user_data` as its userData directory, and the access control
+/// the app's build generates.
+fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
+    let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     mock_builder()
-        .manage(Hid(Arc::new(HidService::new(VirtualDeviceMode::Only))))
+        .manage(Hid(Arc::new(probe_keyboard_service())))
+        .manage(config)
         .manage(opener)
         .invoke_handler(crate::app_commands())
         .build(tauri::generate_context!(test = true))
@@ -94,9 +158,30 @@ fn main_window(app: &App<MockRuntime>) -> WebviewWindow<MockRuntime> {
     main_window_builder(app).unwrap().build().unwrap()
 }
 
-/// The main window of a fresh app whose browser opens nothing.
-fn app_window() -> WebviewWindow<MockRuntime> {
-    main_window(&mock_app(ExternalOpener::new(|_| Ok(()))))
+/// The main window of a fresh app whose browser opens nothing, and the
+/// userData directory of the app, removed when this is dropped.
+struct TestWindow {
+    window: WebviewWindow<MockRuntime>,
+    _user_data: TempDir,
+}
+
+impl std::ops::Deref for TestWindow {
+    type Target = WebviewWindow<MockRuntime>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.window
+    }
+}
+
+fn app_window() -> TestWindow {
+    window_with(ExternalOpener::new(|_| Ok(())))
+}
+
+/// The main window of a fresh app with `opener` as its browser.
+fn window_with(opener: ExternalOpener) -> TestWindow {
+    let user_data = TempDir::new().unwrap();
+    let window = main_window(&mock_app(opener, user_data.path()));
+    TestWindow { window, _user_data: user_data }
 }
 
 /// The command's response, or its error (a deserialization failure for
@@ -133,16 +218,30 @@ fn mismatch(entry: &Entry) -> Option<String> {
     if !APP_COMMANDS.contains(&entry.command.as_str()) {
         return Some("not in APP_COMMANDS".into());
     }
-    let window = app_window();
+    run_entry(entry, &app_window())
+}
+
+fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<String> {
     if NEED_OPEN_DEVICE.contains(&entry.command.as_str()) {
         let (vendor_id, product_id) = VIRTUAL_KEYBOARD;
         let opened =
-            invoke(&window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
+            invoke(window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
         if opened != Ok(json!(true)) {
             return Some(format!("opening the virtual keyboard: {opened:?}"));
         }
     }
-    match invoke(&window, &entry.command, &entry.invoke_args) {
+    if NEED_PROBE.contains(&entry.command.as_str()) {
+        let (vendor_id, product_id, serial_number) = PROBE_KEYBOARD;
+        let opened = invoke(
+            window,
+            "hid_probe_open",
+            &json!({ "vendorId": vendor_id, "productId": product_id, "serialNumber": serial_number }),
+        );
+        if opened != Ok(json!(1)) {
+            return Some(format!("opening the probe handle: {opened:?}"));
+        }
+    }
+    match invoke(window, &entry.command, &entry.invoke_args) {
         Ok(response) if response == entry.response => None,
         Ok(response) => Some(format!("responded {response}, the fixture records {}", entry.response)),
         Err(err) => Some(format!("failed: {err}")),
@@ -230,7 +329,8 @@ fn commands_the_capabilities_do_not_grant_are_rejected() {
 
 #[test]
 fn other_windows_and_remote_pages_are_rejected() {
-    let app = mock_app(ExternalOpener::new(|_| Ok(())));
+    let user_data = TempDir::new().unwrap();
+    let app = mock_app(ExternalOpener::new(|_| Ok(())), user_data.path());
     let main = main_window(&app);
     let other = tauri::WebviewWindowBuilder::new(&app, "other", Default::default()).build().unwrap();
     assert!(rejected_by_acl(&invoke(&other, "list_devices", &json!({}))));
@@ -248,7 +348,7 @@ fn open_external_hands_only_web_urls_to_the_browser() {
         record.lock().unwrap().push(url.to_owned());
         Ok(())
     });
-    let window = main_window(&mock_app(opener));
+    let window = window_with(opener);
     let open = |url: &str| invoke(&window, "open_external", &json!({ "url": url }));
 
     assert_eq!(open("HTTPS://Example.com"), Ok(Value::Null));
@@ -261,7 +361,7 @@ fn open_external_hands_only_web_urls_to_the_browser() {
 #[test]
 fn open_external_reports_a_browser_that_fails_to_start() {
     let opener = ExternalOpener::new(|_| Err(std::io::Error::other("no browser").into()));
-    let window = main_window(&mock_app(opener));
+    let window = window_with(opener);
     assert_eq!(
         invoke(&window, "open_external", &json!({ "url": "https://example.com/" })),
         Err(json!("no browser"))

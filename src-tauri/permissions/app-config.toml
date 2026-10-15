@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The app config commands of src/app_config.rs.
+
+[[set]]
+identifier = "app-config"
+description = "Reads the app config and sets its fields."
+permissions = ["allow-app-config-get-all", "allow-app-config-set"]

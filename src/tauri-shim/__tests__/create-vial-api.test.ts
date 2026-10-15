@@ -61,7 +61,6 @@ describe('createVialApi', () => {
 describe('implemented', () => {
   it('answers the startup calls with the values of a fresh install', async () => {
     const api = createVialApi(implemented)
-    await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
     await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
     await expect(api.i18nPackList()).resolves.toEqual({ success: true, data: [] })
@@ -77,6 +76,13 @@ describe('implemented', () => {
     await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
   })
 
+  it('asks the backend for the app config', async () => {
+    invoke.mockResolvedValueOnce(DEFAULT_APP_CONFIG)
+    const api = createVialApi(implemented)
+    await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
+    expect(invoke).toHaveBeenCalledWith('app_config_get_all', undefined)
+  })
+
   it('asks the backend for devices', async () => {
     invoke.mockResolvedValueOnce([])
     const api = createVialApi(implemented)
@@ -84,11 +90,10 @@ describe('implemented', () => {
     expect(invoke).toHaveBeenCalledWith('list_devices', undefined)
   })
 
-  it('leaves probeDevice to the stub without calling the backend', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  it('asks the backend for a probe handle', async () => {
     invoke.mockClear()
-    expect(implemented.probeDevice).toBeUndefined()
-    await expect(createVialApi(implemented).probeDevice(1, 2)).resolves.toBeUndefined()
-    expect(invoke).not.toHaveBeenCalled()
+    invoke.mockRejectedValueOnce('Probe target device not found')
+    await expect(createVialApi(implemented).probeDevice(1, 2)).rejects.toThrow('Probe target device not found')
+    expect(invoke).toHaveBeenCalledWith('hid_probe_open', { vendorId: 1, productId: 2, serialNumber: undefined })
   })
 })
