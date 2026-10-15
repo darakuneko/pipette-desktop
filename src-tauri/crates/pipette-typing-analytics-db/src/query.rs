@@ -36,7 +36,7 @@ pub struct MinuteStatsRow {
     pub poll_p95_ms: Option<f64>,
 }
 
-pub fn minute_stats_in_range(
+pub(crate) fn minute_stats_in_range(
     conn: &Connection,
     uid: &str,
     since_ms: i64,

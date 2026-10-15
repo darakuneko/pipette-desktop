@@ -13,20 +13,21 @@
 //! - [`TypingAnalyticsDb::minute_stats_in_range`] — the Analyze WPM /
 //!   Interval query.
 
-pub mod apply;
-pub mod jsonl;
-pub mod query;
-pub mod schema;
-pub mod sql;
+mod apply;
+mod jsonl;
+mod query;
+mod schema;
+mod sql;
 
 use std::path::Path;
 
 use rusqlite::Connection;
 use rusqlite::config::DbConfig;
+use schema::SchemaOutcome;
 
 pub use apply::{ApplyRowsResult, DeleteRange};
 pub use query::{MinuteStatsRow, ScopeFilters};
-pub use schema::{DATA_TABLE_NAMES, SCHEMA_VERSION, SchemaOutcome};
+pub use schema::{DATA_TABLE_NAMES, SCHEMA_VERSION};
 
 /// Statements kept prepared per connection; above the number this crate
 /// uses, so none is ever re-prepared.
@@ -133,8 +134,22 @@ impl TypingAnalyticsDb {
         query::minute_stats_in_range(&self.conn, uid, since_ms, until_ms, filters)
     }
 
-    /// Low-level access for queries this crate does not wrap yet.
-    pub fn connection(&self) -> &Connection {
-        &self.conn
+    /// The bundled SQLite version and this connection's journal mode and
+    /// synchronous level, for the benchmark and tests to report.
+    #[doc(hidden)]
+    pub fn pragma_report(&self) -> Result<PragmaReport, Error> {
+        Ok(PragmaReport {
+            sqlite_version: self.conn.query_row("SELECT sqlite_version()", [], |r| r.get(0))?,
+            journal_mode: self.conn.pragma_query_value(None, "journal_mode", |r| r.get(0))?,
+            synchronous: self.conn.pragma_query_value(None, "synchronous", |r| r.get(0))?,
+        })
     }
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PragmaReport {
+    pub sqlite_version: String,
+    pub journal_mode: String,
+    pub synchronous: i64,
 }

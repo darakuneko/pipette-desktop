@@ -47,7 +47,7 @@ fn js_number(text: &str) -> Option<f64> {
     trimmed.parse::<f64>().ok()
 }
 
-pub fn prepare_schema(conn: &Connection) -> Result<SchemaOutcome, Error> {
+pub(crate) fn prepare_schema(conn: &Connection) -> Result<SchemaOutcome, Error> {
     conn.execute_batch(CREATE_META)?;
     let stored: Option<String> =
         conn.query_row(GET_META, params!["schema_version"], |r| r.get(0)).optional()?;

@@ -136,7 +136,7 @@ pub struct JsonlRow {
 /// `\n`, `\r\n` or a lone `\r` (Node's readline), blank and invalid lines
 /// are dropped, and when the text does not end with `\n` its last line is
 /// a crash-truncated write and is dropped too.
-pub fn read_rows(text: &str) -> Vec<JsonlRow> {
+pub(crate) fn read_rows(text: &str) -> Vec<JsonlRow> {
     let mut lines = split_lines(text);
     if !text.ends_with('\n') {
         lines.pop();
@@ -173,7 +173,7 @@ fn split_lines(text: &str) -> Vec<&str> {
 }
 
 /// One line, or `None` where `parseRow` returns null.
-pub fn parse_row(line: &str) -> Option<JsonlRow> {
+fn parse_row(line: &str) -> Option<JsonlRow> {
     if line.is_empty() {
         return None;
     }

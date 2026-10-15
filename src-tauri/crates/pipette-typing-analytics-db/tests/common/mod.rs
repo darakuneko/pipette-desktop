@@ -7,11 +7,11 @@
 #![allow(dead_code, clippy::unwrap_used)]
 
 use std::fmt::Write as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use pipette_typing_analytics_db::{DATA_TABLE_NAMES, MinuteStatsRow};
-use rusqlite::Connection;
 use rusqlite::types::ValueRef;
+use rusqlite::{Connection, OpenFlags};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
@@ -32,6 +32,19 @@ pub fn bench_dir() -> PathBuf {
         None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target"),
     };
     target.join("tmp/pipette-typing-analytics-db")
+}
+
+/// A second, read-only connection to a database file, for dumping its
+/// tables while the crate's own connection stays open.
+pub fn open_read_only(path: &Path) -> Connection {
+    Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap()
+}
+
+/// Removes a database file and its WAL side files, if present.
+pub fn remove_db(path: &Path) {
+    for suffix in ["", "-wal", "-shm"] {
+        let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
+    }
 }
 
 pub fn read_json(path: PathBuf) -> Value {

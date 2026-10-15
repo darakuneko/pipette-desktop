@@ -17,7 +17,9 @@ mod common;
 use std::path::Path;
 use std::time::Instant;
 
-use common::{assert_tables, bench_dir, fixtures_dir, query_row_cells, read_json, strings};
+use common::{
+    assert_tables, bench_dir, fixtures_dir, open_read_only, query_row_cells, read_json, remove_db, strings,
+};
 use pipette_typing_analytics_db::{ScopeFilters, TypingAnalyticsDb};
 use serde_json::Value;
 
@@ -52,12 +54,6 @@ fn run_queries(db: &TypingAnalyticsDb, queries: &Value) -> Vec<Value> {
         .collect()
 }
 
-fn remove_db(path: &Path) {
-    for suffix in ["", "-wal", "-shm"] {
-        let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
-    }
-}
-
 /// `(apply ms, query ms)` medians; `check` compares the last run with the
 /// TypeScript tables and query rows.
 fn bench(input: &Path, queries: &Value, check: Option<&Value>) -> (f64, f64) {
@@ -80,7 +76,7 @@ fn bench(input: &Path, queries: &Value, check: Option<&Value>) -> (f64, f64) {
         if run == RUNS
             && let Some(expected) = check
         {
-            assert_tables(db.connection(), &expected["tables"], "heavy");
+            assert_tables(&open_read_only(&db_path), &expected["tables"], "heavy");
             let want: Vec<Value> = queries.as_array().unwrap().iter().map(|q| q["rows"].clone()).collect();
             assert_eq!(results, want, "heavy: queries");
             println!("heavy.jsonl: tables and queries match the TypeScript result");
@@ -98,21 +94,12 @@ fn main() {
 
     let probe_path = bench_dir().join("bench-probe.db");
     remove_db(&probe_path);
-    let db = TypingAnalyticsDb::open(&probe_path).unwrap();
-    let text = |sql: &str| -> String {
-        db.connection()
-            .query_row(sql, [], |r| r.get::<_, rusqlite::types::Value>(0))
-            .map(|v| format!("{v:?}"))
-            .unwrap()
-    };
+    let report = TypingAnalyticsDb::open(&probe_path).unwrap().pragma_report().unwrap();
     println!(
         "Rust: SQLite {}, journal_mode {}, synchronous {}",
-        text("SELECT sqlite_version()"),
-        text("PRAGMA journal_mode"),
-        text("PRAGMA synchronous")
+        report.sqlite_version, report.journal_mode, report.synchronous
     );
     println!("TS:   SQLite {}, pragmas {}", ts["runtime"]["sqlite"], ts["pragmas"]);
-    drop(db);
     remove_db(&probe_path);
 
     let cases = [

@@ -4,13 +4,16 @@
 //! JSONL files (`pnpm run generate:analytics-db-fixtures`). Each scenario
 //! applies its steps to a fresh database and must end with every table
 //! identical cell by cell (storage class included) and every query row
-//! identical to the bit.
+//! identical to the bit. The databases are files, so a second connection
+//! can read the tables back.
 
 #![allow(clippy::unwrap_used)]
 
 mod common;
 
-use common::{assert_tables, fixtures_dir, query_row_cells, read_json, strings};
+use std::path::PathBuf;
+
+use common::{assert_tables, fixtures_dir, open_read_only, query_row_cells, read_json, remove_db, strings};
 use pipette_typing_analytics_db::{ApplyRowsResult, DeleteRange, ScopeFilters, TypingAnalyticsDb};
 use serde_json::Value;
 
@@ -79,16 +82,26 @@ pub fn assert_queries(db: &TypingAnalyticsDb, queries: &Value, label: &str) {
     }
 }
 
+/// A fresh database file for `name` under CARGO_TARGET_TMPDIR.
+fn fresh_db_path(name: &str) -> PathBuf {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("pipette-typing-analytics-db");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join(format!("{name}.db"));
+    remove_db(&path);
+    path
+}
+
 fn check_scenario(name: &str) {
     let s = scenario(name);
-    let mut db = TypingAnalyticsDb::open_in_memory().unwrap();
+    let path = fresh_db_path(name);
+    let mut db = TypingAnalyticsDb::open(&path).unwrap();
     for (i, (step, want)) in
         s["steps"].as_array().unwrap().iter().zip(s["applied"].as_array().unwrap()).enumerate()
     {
         let got = apply_step(&mut db, step);
         assert_eq!(applied_json(&got), *want, "{name}: step {i} ({got:?})");
     }
-    assert_tables(db.connection(), &s["tables"], name);
+    assert_tables(&open_read_only(&path), &s["tables"], name);
     assert_queries(&db, &s["queries"], name);
 }
 
@@ -111,7 +124,6 @@ fn day_hiding_ranges() {
 /// the scenarios above are what must match.
 #[test]
 fn reports_sqlite_versions() {
-    let db = TypingAnalyticsDb::open_in_memory().unwrap();
-    let ours: String = db.connection().query_row("SELECT sqlite_version()", [], |r| r.get(0)).unwrap();
+    let ours = TypingAnalyticsDb::open_in_memory().unwrap().pragma_report().unwrap().sqlite_version;
     println!("rusqlite bundled SQLite {ours}, better-sqlite3 SQLite {}", expected()["sqliteVersion"]);
 }

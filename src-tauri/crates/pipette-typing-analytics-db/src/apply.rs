@@ -41,7 +41,7 @@ pub struct DeleteRange {
 /// fractional one is truncated, as Buffer.writeUInt32LE stores it. A bucket
 /// above u32::MAX makes writeUInt32LE throw, which aborts the whole apply;
 /// here it is an error with the same effect.
-pub fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<Vec<u8>, Error> {
+fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<Vec<u8>, Error> {
     let mut out = Vec::with_capacity(HIST_BUCKETS * 4);
     for &value in hist {
         let clamped = if value.is_finite() && value >= 0.0 { value } else { 0.0 };
@@ -56,7 +56,7 @@ pub fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<Vec<u8>, Error> {
 
 /// Scopes first so the per-minute rows' foreign keys resolve, then every
 /// other row in file order.
-pub fn apply_rows(tx: &Transaction<'_>, rows: &[JsonlRow]) -> Result<ApplyRowsResult, Error> {
+pub(crate) fn apply_rows(tx: &Transaction<'_>, rows: &[JsonlRow]) -> Result<ApplyRowsResult, Error> {
     let mut result = ApplyRowsResult::default();
     for row in rows {
         if let RowPayload::Scope(p) = &row.payload {
@@ -168,7 +168,7 @@ fn merge_ngrams(
 
 /// Tombstone every live row of `machine_hash` for `uid` inside any of
 /// `ranges`, bumping `updated_at`. Returns the rows changed.
-pub fn tombstone_ranges(
+pub(crate) fn tombstone_ranges(
     tx: &Transaction<'_>,
     uid: &str,
     machine_hash: &str,
