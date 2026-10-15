@@ -44,7 +44,13 @@ jobs:
           rustup toolchain install 1.94.0 --profile minimal --component clippy
           rustup default 1.94.0
 
-      - run: pnpm install --frozen-lockfile
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri -> target
+
+      # The install scripts only serve the Electron build (the Electron binary
+      # download and the native module rebuild); the Tauri build needs none.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Clippy
         working-directory: src-tauri
