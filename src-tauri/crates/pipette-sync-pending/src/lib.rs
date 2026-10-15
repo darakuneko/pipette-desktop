@@ -79,7 +79,8 @@ struct State {
     /// The ticket of the write that is due, if one is.
     due_write: Option<u64>,
     last_ticket: u64,
-    /// True while the last write failed; the next change writes again.
+    /// True from the moment a write takes its content until it succeeds: a
+    /// change made meanwhile, or after the write failed, writes again.
     dirty: bool,
 }
 
@@ -179,17 +180,24 @@ impl PendingStore {
             return None;
         }
         let mut dir_ready = lock(&self.shared.write);
-        let content = {
-            let mut state = lock(&self.shared.state);
-            if ticket.is_some() && state.due_write != ticket {
-                return None;
-            }
-            state.due_write = None;
-            file::content(state.owner.as_ref(), state.units.keys(), &state.held)
-        };
+        let content = self.take_content(ticket)?;
         let result = write_file(&self.shared.path, content.as_bytes(), &mut dir_ready);
         lock(&self.shared.state).dirty = result.is_err();
         Some(result)
+    }
+
+    /// The file's content for a write starting now, which takes the place of
+    /// the write that is due; `None` when `ticket` is no longer that write.
+    /// The state counts as not on disk until the write succeeds, as
+    /// `writePendingNow` of src/main/sync/sync-pending-store.ts marks it.
+    fn take_content(&self, ticket: Option<u64>) -> Option<String> {
+        let mut state = lock(&self.shared.state);
+        if ticket.is_some() && state.due_write != ticket {
+            return None;
+        }
+        state.due_write = None;
+        state.dirty = true;
+        Some(file::content(state.owner.as_ref(), state.units.keys(), &state.held))
     }
 }
 
@@ -227,5 +235,46 @@ fn write_file(path: &Path, content: &[u8], dir_ready: &mut bool) -> std::io::Res
             pipette_fs::write_file_atomic(path, content)
         }
         result => result,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    type Task = Box<dyn FnOnce() + Send>;
+
+    #[derive(Default)]
+    struct Tasks(Mutex<Vec<Task>>);
+
+    impl Scheduler for Tasks {
+        fn schedule(&self, _: Duration, task: Task) {
+            self.0.lock().unwrap().push(task);
+        }
+    }
+
+    impl Tasks {
+        fn run(&self) {
+            let tasks = std::mem::take(&mut *self.0.lock().unwrap());
+            tasks.into_iter().for_each(|task| task());
+        }
+    }
+
+    #[test]
+    fn a_change_to_a_pending_unit_during_a_write_writes_again() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let tasks = Arc::new(Tasks::default());
+        let store =
+            PendingStore::restore(dir.path(), Arc::clone(&tasks) as Arc<dyn Scheduler>, Box::new(|_| {}));
+        store.notify_change("favorites/macro");
+        tasks.run();
+
+        // A write has taken its content and has not finished (it may fail).
+        store.take_content(None).unwrap();
+        store.notify_change("favorites/macro");
+
+        assert_eq!(tasks.0.lock().unwrap().len(), 1);
     }
 }
