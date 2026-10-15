@@ -10,7 +10,7 @@
 
 use pipette_app_config::{Object, Value};
 
-use crate::window_bounds::{MIN_SIZE, Rect, Size, clamp_bounds_to_work_area, effective_min_size};
+use crate::window_bounds::{MIN_SIZE, Rect, Size, clamp_bounds_to_work_area, effective_min_size, js_max};
 
 /// The state of a window that never saved one (`DEFAULT_STATE` of
 /// src/main/app-config.ts): no position, and wider than the minimum, as the
@@ -51,8 +51,11 @@ pub fn load_window_state(stored: Option<&Value>, displays: &[Rect]) -> Rect {
     let Some(state) = stored_rect(stored) else {
         return DEFAULT_STATE;
     };
-    let state =
-        Rect { width: state.width.max(MIN_SIZE.width), height: state.height.max(MIN_SIZE.height), ..state };
+    let state = Rect {
+        width: js_max(state.width, MIN_SIZE.width),
+        height: js_max(state.height, MIN_SIZE.height),
+        ..state
+    };
     let (center_x, center_y) = (state.x + state.width / 2.0, state.y + state.height / 2.0);
     let visible = displays.iter().any(|display| {
         center_x >= display.x
@@ -147,7 +150,7 @@ pub fn to_value(state: Rect) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::window_bounds::tests::{fixture, rect};
+    use crate::window_bounds::tests::{fixture, rect, rect_of};
 
     fn display(bounds: Rect, work_area: Rect) -> Display {
         Display { bounds, work_area }
@@ -164,8 +167,8 @@ mod tests {
         assert!(!cases.is_empty());
         for case in cases {
             let stored = case["stored"].as_str().map(parse);
-            let displays: Vec<Rect> = serde_json::from_value(case["displays"].clone()).unwrap();
-            let expected: Rect = serde_json::from_value(case["result"].clone()).unwrap();
+            let displays: Vec<Rect> = case["displays"].as_array().unwrap().iter().map(rect_of).collect();
+            let expected = rect_of(&case["result"]);
             assert_eq!(load_window_state(stored.as_ref(), &displays), expected, "{case}");
         }
     }
@@ -175,7 +178,7 @@ mod tests {
         let fixture = fixture();
         let missing = &fixture["loadWindowState"][0];
         assert!(missing["stored"].is_null());
-        let expected: Rect = serde_json::from_value(missing["result"].clone()).unwrap();
+        let expected = rect_of(&missing["result"]);
         assert_eq!(DEFAULT_STATE, expected);
     }
 

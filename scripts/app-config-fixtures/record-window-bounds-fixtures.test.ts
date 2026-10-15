@@ -8,6 +8,7 @@
 // - loadWindowState (src/main/app-config.ts) over stored windowState values
 //   (the JSON text in config.json, null for no windowState key) and sets of
 //   display bounds, run on the real electron-store in a temp directory.
+// JSON has no NaN, so a NaN input or result is written as the string "NaN".
 //
 // Run: pnpm run generate:app-config-fixtures
 
@@ -49,6 +50,8 @@ const WORK_AREAS: Rect[] = [
   rect(0, 0, 1280, 1024),
   rect(2560, -200, 1080, 1920),
   rect(0.5, 24.5, 1366.5, 743.25),
+  rect(NaN, 0, 1920, 1080),
+  rect(0, 0, NaN, 1080),
 ]
 
 const BOUNDS: Rect[] = [
@@ -64,12 +67,15 @@ const BOUNDS: Rect[] = [
   rect(10.5, 20.25, 1300.5, 1000.75),
   rect(3000, 1500, 100, 100),
   rect(-1, -1, 1440, 1024),
+  rect(NaN, 10, 800, 600),
+  rect(10, 10, NaN, 600),
 ]
 
 const MIN_SIZES: [number, number][] = [
   [1280, 1024],
   [300, 100],
   [1, 1],
+  [NaN, 1024],
 ]
 
 const DISPLAY_SETS: Record<string, Rect[]> = {
@@ -115,6 +121,16 @@ afterAll(() => {
   rmSync(state.dir, { recursive: true, force: true })
 })
 
+/** `value` with each NaN as the string "NaN". */
+function encodeNaN(value: unknown): unknown {
+  if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
+  if (Array.isArray(value)) return value.map(encodeNaN)
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, encodeNaN(entry)]))
+  }
+  return value
+}
+
 function loadWith(stored: string | null, displays: Rect[]): Rect {
   writeFileSync(join(state.dir, 'config.json'), stored === null ? '{}' : `{"windowState":${stored}}`)
   state.displays = displays
@@ -124,7 +140,7 @@ function loadWith(stored: string | null, displays: Rect[]): Rect {
 describe('window bounds fixtures', () => {
   it('records the geometry helpers and loadWindowState', () => {
     const { MIN_WIDTH, MIN_HEIGHT } = appConfig
-    writeJsonFixture(FIXTURE, {
+    writeJsonFixture(FIXTURE, encodeNaN({
       minSize: { width: MIN_WIDTH, height: MIN_HEIGHT },
       effectiveMinSize: WORK_AREAS.flatMap((workArea) =>
         MIN_SIZES.map(([minWidth, minHeight]) => ({
@@ -140,6 +156,6 @@ describe('window bounds fixtures', () => {
       loadWindowState: Object.entries(DISPLAY_SETS).flatMap(([name, displays]) =>
         STORED.map((stored) => ({ name, stored, displays, result: loadWith(stored, displays) })),
       ),
-    })
+    }))
   })
 })
