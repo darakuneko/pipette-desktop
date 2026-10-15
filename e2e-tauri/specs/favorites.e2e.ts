@@ -11,7 +11,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { browser, expect } from '@wdio/globals'
-import { connectVirtualKeyboard, respondToFileDialog } from '../helpers/app'
+import { connectVirtualKeyboard, invokeCommand } from '../helpers/app'
 
 /** Calls the vialAPI member `member` of the page with `args`. The answer
  *  crosses as JSON text: WebDriver takes an answer with an `error` field
@@ -26,6 +26,18 @@ async function vialApi<T>(member: string, ...args: unknown[]): Promise<T> {
     args,
   )
   return JSON.parse(text) as T
+}
+
+/** Calls `member` with `path` queued as the answer of its file dialog
+ *  (`dev_dialog_respond`; null cancels it), and checks that the call took
+ *  that answer, as `clickIntoFileDialog` does for a click. */
+async function withFileDialog<T>(path: string | null, member: string, ...args: unknown[]): Promise<T> {
+  const queued = (): Promise<number> => invokeCommand<number>('dev_dialog_queued')
+  if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
+  await invokeCommand('dev_dialog_respond', { path })
+  const answer = await vialApi<T>(member, ...args)
+  if ((await queued()) !== 0) throw new Error(`${member} opened no file dialog`)
+  return answer
 }
 
 interface Listed {
@@ -57,8 +69,7 @@ describe('Tauri build favorites', () => {
     )
     expect(saved.success).toBe(true)
 
-    await respondToFileDialog(path)
-    expect(await vialApi('favoriteStoreExport', 'tapDance', 6)).toEqual({ success: true })
+    expect(await withFileDialog(path, 'favoriteStoreExport', 'tapDance', 6)).toEqual({ success: true })
     const exported = JSON.parse(readFileSync(path, 'utf8')) as {
       vial_protocol: number
       categories: Record<string, { label: string; savedAt: string; data: Record<string, unknown> }[]>
@@ -75,8 +86,7 @@ describe('Tauri build favorites', () => {
     expect(await vialApi('favoriteStoreDelete', 'tapDance', saved.entry.id)).toEqual({ success: true })
     expect((await vialApi<Listed>('favoriteStoreList', 'tapDance')).entries).toEqual([])
 
-    await respondToFileDialog(path)
-    expect(await vialApi('favoriteStoreImport')).toEqual({ success: true, imported: 1, skipped: 0 })
+    expect(await withFileDialog(path, 'favoriteStoreImport')).toEqual({ success: true, imported: 1, skipped: 0 })
     const listed = await vialApi<Listed>('favoriteStoreList', 'tapDance')
     expect(listed.entries.map(({ label, savedAt }) => ({ label, savedAt }))).toEqual([
       { label: 'E2E favorite', savedAt: saved.entry.savedAt },
@@ -87,17 +97,14 @@ describe('Tauri build favorites', () => {
 
   it('exports the current value and imports it into the editor', async () => {
     const path = join(dir, 'current.json')
-    await respondToFileDialog(path)
     const current = JSON.stringify({ type: 'tapDance', data: { ...TAP_DANCE, onTap: 5 } })
-    expect(await vialApi('favoriteStoreExportCurrent', 'tapDance', 6, current)).toEqual({ success: true })
+    expect(await withFileDialog(path, 'favoriteStoreExportCurrent', 'tapDance', 6, current)).toEqual({ success: true })
 
-    await respondToFileDialog(path)
-    expect(await vialApi('favoriteStoreImportToCurrent', 'tapDance')).toEqual({
+    expect(await withFileDialog(path, 'favoriteStoreImportToCurrent', 'tapDance')).toEqual({
       success: true,
       data: { ...TAP_DANCE, onTap: 5 },
     })
 
-    await respondToFileDialog(null)
-    expect(await vialApi('favoriteStoreImport')).toEqual({ success: false, imported: 0, skipped: 0, error: 'cancelled' })
+    expect(await withFileDialog(null, 'favoriteStoreImport')).toEqual({ success: false, imported: 0, skipped: 0, error: 'cancelled' })
   })
 })
