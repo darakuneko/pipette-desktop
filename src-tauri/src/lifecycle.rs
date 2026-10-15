@@ -40,10 +40,10 @@ use crate::UserDataDir;
 use crate::app_config::AppConfig;
 use crate::hid_commands::Hid;
 use crate::main_window::{self, MAIN_WINDOW};
-use crate::store_commands::sync_pending::flush_phase;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
+use crate::store_commands::sync_pending::flush_phase;
 
 /// Builds with debug assertions: how many milliseconds the stub of the
 /// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its

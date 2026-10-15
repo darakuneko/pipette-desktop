@@ -259,7 +259,9 @@ mod restoring_the_pending_state_at_startup {
     #[test]
     fn restores_the_units_in_file_order_with_new_generations() {
         let h = Harness::new();
-        h.write_file(r#"{"version":1,"owner":null,"units":["favorites/b","favorites/a","favorites/b"],"held":{}}"#);
+        h.write_file(
+            r#"{"version":1,"owner":null,"units":["favorites/b","favorites/a","favorites/b"],"held":{}}"#,
+        );
         let store = h.launch();
         assert_eq!(store.pending_generation_of("favorites/b"), 1);
         assert_eq!(store.pending_generation_of("favorites/a"), 2);
@@ -291,9 +293,14 @@ mod restoring_the_pending_state_at_startup {
     fn reads_an_owner_that_is_not_a_string_or_is_empty_as_none() {
         for owner in ["42", "\"\"", "null", "{}"] {
             let h = Harness::new();
-            h.write_file(&format!(r#"{{"version":1,"owner":{owner},"units":["favorites/tapDance"],"held":[]}}"#));
+            h.write_file(&format!(
+                r#"{{"version":1,"owner":{owner},"units":["favorites/tapDance"],"held":[]}}"#
+            ));
             h.launch();
-            assert_eq!(h.read_file(), r#"{"version":1,"owner":null,"units":["favorites/tapDance"],"held":{}}"#);
+            assert_eq!(
+                h.read_file(),
+                r#"{"version":1,"owner":null,"units":["favorites/tapDance"],"held":{}}"#
+            );
         }
     }
 

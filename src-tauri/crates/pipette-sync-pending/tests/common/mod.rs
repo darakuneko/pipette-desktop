@@ -56,11 +56,7 @@ pub struct Harness {
 
 impl Harness {
     pub fn new() -> Self {
-        Self {
-            dir: TempDir::new().unwrap(),
-            scheduler: Arc::default(),
-            statuses: Arc::default(),
-        }
+        Self { dir: TempDir::new().unwrap(), scheduler: Arc::default(), statuses: Arc::default() }
     }
 
     pub fn user_data(&self) -> &Path {

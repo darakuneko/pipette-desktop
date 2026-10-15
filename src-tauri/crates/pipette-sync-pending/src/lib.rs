@@ -32,7 +32,7 @@ use crate::file::PendingFile;
 pub const PENDING_WRITE_DELAY: Duration = Duration::from_millis(100);
 
 /// Where the file is, under the userData directory.
-pub const PENDING_FILE: [&str; 2] = ["local", "sync-pending.json"];
+const PENDING_FILE: [&str; 2] = ["local", "sync-pending.json"];
 
 /// Runs the delayed writes.
 pub trait Scheduler: Send + Sync {

@@ -118,7 +118,11 @@ fn the_scenarios_match_the_typescript_store() {
 
         let store = h.restore();
         h.scheduler.advance();
-        assert_eq!(recorded(h.user_data()), tree_of(scenario.get("restored").unwrap()), "{name}: after the restore");
+        assert_eq!(
+            recorded(h.user_data()),
+            tree_of(scenario.get("restored").unwrap()),
+            "{name}: after the restore"
+        );
         if name == "the directory is removed after the restore" {
             fs::remove_dir_all(h.user_data().join("local")).unwrap();
         }
@@ -149,6 +153,10 @@ fn the_scenarios_match_the_typescript_store() {
         }
 
         h.scheduler.advance();
-        assert_eq!(recorded(h.user_data()), tree_of(scenario.get("after").unwrap()), "{name}: after the steps");
+        assert_eq!(
+            recorded(h.user_data()),
+            tree_of(scenario.get("after").unwrap()),
+            "{name}: after the steps"
+        );
     }
 }
