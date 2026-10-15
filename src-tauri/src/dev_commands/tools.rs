@@ -21,6 +21,7 @@ use tauri::webview::{PageLoadEvent, PageLoadPayload};
 use tauri::{Builder, State, Webview, Wry};
 use ts_rs::TS;
 
+use crate::command_error::CommandError;
 use crate::hid_commands::Hid;
 
 include!("../dev_command_names.rs");
@@ -59,11 +60,11 @@ impl From<ControllerState> for ControllerStateDto {
 /// The unlock countdown length must be a non-negative `i32`: the virtual
 /// device decrements the counter from this value, and a negative start
 /// could underflow it.
-fn unlock_counter_max(n: i64) -> Result<i32, String> {
+fn unlock_counter_max(n: i64) -> Result<i32, CommandError> {
     i32::try_from(n)
         .ok()
         .filter(|n| *n >= 0)
-        .ok_or_else(|| format!("unlock counter max must be in 0..={}, got {n}", i32::MAX))
+        .ok_or_else(|| CommandError::new(format!("unlock counter max must be in 0..={}, got {n}", i32::MAX)))
 }
 
 #[tauri::command]
@@ -87,7 +88,7 @@ pub fn virtual_device_hold_keys(hid: State<'_, Hid>, pairs: Vec<(i32, i32)>) {
 }
 
 #[tauri::command]
-pub fn virtual_device_set_unlock_counter_max(hid: State<'_, Hid>, n: i64) -> Result<(), String> {
+pub fn virtual_device_set_unlock_counter_max(hid: State<'_, Hid>, n: i64) -> Result<(), CommandError> {
     hid.0.virtual_device().set_unlock_counter_max(unlock_counter_max(n)?);
     Ok(())
 }
@@ -112,14 +113,15 @@ pub fn dev_log(message: String) {
 /// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
 /// letters, digits and dashes so it cannot leave the directory.
 #[cfg(target_os = "linux")]
-fn shot_path(name: &str) -> Result<std::path::PathBuf, String> {
+fn shot_path(name: &str) -> Result<std::path::PathBuf, CommandError> {
     let valid = !name.is_empty()
         && name.len() <= 64
         && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
     if !valid {
-        return Err(format!("invalid screenshot name: {name:?}"));
+        return Err(CommandError::new(format!("invalid screenshot name: {name:?}")));
     }
-    let dir = std::env::var_os(DEV_SHOT_DIR_ENV).ok_or_else(|| format!("{DEV_SHOT_DIR_ENV} is not set"))?;
+    let dir = std::env::var_os(DEV_SHOT_DIR_ENV)
+        .ok_or_else(|| CommandError::new(format!("{DEV_SHOT_DIR_ENV} is not set")))?;
     Ok(std::path::PathBuf::from(dir).join(format!("{name}.png")))
 }
 
@@ -127,11 +129,12 @@ fn shot_path(name: &str) -> Result<std::path::PathBuf, String> {
 fn write_png(
     snapshot: Result<cairo::Surface, webkit2gtk::Error>,
     path: &std::path::Path,
-) -> Result<(), String> {
-    let surface = snapshot.map_err(|err| err.to_string())?;
-    let image = cairo::ImageSurface::try_from(surface).map_err(|_| "snapshot is not an image surface")?;
-    let mut file = std::fs::File::create(path).map_err(|err| err.to_string())?;
-    image.write_to_png(&mut file).map_err(|err| err.to_string())
+) -> Result<(), CommandError> {
+    let surface = snapshot?;
+    let image = cairo::ImageSurface::try_from(surface)
+        .map_err(|_| CommandError::new("snapshot is not an image surface"))?;
+    let mut file = std::fs::File::create(path)?;
+    Ok(image.write_to_png(&mut file)?)
 }
 
 /// Saves the visible part of the page as rendered by WebKit. Capturing the
@@ -139,28 +142,25 @@ fn write_png(
 /// blank, so the snapshot is taken from WebKit itself.
 #[cfg(target_os = "linux")]
 #[tauri::command]
-pub async fn dev_screenshot(window: tauri::WebviewWindow, name: String) -> Result<(), String> {
+pub async fn dev_screenshot(window: tauri::WebviewWindow, name: String) -> Result<(), CommandError> {
     use webkit2gtk::{SnapshotOptions, SnapshotRegion, WebViewExt};
 
     let path = shot_path(&name)?;
     let (done, result) = std::sync::mpsc::channel();
-    window
-        .with_webview(move |platform| {
-            platform.inner().snapshot(
-                SnapshotRegion::Visible,
-                SnapshotOptions::NONE,
-                None::<&webkit2gtk::gio::Cancellable>,
-                move |snapshot| {
-                    // The receiver only goes away if the command was dropped.
-                    let _ = done.send(write_png(snapshot, &path));
-                },
-            );
-        })
-        .map_err(|err| err.to_string())?;
+    window.with_webview(move |platform| {
+        platform.inner().snapshot(
+            SnapshotRegion::Visible,
+            SnapshotOptions::NONE,
+            None::<&webkit2gtk::gio::Cancellable>,
+            move |snapshot| {
+                // The receiver only goes away if the command was dropped.
+                let _ = done.send(write_png(snapshot, &path));
+            },
+        );
+    })?;
     tauri::async_runtime::spawn_blocking(move || result.recv())
-        .await
-        .map_err(|err| err.to_string())?
-        .map_err(|_| "the snapshot was cancelled".to_string())?
+        .await?
+        .map_err(|_| CommandError::new("the snapshot was cancelled"))?
 }
 
 /// Adds the development tools to `builder`: the script hook, and an invoke
@@ -228,6 +228,8 @@ fn run_dev_script(webview: &Webview<Wry>, payload: &PageLoadPayload<'_>) {
 mod tests {
     use super::*;
 
+    include!("../app_command_names.rs");
+
     #[test]
     fn unlock_counter_max_accepts_non_negative_i32_values() {
         assert_eq!(unlock_counter_max(0), Ok(0));
@@ -247,7 +249,7 @@ mod tests {
     fn shot_names_stay_inside_the_directory() {
         for bad in ["", "../x", "a/b", "A", "x.png", "a b"] {
             let err = super::shot_path(bad).unwrap_err();
-            assert!(err.starts_with("invalid screenshot name"), "{bad}: {err}");
+            assert!(err.to_string().starts_with("invalid screenshot name"), "{bad}: {err}");
         }
     }
 
@@ -257,7 +259,7 @@ mod tests {
             assert!(is_dev_command(command), "{command}");
         }
         assert_eq!(is_dev_command("dev_screenshot"), cfg!(target_os = "linux"));
-        for command in ["list_devices", "send_receive", "decompress_definition", "unknown"] {
+        for command in APP_COMMANDS.iter().chain(&["unknown"]) {
             assert!(!is_dev_command(command), "{command}");
         }
     }

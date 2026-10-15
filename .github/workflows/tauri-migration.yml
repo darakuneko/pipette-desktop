@@ -49,19 +49,20 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
 
-      # The ts-rs export tests in the next step write every declaration
-      # again, so one whose Rust type is gone shows up as deleted below.
-      - name: Clear the generated TypeScript declarations
+      # The export tests in the next step write every file again (the ts-rs
+      # declarations and the app command names), so one whose Rust source is
+      # gone shows up as deleted below.
+      - name: Clear the generated shim files
         run: rm -rf src/tauri-shim/generated
 
       - name: Test
         working-directory: src-tauri
         run: cargo test --workspace --features pipette-app/dev-tools
 
-      # --intent-to-add makes a new declaration show up in the diff too;
+      # --intent-to-add makes a new file show up in the diff too;
       # comparing with HEAD keeps a deleted one in it even when the add
       # stages the deletion.
-      - name: Check the generated TypeScript declarations are committed
+      - name: Check the generated shim files are committed
         run: |
           git add --intent-to-add src/tauri-shim/generated
           git diff --exit-code HEAD -- src/tauri-shim/generated
