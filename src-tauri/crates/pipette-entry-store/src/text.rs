@@ -77,6 +77,12 @@ fn is_js_whitespace(unit: u16) -> bool {
     )
 }
 
+/// [`is_js_whitespace`] for a `char`: every JavaScript whitespace code point
+/// is in the BMP.
+pub(crate) fn is_js_whitespace_char(c: char) -> bool {
+    u16::try_from(u32::from(c)).is_ok_and(is_js_whitespace)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
