@@ -41,15 +41,15 @@ pub struct DeleteRange {
 /// fractional one is truncated, as Buffer.writeUInt32LE stores it. A bucket
 /// above u32::MAX makes writeUInt32LE throw, which aborts the whole apply;
 /// here it is an error with the same effect.
-fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<Vec<u8>, Error> {
-    let mut out = Vec::with_capacity(HIST_BUCKETS * 4);
-    for &value in hist {
+fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<[u8; HIST_BUCKETS * 4], Error> {
+    let mut out = [0u8; HIST_BUCKETS * 4];
+    for (&value, slot) in hist.iter().zip(out.chunks_exact_mut(4)) {
         let clamped = if value.is_finite() && value >= 0.0 { value } else { 0.0 };
         if clamped > f64::from(u32::MAX) {
             return Err(Error::HistogramBucketOutOfRange(value));
         }
         // In range and non-negative, so the cast only drops the fraction.
-        out.extend_from_slice(&(clamped as u32).to_le_bytes());
+        slot.copy_from_slice(&(clamped as u32).to_le_bytes());
     }
     Ok(out)
 }
@@ -88,7 +88,7 @@ pub(crate) fn apply_rows(tx: &Transaction<'_>, rows: &[JsonlRow]) -> Result<Appl
                     "@scopeId": p.scope_id, "@minuteTs": p.minute_ts, "@row": p.row, "@col": p.col,
                     "@layer": p.layer, "@keycode": p.keycode, "@count": p.count,
                     "@tapCount": p.tap_count, "@holdCount": p.hold_count,
-                    "@durHist": dur_hist, "@durSum": p.duration.as_ref().map(|d| d.sum),
+                    "@durHist": dur_hist.as_ref().map(|h| &h[..]), "@durSum": p.duration.as_ref().map(|d| d.sum),
                     "@durSumSq": p.duration.as_ref().map(|d| d.sum_sq),
                     "@appName": p.tags.app_name, "@typingTest": p.tags.typing_test, "@runId": p.tags.run_id,
                     "@updatedAt": common.updated_at, "@isDeleted": deleted(common),
@@ -149,7 +149,7 @@ fn merge_ngrams(
         if with_overlap {
             stmt.execute(named_params! {
                 "@scopeId": p.scope_id, "@minuteTs": p.minute_ts, "@ngramId": id, "@count": entry.count,
-                "@hist": hist, "@sumIki": sum, "@sumSqIki": sum_sq,
+                "@hist": &hist[..], "@sumIki": sum, "@sumSqIki": sum_sq,
                 "@overlapCount": overlap_count, "@overlapN": overlap_n,
                 "@appName": app_name, "@typingTest": typing_test, "@runId": run_id,
                 "@updatedAt": common.updated_at, "@isDeleted": deleted(common),
@@ -157,7 +157,7 @@ fn merge_ngrams(
         } else {
             stmt.execute(named_params! {
                 "@scopeId": p.scope_id, "@minuteTs": p.minute_ts, "@ngramId": id, "@count": entry.count,
-                "@hist": hist, "@sumIki": sum, "@sumSqIki": sum_sq,
+                "@hist": &hist[..], "@sumIki": sum, "@sumSqIki": sum_sq,
                 "@appName": app_name, "@typingTest": typing_test, "@runId": run_id,
                 "@updatedAt": common.updated_at, "@isDeleted": deleted(common),
             })?;
