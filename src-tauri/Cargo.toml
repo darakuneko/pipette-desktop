@@ -51,7 +51,9 @@ tauri-plugin-opener = "=2.7.2"
 # One instance of the app at a time (src/main.rs). On Linux the running app
 # owns the D-Bus name `<identifier>.SingleInstance` on the session bus, so a
 # dev and a bundled build (same identifier) exclude each other. Without a
-# session bus the plugin lets every launch run.
+# session bus (DBUS_SESSION_BUS_ADDRESS unset and no bus at the default
+# socket, or the bus unreachable) every launch runs; a set but unparsable
+# DBUS_SESSION_BUS_ADDRESS makes the plugin panic at startup.
 tauri-plugin-single-instance = "=2.5.2"
 thiserror = "=2.0.21"
 

@@ -132,6 +132,9 @@ fn main() {
     app.run(lifecycle::on_run_event);
 }
 
+/// Starts the log after `build`, that is after the single-instance check, so
+/// a second launch never touches the running app's log; records emitted
+/// while the app is built (plugin setup included) are not written to the file.
 fn start_log(user_data: &Path) {
     if let Err(err) = pipette_logger::init(user_data.join("logs")) {
         log::error!("the log file is unavailable: {err}");
