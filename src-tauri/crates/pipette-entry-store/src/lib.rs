@@ -49,8 +49,8 @@ pub use runtime::{Clock, IdGen, RandomUuid, SystemClock};
 #[cfg(feature = "test-util")]
 pub use runtime::{FixedClock, SequenceIds};
 pub use safe_filename::{
-    is_safe_key, is_safe_pack_id, is_safe_path, is_safe_path_segment, safe_filename, ts_for_export_filename,
-    ts_for_filename,
+    is_safe_key, is_safe_pack_id, is_safe_path, is_safe_path_segment, safe_filename, sanitize_filename,
+    ts_for_export_filename, ts_for_filename,
 };
 pub use store_groups::{EntryStore, FilenameIdRule, RESERVED_FIELDS, StoreGroupDef, V1BodyClockRule};
 pub use text::{trim_js_whitespace, truncate_utf8, truncate_utf8_name_part, utf8_byte_length};

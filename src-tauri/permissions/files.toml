@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/file_commands.rs: saving, exporting and opening files
+# through the native file dialogs. The page never names a path; each command
+# shows its own dialog.
+
+[[set]]
+identifier = "files"
+description = "Saves layouts and exports through a save dialog, opens layouts and JSON files through an open dialog, and writes CSV files into a chosen directory."
+permissions = [
+  "allow-file-save-layout",
+  "allow-file-load-layout",
+  "allow-file-export-keymap-c",
+  "allow-file-export-pdf",
+  "allow-file-export-csv",
+  "allow-file-export-csv-bundle",
+  "allow-file-export-json",
+  "allow-file-sideload-json",
+]

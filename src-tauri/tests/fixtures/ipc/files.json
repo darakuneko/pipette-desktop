@@ -1,0 +1,89 @@
+[
+  {
+    "member": "saveLayout",
+    "args": ["{\"uid\":\"0x1\"}", "My Board"],
+    "command": "file_save_layout",
+    "invokeArgs": {
+      "json": "{\"uid\":\"0x1\"}",
+      "deviceName": "My Board"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "loadLayout",
+    "args": ["Load a Pipette file", ["pipette"]],
+    "command": "file_load_layout",
+    "invokeArgs": {
+      "title": "Load a Pipette file",
+      "extensions": ["pipette"]
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "exportKeymapC",
+    "args": ["const uint16_t keymaps[] = {};\n", "My Board"],
+    "command": "file_export_keymap_c",
+    "invokeArgs": {
+      "content": "const uint16_t keymaps[] = {};\n",
+      "deviceName": "My Board"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "exportPdf",
+    "args": ["JVBERi0=", "My Board"],
+    "command": "file_export_pdf",
+    "invokeArgs": {
+      "base64Data": "JVBERi0=",
+      "deviceName": "My Board"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "exportCsv",
+    "args": ["a,b\n1,2\n", "history"],
+    "command": "file_export_csv",
+    "invokeArgs": {
+      "content": "a,b\n1,2\n",
+      "defaultName": "history"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "exportCsvBundle",
+    "args": [[{ "name": "wpm", "content": "a\n" }]],
+    "command": "file_export_csv_bundle",
+    "invokeArgs": {
+      "files": [{ "name": "wpm", "content": "a\n" }]
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "exportCsvBundle",
+    "args": [[]],
+    "command": "file_export_csv_bundle",
+    "invokeArgs": {
+      "files": []
+    },
+    "response": { "success": false, "error": "no files" }
+  },
+  {
+    "member": "exportJson",
+    "args": ["{}", "definition"],
+    "command": "file_export_json",
+    "invokeArgs": {
+      "content": "{}",
+      "defaultName": "definition"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  },
+  {
+    "member": "sideloadJson",
+    "args": ["Load a definition"],
+    "command": "file_sideload_json",
+    "invokeArgs": {
+      "title": "Load a definition"
+    },
+    "response": { "success": false, "error": "cancelled" }
+  }
+]

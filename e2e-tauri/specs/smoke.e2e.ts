@@ -5,7 +5,9 @@
 // tests share one app session and run in order: each starts where the
 // previous one left the window.
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import {
   closeKeyPopover,
@@ -15,7 +17,9 @@ import {
   HEX_INPUT_SELECTOR,
   invokeCommand,
   openKeycodeHexInput,
+  openOverlayTab,
   openToolsOverlay,
+  respondToFileDialog,
   restartApp,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
@@ -31,6 +35,14 @@ const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
 /** A key the matrix tester shows pressed. */
 const MATRIX_KEY = { row: 2, col: 3 }
 const SECOND_LAUNCH_TIMEOUT_MS = 30_000
+
+/** Writes `keycode` (hex) to the key at `row,col` from the key popover. */
+async function setKeycode(row: number, col: number, keycode: string): Promise<void> {
+  await openKeycodeHexInput(row, col)
+  await $(HEX_INPUT_SELECTOR).setValue(keycode)
+  await $('[data-testid="popover-code-apply"]').click()
+  await closeKeyPopover()
+}
 
 describe('Tauri build smoke', () => {
   it('lists the virtual keyboard and opens its keymap editor, still locked', async () => {
@@ -88,6 +100,46 @@ describe('Tauri build smoke', () => {
     await browser.waitUntil(async () => (await key.getAttribute('data-pressed')) === null, {
       timeoutMsg: 'the matrix tester did not show the key released',
     })
+  })
+  // Loading a layout writes the whole keymap, which asks to unlock a locked
+  // keyboard; the previous test unlocked it.
+  it('saves the layout to a .vil file through the file dialog and loads it back from the file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pipette-e2e-files-'))
+    const path = join(dir, 'layout.vil')
+    try {
+      // The previous test left the key tester on; the popover needs it off.
+      await openToolsOverlay()
+      const keyTester = $('[data-testid="overlay-matrix-toggle"]')
+      if ((await keyTester.getAttribute('aria-checked')) === 'true') await keyTester.click()
+
+      await setKeycode(0, 0, KC_Z)
+      await openOverlayTab('data')
+      await respondToFileDialog(path)
+      await $('[data-testid="layout-store-current-export-vil"]').click()
+      await $('[data-testid="layout-store-exported"]').waitForDisplayed()
+      // vial-gui's format, with QMK keycode names.
+      const vil = JSON.parse(readFileSync(path, 'utf8')) as { layout: unknown[][][] }
+      expect(vil.layout[0][0][0]).toBe('KC_Z')
+
+      await setKeycode(0, 0, KC_X)
+      await openToolsOverlay()
+      await respondToFileDialog(path)
+      await $('[data-testid="overlay-import-vil"]').click()
+      // The import status sits in the Import / Save tab, drawn but hidden.
+      await browser.waitUntil(
+        async () => {
+          const status = $('[data-testid="layout-store-file-status"]')
+          return (await status.isExisting()) && ((await status.getAttribute('class')) ?? '').includes('text-accent')
+        },
+        { timeoutMsg: 'the layout was not imported' },
+      )
+
+      await openKeycodeHexInput(0, 0)
+      expect((await $(HEX_INPUT_SELECTOR).getValue()).toUpperCase()).toBe(KC_Z)
+      await closeKeyPopover()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

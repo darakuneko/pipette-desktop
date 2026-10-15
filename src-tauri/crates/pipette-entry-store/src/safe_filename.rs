@@ -11,6 +11,8 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
+use crate::text::is_js_whitespace_char;
+
 /// Runs of characters other than a Unicode letter or digit, `_` and `-`.
 static UNSAFE_RUN: LazyLock<Regex> = LazyLock::new(|| {
     #[allow(clippy::unwrap_used)] // a literal pattern
@@ -24,6 +26,21 @@ pub fn safe_filename(name: &str, fallback: &str) -> String {
     let replaced = UNSAFE_RUN.replace_all(name, "_");
     let trimmed = replaced.trim_matches('_');
     if trimmed.is_empty() { fallback.to_owned() } else { trimmed.to_owned() }
+}
+
+/// `name` as a file name the way the Electron main process cleans a device
+/// or export name (`sanitizeFilename` of src/main/file-io.ts and
+/// src/main/snapshot-store.ts): each of `/ \ : * ? " < > |` becomes `_`,
+/// the C0 control characters go, then the trailing run of `.`, then
+/// JavaScript whitespace at both ends; `keyboard` when nothing is left.
+pub fn sanitize_filename(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .filter(|c| !matches!(c, '\u{0}'..='\u{1f}'))
+        .map(|c| if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c })
+        .collect();
+    let trimmed = cleaned.trim_end_matches('.').trim_matches(is_js_whitespace_char);
+    if trimmed.is_empty() { "keyboard".to_owned() } else { trimmed.to_owned() }
 }
 
 /// Whether `segment` is safe as a single path segment (a uid, a run id, a
@@ -111,6 +128,31 @@ mod tests {
         let ms = 1_785_511_845_123;
         assert_eq!(ts_for_filename(ms), "2026-07-31T15-30-45.123Z");
         assert_eq!(ts_for_export_filename(ms), "2026-07-31-153045");
+    }
+
+    #[test]
+    fn sanitize_filename_cleans_names_as_the_electron_main_process() {
+        // Expected values from sanitizeFilename of src/main/file-io.ts.
+        for (name, expected) in [
+            ("My Board", "My Board"),
+            ("a/b\\c:d*e?f\"g<h>i|j", "a_b_c_d_e_f_g_h_i_j"),
+            ("tab\there\nnl\u{7f}", "tabherenl\u{7f}"),
+            ("name...", "name"),
+            // The dots go before the whitespace, so a dot behind a space stays.
+            ("name. ", "name."),
+            (" x . ", "x ."),
+            ("a.b.c..", "a.b.c"),
+            ("\u{feff}BOM\u{3000}", "BOM"),
+            // U+0085 is not JavaScript whitespace.
+            ("\u{85}nel\u{85}", "\u{85}nel\u{85}"),
+            ("日本語 キーボード", "日本語 キーボード"),
+            ("", "keyboard"),
+            ("...", "keyboard"),
+            ("  ...", "keyboard"),
+            ("..\u{1}", "keyboard"),
+        ] {
+            assert_eq!(sanitize_filename(name), expected, "{name:?}");
+        }
     }
 
     #[test]

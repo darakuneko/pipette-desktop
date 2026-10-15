@@ -5,23 +5,28 @@
 //! `globalThis.__pipetteVirtualDevice`), a log sink, window
 //! screenshots (Linux), and a script hook that runs a local file in the
 //! window once the first page has loaded, so the UI can be driven without a
-//! WebDriver.
+//! WebDriver, and a queue of answers for the file dialogs, so the e2e tests
+//! can save and open files without the native dialog.
 //!
 //! `install` is the only entry point, called through
 //! `dev_commands::install_or_passthrough`. The permissions of these commands are
 //! generated and granted only in these builds (see build.rs and
 //! capabilities/dev/).
 
+use std::collections::VecDeque;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use pipette_hid::ControllerState;
 use serde::Serialize;
 use tauri::ipc::Invoke;
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
-use tauri::{Builder, State, Webview, Wry};
+use tauri::{AppHandle, Builder, Manager, State, Webview, Wry};
 use ts_rs::TS;
 
 use crate::command_error::CommandError;
+use crate::dialog::{DialogProvider, DialogRequest, Dialogs, SystemDialogs};
 use crate::hid_commands::Hid;
 
 include!("../dev_command_names.rs");
@@ -108,6 +113,56 @@ pub fn virtual_device_reset(hid: State<'_, Hid>) {
 #[tauri::command]
 pub fn dev_log(message: String) {
     log::info!("[webview] {message}");
+}
+
+/// Answers for the next file dialogs, in order: the path the user would
+/// choose, or `None` for a dialog the user cancels. Each answer is used
+/// once.
+#[derive(Default)]
+pub struct DialogQueue(Mutex<VecDeque<Option<PathBuf>>>);
+
+impl DialogQueue {
+    fn push(&self, answer: Option<PathBuf>) {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).push_back(answer);
+    }
+
+    fn pop(&self) -> Option<Option<PathBuf>> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).pop_front()
+    }
+}
+
+/// The queue's next answer, or `fallback`'s dialog when the queue is empty,
+/// so a build with these tools still shows the native dialogs when nothing
+/// is queued.
+struct QueuedDialogs<F> {
+    queue: Arc<DialogQueue>,
+    fallback: F,
+}
+
+impl<F: DialogProvider> DialogProvider for QueuedDialogs<F> {
+    fn show(&self, request: DialogRequest) -> Option<PathBuf> {
+        match self.queue.pop() {
+            Some(answer) => {
+                log::info!("[dev] answered the file dialog {:?} from the queue: {answer:?}", request.title);
+                answer
+            }
+            None => self.fallback.show(request),
+        }
+    }
+}
+
+/// Manages the file dialogs as the queue of `dev_dialog_respond` in front of
+/// the system's.
+pub fn manage_queued_dialogs(app: &AppHandle<Wry>, system: SystemDialogs) {
+    let queue = Arc::new(DialogQueue::default());
+    app.manage(Dialogs::new(QueuedDialogs { queue: Arc::clone(&queue), fallback: system }));
+    app.manage(queue);
+}
+
+/// Queues the answer of the next file dialog: `path`, or a cancel for null.
+#[tauri::command]
+pub fn dev_dialog_respond(queue: State<'_, Arc<DialogQueue>>, path: Option<PathBuf>) {
+    queue.push(path);
 }
 
 /// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
@@ -205,6 +260,7 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         virtual_device_get_state,
         virtual_device_reset,
         dev_log,
+        dev_dialog_respond,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]
@@ -281,6 +337,32 @@ mod tests {
         for command in APP_COMMANDS.iter().chain(&["unknown"]) {
             assert!(!is_dev_command(command), "{command}");
         }
+    }
+
+    #[test]
+    fn queued_answers_go_to_the_next_dialogs_in_order_then_the_fallback_answers() {
+        let queue = Arc::new(DialogQueue::default());
+        let fallback_titles = Arc::new(Mutex::new(Vec::new()));
+        let record = Arc::clone(&fallback_titles);
+        let dialogs = QueuedDialogs {
+            queue: Arc::clone(&queue),
+            fallback: move |request: DialogRequest| {
+                record.lock().unwrap().push(request.title);
+                Some(PathBuf::from("/from/the/fallback"))
+            },
+        };
+        let request = |title: &str| DialogRequest {
+            kind: crate::dialog::DialogKind::OpenFile,
+            title: title.to_owned(),
+            filters: Vec::new(),
+        };
+        queue.push(Some(PathBuf::from("/tmp/a.vil")));
+        queue.push(None);
+
+        assert_eq!(dialogs.show(request("first")), Some(PathBuf::from("/tmp/a.vil")));
+        assert_eq!(dialogs.show(request("second")), None);
+        assert_eq!(dialogs.show(request("third")), Some(PathBuf::from("/from/the/fallback")));
+        assert_eq!(*fallback_titles.lock().unwrap(), ["third"]);
     }
 
     #[test]

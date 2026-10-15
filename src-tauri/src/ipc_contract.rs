@@ -14,6 +14,9 @@
 //! below check that it lets the main window's pages call every app command
 //! and nothing else.
 //!
+//! Every file dialog is cancelled, so the file commands answer without
+//! touching the disk.
+//!
 //! The HID service lists only the virtual keyboard. The virtual keyboard
 //! cannot be probed, so behind it sits one scripted hardware keyboard
 //! ([`PROBE_KEYBOARD`]) for the probe commands: it answers each report with
@@ -35,6 +38,7 @@ use tauri::webview::InvokeRequest;
 use tauri::{App, WebviewWindow};
 use tempfile::TempDir;
 
+use crate::dialog::Dialogs;
 use crate::hid_commands::Hid;
 use crate::main_window::{MAIN_WINDOW, main_window_builder};
 use crate::shell::ExternalOpener;
@@ -138,16 +142,17 @@ pub(crate) fn probe_keyboard_service() -> HidService {
 }
 
 /// A fresh app with the app commands, the state they use, `opener` as the
-/// browser and `user_data` as its userData directory (the pending sync
-/// units restored from it, with no delayed writes, and the stores on it),
-/// and the access control
-/// the app's build generates.
+/// browser, file dialogs the user always cancels, `user_data` as its
+/// userData directory (the pending sync units restored from it, with no
+/// delayed writes, and the stores on it), and the access control the app's
+/// build generates.
 fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     let app = mock_builder()
         .manage(Hid(Arc::new(probe_keyboard_service())))
         .manage(config)
         .manage(opener)
+        .manage(Dialogs::new(|_| None))
         .invoke_handler(crate::app_commands())
         .build(tauri::generate_context!(test = true))
         .unwrap();

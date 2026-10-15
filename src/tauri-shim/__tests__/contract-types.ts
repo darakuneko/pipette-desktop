@@ -24,10 +24,14 @@
 import type { DecompressDefinition } from '../../preload/protocol-members'
 import type { VirtualDeviceControllerState } from '../../main/virtual-device/index'
 import type { DeviceInfo, DeviceType } from '../../shared/types/protocol'
+import type { VialAPI } from '../../shared/types/vial-api'
 import type { CompressedDefinition } from '../generated/CompressedDefinition'
+import type { CsvBundleResult } from '../generated/CsvBundleResult'
 import type { DecompressedDefinition } from '../generated/DecompressedDefinition'
 import type { DeviceInfo as GeneratedDeviceInfo } from '../generated/DeviceInfo'
 import type { DeviceType as GeneratedDeviceType } from '../generated/DeviceType'
+import type { FileOpenResult } from '../generated/FileOpenResult'
+import type { FileSaveResult } from '../generated/FileSaveResult'
 import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
 /** `true` when each type is assignable to the other. The tuples stop the
@@ -43,6 +47,12 @@ export type ContractChecks = [
   // src-tauri/src/definition.rs
   Assert<MutuallyAssignable<CompressedDefinition, Parameters<DecompressDefinition>[0]>>,
   Assert<MutuallyAssignable<DecompressedDefinition, Awaited<ReturnType<DecompressDefinition>>>>,
+  // src-tauri/src/file_commands.rs (sideloadJson's result is FileOpenResult
+  // with its text parsed by the shim)
+  Assert<MutuallyAssignable<FileSaveResult, Awaited<ReturnType<VialAPI['saveLayout']>>>>,
+  Assert<MutuallyAssignable<FileSaveResult, Awaited<ReturnType<VialAPI['exportPdf']>>>>,
+  Assert<MutuallyAssignable<FileOpenResult, Awaited<ReturnType<VialAPI['loadLayout']>>>>,
+  Assert<MutuallyAssignable<CsvBundleResult, Awaited<ReturnType<VialAPI['exportCsvBundle']>>>>,
   // src-tauri/src/dev_commands/tools.rs
   Assert<MutuallyAssignable<GeneratedControllerState, VirtualDeviceControllerState>>,
 ]
