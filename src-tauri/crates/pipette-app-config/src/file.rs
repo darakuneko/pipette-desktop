@@ -52,17 +52,25 @@ fn to_store_object(value: Value) -> Object {
     }
 }
 
-/// Writes `store` as conf's `store` setter does. Without its own
-/// `__internal__`, the one in the current file (if it reads) is appended.
-pub fn write_store(path: &Path, mut store: Object) -> Result<(), AppConfigError> {
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
-    }
+/// `store` with the current file's `__internal__` (if the file reads)
+/// appended when it has none of its own, as conf's `store` setter keeps it
+/// for content that does not come from the file.
+pub fn with_current_internal(path: &Path, mut store: Object) -> Object {
     if !store.contains_key(INTERNAL_KEY)
         && let Ok(Value::Object(current)) = read_value(path)
         && let Some(internal) = current.get(INTERNAL_KEY)
     {
         store.insert(INTERNAL_KEY, internal.clone());
+    }
+    store
+}
+
+/// Writes `store` as the whole file. Content read from the file already
+/// holds its `__internal__`; other content goes through
+/// [`with_current_internal`] first.
+pub fn write_store(path: &Path, store: Object) -> Result<(), AppConfigError> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
     }
     let text = pipette_js_json::stringify_with_gap(&Value::Object(store), "\t");
     write_file(path, text.as_bytes())?;

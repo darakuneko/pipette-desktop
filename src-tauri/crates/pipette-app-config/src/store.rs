@@ -10,7 +10,7 @@ use pipette_js_json::{Object, Value};
 
 use crate::AppConfigError;
 use crate::defaults::DEFAULTS;
-use crate::file::{INTERNAL_KEY, read_store, write_store};
+use crate::file::{INTERNAL_KEY, read_store, with_current_internal, write_store};
 
 /// The file name in the userData directory (electron-store's `name`).
 pub const CONFIG_FILE_NAME: &str = "config.json";
@@ -168,7 +168,7 @@ impl AppConfigStore {
     /// current `__internal__` when it has none.
     pub fn replace(&self, config: Object) -> Result<(), AppConfigError> {
         let _guard = self.lock();
-        write_store(&self.path, config)
+        write_store(&self.path, with_current_internal(&self.path, config))
     }
 
     /// `onAppConfigChange`: `listener` gets each key and value
