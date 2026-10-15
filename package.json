@@ -31,7 +31,9 @@
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
     "generate:virtual-device-fixtures": "vitest run --config scripts/virtual-device-fixtures/vitest.config.ts",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
-    "doc:guide": "node docs/build-guide.mjs"
+    "doc:guide": "node docs/build-guide.mjs",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build --bundles appimage,deb"
   },
   "dependencies": {
     "@paymoapp/active-window": "^2.1.4",
@@ -51,6 +53,7 @@
     "@playwright/mcp": "0.0.78",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "2.12.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^9.6.0",
@@ -81,6 +84,7 @@
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
+    "vite": "7.3.1",
     "vitest": "^4.1.10"
   },
   "build": {

@@ -1,12 +1,26 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Cargo workspace for the Rust backend.
-#
-# Library crates live under crates/*. The Tauri application crate is meant to
-# be this directory itself (src-tauri/, the Tauri default): when it is added,
-# a [package] section goes into this same file next to [workspace], which
-# makes the app the root member while crates/* stay members. Until then this
-# is a virtual manifest.
+# Tauri application crate (root package) and the Cargo workspace for the
+# Rust backend. Library crates live under crates/*.
+
+[package]
+name = "pipette-app"
+description = "Pipette desktop shell (Tauri)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+# tauri 2.12 needs a newer toolchain than the library crates.
+rust-version = "1.90"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.1", features = [] }
+
+[lints]
+workspace = true
 
 [workspace]
 resolver = "3"

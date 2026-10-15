@@ -20,3 +20,4 @@ CLAUDE.md
 
 # Rust (Tauri backend)
 src-tauri/target/
+src-tauri/gen/
