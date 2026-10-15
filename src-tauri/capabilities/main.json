@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Permissions of the main window. Empty: the renderer calls no core plugin command.",
+  "windows": ["main"],
+  "permissions": []
+}
