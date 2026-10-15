@@ -1,0 +1,3 @@
+# Written by the ts-rs export tests of src-tauri; the CI checks them against
+# a fresh export byte for byte.
+src/tauri-shim/generated
