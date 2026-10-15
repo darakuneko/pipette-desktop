@@ -2364,6 +2364,7 @@ name = "pipette-logger"
 version = "0.0.0"
 dependencies = [
  "log",
+ "pipette-time",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2382,12 +2383,17 @@ dependencies = [
  "hex",
  "pbkdf2",
  "pipette-sync-format",
+ "pipette-time",
  "regex",
  "serde",
  "serde_json",
  "sha2",
  "thiserror 2.0.21",
 ]
+
+[[package]]
+name = "pipette-time"
+version = "0.0.0"
 
 [[package]]
 name = "pipette-typing-analytics-db"

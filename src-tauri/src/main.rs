@@ -74,7 +74,7 @@ fn main() {
         }
     };
     if let Err(err) = pipette_logger::init(user_data.join("logs")) {
-        eprintln!("the log file is unavailable: {err}");
+        log::error!("the log file is unavailable: {err}");
     }
     log::info!("Pipette starting");
     let hid = Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env())));

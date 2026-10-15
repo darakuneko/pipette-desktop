@@ -12,7 +12,8 @@
 //! (targets starting with `pipette`) are kept from DEBUG up; those of other
 //! crates (Tauri, the WebView) from WARN up, so their debug output does not
 //! fill the files. A panic is logged as an ERROR before the default panic
-//! output.
+//! output. When the log directory cannot be created the logger still
+//! writes to stderr.
 
 mod format;
 mod rotating_file;
@@ -24,8 +25,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
-pub use format::{format_line, format_timestamp, level_name};
-pub use rotating_file::{MAX_FILE_SIZE, MAX_GENERATIONS, RotatingFile, log_file_name};
+pub use format::format_line;
+use rotating_file::{MAX_FILE_SIZE, RotatingFile};
 
 /// Targets of the app's own crates (`pipette_app`, `pipette_hid`, …).
 const OWN_TARGET_PREFIX: &str = "pipette";
@@ -39,7 +40,8 @@ pub enum InitError {
 }
 
 struct FileLogger {
-    file: Mutex<RotatingFile>,
+    /// `None` when the log directory could not be created: stderr only.
+    file: Option<Mutex<RotatingFile>>,
 }
 
 /// Whether a record of `target` at `level` is kept.
@@ -66,7 +68,10 @@ impl Log for FileLogger {
         }
         let line = format_line(now_epoch_ms(), record.level(), &record.args().to_string());
         let _ = std::io::stderr().write_all(line.as_bytes());
-        let result = self.file.lock().unwrap_or_else(std::sync::PoisonError::into_inner).append(&line);
+        let Some(file) = &self.file else {
+            return;
+        };
+        let result = file.lock().unwrap_or_else(std::sync::PoisonError::into_inner).append(&line);
         if let Err(err) = result {
             // Logging must never take the app down; the line is on stderr.
             let _ = writeln!(std::io::stderr(), "failed to write the log file: {err}");
@@ -77,14 +82,16 @@ impl Log for FileLogger {
 }
 
 /// Installs the logger, writing to `log_dir` (created if missing), and the
-/// panic hook. Call once, first thing at startup.
+/// panic hook. Call once, first thing at startup. When `log_dir` cannot be
+/// created the logger and the hook are installed anyway, writing to stderr
+/// only, and the error says why.
 pub fn init(log_dir: PathBuf) -> Result<(), InitError> {
-    std::fs::create_dir_all(&log_dir).map_err(|err| InitError::CreateDir(log_dir.clone(), err))?;
-    let logger = FileLogger { file: Mutex::new(RotatingFile::new(log_dir, MAX_FILE_SIZE)) };
-    log::set_boxed_logger(Box::new(logger)).map_err(|_| InitError::AlreadyInstalled)?;
+    let created = std::fs::create_dir_all(&log_dir);
+    let file = created.is_ok().then(|| Mutex::new(RotatingFile::new(log_dir.clone(), MAX_FILE_SIZE)));
+    log::set_boxed_logger(Box::new(FileLogger { file })).map_err(|_| InitError::AlreadyInstalled)?;
     log::set_max_level(LevelFilter::Debug);
     install_panic_hook();
-    Ok(())
+    created.map_err(|err| InitError::CreateDir(log_dir, err))
 }
 
 fn install_panic_hook() {

@@ -10,6 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 log = { version = "=0.4.34", features = ["std"] }
+pipette-time = { path = "../pipette-time" }
 thiserror = "=2.0.21"
 
 [dev-dependencies]
