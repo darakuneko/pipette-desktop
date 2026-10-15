@@ -8,6 +8,7 @@
     "definition",
     "app-config",
     "shell",
+    "window",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

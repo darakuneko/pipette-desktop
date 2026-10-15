@@ -64,7 +64,6 @@ describe('implemented', () => {
     await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
     await expect(api.i18nPackList()).resolves.toEqual({ success: true, data: [] })
-    await expect(api.windowIsVisible()).resolves.toBe(true)
   })
 
   it('answers the store calls of connecting a keyboard as a fresh install', async () => {

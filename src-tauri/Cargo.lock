@@ -2590,6 +2590,7 @@ name = "pipette-app"
 version = "0.0.0"
 dependencies = [
  "cairo-rs",
+ "gtk",
  "hex",
  "log",
  "lzma-rs",

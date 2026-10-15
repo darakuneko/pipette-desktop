@@ -59,7 +59,8 @@ pub fn apply_stored_zoom<R: Runtime>(store: &AppConfigStore, window: &WebviewWin
     set_zoom(window, clamp_zoom_factor(zoom.as_ref()));
 }
 
-fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
+/// Zooms `window` to `percent` percent.
+pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
     if let Err(err) = window.set_zoom(percent / 100.0) {
         log::error!("[app-config] failed to set the zoom factor: {err}");
     }

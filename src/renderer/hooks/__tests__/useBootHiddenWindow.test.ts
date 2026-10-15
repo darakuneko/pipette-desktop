@@ -1,57 +1,121 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
+// Runs against both vialAPI implementations: a preload-like mock, and the
+// Tauri shim's window members over a mocked Tauri IPC. Both answer from the
+// same spies, so the tests read the same for each.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { useBootHiddenWindow } from '../useBootHiddenWindow'
+import { windowApi } from '../../../tauri-shim/api/window'
 
 async function flushMicrotasks() {
   await act(async () => {
-    await Promise.resolve()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
   })
 }
 
-let windowShow: ReturnType<typeof vi.fn>
-let windowHide: ReturnType<typeof vi.fn>
-let windowStartedHidden: ReturnType<typeof vi.fn>
-let windowIsVisible: ReturnType<typeof vi.fn>
-let onWindowVisibilityChanged: ReturnType<typeof vi.fn>
-let unsubscribeSpy: ReturnType<typeof vi.fn>
-let visibilityCallback: ((visible: boolean) => void) | undefined
+let windowShow: Mock<() => Promise<boolean>>
+let windowHide: Mock<() => Promise<void>>
+let windowStartedHidden: Mock<() => Promise<boolean>>
+let windowIsVisible: Mock<() => Promise<boolean>>
+let unsubscribeSpy: Mock<() => void>
 
-// Simulates a main-process push (win.on('show') / win.on('hide')) arriving
-// at the renderer via onWindowVisibilityChanged.
-function pushWindowVisibility(visible: boolean) {
-  act(() => {
-    visibilityCallback?.(visible)
-  })
+interface Backend {
+  name: string
+  /** Puts a vialAPI whose window members answer from the spies on window. */
+  install: () => void
+  /** A main-process push of the window's visibility (its show / hide). */
+  push: (visible: boolean) => Promise<void>
 }
+
+function installVialAPI(value: object): void {
+  Object.defineProperty(window, 'vialAPI', { value, writable: true, configurable: true })
+}
+
+const preloadLikeMock: Backend = (() => {
+  let visibilityCallback: ((visible: boolean) => void) | undefined
+  return {
+    name: 'preload-like mock',
+    install: () => {
+      visibilityCallback = undefined
+      installVialAPI({
+        windowShow,
+        windowHide,
+        windowStartedHidden,
+        windowIsVisible,
+        onWindowVisibilityChanged: (callback: (visible: boolean) => void) => {
+          visibilityCallback = callback
+          return unsubscribeSpy
+        },
+      })
+    },
+    push: async (visible) => {
+      act(() => {
+        visibilityCallback?.(visible)
+      })
+    },
+  }
+})()
+
+/** The callback table mockIPC installs, as the Tauri runtime keeps it. */
+interface TauriInternals {
+  runCallback: (id: number, data: unknown) => void
+}
+
+const VISIBILITY_EVENT = 'window:visibility-changed'
+
+const shimOverMockIPC: Backend = (() => {
+  let handlers: number[] = []
+  return {
+    name: 'Tauri shim over mockIPC',
+    install: () => {
+      handlers = []
+      mockIPC((cmd, payload) => {
+        const args = payload as { event?: string; handler?: number }
+        switch (cmd) {
+          case 'window_show': return windowShow()
+          case 'window_hide': return windowHide()
+          case 'window_started_hidden': return windowStartedHidden()
+          case 'window_is_visible': return windowIsVisible()
+          case 'plugin:event|listen':
+            if (args.event === VISIBILITY_EVENT && args.handler !== undefined) handlers.push(args.handler)
+            return args.handler
+          case 'plugin:event|unlisten':
+            if (args.event === VISIBILITY_EVENT) unsubscribeSpy()
+            return null
+        }
+        throw new Error(`unexpected command ${cmd}`)
+      })
+      installVialAPI({ ...windowApi })
+    },
+    // The backend's event reaches the listeners the shim has registered by
+    // then; the pending listen calls finish first, as they do before any
+    // event the backend sends after the page subscribed.
+    push: async (visible) => {
+      await act(async () => {
+        for (let i = 0; i < 10; i++) await Promise.resolve()
+        const internals = (window as unknown as { __TAURI_INTERNALS__: TauriInternals }).__TAURI_INTERNALS__
+        for (const handler of handlers) internals.runCallback(handler, { event: VISIBILITY_EVENT, payload: visible })
+      })
+    },
+  }
+})()
 
 beforeEach(() => {
-  windowShow = vi.fn().mockResolvedValue(true)
-  windowHide = vi.fn().mockResolvedValue(undefined)
-  windowStartedHidden = vi.fn().mockResolvedValue(true)
-  // A boot-hidden launch means the BrowserWindow actually starts hidden,
-  // so windowIsVisible() reports false until this hook shows it.
-  windowIsVisible = vi.fn().mockResolvedValue(false)
-  unsubscribeSpy = vi.fn()
-  visibilityCallback = undefined
-  onWindowVisibilityChanged = vi.fn((callback: (visible: boolean) => void) => {
-    visibilityCallback = callback
-    return unsubscribeSpy
-  })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(window as any).vialAPI = {
-    windowShow,
-    windowHide,
-    windowStartedHidden,
-    windowIsVisible,
-    onWindowVisibilityChanged,
-  }
+  windowShow = vi.fn<() => Promise<boolean>>().mockResolvedValue(true)
+  windowHide = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+  windowStartedHidden = vi.fn<() => Promise<boolean>>().mockResolvedValue(true)
+  // A boot-hidden launch means the window actually starts hidden, so
+  // windowIsVisible() reports false until this hook shows it.
+  windowIsVisible = vi.fn<() => Promise<boolean>>().mockResolvedValue(false)
+  unsubscribeSpy = vi.fn<() => void>()
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  clearMocks()
 })
 
 interface Props {
@@ -73,7 +137,11 @@ function renderBootHiddenWindow(initialProps: Partial<Props> = {}) {
   return utils
 }
 
-describe('useBootHiddenWindow', () => {
+describe.each([preloadLikeMock, shimOverMockIPC])('useBootHiddenWindow ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   it('shows the window once on the unlock dialog rising edge during a boot-hidden launch', async () => {
     const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
@@ -103,7 +171,7 @@ describe('useBootHiddenWindow', () => {
     const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
 
-    pushWindowVisibility(true)
+    await backend.push(true)
 
     expect(windowHide).not.toHaveBeenCalled()
 
@@ -178,7 +246,7 @@ describe('useBootHiddenWindow', () => {
     const { rerender } = renderBootHiddenWindow()
 
     // The user reveals the window before windowStartedHidden() resolves.
-    pushWindowVisibility(true)
+    await backend.push(true)
 
     // Now the promise resolves with hidden=true — this must not re-arm the
     // boot-hidden phase using the stale windowIsVisible() snapshot, since
@@ -233,6 +301,7 @@ describe('useBootHiddenWindow', () => {
     await flushMicrotasks()
 
     unmount()
+    await flushMicrotasks()
 
     expect(unsubscribeSpy).toHaveBeenCalledTimes(1)
   })

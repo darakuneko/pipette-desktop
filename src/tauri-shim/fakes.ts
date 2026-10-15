@@ -2,7 +2,7 @@
 // Fixed answers for the VialAPI members the renderer awaits during startup
 // and while connecting a keyboard and opening its editor, for areas the
 // backend does not implement yet: the values of a fresh install (sync
-// signed out, no packs, no saved keyboard data, window visible). Writes
+// signed out, no packs, no saved keyboard data). Writes
 // succeed without storing anything. Each group names the backend area
 // whose commands take its place; coverage.test.ts lists them.
 
@@ -24,11 +24,6 @@ export const fakes = {
 
   // Language packs.
   i18nPackList: () => Promise.resolve({ success: true, data: [] }),
-
-  // Window state and zoom.
-  windowStartedHidden: () => Promise.resolve(false),
-  windowIsVisible: () => Promise.resolve(true),
-  setWindowZoom: () => Promise.resolve(),
 
   // Theme packs.
   themePackList: () => Promise.resolve({ success: true, data: [] }),

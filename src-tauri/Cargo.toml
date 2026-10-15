@@ -52,7 +52,10 @@ thiserror = "=2.0.21"
 
 # The WebKitGTK view behind the Linux window, for the window screenshots of
 # the development tools (src/dev_commands/tools.rs). Same versions as wry uses.
+# gtk (the version tao uses) tells whether the window runs on Wayland, where
+# it cannot read its position (src/main_window.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
+gtk = "=0.18.2"
 webkit2gtk = { version = "=2.0.2", optional = true }
 cairo-rs = { version = "0.18", features = ["png"], optional = true }
 
