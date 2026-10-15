@@ -28,6 +28,7 @@ import {
 } from '../../shared/pipette-settings-normalize'
 import { isSafePathSegment } from '../../shared/utils/safe-filename'
 import { call } from '../ipc'
+import { readAppConfigAfterSets } from './app-config'
 import { enqueue } from '../key-queue'
 
 /** A settings file as read: `content` is null when there is none. */
@@ -66,10 +67,13 @@ async function patchSettings(uid: string, partial: PipetteSettingsPatch): Promis
     if (typeof partial !== 'object' || partial === null || Array.isArray(partial)) {
       throw new Error('Invalid patch')
     }
+    // Read only for a missing file, and once: the defaults a new file
+    // starts from, as they are after the sets made before this patch.
+    let config: AppConfig | undefined
     for (let attempt = 1; attempt <= MAX_PATCH_ATTEMPTS; attempt++) {
       const { content, etag } = await readSettingsFile(uid)
       const existing = content === null ? null : parsePipetteSettings(content)
-      const base = existing ?? newSettingsBase(await call<AppConfig>('app_config_get_all'))
+      const base = existing ?? newSettingsBase((config ??= await readAppConfigAfterSets()))
       const merged = mergeDefined(base, partial)
       validatePrefs(merged)
       if ((await writeSettingsFile(uid, JSON.stringify(settingsToSave(merged)), etag)) === 'written') {

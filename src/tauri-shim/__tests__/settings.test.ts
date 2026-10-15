@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { DEFAULT_APP_CONFIG } from '../../shared/types/app-config'
+import { appConfigApi } from '../api/app-config'
 import { MAX_PATCH_ATTEMPTS, settingsApi } from '../api/settings'
 
 afterEach(() => {
@@ -118,6 +119,56 @@ describe('pipetteSettingsPatch', () => {
     expect(log.filter((cmd) => cmd === 'pipette_settings_write')).toHaveLength(MAX_PATCH_ATTEMPTS)
     expect(log.filter((cmd) => cmd === 'pipette_settings_read')).toHaveLength(MAX_PATCH_ATTEMPTS)
     expect(error).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts a new file from the defaults the app config sets made before it leave', async () => {
+    atFixedTime()
+    let config = { ...DEFAULT_APP_CONFIG }
+    let releaseSet = (): void => {}
+    let file: string | null = null
+    const log: string[] = []
+    mockIPC((cmd, payload) => {
+      const a = payload as Args
+      log.push(cmd)
+      switch (cmd) {
+        case 'app_config_set':
+          return new Promise<null>((resolve) => {
+            releaseSet = () => {
+              config = { ...config, [a.key as string]: JSON.parse(a.value as string) }
+              resolve(null)
+            }
+          })
+        case 'app_config_get_all': return config
+        case 'pipette_settings_read': return { content: file, etag: file ?? 'absent' }
+        case 'pipette_settings_write':
+          file = a.content as string
+          return 'written'
+        default: throw new Error(`unexpected command ${cmd}`)
+      }
+    })
+    const set = appConfigApi.appConfigSet('defaultKeyboardLayout', 'colemak')
+    const patched = settingsApi.pipetteSettingsPatch('0xA', { quickSelect: true })
+    await settle()
+    expect(log).toEqual(['app_config_set', 'pipette_settings_read'])
+    releaseSet()
+    await set
+    await expect(patched).resolves.toEqual({ success: true })
+    expect(JSON.parse(file ?? 'null')).toMatchObject({ keyboardLayout: 'colemak' })
+  })
+
+  it('reads the app config once however many times a missing file conflicts', async () => {
+    let writes = 0
+    const log: string[] = []
+    mockIPC((cmd) => {
+      log.push(cmd)
+      if (cmd === 'app_config_get_all') return DEFAULT_APP_CONFIG
+      if (cmd === 'pipette_settings_read') return { content: null, etag: 'absent' }
+      if (cmd === 'pipette_settings_write') return ++writes < 3 ? 'conflict' : 'written'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    await expect(settingsApi.pipetteSettingsPatch('0xA', { quickSelect: true })).resolves.toEqual({ success: true })
+    expect(log.filter((cmd) => cmd === 'app_config_get_all')).toHaveLength(1)
+    expect(writes).toBe(3)
   })
 
   it('refuses settings the patch makes invalid without writing', async () => {
