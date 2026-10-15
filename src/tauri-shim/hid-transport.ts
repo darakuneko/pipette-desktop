@@ -5,10 +5,10 @@
 // Electron transport to this module, so src/preload/protocol.ts runs in the
 // WebView unchanged.
 
-import { invoke } from '@tauri-apps/api/core'
 import type { ImplementsHidTransport } from '../shared/types/hid-transport'
-import type { DeviceInfo } from '../shared/types/protocol'
+import type { DeviceInfo } from './generated/DeviceInfo'
 import type * as ThisModule from './hid-transport'
+import { call, type CommandName } from './ipc'
 
 // Skips the round trip to the backend while no device is open, as the
 // Electron transport does.
@@ -20,16 +20,7 @@ let deviceOpen = false
 // its mutex.
 let queue: Promise<unknown> = Promise.resolve()
 
-/** Tauri rejects with the command's error string; callers expect an Error. */
-async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(command, args)
-  } catch (err) {
-    throw err instanceof Error ? err : new Error(String(err))
-  }
-}
-
-function enqueue<T>(command: string, args: Record<string, unknown>): Promise<T> {
+function enqueue<T>(command: CommandName, args: { data: number[] }): Promise<T> {
   const result = queue.then(() => call<T>(command, args))
   queue = result.catch(() => {})
   return result

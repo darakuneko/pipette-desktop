@@ -11,7 +11,7 @@ vi.mock('../../preload/protocol', () => ({
   getDefinitionRaw: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
 }))
 
-import { deviceApi } from '../device-api'
+import { deviceApi } from '../api/device'
 
 beforeEach(() => {
   invoke.mockReset()

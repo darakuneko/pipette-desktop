@@ -1,48 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VialAPI members the Tauri backend answers. Each entry is the member's
-// implementation; members not listed here fall back to the stubs built in
-// create-vial-api.ts.
-//
-// The device and protocol members talk to the backend (./device-api), all
-// but probeDevice: probing a device without opening it has no backend
-// command yet, so it is a stub like every other member not listed. The
-// other entries are the calls the renderer awaits during startup and while
-// connecting a keyboard and opening its editor, answered with the values of
-// a fresh install: default app config, sync signed out, no packs, no saved
-// keyboard data, window visible. Writes succeed without storing anything.
+// The VialAPI members the Tauri shim answers: the members the backend
+// implements, one module per domain under ./api, and the fixed answers of
+// ./fakes. Members in neither fall back to the stubs built in
+// create-vial-api.ts; probeDevice is one of them, as probing a device
+// without opening it has no backend command.
 
 import type { VialAPI } from '../shared/types/vial-api'
-import { DEFAULT_APP_CONFIG } from '../shared/types/app-config'
-import { deviceApi } from './device-api'
+import { deviceApi } from './api/device'
+import { fakes } from './fakes'
 
-export const implemented: Partial<VialAPI> = {
+/** The members backed by backend commands, by domain. */
+export const real = {
   ...deviceApi,
+} satisfies Partial<VialAPI>
 
-  appConfigGetAll: () => Promise.resolve({ ...DEFAULT_APP_CONFIG }),
-  appConfigSet: () => Promise.resolve(),
-  trayStatusUpdate: () => Promise.resolve(),
-
-  syncAuthStatus: () => Promise.resolve({ authenticated: false }),
-  syncPasswordStatus: () => Promise.resolve('noPasswordFile'),
-  syncHasPendingChanges: () => Promise.resolve(false),
-  // Signed out there is no cached Drive status yet, which the main process
-  // reports as null.
-  syncFormatStatus: () => Promise.resolve(null),
-
-  notificationFetch: () => Promise.resolve({ success: false }),
-  i18nPackList: () => Promise.resolve({ success: true, data: [] }),
-
-  windowStartedHidden: () => Promise.resolve(false),
-  windowIsVisible: () => Promise.resolve(true),
-  setWindowZoom: () => Promise.resolve(),
-
-  themePackList: () => Promise.resolve({ success: true, data: [] }),
-  keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
-
-  pipetteSettingsGet: () => Promise.resolve(null),
-  pipetteSettingsEnsureDir: () => Promise.resolve({ success: true }),
-  pipetteSettingsPatch: () => Promise.resolve({ success: true }),
-  keyboardMetaNameIfMissing: () => Promise.resolve(),
-  snapshotStoreList: () => Promise.resolve({ success: true, entries: [] }),
-  typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
-}
+export const implemented: Partial<VialAPI> = { ...real, ...fakes }

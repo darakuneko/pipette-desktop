@@ -1,0 +1,108 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// @vitest-environment jsdom
+// Replays the invoke fixtures (src-tauri/tests/fixtures/ipc/<domain>.json)
+// against the shim: calling `member` with `args` invokes `command` with
+// `invokeArgs` and nothing else, and resolves with `response`. The Rust
+// tests (src-tauri/src/ipc_contract.rs) check the same entries against the
+// commands' argument and return types.
+//
+// `member` is a VialAPI member, or `<module>.<export>` for a shim function
+// that is not one.
+
+import { readdirSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
+import { APP_COMMANDS } from '../generated/app-command-names'
+
+interface Entry {
+  member: string
+  args: unknown[]
+  command: string
+  invokeArgs: Record<string, unknown>
+  response: unknown
+}
+
+const FIXTURE_DIR = resolve(__dirname, '../../../src-tauri/tests/fixtures/ipc')
+
+const entries: Entry[] = readdirSync(FIXTURE_DIR)
+  .filter((name) => name.endsWith('.json'))
+  .sort()
+  .flatMap((name) => JSON.parse(readFileSync(resolve(FIXTURE_DIR, name), 'utf8')) as Entry[])
+
+interface Shim {
+  device: typeof import('../api/device')
+  transport: typeof import('../hid-transport')
+}
+
+/** Fresh modules for each entry: the transport keeps the open flag. */
+async function load(): Promise<Shim> {
+  vi.resetModules()
+  return { device: await import('../api/device'), transport: await import('../hid-transport') }
+}
+
+interface Caller {
+  /** Puts the shim in the state the call needs, before the calls are recorded. */
+  setup?: (shim: Shim) => Promise<unknown>
+  /** Calls the member; a member that resolves with nothing resolves with undefined here. */
+  run: (shim: Shim, args: unknown[]) => Promise<unknown>
+  /** The member resolves with nothing, whatever the command responds. */
+  void?: true
+}
+
+const bytes = (value: unknown): Uint8Array => Uint8Array.from(value as number[])
+
+const CALLERS: Record<string, Caller> = {
+  listDevices: { run: ({ device }) => device.deviceApi.listDevices() },
+  openDevice: {
+    run: ({ device }, [vendorId, productId]) => device.deviceApi.openDevice(vendorId as number, productId as number),
+  },
+  closeDevice: { run: ({ device }) => device.deviceApi.closeDevice(), void: true },
+  // A closed transport answers false without asking the backend.
+  isDeviceOpen: {
+    setup: ({ device }) => device.deviceApi.openDevice(1, 2),
+    run: ({ device }) => device.deviceApi.isDeviceOpen(),
+  },
+  'hid-transport.sendReceive': {
+    run: async ({ transport }, [data]) => Array.from(await transport.sendReceive(bytes(data))),
+  },
+  'hid-transport.send': { run: ({ transport }, [data]) => transport.send(bytes(data)), void: true },
+  'device.decompressDefinition': {
+    run: ({ device }, [data]) => device.decompressDefinition(data as number[]),
+  },
+}
+
+afterEach(() => {
+  clearMocks()
+})
+
+describe('invoke fixtures', () => {
+  it('cover every app command', () => {
+    const commands = new Set(entries.map((entry) => entry.command))
+    for (const command of APP_COMMANDS) {
+      expect(commands.has(command), command).toBe(true)
+    }
+  })
+
+  it.each(entries.map((entry) => [`${entry.member} (${entry.command})`, entry] as const))(
+    '%s invokes the command with the recorded arguments and resolves with the response',
+    async (_name, entry) => {
+      const caller = CALLERS[entry.member]
+      expect(caller, `no caller for ${entry.member}`).toBeDefined()
+      const calls: [string, unknown][] = []
+      mockIPC((cmd, payload) => {
+        calls.push([cmd, payload])
+        if (cmd === entry.command) return entry.response
+        if (cmd === 'open_device') return true
+        throw new Error(`unexpected command ${cmd}`)
+      })
+      const shim = await load()
+      await caller.setup?.(shim)
+      calls.length = 0
+
+      const result = await caller.run(shim, entry.args)
+      expect(calls).toEqual([[entry.command, entry.invokeArgs]])
+      expect(result).toEqual(caller.void ? undefined : entry.response)
+    },
+  )
+})
