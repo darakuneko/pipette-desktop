@@ -298,7 +298,8 @@ describe('sync format vectors', () => {
   })
 
   it("records this machine's machineId(true)", async () => {
-    const actual = await vi.importActual<typeof import('node-machine-id')>('node-machine-id')
+    // node-machine-id is CommonJS, so its exports arrive as `default`.
+    const actual = await vi.importActual<{ default: typeof import('node-machine-id') }>('node-machine-id')
     const machineId = await actual.default.machineId(true)
     writeJsonFixture(NODE_MACHINE_ID_PATH, { machineId })
   })

@@ -5,5 +5,5 @@
   // src/shared is intentionally included by both main and renderer projects
   // so it is checked against both runtime environments.
   "files": [],
-  "references": [{ "path": "./tsconfig.main.json" }, { "path": "./tsconfig.renderer.json" }]
+  "references": [{ "path": "./tsconfig.main.json" }, { "path": "./tsconfig.renderer.json" }, { "path": "./tsconfig.scripts.json" }]
 }
