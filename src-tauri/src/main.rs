@@ -20,6 +20,7 @@ mod hid_commands;
 #[cfg(test)]
 mod ipc_contract;
 mod lifecycle;
+mod main_window;
 mod navigation;
 mod shell;
 mod shutdown;
@@ -28,8 +29,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use pipette_hid::{HidService, VirtualDeviceMode};
+use tauri::Runtime;
 use tauri::ipc::Invoke;
-use tauri::{App, Runtime, WebviewWindowBuilder, Wry};
 
 use crate::hid_commands::Hid;
 use crate::shell::ExternalOpener;
@@ -49,25 +50,6 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         definition::decompress_definition,
         shell::open_external,
     ]
-}
-
-/// The label of the app's one window, the only window the capabilities
-/// grant the commands to.
-pub const MAIN_WINDOW: &str = "main";
-
-/// Creates the main window from its entry in tauri.conf.json (which has
-/// `create: false`, so Tauri leaves it to this), held to the app's own pages.
-fn create_main_window(app: &App<Wry>) -> Result<(), Box<dyn std::error::Error>> {
-    let config = app
-        .config()
-        .app
-        .windows
-        .iter()
-        .find(|window| window.label == MAIN_WINDOW)
-        .ok_or("tauri.conf.json has no main window")?;
-    let builder = WebviewWindowBuilder::from_config(app.handle(), config)?;
-    navigation::guard(builder, navigation::dev_url(app.config())).build()?;
-    Ok(())
 }
 
 /// The userData directory (`pipette_fs::user_data_dir`), the root of all the
@@ -113,7 +95,7 @@ fn main() {
         .manage(UserDataDir(user_data))
         .manage(ExternalOpener::system())
         .setup(|app| {
-            create_main_window(app)?;
+            main_window::main_window_builder(app.handle())?.build()?;
             lifecycle::setup(app);
             Ok(())
         })

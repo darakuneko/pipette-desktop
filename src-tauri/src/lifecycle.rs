@@ -129,7 +129,7 @@ fn build_tray(app: &App<Wry>) -> tauri::Result<()> {
 
 /// Restores, shows and focuses the main window.
 fn show_main_window(app: &AppHandle<Wry>) {
-    let Some(window) = app.get_webview_window("main") else {
+    let Some(window) = app.get_webview_window(crate::main_window::MAIN_WINDOW) else {
         return;
     };
     let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());

@@ -25,8 +25,14 @@ fn same_origin(a: &Url, b: &Url) -> bool {
         && a.port_or_known_default() == b.port_or_known_default()
 }
 
-/// The development server the window loads, in the builds that load it
-/// (`cfg(dev)`, set by tauri-build when the bundled pages are not embedded).
+/// The development server, in the builds whose window loads it. tauri-build
+/// sets `cfg(dev)` exactly when the tauri crate is built without its
+/// custom-protocol feature, which is also when Tauri loads `build.devUrl`
+/// instead of the embedded pages. `tauri build`, which makes every bundle,
+/// enables custom-protocol, so no bundled build counts the dev server as the
+/// app's. The release profile alone is not the condition: `cargo build
+/// --release` without custom-protocol keeps `cfg(dev)` and loads the dev
+/// server.
 pub fn dev_url(config: &tauri::Config) -> Option<Url> {
     if cfg!(dev) { config.build.dev_url.clone() } else { None }
 }
@@ -101,5 +107,13 @@ mod tests {
         ] {
             assert!(!is_app_url(&url(page), Some(&dev)), "{page}");
         }
+    }
+
+    #[test]
+    fn the_dev_server_counts_only_where_the_window_loads_it() {
+        let mut config = tauri::Config::default();
+        config.build.dev_url = Some(url("http://localhost:5173"));
+        let expected = if cfg!(dev) { Some(url("http://localhost:5173")) } else { None };
+        assert_eq!(dev_url(&config), expected);
     }
 }
