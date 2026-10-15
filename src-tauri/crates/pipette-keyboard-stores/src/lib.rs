@@ -2,6 +2,8 @@
 //! The per-keyboard stores under the userData directory, writing the same
 //! files as the Electron build:
 //!
+//! - the favorites of each type (`sync/favorites/{type}`, the sync unit of
+//!   the same name) of src/main/favorite-store.ts;
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
 //!   `meta/keyboard-names`) of src/main/sync/keyboard-meta.ts: the name a
 //!   keyboard gets when it connects, and the name a snapshot save or the
@@ -10,17 +12,24 @@
 //!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts.
 //!
 //! Every store works through a [`StoreContext`]: the userData directory,
-//! the clock, the process-wide write locks shared by all stores, and the
-//! [`ChangeNotifier`] each change of a sync unit is reported to.
+//! the clock, the ids of new entries, the process-wide write locks shared
+//! by all stores, and the [`ChangeNotifier`] each change of a sync unit is
+//! reported to.
 
+mod favorites;
 mod keyboard_meta;
 mod stored_keyboards;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use pipette_entry_store::{Clock, WriteLocks};
+use pipette_entry_store::{Clock, IdGen, RandomUuid, WriteLocks};
 
+pub use favorites::{
+    FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, favorite_response_json,
+    import_favorites, list_favorites, load_favorite, read_favorites_for_export, rename_favorite,
+    save_favorite, set_favorite_hub_post_id, set_favorite_hub_private,
+};
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
@@ -60,6 +69,7 @@ pub enum StoreError {
 pub struct StoreContext {
     user_data: PathBuf,
     clock: Arc<dyn Clock>,
+    ids: Arc<dyn IdGen>,
     locks: Arc<WriteLocks>,
     notifier: Arc<dyn ChangeNotifier>,
 }
@@ -67,14 +77,22 @@ pub struct StoreContext {
 impl StoreContext {
     /// `locks` must be the one set of write locks of the process, shared by
     /// every store (and the sync merges), so the files of a key are written
-    /// one task at a time.
+    /// one task at a time. New entries get random UUIDs ([`Self::with_ids`]
+    /// sets other ids).
     pub fn new(
         user_data: impl Into<PathBuf>,
         clock: Arc<dyn Clock>,
         locks: Arc<WriteLocks>,
         notifier: Arc<dyn ChangeNotifier>,
     ) -> Self {
-        Self { user_data: user_data.into(), clock, locks, notifier }
+        Self { user_data: user_data.into(), clock, ids: Arc::new(RandomUuid), locks, notifier }
+    }
+
+    /// The context with `ids` as the source of new entry ids.
+    #[must_use]
+    pub fn with_ids(mut self, ids: Arc<dyn IdGen>) -> Self {
+        self.ids = ids;
+        self
     }
 
     pub fn user_data(&self) -> &Path {
@@ -87,6 +105,10 @@ impl StoreContext {
 
     fn now_ms(&self) -> i64 {
         self.clock.now_ms()
+    }
+
+    fn new_id(&self) -> String {
+        self.ids.new_id()
     }
 
     fn notify(&self, unit: &str) {
