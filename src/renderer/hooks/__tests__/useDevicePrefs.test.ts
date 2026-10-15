@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
+import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { useDevicePrefs } from '../useDevicePrefs'
 import type { PipetteSettingsPatch, TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
+import type { VialAPI } from '../../../shared/types/vial-api'
+import { settingsApi } from '../../../tauri-shim/api/settings'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 
 // Mock vialAPI for IPC calls
@@ -24,14 +27,79 @@ beforeEach(() => {
   mockPipetteSettingsPatch.mockResolvedValue({ success: true })
 })
 
+afterEach(() => {
+  clearMocks()
+})
+
+type SettingsMembers = Pick<VialAPI, 'pipetteSettingsGet' | 'pipetteSettingsPatch' | 'pipetteSettingsEnsureDir'>
+
+/** The Tauri shim's settings members over a mocked Tauri IPC that keeps
+ *  each keyboard's file text and compares etags as the backend does. The
+ *  spies see each member call: the file a read finds is what
+ *  mockPipetteSettingsGet answers for the get being made, a patch is
+ *  recorded by mockPipetteSettingsPatch and written by the shim (the hook
+ *  ignores what a patch answers), and creating the directory answers what
+ *  mockPipetteSettingsEnsureDir does. */
+function tauriSettingsMembers(): SettingsMembers {
+  const files = new Map<string, string>()
+  mockIPC(async (cmd, payload) => {
+    const { uid, content, etag } = (payload ?? {}) as Record<string, string>
+    switch (cmd) {
+      case 'app_config_get_all': return window.vialAPI.appConfigGetAll()
+      case 'pipette_settings_read': return { content: files.get(uid) ?? null, etag: files.get(uid) ?? 'absent' }
+      case 'pipette_settings_write':
+        if (etag !== (files.get(uid) ?? 'absent')) return 'conflict'
+        files.set(uid, content)
+        return 'written'
+      case 'pipette_settings_ensure_dir': {
+        const result = await mockPipetteSettingsEnsureDir(uid)
+        if (!result.success) throw 'ensure failed'
+        return null
+      }
+      default: throw new Error(`unexpected command ${cmd}`)
+    }
+  })
+  return {
+    pipetteSettingsGet: async (uid) => {
+      const stored = await mockPipetteSettingsGet(uid).catch(() => null)
+      if (stored == null) files.delete(uid)
+      else files.set(uid, JSON.stringify(stored))
+      return settingsApi.pipetteSettingsGet(uid)
+    },
+    pipetteSettingsPatch: (uid, partial) => {
+      void Promise.resolve(mockPipetteSettingsPatch(uid, partial)).catch(() => {})
+      return settingsApi.pipetteSettingsPatch(uid, partial)
+    },
+    pipetteSettingsEnsureDir: (uid) => settingsApi.pipetteSettingsEnsureDir(uid),
+  }
+}
+
+// The hook runs on both vialAPI implementations: a preload-like mock whose
+// members are the spies, and the Tauri shim (tauriSettingsMembers).
+// `anyStoredValue`: the hook gets whatever mockPipetteSettingsGet answers.
+// The shim, like the Electron handler, answers null for settings the
+// content rules refuse (src/shared/pipette-settings-normalize.ts), so the
+// tests of the hook's own checks of such values run on the mock only.
+const BACKENDS: { name: string; members: () => SettingsMembers; anyStoredValue: boolean }[] = [
+  {
+    name: 'preload-like mock',
+    anyStoredValue: true,
+    members: () => ({
+      pipetteSettingsGet: mockPipetteSettingsGet,
+      pipetteSettingsPatch: mockPipetteSettingsPatch,
+      pipetteSettingsEnsureDir: mockPipetteSettingsEnsureDir,
+    }),
+  },
+  { name: 'Tauri shim over mockIPC', members: tauriSettingsMembers, anyStoredValue: false },
+]
+let settingsMembers = BACKENDS[0].members
+
 function setupMocks(configOverrides: Parameters<typeof setupAppConfigMock>[0] = {}) {
   const mocks = setupAppConfigMock(configOverrides)
   Object.defineProperty(window, 'vialAPI', {
     value: {
       ...vialAPIMock(),
-      pipetteSettingsGet: mockPipetteSettingsGet,
-      pipetteSettingsPatch: mockPipetteSettingsPatch,
-      pipetteSettingsEnsureDir: mockPipetteSettingsEnsureDir,
+      ...settingsMembers(),
     },
     writable: true,
     configurable: true,
@@ -39,2833 +107,2839 @@ function setupMocks(configOverrides: Parameters<typeof setupAppConfigMock>[0] = 
   return mocks
 }
 
-describe('useDevicePrefs', () => {
-  describe('defaults', () => {
-    it('returns qwerty and true as initial defaults', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.defaultLayout).toBe('qwerty')
-      expect(result.current.defaultAutoAdvance).toBe(true)
-    })
-
-    it('reads stored default layout from config', async () => {
-      setupMocks({ defaultKeyboardLayout: 'dvorak' })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.defaultLayout).toBe('dvorak')
-    })
-
-    it('reads stored default autoAdvance from config', async () => {
-      setupMocks({ defaultAutoAdvance: false })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.defaultAutoAdvance).toBe(false)
-    })
-
-    it('setDefaultLayout persists via IPC', async () => {
-      const { mockAppConfigSet } = setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      act(() => {
-        result.current.setDefaultLayout('colemak')
-      })
-      expect(result.current.defaultLayout).toBe('colemak')
-      expect(mockAppConfigSet).toHaveBeenCalledWith('defaultKeyboardLayout', 'colemak')
-    })
-
-    it('setDefaultAutoAdvance persists via IPC', async () => {
-      const { mockAppConfigSet } = setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      act(() => {
-        result.current.setDefaultAutoAdvance(false)
-      })
-      expect(result.current.defaultAutoAdvance).toBe(false)
-      expect(mockAppConfigSet).toHaveBeenCalledWith('defaultAutoAdvance', false)
-    })
+describe.each(BACKENDS)('$name', (backend) => {
+  beforeEach(() => {
+    settingsMembers = backend.members
   })
 
-  describe('applyDevicePrefs', () => {
-    it('applies in-memory defaults for a new device without writing settings', async () => {
-      setupMocks({ defaultKeyboardLayout: 'dvorak', defaultAutoAdvance: false })
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+  describe('useDevicePrefs', () => {
+    describe('defaults', () => {
+      it('returns qwerty and true as initial defaults', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.defaultLayout).toBe('qwerty')
+        expect(result.current.defaultAutoAdvance).toBe(true)
       })
 
-      expect(result.current.layout).toBe('dvorak')
-      expect(result.current.autoAdvance).toBe(false)
-      expect(result.current.layerNames).toEqual([])
+      it('reads stored default layout from config', async () => {
+        setupMocks({ defaultKeyboardLayout: 'dvorak' })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.defaultLayout).toBe('dvorak')
+      })
 
-      expect(mockPipetteSettingsGet).toHaveBeenCalledWith('0xAABB')
-      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-      expect(mockPipetteSettingsEnsureDir).toHaveBeenCalledWith('0xAABB')
+      it('reads stored default autoAdvance from config', async () => {
+        setupMocks({ defaultAutoAdvance: false })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.defaultAutoAdvance).toBe(false)
+      })
+
+      it('setDefaultLayout persists via IPC', async () => {
+        const { mockAppConfigSet } = setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        act(() => {
+          result.current.setDefaultLayout('colemak')
+        })
+        expect(result.current.defaultLayout).toBe('colemak')
+        expect(mockAppConfigSet).toHaveBeenCalledWith('defaultKeyboardLayout', 'colemak')
+      })
+
+      it('setDefaultAutoAdvance persists via IPC', async () => {
+        const { mockAppConfigSet } = setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        act(() => {
+          result.current.setDefaultAutoAdvance(false)
+        })
+        expect(result.current.defaultAutoAdvance).toBe(false)
+        expect(mockAppConfigSet).toHaveBeenCalledWith('defaultAutoAdvance', false)
+      })
     })
 
-    it('restores existing per-device prefs from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'colemak',
-        autoAdvance: false,
-        layerNames: ['Base', 'Fn'],
+    describe('applyDevicePrefs', () => {
+      it('applies in-memory defaults for a new device without writing settings', async () => {
+        setupMocks({ defaultKeyboardLayout: 'dvorak', defaultAutoAdvance: false })
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.layout).toBe('dvorak')
+        expect(result.current.autoAdvance).toBe(false)
+        expect(result.current.layerNames).toEqual([])
+
+        expect(mockPipetteSettingsGet).toHaveBeenCalledWith('0xAABB')
+        expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+        expect(mockPipetteSettingsEnsureDir).toHaveBeenCalledWith('0xAABB')
       })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+      it('restores existing per-device prefs from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'colemak',
+          autoAdvance: false,
+          layerNames: ['Base', 'Fn'],
+        })
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.layout).toBe('colemak')
+        expect(result.current.autoAdvance).toBe(false)
+        expect(result.current.layerNames).toEqual(['Base', 'Fn'])
+        expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+        expect(mockPipetteSettingsEnsureDir).not.toHaveBeenCalled()
       })
 
-      expect(result.current.layout).toBe('colemak')
-      expect(result.current.autoAdvance).toBe(false)
-      expect(result.current.layerNames).toEqual(['Base', 'Fn'])
-      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-      expect(mockPipetteSettingsEnsureDir).not.toHaveBeenCalled()
+      it('does not overwrite existing per-device prefs with defaults', async () => {
+        setupMocks({ defaultKeyboardLayout: 'dvorak' })
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'german',
+          autoAdvance: true,
+          layerNames: [],
+        })
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.layout).toBe('german')
+      })
     })
 
-    it('does not overwrite existing per-device prefs with defaults', async () => {
-      setupMocks({ defaultKeyboardLayout: 'dvorak' })
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'german',
-        autoAdvance: true,
-        layerNames: [],
+    describe('per-device setters', () => {
+      it('setLayout saves per-device prefs via IPC after applyDevicePrefs', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+        act(() => {
+          result.current.setLayout('french')
+        })
+
+        expect(result.current.layout).toBe('french')
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          _rev: 1,
+          keyboardLayout: 'french',
+        }))
       })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+      it('setAutoAdvance saves per-device prefs via IPC after applyDevicePrefs', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+        act(() => {
+          result.current.setAutoAdvance(false)
+        })
+
+        expect(result.current.autoAdvance).toBe(false)
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          _rev: 1,
+          autoAdvance: false,
+        }))
       })
 
-      expect(result.current.layout).toBe('german')
-    })
-  })
+      it('setLayerNames saves via IPC and updates state', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+        act(() => {
+          result.current.setLayerNames(['Base', 'Nav', 'Sym'])
+        })
 
-  describe('per-device setters', () => {
-    it('setLayout saves per-device prefs via IPC after applyDevicePrefs', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setLayout('french')
-      })
-
-      expect(result.current.layout).toBe('french')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        _rev: 1,
-        keyboardLayout: 'french',
-      }))
-    })
-
-    it('setAutoAdvance saves per-device prefs via IPC after applyDevicePrefs', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setAutoAdvance(false)
+        expect(result.current.layerNames).toEqual(['Base', 'Nav', 'Sym'])
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          _rev: 1,
+          layerNames: ['Base', 'Nav', 'Sym'],
+        }))
       })
 
-      expect(result.current.autoAdvance).toBe(false)
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        _rev: 1,
-        autoAdvance: false,
-      }))
-    })
+      it('setLayout leaves layerNames out of the patch', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: ['Base', 'Fn'],
+        })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+        act(() => {
+          result.current.setLayout('dvorak')
+        })
 
-    it('setLayerNames saves via IPC and updates state', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        const call = mockPipetteSettingsPatch.mock.calls[0]
+        expect(call[1]).not.toHaveProperty('layerNames')
+        expect(result.current.layerNames).toEqual(['Base', 'Fn'])
       })
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setLayerNames(['Base', 'Nav', 'Sym'])
-      })
-
-      expect(result.current.layerNames).toEqual(['Base', 'Nav', 'Sym'])
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        _rev: 1,
-        layerNames: ['Base', 'Nav', 'Sym'],
-      }))
-    })
-
-    it('setLayout leaves layerNames out of the patch', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: ['Base', 'Fn'],
-      })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setLayout('dvorak')
-      })
-
-      const call = mockPipetteSettingsPatch.mock.calls[0]
-      expect(call[1]).not.toHaveProperty('layerNames')
-      expect(result.current.layerNames).toEqual(['Base', 'Fn'])
-    })
-  })
-
-  describe('invalid data fallback', () => {
-    // After the Key Labels migration any non-empty id is accepted; the
-    // store may still load it asynchronously after a hub download. Tests
-    // below reflect that "the saved id wins" rule.
-    it('keeps any non-empty string for default layout (including unknown ids)', async () => {
-      setupMocks({ defaultKeyboardLayout: 'invalid-layout' })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.defaultLayout).toBe('invalid-layout')
     })
 
-    it('keeps any non-empty layout id from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'nonexistent',
-        autoAdvance: false,
-        layerNames: [],
-      } as { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] })
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+    describe('invalid data fallback', () => {
+      // After the Key Labels migration any non-empty id is accepted; the
+      // store may still load it asynchronously after a hub download. Tests
+      // below reflect that "the saved id wins" rule.
+      it('keeps any non-empty string for default layout (including unknown ids)', async () => {
+        setupMocks({ defaultKeyboardLayout: 'invalid-layout' })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.defaultLayout).toBe('invalid-layout')
       })
-      expect(result.current.layout).toBe('nonexistent')
-      expect(result.current.autoAdvance).toBe(false)
+
+      it('keeps any non-empty layout id from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'nonexistent',
+          autoAdvance: false,
+          layerNames: [],
+        } as { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] })
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.layout).toBe('nonexistent')
+        expect(result.current.autoAdvance).toBe(false)
+      })
+
+      it('keeps the per-device layout id even when the configured default differs', async () => {
+        setupMocks({ defaultKeyboardLayout: 'configured-default' })
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'nonexistent',
+          autoAdvance: false,
+          layerNames: [],
+        } as { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] })
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.layout).toBe('nonexistent')
+        expect(result.current.autoAdvance).toBe(false)
+      })
+
+      it('filters out malformed typingTestResults from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestResults: [
+            { date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30 },
+            null,
+            { wpm: 50 },
+            'not-an-object',
+            42,
+            { date: '2024-01-02', wpm: 80, accuracy: 97, wordCount: 30, correctChars: 120, incorrectChars: 3, durationSeconds: 25 },
+          ],
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        // Only the 2 valid entries should survive
+        expect(result.current.typingTestResults).toHaveLength(2)
+        expect(result.current.typingTestResults[0].wpm).toBe(60)
+        expect(result.current.typingTestResults[1].wpm).toBe(80)
+      })
+
+      it('round-trips a valid typingTestResults.mistakes field', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestResults: [
+            {
+              date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+              mistakes: { a: 2, shi: 1 },
+            },
+          ],
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestResults).toHaveLength(1)
+        expect(result.current.typingTestResults[0].mistakes).toEqual({ a: 2, shi: 1 })
+      })
+
+      it('drops a malformed typingTestResults.mistakes field but keeps the rest of the result', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestResults: [
+            {
+              date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+              mistakes: { a: 'not-a-number' },
+            },
+            {
+              date: '2024-01-02', wpm: 70, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
+              mistakes: ['not', 'an', 'object'],
+            },
+          ],
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestResults).toHaveLength(2)
+        expect(result.current.typingTestResults[0].wpm).toBe(60)
+        expect(result.current.typingTestResults[0].mistakes).toBeUndefined()
+        expect(result.current.typingTestResults[1].wpm).toBe(70)
+        expect(result.current.typingTestResults[1].mistakes).toBeUndefined()
+      })
+
+      it('round-trips a valid typingTestResults kspcKeystrokes/kspcChars pair', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestResults: [
+            {
+              date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+              kspcKeystrokes: 6, kspcChars: 4,
+            },
+          ],
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestResults).toHaveLength(1)
+        expect(result.current.typingTestResults[0].kspcKeystrokes).toBe(6)
+        expect(result.current.typingTestResults[0].kspcChars).toBe(4)
+      })
+
+      it('drops a malformed typingTestResults kspc pair (only one field present) but keeps the rest of the result', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestResults: [
+            {
+              date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+              kspcKeystrokes: 6, // kspcChars missing — both-or-neither violated
+            },
+            {
+              date: '2024-01-02', wpm: 70, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
+              kspcKeystrokes: -1, kspcChars: 4, // negative keystrokes
+            },
+            {
+              date: '2024-01-03', wpm: 75, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
+              kspcKeystrokes: 6, kspcChars: 0, // zero chars — would divide by zero
+            },
+          ],
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestResults).toHaveLength(3)
+        for (const r of result.current.typingTestResults) {
+          expect(r.kspcKeystrokes).toBeUndefined()
+          expect(r.kspcChars).toBeUndefined()
+        }
+        expect(result.current.typingTestResults[0].wpm).toBe(60)
+      })
+
+      it('falls back to defaults when IPC fails', async () => {
+        setupMocks({ defaultKeyboardLayout: 'dvorak' })
+        mockPipetteSettingsGet.mockRejectedValue(new Error('IPC error'))
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.layout).toBe('dvorak')
+        expect(result.current.autoAdvance).toBe(true)
+      })
     })
 
-    it('keeps the per-device layout id even when the configured default differs', async () => {
-      setupMocks({ defaultKeyboardLayout: 'configured-default' })
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'nonexistent',
-        autoAdvance: false,
-        layerNames: [],
-      } as { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] })
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.layout).toBe('nonexistent')
-      expect(result.current.autoAdvance).toBe(false)
-    })
-
-    it('filters out malformed typingTestResults from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestResults: [
-          { date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30 },
-          null,
-          { wpm: 50 },
-          'not-an-object',
-          42,
-          { date: '2024-01-02', wpm: 80, accuracy: 97, wordCount: 30, correctChars: 120, incorrectChars: 3, durationSeconds: 25 },
-        ],
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      // Only the 2 valid entries should survive
-      expect(result.current.typingTestResults).toHaveLength(2)
-      expect(result.current.typingTestResults[0].wpm).toBe(60)
-      expect(result.current.typingTestResults[1].wpm).toBe(80)
-    })
-
-    it('round-trips a valid typingTestResults.mistakes field', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestResults: [
-          {
-            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
-            mistakes: { a: 2, shi: 1 },
-          },
-        ],
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestResults).toHaveLength(1)
-      expect(result.current.typingTestResults[0].mistakes).toEqual({ a: 2, shi: 1 })
-    })
-
-    it('drops a malformed typingTestResults.mistakes field but keeps the rest of the result', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestResults: [
-          {
-            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
-            mistakes: { a: 'not-a-number' },
-          },
-          {
-            date: '2024-01-02', wpm: 70, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
-            mistakes: ['not', 'an', 'object'],
-          },
-        ],
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestResults).toHaveLength(2)
-      expect(result.current.typingTestResults[0].wpm).toBe(60)
-      expect(result.current.typingTestResults[0].mistakes).toBeUndefined()
-      expect(result.current.typingTestResults[1].wpm).toBe(70)
-      expect(result.current.typingTestResults[1].mistakes).toBeUndefined()
-    })
-
-    it('round-trips a valid typingTestResults kspcKeystrokes/kspcChars pair', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestResults: [
-          {
-            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
-            kspcKeystrokes: 6, kspcChars: 4,
-          },
-        ],
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestResults).toHaveLength(1)
-      expect(result.current.typingTestResults[0].kspcKeystrokes).toBe(6)
-      expect(result.current.typingTestResults[0].kspcChars).toBe(4)
-    })
-
-    it('drops a malformed typingTestResults kspc pair (only one field present) but keeps the rest of the result', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestResults: [
-          {
-            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
-            kspcKeystrokes: 6, // kspcChars missing — both-or-neither violated
-          },
-          {
-            date: '2024-01-02', wpm: 70, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
-            kspcKeystrokes: -1, kspcChars: 4, // negative keystrokes
-          },
-          {
-            date: '2024-01-03', wpm: 75, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
-            kspcKeystrokes: 6, kspcChars: 0, // zero chars — would divide by zero
-          },
-        ],
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestResults).toHaveLength(3)
-      for (const r of result.current.typingTestResults) {
-        expect(r.kspcKeystrokes).toBeUndefined()
-        expect(r.kspcChars).toBeUndefined()
+    describe('typingTestMemory KSPC fields', () => {
+      const baseMemory = {
+        textId: 't1',
+        currentWordIndex: 1,
+        currentInput: '',
+        wordResults: [{ word: 'a', typed: 'a', correct: true }],
+        correctChars: 2,
+        incorrectChars: 0,
+        elapsedMs: 1000,
+        wpmHistory: [],
+        savedAt: '2024-01-01T00:00:00.000Z',
       }
-      expect(result.current.typingTestResults[0].wpm).toBe(60)
-    })
 
-    it('falls back to defaults when IPC fails', async () => {
-      setupMocks({ defaultKeyboardLayout: 'dvorak' })
-      mockPipetteSettingsGet.mockRejectedValue(new Error('IPC error'))
+      it('round-trips a valid totalKeystrokes/confirmedChars/kspcUncomputable group', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestMemory: { ...baseMemory, totalKeystrokes: 3, confirmedChars: 2, kspcUncomputable: false },
+        } as never)
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.layout).toBe('dvorak')
-      expect(result.current.autoAdvance).toBe(true)
-    })
-  })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-  describe('typingTestMemory KSPC fields', () => {
-    const baseMemory = {
-      textId: 't1',
-      currentWordIndex: 1,
-      currentInput: '',
-      wordResults: [{ word: 'a', typed: 'a', correct: true }],
-      correctChars: 2,
-      incorrectChars: 0,
-      elapsedMs: 1000,
-      wpmHistory: [],
-      savedAt: '2024-01-01T00:00:00.000Z',
-    }
-
-    it('round-trips a valid totalKeystrokes/confirmedChars/kspcUncomputable group', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestMemory: { ...baseMemory, totalKeystrokes: 3, confirmedChars: 2, kspcUncomputable: false },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestMemory?.totalKeystrokes).toBe(3)
+        expect(result.current.typingTestMemory?.confirmedChars).toBe(2)
+        expect(result.current.typingTestMemory?.kspcUncomputable).toBe(false)
       })
 
-      expect(result.current.typingTestMemory?.totalKeystrokes).toBe(3)
-      expect(result.current.typingTestMemory?.confirmedChars).toBe(2)
-      expect(result.current.typingTestMemory?.kspcUncomputable).toBe(false)
-    })
+      it('drops the whole group (all three fields) when only some are present — legacy-format fallback applies on restore', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestMemory: { ...baseMemory, totalKeystrokes: 3, confirmedChars: 2 }, // kspcUncomputable missing
+        } as never)
 
-    it('drops the whole group (all three fields) when only some are present — legacy-format fallback applies on restore', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestMemory: { ...baseMemory, totalKeystrokes: 3, confirmedChars: 2 }, // kspcUncomputable missing
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
+        expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
+        expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
+        // The rest of the memory still survives.
+        expect(result.current.typingTestMemory?.textId).toBe('t1')
       })
 
-      expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
-      expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
-      expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
-      // The rest of the memory still survives.
-      expect(result.current.typingTestMemory?.textId).toBe('t1')
-    })
+      it('leaves all three fields undefined for a memory saved before KSPC existed', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestMemory: { ...baseMemory },
+        } as never)
 
-    it('leaves all three fields undefined for a memory saved before KSPC existed', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestMemory: { ...baseMemory },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
+        expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
+        expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
       })
 
-      expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
-      expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
-      expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
-    })
+      it('drops the whole group when totalKeystrokes is fractional (corrupted data), same as a missing field', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestMemory: { ...baseMemory, totalKeystrokes: 3.5, confirmedChars: 2, kspcUncomputable: false },
+        } as never)
 
-    it('drops the whole group when totalKeystrokes is fractional (corrupted data), same as a missing field', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestMemory: { ...baseMemory, totalKeystrokes: 3.5, confirmedChars: 2, kspcUncomputable: false },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
-      expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
-      expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
-    })
-  })
-
-  describe('race guard', () => {
-    it('discards stale applyDevicePrefs result when UID changes', async () => {
-      setupMocks()
-      let resolveFirst: (value: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null) => void
-      const firstPromise = new Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>((resolve) => {
-        resolveFirst = resolve
-      })
-      mockPipetteSettingsGet
-        .mockReturnValueOnce(firstPromise)
-        .mockResolvedValueOnce({ _rev: 1, keyboardLayout: 'colemak', autoAdvance: true, layerNames: [] })
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-
-      // Start first apply (will be pending)
-      let firstDone = false
-      act(() => {
-        result.current.applyDevicePrefs('uid-1').then(() => { firstDone = true })
-      })
-
-      // Start second apply immediately (uid changes)
-      await act(async () => {
-        await result.current.applyDevicePrefs('uid-2')
-      })
-
-      // Resolve the first promise (stale)
-      await act(async () => {
-        resolveFirst!({ _rev: 1, keyboardLayout: 'german', autoAdvance: false, layerNames: [] })
-        // Let microtasks settle
-        await new Promise((r) => setTimeout(r, 0))
-      })
-
-      // Should have uid-2's prefs, not uid-1's stale result
-      expect(firstDone).toBe(true)
-      expect(result.current.layout).toBe('colemak')
-      expect(result.current.autoAdvance).toBe(true)
-    })
-  })
-
-  describe('typingTestConfig persistence', () => {
-    it('restores typingTestConfig from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'time', duration: 60, punctuation: true, numbers: false },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'time',
-        duration: 60,
-        punctuation: true,
-        numbers: false,
+        expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
+        expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
+        expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
       })
     })
 
-    it('restores typingTestLanguage from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestLanguage: 'english_1k',
-      } as never)
+    describe('race guard', () => {
+      it('discards stale applyDevicePrefs result when UID changes', async () => {
+        setupMocks()
+        let resolveFirst: (value: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null) => void
+        const firstPromise = new Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>((resolve) => {
+          resolveFirst = resolve
+        })
+        mockPipetteSettingsGet
+          .mockReturnValueOnce(firstPromise)
+          .mockResolvedValueOnce({ _rev: 1, keyboardLayout: 'colemak', autoAdvance: true, layerNames: [] })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
 
-      expect(result.current.typingTestLanguage).toBe('english_1k')
-    })
+        // Start first apply (will be pending)
+        let firstDone = false
+        act(() => {
+          result.current.applyDevicePrefs('uid-1').then(() => { firstDone = true })
+        })
 
-    it('setTypingTestConfig saves via IPC', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
+        // Start second apply immediately (uid changes)
+        await act(async () => {
+          await result.current.applyDevicePrefs('uid-2')
+        })
 
-      act(() => {
-        result.current.setTypingTestConfig({ mode: 'words', wordCount: 60, punctuation: true, numbers: false })
-      })
+        // Resolve the first promise (stale)
+        await act(async () => {
+          resolveFirst!({ _rev: 1, keyboardLayout: 'german', autoAdvance: false, layerNames: [] })
+          // Let microtasks settle
+          await new Promise((r) => setTimeout(r, 0))
+        })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 60,
-        punctuation: true,
-        numbers: false,
-      })
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        typingTestConfig: { mode: 'words', wordCount: 60, punctuation: true, numbers: false },
-      }))
-    })
-
-    it('restores a tatoeba typingTestConfig from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'tatoeba', language: 'english' },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+        // Should have uid-2's prefs, not uid-1's stale result
+        expect(firstDone).toBe(true)
+        expect(result.current.layout).toBe('colemak')
+        expect(result.current.autoAdvance).toBe(true)
       })
     })
 
-    it('rejects a stale tatoeba value persisted in the MonkeyType fallback', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        // An older build could have saved a tatoeba config here; it must not
-        // come back as the MonkeyType fallback.
-        typingTestMonkeytypeConfig: { mode: 'tatoeba', language: 'english' },
-      } as never)
+    describe('typingTestConfig persistence', () => {
+      it('restores typingTestConfig from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'time', duration: 60, punctuation: true, numbers: false },
+        } as never)
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'time',
+          duration: 60,
+          punctuation: true,
+          numbers: false,
+        })
       })
 
-      expect(result.current.typingTestMonkeytypeConfig).toBeUndefined()
-    })
+      it('restores typingTestLanguage from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestLanguage: 'english_1k',
+        } as never)
 
-    it('does not cache a tatoeba config as the MonkeyType fallback', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestLanguage).toBe('english_1k')
       })
 
-      // Set a normal config → it becomes the MonkeyType fallback.
-      act(() => {
-        result.current.setTypingTestConfig({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
-      })
-      // Switch to tatoeba → the fallback must stay the last normal config.
-      act(() => {
-        result.current.setTypingTestConfig({ mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 })
-      })
+      it('setTypingTestConfig saves via IPC', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
-      })
-      expect(result.current.typingTestMonkeytypeConfig).toEqual({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
-    })
+        act(() => {
+          result.current.setTypingTestConfig({ mode: 'words', wordCount: 60, punctuation: true, numbers: false })
+        })
 
-    it('setTypingTestLanguage saves via IPC', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setTypingTestLanguage('english_5k')
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'words',
+          wordCount: 60,
+          punctuation: true,
+          numbers: false,
+        })
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          typingTestConfig: { mode: 'words', wordCount: 60, punctuation: true, numbers: false },
+        }))
       })
 
-      expect(result.current.typingTestLanguage).toBe('english_5k')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        typingTestLanguage: 'english_5k',
-      }))
-    })
+      it('restores a tatoeba typingTestConfig from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'tatoeba', language: 'english' },
+        } as never)
 
-    it('returns undefined for typingTestConfig/typingTestLanguage when not stored', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+        })
       })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+      it('rejects a stale tatoeba value persisted in the MonkeyType fallback', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          // An older build could have saved a tatoeba config here; it must not
+          // come back as the MonkeyType fallback.
+          typingTestMonkeytypeConfig: { mode: 'tatoeba', language: 'english' },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestMonkeytypeConfig).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toBeUndefined()
-      expect(result.current.typingTestLanguage).toBeUndefined()
-    })
+      it('does not cache a tatoeba config as the MonkeyType fallback', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-    it('ignores invalid typingTestConfig from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'invalid' },
-      } as never)
+        // Set a normal config → it becomes the MonkeyType fallback.
+        act(() => {
+          result.current.setTypingTestConfig({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
+        })
+        // Switch to tatoeba → the fallback must stay the last normal config.
+        act(() => {
+          result.current.setTypingTestConfig({ mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 })
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+        })
+        expect(result.current.typingTestMonkeytypeConfig).toEqual({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
       })
 
-      expect(result.current.typingTestConfig).toBeUndefined()
-    })
+      it('setTypingTestLanguage saves via IPC', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
 
-    it('accepts any non-empty string as typingTestLanguage from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestLanguage: 'klingon',
-      } as never)
+        act(() => {
+          result.current.setTypingTestLanguage('english_5k')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestLanguage).toBe('english_5k')
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          typingTestLanguage: 'english_5k',
+        }))
       })
 
-      expect(result.current.typingTestLanguage).toBe('klingon')
-    })
+      it('returns undefined for typingTestConfig/typingTestLanguage when not stored', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+        })
 
-    it('ignores empty string typingTestLanguage from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestLanguage: '',
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toBeUndefined()
+        expect(result.current.typingTestLanguage).toBeUndefined()
       })
 
-      expect(result.current.typingTestLanguage).toBeUndefined()
-    })
+      it('ignores invalid typingTestConfig from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'invalid' },
+        } as never)
 
-    it('rejects typingTestConfig with NaN wordCount', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'words', wordCount: NaN, punctuation: false, numbers: false },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toBeUndefined()
-    })
+      it('accepts any non-empty string as typingTestLanguage from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestLanguage: 'klingon',
+        } as never)
 
-    it('rejects typingTestConfig with negative duration', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'time', duration: -5, punctuation: false, numbers: false },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestLanguage).toBe('klingon')
       })
 
-      expect(result.current.typingTestConfig).toBeUndefined()
-    })
+      it('ignores empty string typingTestLanguage from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestLanguage: '',
+        } as never)
 
-    it('rejects typingTestConfig with Infinity wordCount', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'words', wordCount: Infinity, punctuation: false, numbers: false },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestLanguage).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toBeUndefined()
-    })
+      it('rejects typingTestConfig with NaN wordCount', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'words', wordCount: NaN, punctuation: false, numbers: false },
+        } as never)
 
-    it('rejects typingTestConfig that is an array', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: [1, 2, 3],
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toBeUndefined()
-    })
+      it('rejects typingTestConfig with negative duration', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'time', duration: -5, punctuation: false, numbers: false },
+        } as never)
 
-    it('validates quote mode config from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'quote', quoteLength: 'medium' },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'quote',
-        quoteLength: 'medium',
-      })
-    })
+      it('rejects typingTestConfig with Infinity wordCount', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'words', wordCount: Infinity, punctuation: false, numbers: false },
+        } as never)
 
-    it('preserves romajiInput on a words config restored from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romajiInput: true,
-      })
-    })
+      it('rejects typingTestConfig that is an array', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: [1, 2, 3],
+        } as never)
 
-    it('preserves romajiInput on a time config restored from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'time', duration: 60, punctuation: true, numbers: false, romajiInput: true },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toBeUndefined()
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'time',
-        duration: 60,
-        punctuation: true,
-        numbers: false,
-        romajiInput: true,
-      })
-    })
+      it('validates quote mode config from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'quote', quoteLength: 'medium' },
+        } as never)
 
-    it('drops a non-boolean romajiInput but keeps the rest of the config', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: 'yes' },
-      } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'quote',
+          quoteLength: 'medium',
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
+      it('preserves romajiInput on a words config restored from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romajiInput: true,
+        })
       })
-    })
 
-    it('preserves romajiInput on the restored MonkeyType fallback config', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestMonkeytypeConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true },
-      } as never)
+      it('preserves romajiInput on a time config restored from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'time', duration: 60, punctuation: true, numbers: false, romajiInput: true },
+        } as never)
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'time',
+          duration: 60,
+          punctuation: true,
+          numbers: false,
+          romajiInput: true,
+        })
       })
 
-      expect(result.current.typingTestMonkeytypeConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romajiInput: true,
-      })
-    })
+      it('drops a non-boolean romajiInput but keeps the rest of the config', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: 'yes' },
+        } as never)
 
-    it('preserves a fully valid romaji detail block on a words config restored from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+        })
+      })
+
+      it('preserves romajiInput on the restored MonkeyType fallback config', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestMonkeytypeConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestMonkeytypeConfig).toEqual({
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romajiInput: true,
+        })
+      })
+
+      it('preserves a fully valid romaji detail block on a words config restored from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romajiInput: true,
+            romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
+          },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
           romajiInput: true,
           romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romajiInput: true,
-        romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
-      })
-    })
+      it('silently drops a persisted romaji fontSize (the guide always tracks Settings > Font now)', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            // Left over from a build that still had the per-guide font
+            // control; must not resurface anywhere on the restored config.
+            romaji: { fontSize: 40, caseStyle: 'capital' },
+          },
+        } as never)
 
-    it('silently drops a persisted romaji fontSize (the guide always tracks Settings > Font now)', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          // Left over from a build that still had the per-guide font
-          // control; must not resurface anywhere on the restored config.
-          romaji: { fontSize: 40, caseStyle: 'capital' },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { caseStyle: 'capital' },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { caseStyle: 'capital' },
-      })
-    })
+      it.each([0, 1, 2, 3])('round-trips a valid guideLineCount of %i', async (guideLineCount) => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { guideLineCount },
+          },
+        } as never)
 
-    it.each([0, 1, 2, 3])('round-trips a valid guideLineCount of %i', async (guideLineCount) => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
           romaji: { guideLineCount },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { guideLineCount },
-      })
-    })
+      it.each([4, -1, 1.5, 'two'])('drops an out-of-range/non-integer guideLineCount (%p) but keeps the rest of romaji', async (guideLineCount) => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { caseStyle: 'capital', guideLineCount },
+          },
+        } as never)
 
-    it.each([4, -1, 1.5, 'two'])('drops an out-of-range/non-integer guideLineCount (%p) but keeps the rest of romaji', async (guideLineCount) => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'capital', guideLineCount },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { caseStyle: 'capital' },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { caseStyle: 'capital' },
-      })
-    })
+      // The unified 3-way input-method selector (RomajiSettingsModal) only
+      // ever persists inputMethod: 'kana' (or omits the field entirely for
+      // Direct/Romaji — see pruneRomaji) — round-trips through the same
+      // sanitize path as every other romaji field.
+      it('round-trips inputMethod: kana', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { inputMethod: 'kana' },
+          },
+        } as never)
 
-    // The unified 3-way input-method selector (RomajiSettingsModal) only
-    // ever persists inputMethod: 'kana' (or omits the field entirely for
-    // Direct/Romaji — see pruneRomaji) — round-trips through the same
-    // sanitize path as every other romaji field.
-    it('round-trips inputMethod: kana', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
           romaji: { inputMethod: 'kana' },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { inputMethod: 'kana' },
-      })
-    })
+      it.each(['romaji', 'direct', 'bogus', 1])('drops an invalid inputMethod (%p) but keeps the rest of romaji', async (inputMethod) => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { caseStyle: 'capital', inputMethod },
+          },
+        } as never)
 
-    it.each(['romaji', 'direct', 'bogus', 1])('drops an invalid inputMethod (%p) but keeps the rest of romaji', async (inputMethod) => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'capital', inputMethod },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { caseStyle: 'capital' },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { caseStyle: 'capital' },
-      })
-    })
+      // guideLineCount takes precedence over the legacy guideWordCount field
+      // (same 0-3 int range, same "0 = hidden" meaning). A config that only
+      // carries the legacy field is mapped over on read rather than silently
+      // losing the user's explicit choice — see validateRomajiDetailSettings.
+      it('migrates a legacy guideWordCount to guideLineCount when guideLineCount is absent', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { guideWordCount: 3 },
+          },
+        } as never)
 
-    // guideLineCount takes precedence over the legacy guideWordCount field
-    // (same 0-3 int range, same "0 = hidden" meaning). A config that only
-    // carries the legacy field is mapped over on read rather than silently
-    // losing the user's explicit choice — see validateRomajiDetailSettings.
-    it('migrates a legacy guideWordCount to guideLineCount when guideLineCount is absent', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { guideWordCount: 3 },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { guideLineCount: 3 },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { guideLineCount: 3 },
-      })
-    })
+      it('prefers guideLineCount over a legacy guideWordCount when both are present', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { guideLineCount: 1, guideWordCount: 3 },
+          },
+        } as never)
 
-    it('prefers guideLineCount over a legacy guideWordCount when both are present', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { guideLineCount: 1, guideWordCount: 3 },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { guideLineCount: 1 },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { guideLineCount: 1 },
-      })
-    })
+      it('migrates a legacy guideWordCount of 0 (explicitly hidden) to guideLineCount', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { guideWordCount: 0 },
+          },
+        } as never)
 
-    it('migrates a legacy guideWordCount of 0 (explicitly hidden) to guideLineCount', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { guideWordCount: 0 },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { guideLineCount: 0 },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { guideLineCount: 0 },
-      })
-    })
+      // Task: lineEndEnter (romaji "Enter at line ends" toggle) — default
+      // true, prune-at-default (only an explicit false persists), same
+      // convention as guideLineCount's default of 1 above.
+      it('round-trips an explicit lineEndEnter: false', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { lineEndEnter: false },
+          },
+        } as never)
 
-    // Task: lineEndEnter (romaji "Enter at line ends" toggle) — default
-    // true, prune-at-default (only an explicit false persists), same
-    // convention as guideLineCount's default of 1 above.
-    it('round-trips an explicit lineEndEnter: false', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
           romaji: { lineEndEnter: false },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { lineEndEnter: false },
-      })
-    })
+      it('drops a non-boolean lineEndEnter but keeps the rest of romaji', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { caseStyle: 'capital', lineEndEnter: 'nope' },
+          },
+        } as never)
 
-    it('drops a non-boolean lineEndEnter but keeps the rest of romaji', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'capital', lineEndEnter: 'nope' },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { caseStyle: 'capital' },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { caseStyle: 'capital' },
-      })
-    })
+      it('drops individually invalid romaji fields but keeps the ones that validate', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { caseStyle: 'sideways', guideStyles: ['kunrei'], disabledStyles: ['c', 'not-a-style', 123] },
+          },
+        } as never)
 
-    it('drops individually invalid romaji fields but keeps the ones that validate', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'sideways', guideStyles: ['kunrei'], disabledStyles: ['c', 'not-a-style', 123] },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          // caseStyle was malformed and dropped; guideStyles and the one
+          // known entry in disabledStyles survived.
+          romaji: { guideStyles: ['kunrei'], disabledStyles: ['c'] },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        // caseStyle was malformed and dropped; guideStyles and the one
-        // known entry in disabledStyles survived.
-        romaji: { guideStyles: ['kunrei'], disabledStyles: ['c'] },
-      })
-    })
+      it('sanitizes a persisted disabledStyles that disables both base systems by dropping kunrei from it', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            // Should never happen via the modal (it blocks disabling the last
+            // enabled base), but a hand-edited or corrupted config could still
+            // carry both disabled — at least one base must survive validation.
+            romaji: { disabledStyles: ['hepburn', 'kunrei', 'digraph'] },
+          },
+        } as never)
 
-    it('sanitizes a persisted disabledStyles that disables both base systems by dropping kunrei from it', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          // Should never happen via the modal (it blocks disabling the last
-          // enabled base), but a hand-edited or corrupted config could still
-          // carry both disabled — at least one base must survive validation.
-          romaji: { disabledStyles: ['hepburn', 'kunrei', 'digraph'] },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { disabledStyles: ['hepburn', 'digraph'] },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { disabledStyles: ['hepburn', 'digraph'] },
-      })
-    })
+      it('drops a legacy "cq" style from a persisted disabledStyles/guideStyles (split into separate c/q styles)', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { guideStyles: ['cq', 'kunrei'], disabledStyles: ['cq', 'digraph'] },
+          },
+        } as never)
 
-    it('drops a legacy "cq" style from a persisted disabledStyles/guideStyles (split into separate c/q styles)', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { guideStyles: ['cq', 'kunrei'], disabledStyles: ['cq', 'digraph'] },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { guideStyles: ['kunrei'], disabledStyles: ['digraph'] },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { guideStyles: ['kunrei'], disabledStyles: ['digraph'] },
-      })
-    })
+      it('drops a stray hepburn entry from a persisted guideStyles (it is the implicit default, never stored by the modal)', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'words',
+            wordCount: 30,
+            punctuation: false,
+            numbers: false,
+            romaji: { guideStyles: ['hepburn', 'xSmall'] },
+          },
+        } as never)
 
-    it('drops a stray hepburn entry from a persisted guideStyles (it is the implicit default, never stored by the modal)', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'words',
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { guideStyles: ['hepburn', 'xSmall'] },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+          romaji: { guideStyles: ['xSmall'] },
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-        romaji: { guideStyles: ['xSmall'] },
-      })
-    })
+      it('drops the whole romaji block when every field is invalid', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'time',
+            duration: 60,
+            punctuation: false,
+            numbers: false,
+            romaji: { caseStyle: 'nope', fontSize: 'big', guideStyles: 'nope', disabledStyles: 'c' },
+          },
+        } as never)
 
-    it('drops the whole romaji block when every field is invalid', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'time',
           duration: 60,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyles: 'nope', disabledStyles: 'c' },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'time',
-        duration: 60,
-        punctuation: false,
-        numbers: false,
+      it('drops a non-object romaji value but keeps the rest of the config', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romaji: 'lower' },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+        })
       })
-    })
 
-    it('drops a non-object romaji value but keeps the rest of the config', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romaji: 'lower' },
-      } as never)
+      it('preserves romajiInput + romaji on a tatoeba config restored from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'tatoeba',
+            language: 'japanese_hiragana',
+            romajiInput: true,
+            romaji: { caseStyle: 'capital' },
+          },
+        } as never)
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'words',
-        wordCount: 30,
-        punctuation: false,
-        numbers: false,
-      })
-    })
-
-    it('preserves romajiInput + romaji on a tatoeba config restored from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'tatoeba',
           language: 'japanese_hiragana',
+          pattern: 'lines',
+          lineCount: 5,
+          duration: 30,
           romajiInput: true,
           romaji: { caseStyle: 'capital' },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'tatoeba',
-        language: 'japanese_hiragana',
-        pattern: 'lines',
-        lineCount: 5,
-        duration: 30,
-        romajiInput: true,
-        romaji: { caseStyle: 'capital' },
-      })
-    })
+      it('preserves romajiInput + romaji on a fileImport config restored from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: {
+            mode: 'fileImport',
+            textId: 'text-1',
+            romajiInput: true,
+            romaji: { guideStyles: ['kunrei'] },
+          },
+        } as never)
 
-    it('preserves romajiInput + romaji on a fileImport config restored from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: {
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
           mode: 'fileImport',
           textId: 'text-1',
           romajiInput: true,
           romaji: { guideStyles: ['kunrei'] },
-        },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        })
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'fileImport',
-        textId: 'text-1',
-        romajiInput: true,
-        romaji: { guideStyles: ['kunrei'] },
+      it('drops a non-boolean romajiInput on a tatoeba config but keeps the rest', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'tatoeba', language: 'english', romajiInput: 'yes' },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+        })
+      })
+
+      it('defaults pattern/lineCount/duration on an old tatoeba config that predates them', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          // Pre-Pattern/Units tatoeba config, as saved by an older build.
+          typingTestConfig: { mode: 'tatoeba', language: 'french' },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'tatoeba', language: 'french', pattern: 'lines', lineCount: 5, duration: 30,
+        })
+      })
+
+      it('round-trips explicit pattern/lineCount/duration on a tatoeba config', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestConfig: { mode: 'tatoeba', language: 'french', pattern: 'time', lineCount: 20, duration: 120 },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.typingTestConfig).toEqual({
+          mode: 'tatoeba', language: 'french', pattern: 'time', lineCount: 20, duration: 120,
+        })
       })
     })
 
-    it('drops a non-boolean romajiInput on a tatoeba config but keeps the rest', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'tatoeba', language: 'english', romajiInput: 'yes' },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+    describe('splitKeyMode', () => {
+      it('defaults to split', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.splitKeyMode).toBe('split')
+        expect(result.current.defaultSplitKeyMode).toBe('split')
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+      it('restores splitKeyMode from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          splitKeyMode: 'flat',
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.splitKeyMode).toBe('flat')
+      })
+
+      it('setSplitKeyMode saves via IPC', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+        act(() => {
+          result.current.setSplitKeyMode('flat')
+        })
+
+        expect(result.current.splitKeyMode).toBe('flat')
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          splitKeyMode: 'flat',
+        }))
+      })
+
+      it('setDefaultSplitKeyMode persists via IPC', async () => {
+        const { mockAppConfigSet } = setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        act(() => {
+          result.current.setDefaultSplitKeyMode('flat')
+        })
+        expect(mockAppConfigSet).toHaveBeenCalledWith('defaultSplitKeyMode', 'flat')
+      })
+
+      it('falls back to default for invalid splitKeyMode from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          splitKeyMode: 'invalid',
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.splitKeyMode).toBe('split')
       })
     })
 
-    it('defaults pattern/lineCount/duration on an old tatoeba config that predates them', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        // Pre-Pattern/Units tatoeba config, as saved by an older build.
-        typingTestConfig: { mode: 'tatoeba', language: 'french' },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+    describe('viewMode', () => {
+      it('defaults to "editor" when not in storage', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMode).toBe('editor')
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'tatoeba', language: 'french', pattern: 'lines', lineCount: 5, duration: 30,
+      it('loads stored viewMode from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          viewMode: 'typingView',
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMode).toBe('typingView')
+      })
+
+      it('falls back to "editor" for invalid viewMode from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          viewMode: 'bogus',
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMode).toBe('editor')
+      })
+
+      it('setViewMode saves via IPC', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+        act(() => {
+          result.current.setViewMode('typingTest')
+        })
+
+        expect(result.current.viewMode).toBe('typingTest')
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          viewMode: 'typingTest',
+        }))
+      })
+
+      it('appliedUid is null before applyDevicePrefs', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.appliedUid).toBeNull()
+      })
+
+      it('appliedUid matches uid after applyDevicePrefs resolves', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.appliedUid).toBe('0xAABB')
+      })
+
+      it('setTypingTestViewOnly leaves viewMode out of the patch (disconnect scenario)', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestViewOnly: true,
+          viewMode: 'typingView',
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+
+        // Simulates disconnect cleanup: resets typingTestViewOnly but should not touch viewMode
+        act(() => {
+          result.current.setTypingTestViewOnly(false)
+        })
+
+        expect(result.current.viewMode).toBe('typingView')
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', { _rev: 1, typingTestViewOnly: false })
       })
     })
 
-    it('round-trips explicit pattern/lineCount/duration on a tatoeba config', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestConfig: { mode: 'tatoeba', language: 'french', pattern: 'time', lineCount: 20, duration: 120 },
-      } as never)
+    describe('stale typingViewMenuTab tolerance', () => {
+      // `typingViewMenuTab` isn't part of PipetteSettings, but a settings
+      // JSON written by an older build can still carry the field on disk —
+      // it must be silently ignored on load rather than rejecting the whole
+      // record or leaking onto the returned prefs object.
+      it('loads normally, ignoring a stale typingViewMenuTab field', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingViewMenuTab: 'rec',
+        } as never)
 
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+
+        expect(result.current.layout).toBe('qwerty')
+        expect(result.current.autoAdvance).toBe(true)
+        expect(result.current as unknown as Record<string, unknown>).not.toHaveProperty('typingViewMenuTab')
+      })
+    })
+
+    describe('typingRecordEnabled', () => {
+      it('defaults to false for a new device', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.typingRecordEnabled).toBe(false)
       })
 
-      expect(result.current.typingTestConfig).toEqual({
-        mode: 'tatoeba', language: 'french', pattern: 'time', lineCount: 20, duration: 120,
+      it('restores typingRecordEnabled from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingRecordEnabled: true,
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.typingRecordEnabled).toBe(true)
+      })
+
+      it('falls back to false when IPC returns a non-boolean typingRecordEnabled', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingRecordEnabled: 'yes',
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.typingRecordEnabled).toBe(false)
+      })
+
+      it('setTypingRecordEnabled saves via IPC and updates state', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+
+        act(() => {
+          result.current.setTypingRecordEnabled(true)
+        })
+
+        expect(result.current.typingRecordEnabled).toBe(true)
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          typingRecordEnabled: true,
+        }))
+      })
+
+      it('setTypingRecordEnabled skips the IPC save when the value is unchanged', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+
+        act(() => {
+          result.current.setTypingRecordEnabled(false)
+        })
+
+        expect(result.current.typingRecordEnabled).toBe(false)
+        expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+      })
+    })
+
+
+    describe('typingTestViewOnlyOpacity', () => {
+      async function applyWith(saved: Record<string, unknown> | null) {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue(saved === null ? null : {
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          ...saved,
+        } as never)
+        const hook = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await hook.result.current.applyDevicePrefs('0xAABB')
+        })
+        return hook
+      }
+
+      it('defaults to 1 for a new device', async () => {
+        const { result } = await applyWith(null)
+        expect(result.current.typingTestViewOnlyOpacity).toBe(1)
+      })
+
+      it('restores a saved in-range value', async () => {
+        const { result } = await applyWith({ typingTestViewOnlyOpacity: 0.7 })
+        expect(result.current.typingTestViewOnlyOpacity).toBe(0.7)
+      })
+
+      it('clamps out-of-range saved values', async () => {
+        const low = await applyWith({ typingTestViewOnlyOpacity: 0.1 })
+        expect(low.result.current.typingTestViewOnlyOpacity).toBe(0.5)
+        const high = await applyWith({ typingTestViewOnlyOpacity: 3 })
+        expect(high.result.current.typingTestViewOnlyOpacity).toBe(1)
+      })
+
+      it.runIf(backend.anyStoredValue)('falls back to 1 for a non-number without dropping the other settings', async () => {
+        const { result } = await applyWith({
+          typingTestViewOnlyOpacity: 'half',
+          typingTestViewOnlyAlwaysOnTop: true,
+          typingTestFontSize: 30,
+          layerNames: ['Base', 'Fn'],
+        })
+        expect(result.current.typingTestViewOnlyOpacity).toBe(1)
+        expect(result.current.typingTestViewOnlyAlwaysOnTop).toBe(true)
+        expect(result.current.typingTestFontSize).toBe(30)
+        expect(result.current.layerNames).toEqual(['Base', 'Fn'])
+      })
+
+      it('setTypingTestViewOnlyOpacity clamps, updates state and saves via IPC', async () => {
+        const { result } = await applyWith(null)
+        mockPipetteSettingsPatch.mockClear()
+
+        act(() => {
+          result.current.setTypingTestViewOnlyOpacity(0.2)
+        })
+
+        expect(result.current.typingTestViewOnlyOpacity).toBe(0.5)
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledTimes(1)
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          typingTestViewOnlyOpacity: 0.5,
+        }))
+      })
+
+      it('setTypingTestViewOnlyOpacity skips the IPC save when the value is unchanged', async () => {
+        const { result } = await applyWith({ typingTestViewOnlyOpacity: 0.8 })
+        mockPipetteSettingsPatch.mockClear()
+
+        act(() => {
+          result.current.setTypingTestViewOnlyOpacity(0.8)
+        })
+
+        expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+      })
+
+      it('setTypingTestViewOnlyOpacity skips the save when a value clamps to the current one', async () => {
+        const { result } = await applyWith(null)
+        mockPipetteSettingsPatch.mockClear()
+
+        act(() => {
+          result.current.setTypingTestViewOnlyOpacity(Number.NaN)
+        })
+
+        expect(result.current.typingTestViewOnlyOpacity).toBe(1)
+        expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('viewMatrix', () => {
+      it('defaults to undefined when not in storage', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMatrix).toBeUndefined()
+      })
+
+      it('restores a valid viewMatrix from IPC', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          viewMatrix: { '0,0': { row: 0, col: 5 }, '1,2': { row: 0, col: 0 } },
+        } as never)
+
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMatrix).toEqual({
+          '0,0': { row: 0, col: 5 },
+          '1,2': { row: 0, col: 0 },
+        })
+      })
+
+      it('setViewMatrix saves via IPC and updates state (round trip through save/apply)', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        mockPipetteSettingsPatch.mockClear()
+
+        const next = { '0,0': { row: 2, col: 3 } }
+        act(() => {
+          result.current.setViewMatrix(next)
+        })
+
+        expect(result.current.viewMatrix).toEqual(next)
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          viewMatrix: next,
+        }))
+
+        // Simulate reload: the last patch payload is what IPC would persist
+        // and return on the next `pipetteSettingsGet`.
+        const lastPatch = mockPipetteSettingsPatch.mock.calls[mockPipetteSettingsPatch.mock.calls.length - 1][1]
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          viewMatrix: lastPatch.viewMatrix,
+        } as never)
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMatrix).toEqual(next)
+      })
+
+      it('setViewMatrix(undefined) clears the field by sending null in the patch', async () => {
+        setupMocks()
+        mockPipetteSettingsGet.mockResolvedValue({
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          viewMatrix: { '0,0': { row: 2, col: 3 } },
+        } as never)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        expect(result.current.viewMatrix).toEqual({ '0,0': { row: 2, col: 3 } })
+        mockPipetteSettingsPatch.mockClear()
+
+        act(() => {
+          result.current.setViewMatrix(undefined)
+        })
+
+        expect(result.current.viewMatrix).toBeUndefined()
+        expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+          viewMatrix: null,
+        }))
+      })
+
+    })
+
+    describe('remapLabel and isRemapped', () => {
+      it('remapLabel delegates to remapKeycode with current layout', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        // Default qwerty: identity
+        expect(result.current.remapLabel('KC_A')).toBe('KC_A')
+      })
+
+      // After the Key Labels migration the only built-in layout is
+      // QWERTY; dvorak (and friends) are downloaded into the Key Label
+      // store at runtime. The async store fetch is exercised in
+      // useKeyLabelLookup tests, so this remap-after-change scenario is
+      // covered there instead.
+      it.skip('remapLabel updates after layout change (legacy: dvorak built-in)', async () => {})
+
+      it('isRemapped returns false for qwerty', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.isRemapped('KC_A')).toBe(false)
+      })
+    })
+
+    // Display Only is the sole remap-rendering mode this block covers —
+    // `remapLabel`/`isRemapped` resolve through the active Key Label pack's
+    // own compositeLabels -> map lookup order. A Rewrite never leaves anything
+    // for this to simulate, since it resets `layout` back to QWERTY on
+    // success. Same fixture as `shared/keymap/__tests__/keymap-apply.test.ts`
+    // (real Colemak data).
+    describe('remap-rendering (Display Only mode)', () => {
+      const COLEMAK: Record<string, string> = {
+        KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+        KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+        KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+      }
+
+      function mockKeyLabelPack(id: string, map: Record<string, string>, compositeLabels?: Record<string, string>): void {
+        const existing = vialAPIMock()
+        Object.defineProperty(window, 'vialAPI', {
+          value: {
+            ...existing,
+            keyLabelStoreGet: async (reqId: string) => {
+              if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+              return {
+                success: true,
+                data: {
+                  meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                  data: { name: id, map, compositeLabels },
+                },
+              }
+            },
+          },
+          writable: true,
+          configurable: true,
+        })
+      }
+
+      it('remapLabel returns the pack\'s own label, and isRemapped marks both a map source key and a compositeLabels-only entry', async () => {
+        setupMocks()
+        mockKeyLabelPack('colemak-id', COLEMAK, { 'LALT(KC_L)': 'KC_LALT' })
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-id')
+        })
+        await act(async () => {}) // flush the ensure() IPC fetch
+        expect(result.current.remapLabel('KC_E')).toBe('F')
+        expect(result.current.isRemapped('KC_E')).toBe(true) // KC_E is a pack SOURCE key
+        expect(result.current.isRemapped('LALT(KC_L)')).toBe(true) // compositeLabels-only entry
+        expect(result.current.isRemapped('KC_A')).toBe(false) // untouched key
+      })
+
+      // `isRemapped` applies the value-difference rule every picker/palette
+      // consumer applies via `remapLabel(x) !== x`, not map membership. A
+      // pack entry whose value is a passthrough identical to its own qmkId
+      // (present in the map but never actually changing the label) must not
+      // be marked either.
+      it('an identity passthrough entry (map value equal to its own qmkId) is not marked, matching remapLabel(x) === x', async () => {
+        setupMocks()
+        const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
+        mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-passthrough-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapLabel('KC_A')).toBe('KC_A')
+        expect(result.current.isRemapped('KC_A')).toBe(false)
+        // A genuinely changed entry is still marked.
+        expect(result.current.remapLabel('KC_E')).toBe('F')
+        expect(result.current.isRemapped('KC_E')).toBe(true)
+      })
+
+      it('isRemapped and remapLabel always agree (isRemapped(x) === (remapLabel(x) !== x))', async () => {
+        setupMocks()
+        const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
+        mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-passthrough-id')
+        })
+        await act(async () => {})
+        for (const qmkId of ['KC_A', 'KC_E', 'KC_Z']) {
+          expect(result.current.isRemapped(qmkId)).toBe(result.current.remapLabel(qmkId) !== qmkId)
+        }
+      })
+
+      it('QWERTY resolves to identity (empty builtin map) — raw label, no remap tint', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.remapLabel('KC_E')).toBe('KC_E')
+        expect(result.current.isRemapped('KC_E')).toBe(false)
+      })
+    })
+
+    // The key PICKER only ever changes for a pack that deviates from ANSI —
+    // a pure QWERTY-keycode permutation pack (Colemak et al.) leaves the
+    // picker raw in every mode, since every character it swaps in already
+    // exists in the picker somewhere. `pickerRemapLabel` is the gated
+    // variant; `remapLabel` (the keymap-legend source) is unaffected either
+    // way.
+    describe('pickerRemapLabel', () => {
+      const COLEMAK: Record<string, string> = {
+        KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+        KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+        KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+      }
+
+      // Real sample-packs/key-labels/japanese_qwerty_ej.json-style data — a
+      // QWERTY physical layout with shift-pair display labels. Fails
+      // `buildKeymapRewriteTable` (a shift pair can't flatten to one
+      // keycode), so it counts as an "ANSI-deviation" pack the picker must
+      // still remap — same fixture shape as
+      // `shared/keymap/__tests__/keymap-apply.test.ts`.
+      const JAPANESE_QWERTY: Record<string, string> = {
+        KC_LBRACKET: '`\n@',
+        KC_RBRACKET: '{\n[',
+        KC_2: '"\n2',
+      }
+
+      function mockKeyLabelPack(id: string, map: Record<string, string>): void {
+        const existing = vialAPIMock()
+        Object.defineProperty(window, 'vialAPI', {
+          value: {
+            ...existing,
+            keyLabelStoreGet: async (reqId: string) => {
+              if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+              return {
+                success: true,
+                data: {
+                  meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                  data: { name: id, map },
+                },
+              }
+            },
+          },
+          writable: true,
+          configurable: true,
+        })
+      }
+
+      it('is identity for a pure permutation pack (Colemak) while remapLabel/isRemapped still remap', async () => {
+        setupMocks()
+        mockKeyLabelPack('colemak-id', COLEMAK)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-id')
+        })
+        await act(async () => {}) // flush the ensure() IPC fetch
+
+        // Picker stays raw...
+        expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
+        // ...while the keymap-legend source keeps remapping and tinting.
+        expect(result.current.remapLabel('KC_E')).toBe('F')
+        expect(result.current.isRemapped('KC_E')).toBe(true)
+      })
+
+      it('matches remapLabel for a deviation pack that fails buildKeymapRewriteTable (JIS shift pairs)', async () => {
+        setupMocks()
+        mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('jis-id')
+        })
+        await act(async () => {})
+
+        expect(result.current.pickerRemapLabel('KC_LBRACKET')).toBe(result.current.remapLabel('KC_LBRACKET'))
+        expect(result.current.pickerRemapLabel('KC_LBRACKET')).toBe('`\n@')
+        expect(result.current.pickerRemapLabel('KC_2')).toBe('"\n2')
+      })
+
+      it('is identity for QWERTY, matching remapLabel', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
+        expect(result.current.pickerRemapLabel('KC_E')).toBe(result.current.remapLabel('KC_E'))
+      })
+    })
+
+    // `remapKind` picks WHICH remap tint the keymap surface uses —
+    // 'simulated' (the permutation-pack Display Only case: labels show what
+    // a Rewrite would produce, pressing still types the old character) iff a
+    // non-empty pack map is loaded and it's a pure permutation; 'actual'
+    // otherwise (JIS-type deviation packs, QWERTY/no pack).
+    describe('remapKind', () => {
+      const COLEMAK: Record<string, string> = {
+        KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+        KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+        KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+      }
+      // Fails buildKeymapRewriteTable (a shift pair can't flatten to one
+      // keycode) — same fixture shape used throughout this file.
+      const JAPANESE_QWERTY: Record<string, string> = {
+        KC_LBRACKET: '`\n@',
+        KC_RBRACKET: '{\n[',
+        KC_2: '"\n2',
+      }
+
+      function mockKeyLabelPack(id: string, map: Record<string, string>, keymapApplicable = true): void {
+        const existing = vialAPIMock()
+        Object.defineProperty(window, 'vialAPI', {
+          value: {
+            ...existing,
+            keyLabelStoreGet: async (reqId: string) => {
+              if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+              return {
+                success: true,
+                data: {
+                  meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                  data: { name: id, map, keymapApplicable },
+                },
+              }
+            },
+          },
+          writable: true,
+          configurable: true,
+        })
+      }
+
+      it('is "actual" for QWERTY (no pack loaded)', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('actual')
+      })
+
+      it('is "simulated" for a pure permutation pack (Colemak) in Display Only mode', async () => {
+        setupMocks()
+        mockKeyLabelPack('colemak-id', COLEMAK)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-id')
+        })
+        await act(async () => {}) // flush the ensure() IPC fetch
+        expect(result.current.remapKind).toBe('simulated')
+      })
+
+      it('is "actual" for a JIS-type deviation pack that fails buildKeymapRewriteTable', async () => {
+        setupMocks()
+        mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('jis-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('actual')
+      })
+
+      it('is "actual" when the pack is missing/not yet loaded', async () => {
+        setupMocks() // no keyLabelStoreGet override — the pack never resolves
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('missing-pack-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('actual')
+      })
+
+      // A structurally pure permutation the author did NOT flag
+      // `keymapApplicable` must render with the actual tint (no simulation to
+      // offer, since nothing downstream will ever build an Apply table for it
+      // either) — a check that only tested `.ok` would wrongly return
+      // 'simulated' here.
+      it('is "actual" for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
+        setupMocks()
+        mockKeyLabelPack('colemak-id', COLEMAK, false)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('actual')
+      })
+    })
+
+    // `activeRewriteTable` lets `useKeymapApplyPrompt.requestApply` skip its
+    // own async lookup/build — it must mirror `remapKind` exactly: defined
+    // (and matching `buildKeymapRewriteTable`'s own table) iff
+    // `remapKind === 'simulated'`, `undefined` in every 'actual' case.
+    describe('activeRewriteTable', () => {
+      const COLEMAK: Record<string, string> = {
+        KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+        KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+        KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+      }
+      const JAPANESE_QWERTY: Record<string, string> = {
+        KC_LBRACKET: '`\n@',
+        KC_RBRACKET: '{\n[',
+        KC_2: '"\n2',
+      }
+
+      function mockKeyLabelPack(id: string, map: Record<string, string>, keymapApplicable = true): void {
+        const existing = vialAPIMock()
+        Object.defineProperty(window, 'vialAPI', {
+          value: {
+            ...existing,
+            keyLabelStoreGet: async (reqId: string) => {
+              if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+              return {
+                success: true,
+                data: {
+                  meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                  data: { name: id, map, keymapApplicable },
+                },
+              }
+            },
+          },
+          writable: true,
+          configurable: true,
+        })
+      }
+
+      it('is undefined for QWERTY (no pack loaded)', async () => {
+        setupMocks()
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        expect(result.current.activeRewriteTable).toBeUndefined()
+      })
+
+      it('mirrors remapKind === "simulated": the resolved table for a pure permutation pack (Colemak)', async () => {
+        setupMocks()
+        mockKeyLabelPack('colemak-id', COLEMAK)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('simulated')
+        expect(result.current.activeRewriteTable).toBeDefined()
+        expect(result.current.activeRewriteTable?.get('KC_E')).toBe('KC_F')
+      })
+
+      it('is undefined for a JIS-type deviation pack that fails buildKeymapRewriteTable', async () => {
+        setupMocks()
+        mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('jis-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('actual')
+        expect(result.current.activeRewriteTable).toBeUndefined()
+      })
+
+      it('is undefined for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
+        setupMocks()
+        mockKeyLabelPack('colemak-id', COLEMAK, false)
+        const { result } = renderHookWithConfig(() => useDevicePrefs())
+        await act(async () => {})
+        await act(async () => {
+          await result.current.applyDevicePrefs('0xAABB')
+        })
+        act(() => {
+          result.current.setLayout('colemak-id')
+        })
+        await act(async () => {})
+        expect(result.current.remapKind).toBe('actual')
+        expect(result.current.activeRewriteTable).toBeUndefined()
       })
     })
   })
 
-  describe('splitKeyMode', () => {
-    it('defaults to split', async () => {
+  describe('useDevicePrefs — layerHoverPreview', () => {
+    type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
+    const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
+      ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
+
+    async function applied(uid: string) {
       setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.splitKeyMode).toBe('split')
-      expect(result.current.defaultSplitKeyMode).toBe('split')
-    })
-
-    it('restores splitKeyMode from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        splitKeyMode: 'flat',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.splitKeyMode).toBe('flat')
-    })
-
-    it('setSplitKeyMode saves via IPC', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setSplitKeyMode('flat')
-      })
-
-      expect(result.current.splitKeyMode).toBe('flat')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        splitKeyMode: 'flat',
-      }))
-    })
-
-    it('setDefaultSplitKeyMode persists via IPC', async () => {
-      const { mockAppConfigSet } = setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      act(() => {
-        result.current.setDefaultSplitKeyMode('flat')
-      })
-      expect(mockAppConfigSet).toHaveBeenCalledWith('defaultSplitKeyMode', 'flat')
-    })
-
-    it('falls back to default for invalid splitKeyMode from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        splitKeyMode: 'invalid',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.splitKeyMode).toBe('split')
-    })
-  })
-
-  describe('viewMode', () => {
-    it('defaults to "editor" when not in storage', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMode).toBe('editor')
-    })
-
-    it('loads stored viewMode from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        viewMode: 'typingView',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMode).toBe('typingView')
-    })
-
-    it('falls back to "editor" for invalid viewMode from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        viewMode: 'bogus',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMode).toBe('editor')
-    })
-
-    it('setViewMode saves via IPC', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setViewMode('typingTest')
-      })
-
-      expect(result.current.viewMode).toBe('typingTest')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        viewMode: 'typingTest',
-      }))
-    })
-
-    it('appliedUid is null before applyDevicePrefs', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.appliedUid).toBeNull()
-    })
-
-    it('appliedUid matches uid after applyDevicePrefs resolves', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.appliedUid).toBe('0xAABB')
-    })
-
-    it('setTypingTestViewOnly leaves viewMode out of the patch (disconnect scenario)', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingTestViewOnly: true,
-        viewMode: 'typingView',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      // Simulates disconnect cleanup: resets typingTestViewOnly but should not touch viewMode
-      act(() => {
-        result.current.setTypingTestViewOnly(false)
-      })
-
-      expect(result.current.viewMode).toBe('typingView')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', { _rev: 1, typingTestViewOnly: false })
-    })
-  })
-
-  describe('stale typingViewMenuTab tolerance', () => {
-    // `typingViewMenuTab` isn't part of PipetteSettings, but a settings
-    // JSON written by an older build can still carry the field on disk —
-    // it must be silently ignored on load rather than rejecting the whole
-    // record or leaking onto the returned prefs object.
-    it('loads normally, ignoring a stale typingViewMenuTab field', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingViewMenuTab: 'rec',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-
-      expect(result.current.layout).toBe('qwerty')
-      expect(result.current.autoAdvance).toBe(true)
-      expect(result.current as unknown as Record<string, unknown>).not.toHaveProperty('typingViewMenuTab')
-    })
-  })
-
-  describe('typingRecordEnabled', () => {
-    it('defaults to false for a new device', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.typingRecordEnabled).toBe(false)
-    })
-
-    it('restores typingRecordEnabled from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingRecordEnabled: true,
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.typingRecordEnabled).toBe(true)
-    })
-
-    it('falls back to false when IPC returns a non-boolean typingRecordEnabled', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingRecordEnabled: 'yes',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.typingRecordEnabled).toBe(false)
-    })
-
-    it('setTypingRecordEnabled saves via IPC and updates state', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setTypingRecordEnabled(true)
-      })
-
-      expect(result.current.typingRecordEnabled).toBe(true)
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        typingRecordEnabled: true,
-      }))
-    })
-
-    it('setTypingRecordEnabled skips the IPC save when the value is unchanged', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setTypingRecordEnabled(false)
-      })
-
-      expect(result.current.typingRecordEnabled).toBe(false)
-      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-    })
-  })
-
-
-  describe('typingTestViewOnlyOpacity', () => {
-    async function applyWith(saved: Record<string, unknown> | null) {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue(saved === null ? null : {
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        ...saved,
-      } as never)
       const hook = renderHookWithConfig(() => useDevicePrefs())
       await act(async () => {})
-      await act(async () => {
-        await hook.result.current.applyDevicePrefs('0xAABB')
-      })
+      await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
       return hook
     }
 
-    it('defaults to 1 for a new device', async () => {
-      const { result } = await applyWith(null)
-      expect(result.current.typingTestViewOnlyOpacity).toBe(1)
+    it('defaults to on for a new keyboard without writing it', async () => {
+      const { result } = await applied('0xAABB')
+      expect(result.current.layerHoverPreview).toBe(true)
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
     })
 
-    it('restores a saved in-range value', async () => {
-      const { result } = await applyWith({ typingTestViewOnlyOpacity: 0.7 })
-      expect(result.current.typingTestViewOnlyOpacity).toBe(0.7)
+    it('defaults to on when the stored prefs have no value', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored())
+      const { result } = await applied('0xAABB')
+      expect(result.current.layerHoverPreview).toBe(true)
     })
 
-    it('clamps out-of-range saved values', async () => {
-      const low = await applyWith({ typingTestViewOnlyOpacity: 0.1 })
-      expect(low.result.current.typingTestViewOnlyOpacity).toBe(0.5)
-      const high = await applyWith({ typingTestViewOnlyOpacity: 3 })
-      expect(high.result.current.typingTestViewOnlyOpacity).toBe(1)
+    it('restores an explicit false', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored({ layerHoverPreview: false }))
+      const { result } = await applied('0xAABB')
+      expect(result.current.layerHoverPreview).toBe(false)
     })
 
-    it('falls back to 1 for a non-number without dropping the other settings', async () => {
-      const { result } = await applyWith({
-        typingTestViewOnlyOpacity: 'half',
-        typingTestViewOnlyAlwaysOnTop: true,
-        typingTestFontSize: 30,
-        layerNames: ['Base', 'Fn'],
-      })
-      expect(result.current.typingTestViewOnlyOpacity).toBe(1)
-      expect(result.current.typingTestViewOnlyAlwaysOnTop).toBe(true)
-      expect(result.current.typingTestFontSize).toBe(30)
-      expect(result.current.layerNames).toEqual(['Base', 'Fn'])
+    it('falls back to on for a non-boolean value', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored({ layerHoverPreview: 'no' }))
+      const { result } = await applied('0xAABB')
+      expect(result.current.layerHoverPreview).toBe(true)
     })
 
-    it('setTypingTestViewOnlyOpacity clamps, updates state and saves via IPC', async () => {
-      const { result } = await applyWith(null)
+    it('setLayerHoverPreview saves false, and later unrelated saves leave it out of the patch', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored())
+      const { result } = await applied('0xAABB')
+      act(() => { result.current.setLayerHoverPreview(false) })
+      expect(result.current.layerHoverPreview).toBe(false)
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ layerHoverPreview: false }))
+
+      act(() => { result.current.setAutoAdvance(false) })
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
+      expect(result.current.layerHoverPreview).toBe(false)
+    })
+
+    it('does not carry one keyboard\'s value over to another', async () => {
+      mockPipetteSettingsGet
+        .mockResolvedValueOnce(stored({ layerHoverPreview: false }))
+        .mockResolvedValueOnce(stored())
+      const { result } = await applied('uid-1')
+      expect(result.current.layerHoverPreview).toBe(false)
+      await act(async () => { await result.current.applyDevicePrefs('uid-2') })
+      expect(result.current.layerHoverPreview).toBe(true)
+    })
+  })
+
+  describe('useDevicePrefs — entryHoverPreview', () => {
+    type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
+    const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
+      ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
+
+    async function applied(uid: string) {
+      setupMocks()
+      const hook = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
+      return hook
+    }
+
+    it('defaults to on for a new keyboard without writing it', async () => {
+      const { result } = await applied('0xAABB')
+      expect(result.current.entryHoverPreview).toBe(true)
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+    })
+
+    it('defaults to on when the stored prefs have no value', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored())
+      const { result } = await applied('0xAABB')
+      expect(result.current.entryHoverPreview).toBe(true)
+    })
+
+    it('restores an explicit false', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored({ entryHoverPreview: false }))
+      const { result } = await applied('0xAABB')
+      expect(result.current.entryHoverPreview).toBe(false)
+    })
+
+    it('falls back to on for a non-boolean value', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored({ entryHoverPreview: 'no' }))
+      const { result } = await applied('0xAABB')
+      expect(result.current.entryHoverPreview).toBe(true)
+    })
+
+    it('setEntryHoverPreview saves false, and later unrelated saves leave it out of the patch', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored())
+      const { result } = await applied('0xAABB')
+      act(() => { result.current.setEntryHoverPreview(false) })
+      expect(result.current.entryHoverPreview).toBe(false)
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ entryHoverPreview: false }))
+
+      act(() => { result.current.setAutoAdvance(false) })
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
+      expect(result.current.entryHoverPreview).toBe(false)
+    })
+
+    it('does not carry one keyboard\'s value over to another', async () => {
+      mockPipetteSettingsGet
+        .mockResolvedValueOnce(stored({ entryHoverPreview: false }))
+        .mockResolvedValueOnce(stored())
+      const { result } = await applied('uid-1')
+      expect(result.current.entryHoverPreview).toBe(false)
+      await act(async () => { await result.current.applyDevicePrefs('uid-2') })
+      expect(result.current.entryHoverPreview).toBe(true)
+    })
+  })
+
+  describe('useDevicePrefs — keycodeTabOrder', () => {
+    type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
+    const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
+      ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
+
+    async function applied(uid: string) {
+      setupMocks()
+      const hook = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
+      return hook
+    }
+
+    it('is the default order (undefined) for a new keyboard without writing it', async () => {
+      const { result } = await applied('0xAABB')
+      expect(result.current.keycodeTabOrder).toBeUndefined()
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+    })
+
+    it.runIf(backend.anyStoredValue)('restores a saved order, keeping unknown ids and dropping repeats and non-strings', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored({ keycodeTabOrder: ['user', 'future', 3, 'user', 'basic'] }))
+      const { result } = await applied('0xAABB')
+      expect(result.current.keycodeTabOrder).toEqual(['user', 'future', 'basic'])
+    })
+
+    it.each([['not an array', 'user'], ['empty', []], ['no strings', [1, null]]])('falls back to the default order when %s', async (_name, value) => {
+      mockPipetteSettingsGet.mockResolvedValue(stored({ keycodeTabOrder: value }))
+      const { result } = await applied('0xAABB')
+      expect(result.current.keycodeTabOrder).toBeUndefined()
+    })
+
+    it('setKeycodeTabOrder saves the order, later unrelated saves leave it out of the patch, and undefined clears it with null', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored())
+      const { result } = await applied('0xAABB')
+      act(() => { result.current.setKeycodeTabOrder(['user', 'basic']) })
+      expect(result.current.keycodeTabOrder).toEqual(['user', 'basic'])
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: ['user', 'basic'] }))
+
+      act(() => { result.current.setAutoAdvance(false) })
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
+      expect(result.current.keycodeTabOrder).toEqual(['user', 'basic'])
+
+      act(() => { result.current.setKeycodeTabOrder(undefined) })
+      expect(result.current.keycodeTabOrder).toBeUndefined()
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: null }))
+    })
+
+    it('keeps the new order in memory when the save fails', async () => {
+      mockPipetteSettingsGet.mockResolvedValue(stored())
+      const { result } = await applied('0xAABB')
+      mockPipetteSettingsPatch.mockRejectedValueOnce(new Error('disk full'))
+      await act(async () => { result.current.setKeycodeTabOrder(['user']) })
+      expect(result.current.keycodeTabOrder).toEqual(['user'])
+    })
+
+    it('does not carry one keyboard\'s order over to another', async () => {
+      mockPipetteSettingsGet
+        .mockResolvedValueOnce(stored({ keycodeTabOrder: ['user'] }))
+        .mockResolvedValueOnce(stored())
+      const { result } = await applied('uid-1')
+      expect(result.current.keycodeTabOrder).toEqual(['user'])
+      await act(async () => { await result.current.applyDevicePrefs('uid-2') })
+      expect(result.current.keycodeTabOrder).toBeUndefined()
+    })
+  })
+
+  describe('useDevicePrefs — per-field patches', () => {
+    const UID = '0xAABB'
+    const RESULT: TypingTestResult = {
+      date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 30,
+      correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+    }
+    const NEW_RESULT: TypingTestResult = { ...RESULT, date: '2026-01-02T00:00:00.000Z', wpm: 60 }
+    const MEMORY: TypingTestMemory = {
+      textId: 't1', currentWordIndex: 1, currentInput: 'a', wordResults: [],
+      correctChars: 1, incorrectChars: 0, elapsedMs: 10, wpmHistory: [], savedAt: '2026-01-01T00:00:00.000Z',
+    }
+    const WORDS_CFG = { mode: 'words', wordCount: 60, punctuation: true, numbers: false } as TypingTestConfig
+    const TATOEBA_CFG = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 } as TypingTestConfig
+    const MATRIX = { '0,0': { row: 1, col: 2 } }
+
+    type Hook = ReturnType<typeof useDevicePrefs>
+    // Rows for clamped inputs (keymapScale, typingTestFontSize, keyEditorZoom)
+    // expect the clamped value, not the raw input.
+    const rows: { name: string; call: (r: Hook) => void; expected: PipetteSettingsPatch }[] = [
+      { name: 'setLayout', call: (r) => r.setLayout('dvorak'), expected: { keyboardLayout: 'dvorak' } },
+      { name: 'setAutoAdvance', call: (r) => r.setAutoAdvance(false), expected: { autoAdvance: false } },
+      { name: 'setLayerPanelOpen', call: (r) => r.setLayerPanelOpen(false), expected: { layerPanelOpen: false } },
+      { name: 'setBasicViewType', call: (r) => r.setBasicViewType('iso'), expected: { basicViewType: 'iso' } },
+      { name: 'setSplitKeyMode', call: (r) => r.setSplitKeyMode('flat'), expected: { splitKeyMode: 'flat' } },
+      { name: 'setQuickSelect', call: (r) => r.setQuickSelect(false), expected: { quickSelect: false } },
+      { name: 'setKeymapScale', call: (r) => r.setKeymapScale(1.54), expected: { keymapScale: 1.5 } },
+      { name: 'setLayerNames', call: (r) => r.setLayerNames(['a', 'b']), expected: { layerNames: ['a', 'b'] } },
+      { name: 'addTypingTestResult', call: (r) => r.addTypingTestResult(NEW_RESULT), expected: { typingTestResults: [NEW_RESULT, RESULT] } },
+      { name: 'renameTypingTestResult', call: (r) => r.renameTypingTestResult(RESULT.date, 'n'), expected: { typingTestResults: [{ ...RESULT, name: 'n' }] } },
+      { name: 'deleteTypingTestResult', call: (r) => r.deleteTypingTestResult(RESULT.date), expected: { typingTestResults: [] } },
+      { name: 'setTypingTestConfig', call: (r) => r.setTypingTestConfig(WORDS_CFG), expected: { typingTestConfig: WORDS_CFG, typingTestMonkeytypeConfig: WORDS_CFG } },
+      { name: 'setTypingTestLanguage', call: (r) => r.setTypingTestLanguage('english_1k'), expected: { typingTestLanguage: 'english_1k' } },
+      { name: 'setTypingTestViewOnly', call: (r) => r.setTypingTestViewOnly(true), expected: { typingTestViewOnly: true } },
+      { name: 'setTypingTestViewOnlyWindowSize', call: (r) => r.setTypingTestViewOnlyWindowSize({ width: 300, height: 200 }), expected: { typingTestViewOnlyWindowSize: { width: 300, height: 200 } } },
+      { name: 'setTypingTestViewOnlyAlwaysOnTop', call: (r) => r.setTypingTestViewOnlyAlwaysOnTop(true), expected: { typingTestViewOnlyAlwaysOnTop: true } },
+      { name: 'setTypingTestViewOnlyOpacity', call: (r) => r.setTypingTestViewOnlyOpacity(0.7), expected: { typingTestViewOnlyOpacity: 0.7 } },
+      { name: 'setTypingTestMemory', call: (r) => r.setTypingTestMemory(MEMORY), expected: { typingTestMemory: MEMORY } },
+      { name: 'setTypingTestDisplayLines', call: (r) => r.setTypingTestDisplayLines(6), expected: { typingTestDisplayLines: 6 } },
+      { name: 'setTypingTestFontSize', call: (r) => r.setTypingTestFontSize(31), expected: { typingTestFontSize: 32 } },
+      { name: 'setTypingTestHideKeymap', call: (r) => r.setTypingTestHideKeymap(true), expected: { typingTestHideKeymap: true } },
+      { name: 'setTypingTestHideStatsRow', call: (r) => r.setTypingTestHideStatsRow(true), expected: { typingTestHideStatsRow: true } },
+      { name: 'setTypingTestHideControls', call: (r) => r.setTypingTestHideControls(true), expected: { typingTestHideControls: true } },
+      { name: 'setTypingTestSaveUnnamed', call: (r) => r.setTypingTestSaveUnnamed(false), expected: { typingTestSaveUnnamed: false } },
+      { name: 'setTypingTestComparisonBaseline', call: (r) => r.setTypingTestComparisonBaseline('k', { kind: 'previous' }), expected: { typingTestComparisonBaselines: { k: { kind: 'previous' } } } },
+      { name: 'setTypingTestSettingsPanelOpen', call: (r) => r.setTypingTestSettingsPanelOpen(false), expected: { typingTestSettingsPanelOpen: false } },
+      { name: 'setTypingRecordEnabled', call: (r) => r.setTypingRecordEnabled(true), expected: { typingRecordEnabled: true } },
+      { name: 'setViewMode', call: (r) => r.setViewMode('typingTest'), expected: { viewMode: 'typingTest' } },
+      { name: 'setViewMatrix', call: (r) => r.setViewMatrix(MATRIX), expected: { viewMatrix: MATRIX } },
+      { name: 'setViewMatrixWires', call: (r) => r.setViewMatrixWires(false), expected: { viewMatrixWires: false } },
+      { name: 'setLayerHoverPreview', call: (r) => r.setLayerHoverPreview(false), expected: { layerHoverPreview: false } },
+      { name: 'setEntryHoverPreview', call: (r) => r.setEntryHoverPreview(false), expected: { entryHoverPreview: false } },
+      { name: 'setKeycodeTabOrder', call: (r) => r.setKeycodeTabOrder(['user', 'basic']), expected: { keycodeTabOrder: ['user', 'basic'] } },
+      { name: 'setKeyEditorZoom', call: (r) => r.setKeyEditorZoom(500), expected: { keyEditorZoom: 200 } },
+    ]
+
+    async function applied() {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], typingTestResults: [RESULT],
+      } as never)
+      const hook = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => { await hook.result.current.applyDevicePrefs(UID) })
       mockPipetteSettingsPatch.mockClear()
+      return hook
+    }
 
-      act(() => {
-        result.current.setTypingTestViewOnlyOpacity(0.2)
-      })
+    it('covers every setter', () => {
+      // Bump the count when a setter is added.
+      expect(rows).toHaveLength(34)
+    })
 
-      expect(result.current.typingTestViewOnlyOpacity).toBe(0.5)
+    it.each(rows)('$name patches only the field it changed', async ({ call, expected }) => {
+      const { result } = await applied()
+      act(() => { call(result.current) })
       expect(mockPipetteSettingsPatch).toHaveBeenCalledTimes(1)
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        typingTestViewOnlyOpacity: 0.5,
-      }))
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, ...expected })
     })
 
-    it('setTypingTestViewOnlyOpacity skips the IPC save when the value is unchanged', async () => {
-      const { result } = await applyWith({ typingTestViewOnlyOpacity: 0.8 })
-      mockPipetteSettingsPatch.mockClear()
+    it('sends null when typingTestMemory is cleared', async () => {
+      const { result } = await applied()
+      act(() => { result.current.setTypingTestMemory(MEMORY) })
+      act(() => { result.current.setTypingTestMemory(undefined) })
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, typingTestMemory: null })
+    })
 
-      act(() => {
-        result.current.setTypingTestViewOnlyOpacity(0.8)
+    it('setTypingTestConfig leaving a monkeytype mode also sends the previous monkeytype config', async () => {
+      const { result } = await applied()
+      act(() => { result.current.setTypingTestConfig(WORDS_CFG) })
+      act(() => { result.current.setTypingTestConfig(TATOEBA_CFG) })
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, {
+        _rev: 1, typingTestConfig: TATOEBA_CFG, typingTestMonkeytypeConfig: WORDS_CFG,
       })
+    })
 
+    it('setTypingTestConfig to a non-monkeytype mode without a previous config sends only the config', async () => {
+      const { result } = await applied()
+      act(() => { result.current.setTypingTestConfig(TATOEBA_CFG) })
+      expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, typingTestConfig: TATOEBA_CFG })
+    })
+
+    it('does not patch before a keyboard is applied', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      act(() => { result.current.setAutoAdvance(false) })
       expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
     })
-
-    it('setTypingTestViewOnlyOpacity skips the save when a value clamps to the current one', async () => {
-      const { result } = await applyWith(null)
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setTypingTestViewOnlyOpacity(Number.NaN)
-      })
-
-      expect(result.current.typingTestViewOnlyOpacity).toBe(1)
-      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('viewMatrix', () => {
-    it('defaults to undefined when not in storage', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMatrix).toBeUndefined()
-    })
-
-    it('restores a valid viewMatrix from IPC', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        viewMatrix: { '0,0': { row: 0, col: 5 }, '1,2': { row: 0, col: 0 } },
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMatrix).toEqual({
-        '0,0': { row: 0, col: 5 },
-        '1,2': { row: 0, col: 0 },
-      })
-    })
-
-    it('setViewMatrix saves via IPC and updates state (round trip through save/apply)', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      const next = { '0,0': { row: 2, col: 3 } }
-      act(() => {
-        result.current.setViewMatrix(next)
-      })
-
-      expect(result.current.viewMatrix).toEqual(next)
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        viewMatrix: next,
-      }))
-
-      // Simulate reload: the last patch payload is what IPC would persist
-      // and return on the next `pipetteSettingsGet`.
-      const lastPatch = mockPipetteSettingsPatch.mock.calls[mockPipetteSettingsPatch.mock.calls.length - 1][1]
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        viewMatrix: lastPatch.viewMatrix,
-      } as never)
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMatrix).toEqual(next)
-    })
-
-    it('setViewMatrix(undefined) clears the field by sending null in the patch', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        viewMatrix: { '0,0': { row: 2, col: 3 } },
-      } as never)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.viewMatrix).toEqual({ '0,0': { row: 2, col: 3 } })
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setViewMatrix(undefined)
-      })
-
-      expect(result.current.viewMatrix).toBeUndefined()
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        viewMatrix: null,
-      }))
-    })
-
-  })
-
-  describe('remapLabel and isRemapped', () => {
-    it('remapLabel delegates to remapKeycode with current layout', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      // Default qwerty: identity
-      expect(result.current.remapLabel('KC_A')).toBe('KC_A')
-    })
-
-    // After the Key Labels migration the only built-in layout is
-    // QWERTY; dvorak (and friends) are downloaded into the Key Label
-    // store at runtime. The async store fetch is exercised in
-    // useKeyLabelLookup tests, so this remap-after-change scenario is
-    // covered there instead.
-    it.skip('remapLabel updates after layout change (legacy: dvorak built-in)', async () => {})
-
-    it('isRemapped returns false for qwerty', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.isRemapped('KC_A')).toBe(false)
-    })
-  })
-
-  // Display Only is the sole remap-rendering mode this block covers —
-  // `remapLabel`/`isRemapped` resolve through the active Key Label pack's
-  // own compositeLabels -> map lookup order. A Rewrite never leaves anything
-  // for this to simulate, since it resets `layout` back to QWERTY on
-  // success. Same fixture as `shared/keymap/__tests__/keymap-apply.test.ts`
-  // (real Colemak data).
-  describe('remap-rendering (Display Only mode)', () => {
-    const COLEMAK: Record<string, string> = {
-      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
-      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
-      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
-    }
-
-    function mockKeyLabelPack(id: string, map: Record<string, string>, compositeLabels?: Record<string, string>): void {
-      const existing = vialAPIMock()
-      Object.defineProperty(window, 'vialAPI', {
-        value: {
-          ...existing,
-          keyLabelStoreGet: async (reqId: string) => {
-            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
-            return {
-              success: true,
-              data: {
-                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
-                data: { name: id, map, compositeLabels },
-              },
-            }
-          },
-        },
-        writable: true,
-        configurable: true,
-      })
-    }
-
-    it('remapLabel returns the pack\'s own label, and isRemapped marks both a map source key and a compositeLabels-only entry', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK, { 'LALT(KC_L)': 'KC_LALT' })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-      })
-      await act(async () => {}) // flush the ensure() IPC fetch
-      expect(result.current.remapLabel('KC_E')).toBe('F')
-      expect(result.current.isRemapped('KC_E')).toBe(true) // KC_E is a pack SOURCE key
-      expect(result.current.isRemapped('LALT(KC_L)')).toBe(true) // compositeLabels-only entry
-      expect(result.current.isRemapped('KC_A')).toBe(false) // untouched key
-    })
-
-    // `isRemapped` applies the value-difference rule every picker/palette
-    // consumer applies via `remapLabel(x) !== x`, not map membership. A
-    // pack entry whose value is a passthrough identical to its own qmkId
-    // (present in the map but never actually changing the label) must not
-    // be marked either.
-    it('an identity passthrough entry (map value equal to its own qmkId) is not marked, matching remapLabel(x) === x', async () => {
-      setupMocks()
-      const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
-      mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-passthrough-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapLabel('KC_A')).toBe('KC_A')
-      expect(result.current.isRemapped('KC_A')).toBe(false)
-      // A genuinely changed entry is still marked.
-      expect(result.current.remapLabel('KC_E')).toBe('F')
-      expect(result.current.isRemapped('KC_E')).toBe(true)
-    })
-
-    it('isRemapped and remapLabel always agree (isRemapped(x) === (remapLabel(x) !== x))', async () => {
-      setupMocks()
-      const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
-      mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-passthrough-id')
-      })
-      await act(async () => {})
-      for (const qmkId of ['KC_A', 'KC_E', 'KC_Z']) {
-        expect(result.current.isRemapped(qmkId)).toBe(result.current.remapLabel(qmkId) !== qmkId)
-      }
-    })
-
-    it('QWERTY resolves to identity (empty builtin map) — raw label, no remap tint', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.remapLabel('KC_E')).toBe('KC_E')
-      expect(result.current.isRemapped('KC_E')).toBe(false)
-    })
-  })
-
-  // The key PICKER only ever changes for a pack that deviates from ANSI —
-  // a pure QWERTY-keycode permutation pack (Colemak et al.) leaves the
-  // picker raw in every mode, since every character it swaps in already
-  // exists in the picker somewhere. `pickerRemapLabel` is the gated
-  // variant; `remapLabel` (the keymap-legend source) is unaffected either
-  // way.
-  describe('pickerRemapLabel', () => {
-    const COLEMAK: Record<string, string> = {
-      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
-      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
-      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
-    }
-
-    // Real sample-packs/key-labels/japanese_qwerty_ej.json-style data — a
-    // QWERTY physical layout with shift-pair display labels. Fails
-    // `buildKeymapRewriteTable` (a shift pair can't flatten to one
-    // keycode), so it counts as an "ANSI-deviation" pack the picker must
-    // still remap — same fixture shape as
-    // `shared/keymap/__tests__/keymap-apply.test.ts`.
-    const JAPANESE_QWERTY: Record<string, string> = {
-      KC_LBRACKET: '`\n@',
-      KC_RBRACKET: '{\n[',
-      KC_2: '"\n2',
-    }
-
-    function mockKeyLabelPack(id: string, map: Record<string, string>): void {
-      const existing = vialAPIMock()
-      Object.defineProperty(window, 'vialAPI', {
-        value: {
-          ...existing,
-          keyLabelStoreGet: async (reqId: string) => {
-            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
-            return {
-              success: true,
-              data: {
-                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
-                data: { name: id, map },
-              },
-            }
-          },
-        },
-        writable: true,
-        configurable: true,
-      })
-    }
-
-    it('is identity for a pure permutation pack (Colemak) while remapLabel/isRemapped still remap', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-      })
-      await act(async () => {}) // flush the ensure() IPC fetch
-
-      // Picker stays raw...
-      expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
-      // ...while the keymap-legend source keeps remapping and tinting.
-      expect(result.current.remapLabel('KC_E')).toBe('F')
-      expect(result.current.isRemapped('KC_E')).toBe(true)
-    })
-
-    it('matches remapLabel for a deviation pack that fails buildKeymapRewriteTable (JIS shift pairs)', async () => {
-      setupMocks()
-      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('jis-id')
-      })
-      await act(async () => {})
-
-      expect(result.current.pickerRemapLabel('KC_LBRACKET')).toBe(result.current.remapLabel('KC_LBRACKET'))
-      expect(result.current.pickerRemapLabel('KC_LBRACKET')).toBe('`\n@')
-      expect(result.current.pickerRemapLabel('KC_2')).toBe('"\n2')
-    })
-
-    it('is identity for QWERTY, matching remapLabel', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
-      expect(result.current.pickerRemapLabel('KC_E')).toBe(result.current.remapLabel('KC_E'))
-    })
-  })
-
-  // `remapKind` picks WHICH remap tint the keymap surface uses —
-  // 'simulated' (the permutation-pack Display Only case: labels show what
-  // a Rewrite would produce, pressing still types the old character) iff a
-  // non-empty pack map is loaded and it's a pure permutation; 'actual'
-  // otherwise (JIS-type deviation packs, QWERTY/no pack).
-  describe('remapKind', () => {
-    const COLEMAK: Record<string, string> = {
-      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
-      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
-      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
-    }
-    // Fails buildKeymapRewriteTable (a shift pair can't flatten to one
-    // keycode) — same fixture shape used throughout this file.
-    const JAPANESE_QWERTY: Record<string, string> = {
-      KC_LBRACKET: '`\n@',
-      KC_RBRACKET: '{\n[',
-      KC_2: '"\n2',
-    }
-
-    function mockKeyLabelPack(id: string, map: Record<string, string>, keymapApplicable = true): void {
-      const existing = vialAPIMock()
-      Object.defineProperty(window, 'vialAPI', {
-        value: {
-          ...existing,
-          keyLabelStoreGet: async (reqId: string) => {
-            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
-            return {
-              success: true,
-              data: {
-                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
-                data: { name: id, map, keymapApplicable },
-              },
-            }
-          },
-        },
-        writable: true,
-        configurable: true,
-      })
-    }
-
-    it('is "actual" for QWERTY (no pack loaded)', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('actual')
-    })
-
-    it('is "simulated" for a pure permutation pack (Colemak) in Display Only mode', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-      })
-      await act(async () => {}) // flush the ensure() IPC fetch
-      expect(result.current.remapKind).toBe('simulated')
-    })
-
-    it('is "actual" for a JIS-type deviation pack that fails buildKeymapRewriteTable', async () => {
-      setupMocks()
-      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('jis-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('actual')
-    })
-
-    it('is "actual" when the pack is missing/not yet loaded', async () => {
-      setupMocks() // no keyLabelStoreGet override — the pack never resolves
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('missing-pack-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('actual')
-    })
-
-    // A structurally pure permutation the author did NOT flag
-    // `keymapApplicable` must render with the actual tint (no simulation to
-    // offer, since nothing downstream will ever build an Apply table for it
-    // either) — a check that only tested `.ok` would wrongly return
-    // 'simulated' here.
-    it('is "actual" for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK, false)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('actual')
-    })
-  })
-
-  // `activeRewriteTable` lets `useKeymapApplyPrompt.requestApply` skip its
-  // own async lookup/build — it must mirror `remapKind` exactly: defined
-  // (and matching `buildKeymapRewriteTable`'s own table) iff
-  // `remapKind === 'simulated'`, `undefined` in every 'actual' case.
-  describe('activeRewriteTable', () => {
-    const COLEMAK: Record<string, string> = {
-      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
-      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
-      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
-    }
-    const JAPANESE_QWERTY: Record<string, string> = {
-      KC_LBRACKET: '`\n@',
-      KC_RBRACKET: '{\n[',
-      KC_2: '"\n2',
-    }
-
-    function mockKeyLabelPack(id: string, map: Record<string, string>, keymapApplicable = true): void {
-      const existing = vialAPIMock()
-      Object.defineProperty(window, 'vialAPI', {
-        value: {
-          ...existing,
-          keyLabelStoreGet: async (reqId: string) => {
-            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
-            return {
-              success: true,
-              data: {
-                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
-                data: { name: id, map, keymapApplicable },
-              },
-            }
-          },
-        },
-        writable: true,
-        configurable: true,
-      })
-    }
-
-    it('is undefined for QWERTY (no pack loaded)', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      expect(result.current.activeRewriteTable).toBeUndefined()
-    })
-
-    it('mirrors remapKind === "simulated": the resolved table for a pure permutation pack (Colemak)', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('simulated')
-      expect(result.current.activeRewriteTable).toBeDefined()
-      expect(result.current.activeRewriteTable?.get('KC_E')).toBe('KC_F')
-    })
-
-    it('is undefined for a JIS-type deviation pack that fails buildKeymapRewriteTable', async () => {
-      setupMocks()
-      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('jis-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('actual')
-      expect(result.current.activeRewriteTable).toBeUndefined()
-    })
-
-    it('is undefined for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK, false)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapKind).toBe('actual')
-      expect(result.current.activeRewriteTable).toBeUndefined()
-    })
-  })
-})
-
-describe('useDevicePrefs — layerHoverPreview', () => {
-  type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
-  const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
-    ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
-
-  async function applied(uid: string) {
-    setupMocks()
-    const hook = renderHookWithConfig(() => useDevicePrefs())
-    await act(async () => {})
-    await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
-    return hook
-  }
-
-  it('defaults to on for a new keyboard without writing it', async () => {
-    const { result } = await applied('0xAABB')
-    expect(result.current.layerHoverPreview).toBe(true)
-    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-  })
-
-  it('defaults to on when the stored prefs have no value', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored())
-    const { result } = await applied('0xAABB')
-    expect(result.current.layerHoverPreview).toBe(true)
-  })
-
-  it('restores an explicit false', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored({ layerHoverPreview: false }))
-    const { result } = await applied('0xAABB')
-    expect(result.current.layerHoverPreview).toBe(false)
-  })
-
-  it('falls back to on for a non-boolean value', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored({ layerHoverPreview: 'no' }))
-    const { result } = await applied('0xAABB')
-    expect(result.current.layerHoverPreview).toBe(true)
-  })
-
-  it('setLayerHoverPreview saves false, and later unrelated saves leave it out of the patch', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored())
-    const { result } = await applied('0xAABB')
-    act(() => { result.current.setLayerHoverPreview(false) })
-    expect(result.current.layerHoverPreview).toBe(false)
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ layerHoverPreview: false }))
-
-    act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
-    expect(result.current.layerHoverPreview).toBe(false)
-  })
-
-  it('does not carry one keyboard\'s value over to another', async () => {
-    mockPipetteSettingsGet
-      .mockResolvedValueOnce(stored({ layerHoverPreview: false }))
-      .mockResolvedValueOnce(stored())
-    const { result } = await applied('uid-1')
-    expect(result.current.layerHoverPreview).toBe(false)
-    await act(async () => { await result.current.applyDevicePrefs('uid-2') })
-    expect(result.current.layerHoverPreview).toBe(true)
-  })
-})
-
-describe('useDevicePrefs — entryHoverPreview', () => {
-  type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
-  const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
-    ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
-
-  async function applied(uid: string) {
-    setupMocks()
-    const hook = renderHookWithConfig(() => useDevicePrefs())
-    await act(async () => {})
-    await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
-    return hook
-  }
-
-  it('defaults to on for a new keyboard without writing it', async () => {
-    const { result } = await applied('0xAABB')
-    expect(result.current.entryHoverPreview).toBe(true)
-    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-  })
-
-  it('defaults to on when the stored prefs have no value', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored())
-    const { result } = await applied('0xAABB')
-    expect(result.current.entryHoverPreview).toBe(true)
-  })
-
-  it('restores an explicit false', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored({ entryHoverPreview: false }))
-    const { result } = await applied('0xAABB')
-    expect(result.current.entryHoverPreview).toBe(false)
-  })
-
-  it('falls back to on for a non-boolean value', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored({ entryHoverPreview: 'no' }))
-    const { result } = await applied('0xAABB')
-    expect(result.current.entryHoverPreview).toBe(true)
-  })
-
-  it('setEntryHoverPreview saves false, and later unrelated saves leave it out of the patch', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored())
-    const { result } = await applied('0xAABB')
-    act(() => { result.current.setEntryHoverPreview(false) })
-    expect(result.current.entryHoverPreview).toBe(false)
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ entryHoverPreview: false }))
-
-    act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
-    expect(result.current.entryHoverPreview).toBe(false)
-  })
-
-  it('does not carry one keyboard\'s value over to another', async () => {
-    mockPipetteSettingsGet
-      .mockResolvedValueOnce(stored({ entryHoverPreview: false }))
-      .mockResolvedValueOnce(stored())
-    const { result } = await applied('uid-1')
-    expect(result.current.entryHoverPreview).toBe(false)
-    await act(async () => { await result.current.applyDevicePrefs('uid-2') })
-    expect(result.current.entryHoverPreview).toBe(true)
-  })
-})
-
-describe('useDevicePrefs — keycodeTabOrder', () => {
-  type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
-  const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
-    ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
-
-  async function applied(uid: string) {
-    setupMocks()
-    const hook = renderHookWithConfig(() => useDevicePrefs())
-    await act(async () => {})
-    await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
-    return hook
-  }
-
-  it('is the default order (undefined) for a new keyboard without writing it', async () => {
-    const { result } = await applied('0xAABB')
-    expect(result.current.keycodeTabOrder).toBeUndefined()
-    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
-  })
-
-  it('restores a saved order, keeping unknown ids and dropping repeats and non-strings', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored({ keycodeTabOrder: ['user', 'future', 3, 'user', 'basic'] }))
-    const { result } = await applied('0xAABB')
-    expect(result.current.keycodeTabOrder).toEqual(['user', 'future', 'basic'])
-  })
-
-  it.each([['not an array', 'user'], ['empty', []], ['no strings', [1, null]]])('falls back to the default order when %s', async (_name, value) => {
-    mockPipetteSettingsGet.mockResolvedValue(stored({ keycodeTabOrder: value }))
-    const { result } = await applied('0xAABB')
-    expect(result.current.keycodeTabOrder).toBeUndefined()
-  })
-
-  it('setKeycodeTabOrder saves the order, later unrelated saves leave it out of the patch, and undefined clears it with null', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored())
-    const { result } = await applied('0xAABB')
-    act(() => { result.current.setKeycodeTabOrder(['user', 'basic']) })
-    expect(result.current.keycodeTabOrder).toEqual(['user', 'basic'])
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: ['user', 'basic'] }))
-
-    act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
-    expect(result.current.keycodeTabOrder).toEqual(['user', 'basic'])
-
-    act(() => { result.current.setKeycodeTabOrder(undefined) })
-    expect(result.current.keycodeTabOrder).toBeUndefined()
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: null }))
-  })
-
-  it('keeps the new order in memory when the save fails', async () => {
-    mockPipetteSettingsGet.mockResolvedValue(stored())
-    const { result } = await applied('0xAABB')
-    mockPipetteSettingsPatch.mockRejectedValueOnce(new Error('disk full'))
-    await act(async () => { result.current.setKeycodeTabOrder(['user']) })
-    expect(result.current.keycodeTabOrder).toEqual(['user'])
-  })
-
-  it('does not carry one keyboard\'s order over to another', async () => {
-    mockPipetteSettingsGet
-      .mockResolvedValueOnce(stored({ keycodeTabOrder: ['user'] }))
-      .mockResolvedValueOnce(stored())
-    const { result } = await applied('uid-1')
-    expect(result.current.keycodeTabOrder).toEqual(['user'])
-    await act(async () => { await result.current.applyDevicePrefs('uid-2') })
-    expect(result.current.keycodeTabOrder).toBeUndefined()
-  })
-})
-
-describe('useDevicePrefs — per-field patches', () => {
-  const UID = '0xAABB'
-  const RESULT: TypingTestResult = {
-    date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 30,
-    correctChars: 100, incorrectChars: 5, durationSeconds: 30,
-  }
-  const NEW_RESULT: TypingTestResult = { ...RESULT, date: '2026-01-02T00:00:00.000Z', wpm: 60 }
-  const MEMORY: TypingTestMemory = {
-    textId: 't1', currentWordIndex: 1, currentInput: 'a', wordResults: [],
-    correctChars: 1, incorrectChars: 0, elapsedMs: 10, wpmHistory: [], savedAt: '2026-01-01T00:00:00.000Z',
-  }
-  const WORDS_CFG = { mode: 'words', wordCount: 60, punctuation: true, numbers: false } as TypingTestConfig
-  const TATOEBA_CFG = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 } as TypingTestConfig
-  const MATRIX = { '0,0': { row: 1, col: 2 } }
-
-  type Hook = ReturnType<typeof useDevicePrefs>
-  // Rows for clamped inputs (keymapScale, typingTestFontSize, keyEditorZoom)
-  // expect the clamped value, not the raw input.
-  const rows: { name: string; call: (r: Hook) => void; expected: PipetteSettingsPatch }[] = [
-    { name: 'setLayout', call: (r) => r.setLayout('dvorak'), expected: { keyboardLayout: 'dvorak' } },
-    { name: 'setAutoAdvance', call: (r) => r.setAutoAdvance(false), expected: { autoAdvance: false } },
-    { name: 'setLayerPanelOpen', call: (r) => r.setLayerPanelOpen(false), expected: { layerPanelOpen: false } },
-    { name: 'setBasicViewType', call: (r) => r.setBasicViewType('iso'), expected: { basicViewType: 'iso' } },
-    { name: 'setSplitKeyMode', call: (r) => r.setSplitKeyMode('flat'), expected: { splitKeyMode: 'flat' } },
-    { name: 'setQuickSelect', call: (r) => r.setQuickSelect(false), expected: { quickSelect: false } },
-    { name: 'setKeymapScale', call: (r) => r.setKeymapScale(1.54), expected: { keymapScale: 1.5 } },
-    { name: 'setLayerNames', call: (r) => r.setLayerNames(['a', 'b']), expected: { layerNames: ['a', 'b'] } },
-    { name: 'addTypingTestResult', call: (r) => r.addTypingTestResult(NEW_RESULT), expected: { typingTestResults: [NEW_RESULT, RESULT] } },
-    { name: 'renameTypingTestResult', call: (r) => r.renameTypingTestResult(RESULT.date, 'n'), expected: { typingTestResults: [{ ...RESULT, name: 'n' }] } },
-    { name: 'deleteTypingTestResult', call: (r) => r.deleteTypingTestResult(RESULT.date), expected: { typingTestResults: [] } },
-    { name: 'setTypingTestConfig', call: (r) => r.setTypingTestConfig(WORDS_CFG), expected: { typingTestConfig: WORDS_CFG, typingTestMonkeytypeConfig: WORDS_CFG } },
-    { name: 'setTypingTestLanguage', call: (r) => r.setTypingTestLanguage('english_1k'), expected: { typingTestLanguage: 'english_1k' } },
-    { name: 'setTypingTestViewOnly', call: (r) => r.setTypingTestViewOnly(true), expected: { typingTestViewOnly: true } },
-    { name: 'setTypingTestViewOnlyWindowSize', call: (r) => r.setTypingTestViewOnlyWindowSize({ width: 300, height: 200 }), expected: { typingTestViewOnlyWindowSize: { width: 300, height: 200 } } },
-    { name: 'setTypingTestViewOnlyAlwaysOnTop', call: (r) => r.setTypingTestViewOnlyAlwaysOnTop(true), expected: { typingTestViewOnlyAlwaysOnTop: true } },
-    { name: 'setTypingTestViewOnlyOpacity', call: (r) => r.setTypingTestViewOnlyOpacity(0.7), expected: { typingTestViewOnlyOpacity: 0.7 } },
-    { name: 'setTypingTestMemory', call: (r) => r.setTypingTestMemory(MEMORY), expected: { typingTestMemory: MEMORY } },
-    { name: 'setTypingTestDisplayLines', call: (r) => r.setTypingTestDisplayLines(6), expected: { typingTestDisplayLines: 6 } },
-    { name: 'setTypingTestFontSize', call: (r) => r.setTypingTestFontSize(31), expected: { typingTestFontSize: 32 } },
-    { name: 'setTypingTestHideKeymap', call: (r) => r.setTypingTestHideKeymap(true), expected: { typingTestHideKeymap: true } },
-    { name: 'setTypingTestHideStatsRow', call: (r) => r.setTypingTestHideStatsRow(true), expected: { typingTestHideStatsRow: true } },
-    { name: 'setTypingTestHideControls', call: (r) => r.setTypingTestHideControls(true), expected: { typingTestHideControls: true } },
-    { name: 'setTypingTestSaveUnnamed', call: (r) => r.setTypingTestSaveUnnamed(false), expected: { typingTestSaveUnnamed: false } },
-    { name: 'setTypingTestComparisonBaseline', call: (r) => r.setTypingTestComparisonBaseline('k', { kind: 'previous' }), expected: { typingTestComparisonBaselines: { k: { kind: 'previous' } } } },
-    { name: 'setTypingTestSettingsPanelOpen', call: (r) => r.setTypingTestSettingsPanelOpen(false), expected: { typingTestSettingsPanelOpen: false } },
-    { name: 'setTypingRecordEnabled', call: (r) => r.setTypingRecordEnabled(true), expected: { typingRecordEnabled: true } },
-    { name: 'setViewMode', call: (r) => r.setViewMode('typingTest'), expected: { viewMode: 'typingTest' } },
-    { name: 'setViewMatrix', call: (r) => r.setViewMatrix(MATRIX), expected: { viewMatrix: MATRIX } },
-    { name: 'setViewMatrixWires', call: (r) => r.setViewMatrixWires(false), expected: { viewMatrixWires: false } },
-    { name: 'setLayerHoverPreview', call: (r) => r.setLayerHoverPreview(false), expected: { layerHoverPreview: false } },
-    { name: 'setEntryHoverPreview', call: (r) => r.setEntryHoverPreview(false), expected: { entryHoverPreview: false } },
-    { name: 'setKeycodeTabOrder', call: (r) => r.setKeycodeTabOrder(['user', 'basic']), expected: { keycodeTabOrder: ['user', 'basic'] } },
-    { name: 'setKeyEditorZoom', call: (r) => r.setKeyEditorZoom(500), expected: { keyEditorZoom: 200 } },
-  ]
-
-  async function applied() {
-    setupMocks()
-    mockPipetteSettingsGet.mockResolvedValue({
-      _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], typingTestResults: [RESULT],
-    } as never)
-    const hook = renderHookWithConfig(() => useDevicePrefs())
-    await act(async () => {})
-    await act(async () => { await hook.result.current.applyDevicePrefs(UID) })
-    mockPipetteSettingsPatch.mockClear()
-    return hook
-  }
-
-  it('covers every setter', () => {
-    // Bump the count when a setter is added.
-    expect(rows).toHaveLength(34)
-  })
-
-  it.each(rows)('$name patches only the field it changed', async ({ call, expected }) => {
-    const { result } = await applied()
-    act(() => { call(result.current) })
-    expect(mockPipetteSettingsPatch).toHaveBeenCalledTimes(1)
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, ...expected })
-  })
-
-  it('sends null when typingTestMemory is cleared', async () => {
-    const { result } = await applied()
-    act(() => { result.current.setTypingTestMemory(MEMORY) })
-    act(() => { result.current.setTypingTestMemory(undefined) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, typingTestMemory: null })
-  })
-
-  it('setTypingTestConfig leaving a monkeytype mode also sends the previous monkeytype config', async () => {
-    const { result } = await applied()
-    act(() => { result.current.setTypingTestConfig(WORDS_CFG) })
-    act(() => { result.current.setTypingTestConfig(TATOEBA_CFG) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, {
-      _rev: 1, typingTestConfig: TATOEBA_CFG, typingTestMonkeytypeConfig: WORDS_CFG,
-    })
-  })
-
-  it('setTypingTestConfig to a non-monkeytype mode without a previous config sends only the config', async () => {
-    const { result } = await applied()
-    act(() => { result.current.setTypingTestConfig(TATOEBA_CFG) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, typingTestConfig: TATOEBA_CFG })
-  })
-
-  it('does not patch before a keyboard is applied', async () => {
-    setupMocks()
-    const { result } = renderHookWithConfig(() => useDevicePrefs())
-    await act(async () => {})
-    act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
   })
 })
