@@ -14,10 +14,11 @@
 //! | Linux | `( cat /var/lib/dbus/machine-id /etc/machine-id 2> /dev/null \|\| hostname ) \| head -n 1 \|\| :` | whole output |
 //! | Windows | `%windir%\System32\REG.exe QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography /v MachineGuid` | after the first `REG_SZ` |
 //! | macOS | `ioreg -rd1 -c IOPlatformExpertDevice` | the rest of the first `IOPlatformUUID` line, without `=` and `"` |
-//! | FreeBSD | `kenv -q smbios.system.uuid \|\| sysctl -n kern.hostuuid` | whole output |
 //!
 //! Every platform then removes all whitespace (JavaScript's `\s`) and
-//! lowercases.
+//! lowercases. Other targets return [`MachineIdError::UnsupportedPlatform`].
+
+use std::sync::OnceLock;
 
 use crate::content_hash::sha256_hex;
 
@@ -65,7 +66,7 @@ fn second_split_segment<'a>(text: &'a str, marker: &str) -> Option<&'a str> {
     Some(rest.split_once(marker).map_or(rest, |(segment, _)| segment))
 }
 
-/// Linux and FreeBSD: the whole command output.
+/// Linux: the whole command output.
 pub fn expose_linux(output: &str) -> String {
     strip_and_lowercase(output, &[])
 }
@@ -114,7 +115,7 @@ fn platform_machine_id() -> Result<String, MachineIdError> {
 
 /// Runs `program` with `args` and returns its stdout; a start failure or a
 /// non-zero exit is an error, as with Node's `exec`.
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "freebsd"))]
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 fn run(program: &str, args: &[&str]) -> Result<String, MachineIdError> {
     let output = std::process::Command::new(program)
         .args(args)
@@ -148,20 +149,25 @@ fn platform_machine_id() -> Result<String, MachineIdError> {
     expose_macos(&run("ioreg", &["-rd1", "-c", "IOPlatformExpertDevice"])?)
 }
 
-/// Not run on FreeBSD yet.
-#[cfg(target_os = "freebsd")]
-fn platform_machine_id() -> Result<String, MachineIdError> {
-    Ok(expose_linux(&run("/bin/sh", &["-c", "kenv -q smbios.system.uuid || sysctl -n kern.hostuuid"])?))
-}
-
-#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "freebsd")))]
+#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
 fn platform_machine_id() -> Result<String, MachineIdError> {
     Err(MachineIdError::UnsupportedPlatform)
 }
 
 /// The value `node-machine-id`'s `machineId(true)` returns on this machine.
+///
+/// The first successful result is cached for the lifetime of the process,
+/// as `getMachineHash` (`src/main/typing-analytics/machine-hash.ts`) caches
+/// its hash. A failure is not cached, so the next call runs the platform
+/// query again. Callers racing the first call may each run the query; all
+/// of them get the value stored first.
 pub fn machine_id_original() -> Result<String, MachineIdError> {
-    platform_machine_id()
+    static CACHED: OnceLock<String> = OnceLock::new();
+    if let Some(id) = CACHED.get() {
+        return Ok(id.clone());
+    }
+    let id = platform_machine_id()?;
+    Ok(CACHED.get_or_init(|| id).clone())
 }
 
 #[cfg(test)]
@@ -220,6 +226,14 @@ mod tests {
             ])
             .output()
             .unwrap();
-        assert_eq!(machine_id_original().unwrap(), expose_linux(&String::from_utf8_lossy(&output.stdout)));
+        assert_eq!(platform_machine_id().unwrap(), expose_linux(&String::from_utf8_lossy(&output.stdout)));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn cached_id_is_the_platform_id() {
+        let first = machine_id_original().unwrap();
+        assert_eq!(first, platform_machine_id().unwrap());
+        assert_eq!(machine_id_original().unwrap(), first);
     }
 }

@@ -4,24 +4,13 @@
 
 use sha2::{Digest, Sha256};
 
-/// Lowercase hex of `bytes`.
-pub(crate) fn lower_hex(bytes: &[u8]) -> String {
-    const DIGITS: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        out.push(char::from(DIGITS[usize::from(byte >> 4)]));
-        out.push(char::from(DIGITS[usize::from(byte & 0x0f)]));
-    }
-    out
-}
-
 /// Lowercase hex SHA-256 of the concatenation of `parts`, with no separator.
 pub fn sha256_hex(parts: &[&[u8]]) -> String {
     let mut hasher = Sha256::new();
     for part in parts {
         hasher.update(part);
     }
-    lower_hex(&hasher.finalize())
+    format!("{:x}", hasher.finalize())
 }
 
 /// Hash of an entry body's text (snapshots, analyze filters and the other
