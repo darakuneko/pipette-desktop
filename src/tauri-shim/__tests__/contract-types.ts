@@ -18,7 +18,7 @@
 //   here against `number`: JSON carries them as doubles, so pick a type that
 //   fits or override it deliberately.
 // - Overrides with `#[ts(type = ...)]` or `#[ts(as = ...)]` hand-write the
-//   declaration, so this check no longer covers that field. Each one is
+//   declaration, so this check does not cover that field. Each one is
 //   listed here; there are none.
 
 import type { DecompressDefinition } from '../../preload/protocol-members'
