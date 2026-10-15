@@ -1,0 +1,39 @@
+[
+  {
+    "member": "setWindowZoom",
+    "args": [150],
+    "command": "set_window_zoom",
+    "invokeArgs": {
+      "zoom": 150
+    },
+    "response": null
+  },
+  {
+    "member": "windowShow",
+    "args": [],
+    "command": "window_show",
+    "invokeArgs": {},
+    "response": false
+  },
+  {
+    "member": "windowHide",
+    "args": [],
+    "command": "window_hide",
+    "invokeArgs": {},
+    "response": null
+  },
+  {
+    "member": "windowStartedHidden",
+    "args": [],
+    "command": "window_started_hidden",
+    "invokeArgs": {},
+    "response": false
+  },
+  {
+    "member": "windowIsVisible",
+    "args": [],
+    "command": "window_is_visible",
+    "invokeArgs": {},
+    "response": true
+  }
+]

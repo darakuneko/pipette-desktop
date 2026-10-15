@@ -27,4 +27,10 @@ pub const APP_COMMANDS: &[&str] = &[
     "app_config_set",
     // src/shell.rs
     "open_external",
+    // src/window_commands.rs
+    "set_window_zoom",
+    "window_show",
+    "window_hide",
+    "window_started_hidden",
+    "window_is_visible",
 ];

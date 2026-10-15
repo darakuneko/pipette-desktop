@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Tauri entry point: one window that loads the renderer build, the HID,
-// definition and app config commands its vialAPI shim calls, and the tray
+// definition, app config and window commands its vialAPI shim calls, and the tray
 // and quit handling of lifecycle.rs. Before any of that it settles the
 // userData directory, refuses to start while the Electron build holds it,
 // starts the log in it and loads the app config.
@@ -26,6 +26,7 @@ mod navigation;
 mod shell;
 mod shutdown;
 mod window_bounds;
+mod window_commands;
 mod window_state;
 
 use std::path::{Path, PathBuf};
@@ -57,6 +58,11 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         app_config::app_config_get_all,
         app_config::app_config_set,
         shell::open_external,
+        window_commands::set_window_zoom,
+        window_commands::window_show,
+        window_commands::window_hide,
+        window_commands::window_started_hidden,
+        window_commands::window_is_visible,
     ]
 }
 

@@ -34,6 +34,7 @@ interface Shim {
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
   shell: typeof import('../api/shell')
+  window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
 }
 
@@ -44,6 +45,7 @@ async function load(): Promise<Shim> {
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
     shell: await import('../api/shell'),
+    window: await import('../api/window'),
     transport: await import('../hid-transport'),
   }
 }
@@ -91,6 +93,11 @@ const CALLERS: Record<string, Caller> = {
   },
   'device.probeClose': { run: ({ device }, [id]) => device.probeClose(id as number), void: true },
   openExternal: { run: ({ shell }, [url]) => shell.shellApi.openExternal(url as string), void: true },
+  setWindowZoom: { run: ({ window }, [zoom]) => window.windowApi.setWindowZoom(zoom as number), void: true },
+  windowShow: { run: ({ window }) => window.windowApi.windowShow() },
+  windowHide: { run: ({ window }) => window.windowApi.windowHide(), void: true },
+  windowStartedHidden: { run: ({ window }) => window.windowApi.windowStartedHidden() },
+  windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
 }
 
 afterEach(() => {

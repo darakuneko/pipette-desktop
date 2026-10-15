@@ -33,7 +33,7 @@ use pipette_hid::HidService;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
-use tauri::{App, AppHandle, Manager, RunEvent, Webview, Window, WindowEvent, Wry};
+use tauri::{App, AppHandle, Manager, RunEvent, Runtime, Webview, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
 use crate::app_config::AppConfig;
@@ -164,6 +164,11 @@ fn show_main_window(app: &AppHandle<Wry>) {
     if let Some(window) = main_window::main_window(app) {
         main_window::reveal(&window);
     }
+}
+
+/// Whether the tray icon exists, so a hidden window can be shown again.
+pub fn is_tray_active<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<Arc<Lifecycle>>().is_some_and(|lifecycle| lifecycle.tray_active.load(Ordering::Acquire))
 }
 
 /// Saves the window state when the window is asked to close, then hides

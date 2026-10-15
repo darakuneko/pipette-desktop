@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/window_commands.rs: the zoom and the main window's
+# visibility.
+
+[[set]]
+identifier = "window"
+description = "Zooms the window, and shows, hides and reports the visibility of the main window."
+permissions = [
+  "allow-set-window-zoom",
+  "allow-window-show",
+  "allow-window-hide",
+  "allow-window-started-hidden",
+  "allow-window-is-visible",
+]
