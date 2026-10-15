@@ -3,6 +3,8 @@
 //! file. The rules work on UTF-16 code units, as the Electron build's do,
 //! so both builds give a legacy name the same new name.
 
+use std::fmt::Write;
+
 use pipette_js_json::JsString;
 
 use crate::store_groups::{EntryStore, FilenameIdRule};
@@ -48,7 +50,8 @@ pub fn id_filename_segment(id: &JsString) -> Vec<u16> {
     let mut hex = String::with_capacity(1 + units.len() * 4);
     hex.push('x');
     for unit in units {
-        hex.push_str(&format!("{unit:04x}"));
+        // Writing to a String cannot fail.
+        let _ = write!(hex, "{unit:04x}");
     }
     hex.encode_utf16().collect()
 }

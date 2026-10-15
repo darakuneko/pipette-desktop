@@ -188,9 +188,12 @@ pub fn unlink_unreferenced_body_files(
     };
     let mut removed = 0;
     for item in listing.flatten() {
-        let name = JsString::from(item.file_name().to_string_lossy().into_owned());
-        let Some(text) = name.as_str() else { continue };
-        if referenced.contains(&name) || !is_body_file_name(store, text) {
+        let text = item.file_name().to_string_lossy().into_owned();
+        if !is_body_file_name(store, &text) {
+            continue;
+        }
+        let name = JsString::from(text);
+        if referenced.contains(&name) {
             continue;
         }
         if join_segment(dir, &name).and_then(std::fs::remove_file).is_ok() {
