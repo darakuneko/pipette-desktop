@@ -1,0 +1,151 @@
+name: Tauri migration
+
+# Checks the Tauri migration branch and the work branches cut from it. The
+# Electron checks repeat the check job of ci.yml, which runs only on pull
+# requests to main, so the Electron build stays green on these branches too.
+on:
+  push:
+    branches:
+      - feat/tauri-migration
+      - "feat/tauri-*"
+  pull_request:
+    branches:
+      - feat/tauri-migration
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-migration-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  electron-check:
+    runs-on: ubuntu-latest
+    env:
+      # Same pin as the check job of ci.yml: tests rely on the local
+      # wall-clock semantics of Asia/Tokyo.
+      TZ: Asia/Tokyo
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Linux build dependencies for native modules and Xvfb for the Electron E2E specs
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev xvfb
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: npx tsx scripts/check-hook-deps-tdz.ts
+      - run: pnpm test
+      - run: pnpm build
+
+      - name: Install Playwright OS dependencies for the Electron E2E specs
+        run: npx playwright install-deps
+
+      # Only the @virtual specs are self-contained (the virtual keyboard or a
+      # dummy JSON definition); the others need real hardware or a local Hub.
+      - name: Run @virtual-tagged E2E specs against the virtual device
+        run: xvfb-run -a npx playwright test --grep @virtual
+
+      - run: pnpm run doc:guide
+      - name: Verify generated docs are up to date
+        run: bash scripts/check-docs-fresh.sh
+
+  tauri:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install WebKitGTK and the native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libusb-1.0-0-dev libudev-dev
+
+      # Installs the toolchain of src-tauri/rust-toolchain.toml and makes it
+      # the default, so the rustc version rust-cache reads from the repository
+      # root is the one that builds.
+      - name: Install the Rust toolchain
+        working-directory: src-tauri
+        run: |
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri -> target
+
+      # The install scripts only serve the Electron build (the Electron binary
+      # download and the native module rebuild); the Tauri build needs none.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Format
+        working-directory: src-tauri
+        run: cargo fmt --all --check
+
+      - name: Clippy (debug, with the development tools)
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+
+      - name: Clippy (release)
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets --release -- -D warnings
+
+      - name: Test
+        working-directory: src-tauri
+        run: cargo test --workspace --features pipette-app/dev-tools
+
+      - name: Debug build
+        run: pnpm tauri build --debug --no-bundle --features dev-tools
+
+  fixtures-fresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Linux build dependencies for native modules
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+
+      # With the install scripts: the analytics DB generator runs under
+      # Electron acting as Node, with better-sqlite3 rebuilt for Electron.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm generate:virtual-device-fixtures
+      - run: pnpm generate:definition-fixtures
+      - run: pnpm generate:sync-format-fixtures
+      - run: pnpm generate:analytics-db-fixtures
+
+      - name: Verify the fixtures under src-tauri match their generators
+        run: |
+          git diff --exit-code -- src-tauri
+          untracked="$(git ls-files --others --exclude-standard -- src-tauri)"
+          if [ -n "$untracked" ]; then
+            echo "Untracked files under src-tauri:"
+            echo "$untracked"
+            exit 1
+          fi
