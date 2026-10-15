@@ -49,6 +49,13 @@ ts-rs = "=12.0.1"
 # Opens links in the browser (src/shell.rs). Only its Rust functions are
 # used: the plugin is not registered, so the page gets none of its commands.
 tauri-plugin-opener = "=2.7.2"
+# One instance of the app at a time (src/main.rs). On Linux the running app
+# owns the D-Bus name `<identifier>.SingleInstance` on the session bus, so a
+# dev and a bundled build (same identifier) exclude each other. Without a
+# session bus (DBUS_SESSION_BUS_ADDRESS unset and no bus at the default
+# socket, or the bus unreachable) every launch runs; a set but unparsable
+# DBUS_SESSION_BUS_ADDRESS makes the plugin panic at startup.
+tauri-plugin-single-instance = "=2.5.2"
 thiserror = "=2.0.21"
 
 # The WebKitGTK view behind the Linux window, for the window screenshots of

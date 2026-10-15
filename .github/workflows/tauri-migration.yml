@@ -76,7 +76,8 @@ jobs:
       # The WebDriver of WebKitGTK is webkit2gtk-driver up to Ubuntu 24.04 and
       # webkitgtk-webdriver from 26.04 on. xvfb gives the app a display and
       # dbus-run-session a session bus of its own, as a desktop session has
-      # (the tray icon registers on it).
+      # (the tray icon registers on it, and the single-instance guard owns a
+      # name on it).
       - name: Install the e2e dependencies
         run: |
           # apt-cache show also succeeds for a name that is only referred to,
