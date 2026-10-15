@@ -10,13 +10,15 @@
 //! when the guard says to start.
 
 use std::future::Future;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::Duration;
 
 use serde::Serialize;
 use tokio::time::Instant;
+
+use crate::fs_atomic::write_file_atomic;
 
 /// How long the quit sequence may run before the app exits anyway. Same
 /// value as `QUIT_SYNC_DEADLINE_MS` in src/main/sync/sync-flush.ts: a
@@ -104,7 +106,7 @@ impl QuitGuard {
 /// passes, logging each phase's start and duration. A phase cut off by the
 /// deadline is dropped mid-await, so a phase must leave nothing half-written
 /// at an await point.
-pub async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration) -> QuitOutcome {
+async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration) -> QuitOutcome {
     let started = Instant::now();
     let mut current: Option<&'static str> = None;
     let sequence = async {
@@ -139,10 +141,16 @@ pub async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration) -> QuitOutco
 
 /// Runs the phases, then records what is left for the next launch: the
 /// marker in `data_dir` is written when the deadline cut the sequence short
-/// and removed when every phase ended. The sequence's outcome is returned
-/// whether or not the marker could be written.
-pub async fn run_quit_sequence(phases: Vec<QuitPhase>, deadline: Duration, data_dir: &Path) -> QuitOutcome {
+/// and removed when every phase ended. Without a data directory no marker
+/// is kept. The sequence's outcome is returned whether or not the marker
+/// could be written.
+pub async fn run_quit_sequence(
+    phases: Vec<QuitPhase>,
+    deadline: Duration,
+    data_dir: Option<&Path>,
+) -> QuitOutcome {
     let outcome = run_phases(phases, deadline).await;
+    let Some(data_dir) = data_dir else { return outcome };
     let marker = data_dir.join(PENDING_MARKER_FILE);
     let result = match &outcome {
         QuitOutcome::Completed { .. } => remove_marker(&marker),
@@ -161,8 +169,6 @@ struct PendingMarker {
     deadline_ms: u128,
 }
 
-/// Writes the marker through a temporary file and a rename, so a crash
-/// leaves either the old marker or the new one.
 fn write_marker(marker: &Path, unfinished: Option<&'static str>, deadline: Duration) -> std::io::Result<()> {
     if let Some(dir) = marker.parent() {
         std::fs::create_dir_all(dir)?;
@@ -172,9 +178,7 @@ fn write_marker(marker: &Path, unfinished: Option<&'static str>, deadline: Durat
         deadline_ms: deadline.as_millis(),
     })
     .map_err(std::io::Error::other)?;
-    let tmp = temp_path(marker);
-    std::fs::write(&tmp, body)?;
-    std::fs::rename(&tmp, marker)
+    write_file_atomic(marker, &body)
 }
 
 fn remove_marker(marker: &Path) -> std::io::Result<()> {
@@ -184,15 +188,10 @@ fn remove_marker(marker: &Path) -> std::io::Result<()> {
     }
 }
 
-fn temp_path(marker: &Path) -> PathBuf {
-    let mut name = marker.file_name().map(|n| n.to_os_string()).unwrap_or_default();
-    name.push(format!(".{}.tmp", std::process::id()));
-    marker.with_file_name(name)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use std::sync::atomic::AtomicUsize;
     use std::sync::{Arc, Mutex};
 
@@ -325,7 +324,7 @@ mod tests {
         paused(async {
             let dir = temp_dir("deadline");
             let phases = vec![QuitPhase::new("flushPending", std::future::pending())];
-            let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &dir).await;
+            let outcome = run_quit_sequence(phases, QUIT_DEADLINE, Some(&dir)).await;
             assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("flushPending") });
             let body = std::fs::read_to_string(dir.join(PENDING_MARKER_FILE)).unwrap();
             assert_eq!(body, r#"{"unfinishedPhase":"flushPending","deadlineMs":30000}"#);
@@ -339,7 +338,7 @@ mod tests {
             let dir = temp_dir("completed");
             let marker = dir.join(PENDING_MARKER_FILE);
             std::fs::write(&marker, "{}").unwrap();
-            let outcome = run_quit_sequence(Vec::new(), QUIT_DEADLINE, &dir).await;
+            let outcome = run_quit_sequence(Vec::new(), QUIT_DEADLINE, Some(&dir)).await;
             assert!(matches!(outcome, QuitOutcome::Completed { .. }));
             assert!(!marker.exists());
             std::fs::remove_dir_all(dir).unwrap();
@@ -353,11 +352,20 @@ mod tests {
             run_quit_sequence(
                 vec![QuitPhase::new("x", std::future::pending())],
                 Duration::from_secs(1),
-                &dir,
+                Some(&dir),
             )
             .await;
             assert!(dir.join(PENDING_MARKER_FILE).exists());
             std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
+        });
+    }
+
+    #[test]
+    fn without_a_data_directory_the_outcome_is_still_returned() {
+        paused(async {
+            let phases = vec![QuitPhase::new("stuck", std::future::pending())];
+            let outcome = run_quit_sequence(phases, Duration::from_secs(1), None).await;
+            assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("stuck") });
         });
     }
 

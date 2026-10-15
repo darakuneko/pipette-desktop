@@ -24,7 +24,7 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
 
-use crate::shutdown::{ExitDecision, QUIT_DEADLINE, QuitGuard, QuitPhase, run_phases, run_quit_sequence};
+use crate::shutdown::{ExitDecision, QUIT_DEADLINE, QuitGuard, QuitPhase, run_quit_sequence};
 
 /// Whether the app keeps running in the tray when the window is closed.
 /// The Electron build reads this from `AppConfig.trayResident`, whose
@@ -36,11 +36,14 @@ const TRAY_RESIDENT_DEFAULT: bool = false;
 #[cfg(debug_assertions)]
 const DEV_TRAY_RESIDENT_ENV: &str = "PIPETTE_DEV_TRAY_RESIDENT";
 
-/// Builds with debug assertions: how long each stub phase of the quit
-/// sequence takes, as `name=ms` pairs separated by commas (for example
-/// `flushPending=35000`). A phase not listed takes no time.
+/// Builds with debug assertions: how many milliseconds the stub of the
+/// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its
+/// deadline. The other phases take no time.
 #[cfg(debug_assertions)]
-const DEV_QUIT_PHASE_MS_ENV: &str = "PIPETTE_DEV_QUIT_PHASE_MS";
+const DEV_QUIT_DELAY_MS_ENV: &str = "PIPETTE_DEV_QUIT_DELAY_MS";
+
+/// The phase `PIPETTE_DEV_QUIT_DELAY_MS` delays: flushPending.
+const DEV_DELAYED_PHASE: usize = 3;
 
 /// The phases of the before-quit handler in src/main/sync/sync-flush.ts, in
 /// its order. Each one is a stub that waits for its configured time until
@@ -176,10 +179,7 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let durations = phase_durations();
     tauri::async_runtime::spawn(async move {
         let phases = stub_phases(durations);
-        let outcome = match data_dir {
-            Some(dir) => run_quit_sequence(phases, QUIT_DEADLINE, &dir).await,
-            None => run_phases(phases, QUIT_DEADLINE).await,
-        };
+        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, data_dir.as_deref()).await;
         eprintln!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
         app.exit(0);
@@ -196,30 +196,28 @@ fn stub_phases(durations: [Duration; QUIT_PHASES.len()]) -> Vec<QuitPhase> {
 }
 
 fn phase_durations() -> [Duration; QUIT_PHASES.len()] {
-    #[cfg(debug_assertions)]
-    if let Some(spec) = std::env::var_os(DEV_QUIT_PHASE_MS_ENV) {
-        match parse_phase_durations(&spec.to_string_lossy()) {
-            Ok(durations) => return durations,
-            Err(err) => eprintln!("[quit] ignoring {DEV_QUIT_PHASE_MS_ENV}: {err}"),
-        }
+    let mut durations = [Duration::ZERO; QUIT_PHASES.len()];
+    if let Some(delay) = dev_quit_delay() {
+        durations[DEV_DELAYED_PHASE] = delay;
     }
-    [Duration::ZERO; QUIT_PHASES.len()]
+    durations
 }
 
-/// Parses `name=ms,name=ms` into a duration per entry of [`QUIT_PHASES`].
 #[cfg(debug_assertions)]
-fn parse_phase_durations(spec: &str) -> Result<[Duration; QUIT_PHASES.len()], String> {
-    let mut durations = [Duration::ZERO; QUIT_PHASES.len()];
-    for pair in spec.split(',').map(str::trim).filter(|p| !p.is_empty()) {
-        let (name, ms) = pair.split_once('=').ok_or_else(|| format!("{pair:?} is not name=ms"))?;
-        let index = QUIT_PHASES
-            .iter()
-            .position(|&phase| phase == name.trim())
-            .ok_or_else(|| format!("unknown phase {name:?}"))?;
-        let ms: u64 = ms.trim().parse().map_err(|_| format!("{ms:?} is not a number of milliseconds"))?;
-        durations[index] = Duration::from_millis(ms);
+fn dev_quit_delay() -> Option<Duration> {
+    let value = std::env::var_os(DEV_QUIT_DELAY_MS_ENV)?;
+    match value.to_string_lossy().trim().parse::<u64>() {
+        Ok(ms) => Some(Duration::from_millis(ms)),
+        Err(_) => {
+            eprintln!("[quit] ignoring {DEV_QUIT_DELAY_MS_ENV}: {value:?} is not a number of milliseconds");
+            None
+        }
     }
-    Ok(durations)
+}
+
+#[cfg(not(debug_assertions))]
+fn dev_quit_delay() -> Option<Duration> {
+    None
 }
 
 /// Turns SIGTERM and SIGINT into an exit request, so they run the quit
@@ -258,37 +256,12 @@ mod tests {
             .start_paused(true)
             .build()
             .unwrap()
-            .block_on(run_phases(stub_phases(durations), QUIT_DEADLINE));
+            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, None));
         assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
     }
 
-    #[cfg(debug_assertions)]
     #[test]
-    fn parses_the_listed_phases_and_leaves_the_others_at_zero() {
-        let durations = parse_phase_durations("flushPending=35000, passwordChange = 200").unwrap();
-        assert_eq!(
-            durations,
-            [
-                Duration::from_millis(200),
-                Duration::ZERO,
-                Duration::ZERO,
-                Duration::from_millis(35_000),
-                Duration::ZERO
-            ]
-        );
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    fn an_empty_spec_means_no_delay() {
-        assert_eq!(parse_phase_durations("").unwrap(), [Duration::ZERO; 5]);
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    fn rejects_unknown_phases_and_bad_numbers() {
-        assert!(parse_phase_durations("nope=1").is_err());
-        assert!(parse_phase_durations("flushPending=-1").is_err());
-        assert!(parse_phase_durations("flushPending").is_err());
+    fn the_delay_applies_to_flush_pending() {
+        assert_eq!(QUIT_PHASES[DEV_DELAYED_PHASE], "flushPending");
     }
 }

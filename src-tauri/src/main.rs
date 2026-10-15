@@ -9,6 +9,7 @@
 mod definition;
 #[cfg(debug_assertions)]
 mod dev_commands;
+mod fs_atomic;
 mod hid_commands;
 mod lifecycle;
 mod shutdown;
