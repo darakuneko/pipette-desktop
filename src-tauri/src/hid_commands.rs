@@ -5,23 +5,45 @@
 
 use std::sync::Arc;
 
-use pipette_hid::{DeviceInfo, HidError, HidService, MSG_LEN};
+use pipette_hid::{DeviceInfo, DeviceType, HidError, HidService, MSG_LEN};
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use ts_rs::TS;
 
 /// The process-wide HID service, shared with the blocking I/O tasks.
 pub struct Hid(pub Arc<HidService>);
 
+/// Same values as `DeviceType` in src/shared/types/protocol.ts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, rename = "DeviceType")]
+pub enum DeviceTypeDto {
+    Vial,
+    Via,
+    Bootloader,
+}
+
+impl From<DeviceType> for DeviceTypeDto {
+    fn from(t: DeviceType) -> Self {
+        match t {
+            DeviceType::Vial => Self::Vial,
+            DeviceType::Via => Self::Via,
+            DeviceType::Bootloader => Self::Bootloader,
+        }
+    }
+}
+
 /// Same shape as `DeviceInfo` in src/shared/types/protocol.ts.
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, rename = "DeviceInfo")]
 pub struct DeviceInfoDto {
     vendor_id: u16,
     product_id: u16,
     product_name: String,
     serial_number: String,
     #[serde(rename = "type")]
-    device_type: &'static str,
+    device_type: DeviceTypeDto,
 }
 
 impl From<DeviceInfo> for DeviceInfoDto {
@@ -31,7 +53,7 @@ impl From<DeviceInfo> for DeviceInfoDto {
             product_id: d.product_id,
             product_name: d.product_name,
             serial_number: d.serial_number,
-            device_type: d.device_type.as_str(),
+            device_type: d.device_type.into(),
         }
     }
 }
@@ -109,7 +131,6 @@ pub async fn is_device_open(hid: State<'_, Hid>) -> Result<bool, String> {
 
 #[cfg(test)]
 mod tests {
-    use pipette_hid::DeviceType;
     use serde_json::json;
 
     use super::*;
