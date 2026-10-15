@@ -21,7 +21,7 @@ tauri-build = { version = "=2.7.1", features = [] }
 tauri = { version = "=2.12.1", features = ["tray-icon"] }
 # The quit sequence (src/shutdown.rs) times its phases on the Tokio runtime
 # Tauri already runs, and src/lifecycle.rs listens for SIGTERM / SIGINT.
-tokio = { version = "=1.53.3", features = ["time", "signal"] }
+tokio = { version = "=1.53.3", features = ["rt", "time", "signal"] }
 pipette-hid = { path = "crates/pipette-hid" }
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).

@@ -223,19 +223,29 @@ fn dev_quit_delay() -> Option<Duration> {
 /// Turns SIGTERM and SIGINT into an exit request, so they run the quit
 /// sequence instead of killing the process. A signal while quitting is
 /// stopped like any other exit request; the deadline bounds the wait.
+///
+/// The handlers are installed here, before setup returns, and only the loop
+/// that reads them is spawned: a signal that arrives before that task first
+/// runs is kept by the stream. A signal before setup takes the default
+/// action and ends the process; at that point there is no app handle to
+/// route the exit through and nothing the quit phases would flush has
+/// started.
 #[cfg(unix)]
 fn listen_for_termination(app: AppHandle<Wry>) {
     use tokio::signal::unix::{SignalKind, signal};
+    let runtime = tauri::async_runtime::handle();
+    // `signal` needs the runtime's reactor, which setup does not run in.
+    let _context = runtime.inner().enter();
     for (kind, name) in [(SignalKind::terminate(), "SIGTERM"), (SignalKind::interrupt(), "SIGINT")] {
+        let mut stream = match signal(kind) {
+            Ok(stream) => stream,
+            Err(err) => {
+                eprintln!("failed to listen for {name}: {err}");
+                continue;
+            }
+        };
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
-            let mut stream = match signal(kind) {
-                Ok(stream) => stream,
-                Err(err) => {
-                    eprintln!("failed to listen for {name}: {err}");
-                    return;
-                }
-            };
             while stream.recv().await.is_some() {
                 eprintln!("[quit] {name} received");
                 app.exit(0);

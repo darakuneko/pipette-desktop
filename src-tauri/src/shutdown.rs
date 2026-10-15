@@ -139,27 +139,64 @@ async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration) -> QuitOutcome {
     }
 }
 
+/// How long the marker update may take after the phases end. The update
+/// syncs a file to disk, which a stalled file system can hold up forever,
+/// so it runs on a blocking thread and the exit goes ahead when this
+/// passes. The whole sequence therefore ends within the phase deadline plus
+/// this.
+pub const MARKER_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Writes or removes the pending marker for an outcome: the file path, the
+/// outcome and the phase deadline.
+type MarkerUpdate = fn(&Path, &QuitOutcome, Duration) -> std::io::Result<()>;
+
 /// Runs the phases, then records what is left for the next launch: the
 /// marker in `data_dir` is written when the deadline cut the sequence short
 /// and removed when every phase ended. Without a data directory no marker
-/// is kept. The sequence's outcome is returned whether or not the marker
-/// could be written.
+/// is kept. The sequence's outcome is returned whether the marker update
+/// succeeded, failed or ran past [`MARKER_TIMEOUT`].
 pub async fn run_quit_sequence(
     phases: Vec<QuitPhase>,
     deadline: Duration,
     data_dir: Option<&Path>,
 ) -> QuitOutcome {
+    run_quit_sequence_with(phases, deadline, data_dir, update_marker, MARKER_TIMEOUT).await
+}
+
+async fn run_quit_sequence_with(
+    phases: Vec<QuitPhase>,
+    deadline: Duration,
+    data_dir: Option<&Path>,
+    update: MarkerUpdate,
+    marker_timeout: Duration,
+) -> QuitOutcome {
     let outcome = run_phases(phases, deadline).await;
     let Some(data_dir) = data_dir else { return outcome };
     let marker = data_dir.join(PENDING_MARKER_FILE);
-    let result = match &outcome {
-        QuitOutcome::Completed { .. } => remove_marker(&marker),
-        QuitOutcome::DeadlineReached { unfinished } => write_marker(&marker, *unfinished, deadline),
+    let task = {
+        let (marker, outcome) = (marker.clone(), outcome.clone());
+        tokio::task::spawn_blocking(move || update(&marker, &outcome, deadline))
     };
-    if let Err(err) = result {
-        eprintln!("[quit] failed to update {}: {err}", marker.display());
+    // On a timeout the blocking thread is left running; it cannot be
+    // cancelled, and the process exit ends it.
+    match tokio::time::timeout(marker_timeout, task).await {
+        Ok(Ok(Ok(()))) => {}
+        Ok(Ok(Err(err))) => eprintln!("[quit] failed to update {}: {err}", marker.display()),
+        Ok(Err(err)) => eprintln!("[quit] the update of {} did not finish: {err}", marker.display()),
+        Err(_) => eprintln!(
+            "[quit] gave up on updating {} after {}ms",
+            marker.display(),
+            marker_timeout.as_millis()
+        ),
     }
     outcome
+}
+
+fn update_marker(marker: &Path, outcome: &QuitOutcome, deadline: Duration) -> std::io::Result<()> {
+    match outcome {
+        QuitOutcome::Completed { .. } => remove_marker(marker),
+        QuitOutcome::DeadlineReached { unfinished } => write_marker(marker, *unfinished, deadline),
+    }
 }
 
 #[derive(Serialize)]
@@ -367,6 +404,60 @@ mod tests {
             let outcome = run_quit_sequence(phases, Duration::from_secs(1), None).await;
             assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("stuck") });
         });
+    }
+
+    /// Runs `test` on a current-thread runtime with the real clock: a paused
+    /// clock does not advance while a blocking task runs, so the marker
+    /// timeout could never pass.
+    fn real_time<T>(test: impl Future<Output = T>) -> T {
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_time().build().unwrap();
+        let result = runtime.block_on(test);
+        // Leaves a stalled writer thread behind instead of waiting for it.
+        runtime.shutdown_background();
+        result
+    }
+
+    fn stalled_writer(_: &Path, _: &QuitOutcome, _: Duration) -> std::io::Result<()> {
+        std::thread::sleep(Duration::from_secs(10));
+        Ok(())
+    }
+
+    fn failing_writer(_: &Path, _: &QuitOutcome, _: Duration) -> std::io::Result<()> {
+        Err(std::io::Error::other("disk gone"))
+    }
+
+    #[test]
+    fn a_stalled_marker_update_does_not_hold_up_the_end_of_the_sequence() {
+        let dir = temp_dir("stalled");
+        let deadline = Duration::from_millis(100);
+        let marker_timeout = Duration::from_millis(200);
+        let started = std::time::Instant::now();
+        let outcome = real_time(run_quit_sequence_with(
+            vec![QuitPhase::new("flushPending", std::future::pending())],
+            deadline,
+            Some(&dir),
+            stalled_writer,
+            marker_timeout,
+        ));
+        let elapsed = started.elapsed();
+        assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("flushPending") });
+        assert!(elapsed >= deadline + marker_timeout, "ended after {elapsed:?}");
+        assert!(elapsed < deadline + marker_timeout + Duration::from_secs(2), "ended after {elapsed:?}");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_failed_marker_update_still_returns_the_outcome() {
+        let dir = temp_dir("failed");
+        let outcome = real_time(run_quit_sequence_with(
+            Vec::new(),
+            QUIT_DEADLINE,
+            Some(&dir),
+            failing_writer,
+            MARKER_TIMEOUT,
+        ));
+        assert!(matches!(outcome, QuitOutcome::Completed { .. }));
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
