@@ -6,7 +6,7 @@
 //! bring an entry back after a delete.
 
 use pipette_js_json::{Object, Value};
-use pipette_time::{iso_8601_millis, iso_8601_millis_checked, parse_date_time_string};
+use pipette_time::{date_string_ms, iso_8601_millis, iso_8601_millis_checked, parse_date_time_string};
 use sha2::{Digest, Sha256};
 
 use crate::entry::{Entry, EntryGroup, MetaGroup};
@@ -33,7 +33,7 @@ pub enum EntryError {
 /// before the epoch are negative, as in JavaScript.
 pub fn clock_ms(value: Option<&Value>) -> i64 {
     match value {
-        Some(Value::String(s)) => s.as_str().and_then(parse_date_time_string).unwrap_or(0),
+        Some(Value::String(s)) => date_string_ms(s).unwrap_or(0),
         _ => 0,
     }
 }

@@ -44,4 +44,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "file_export_csv_bundle",
     "file_export_json",
     "file_sideload_json",
+    // src/store_commands/keyboard_data.rs
+    "list_stored_keyboards",
+    "keyboard_meta_name_if_missing",
 ];

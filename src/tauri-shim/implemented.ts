@@ -8,6 +8,7 @@ import type { VialAPI } from '../shared/types/vial-api'
 import { appConfigApi } from './api/app-config'
 import { deviceApi } from './api/device'
 import { filesApi } from './api/files'
+import { keyboardDataApi } from './api/keyboard-data'
 import { shellApi } from './api/shell'
 import { syncPendingApi } from './api/sync-pending'
 import { windowApi } from './api/window'
@@ -21,6 +22,7 @@ export const real = {
   ...windowApi,
   ...syncPendingApi,
   ...filesApi,
+  ...keyboardDataApi,
 } satisfies Partial<VialAPI>
 
 export const implemented: Partial<VialAPI> = { ...real, ...fakes }

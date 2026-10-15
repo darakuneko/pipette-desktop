@@ -60,6 +60,14 @@ pub fn truncate_utf8_name_part(units: &[u16], max_bytes: usize) -> &[u16] {
     cut
 }
 
+/// `String.prototype.trim`: `units` without the whitespace and line
+/// terminators (`\s`) at either end.
+pub fn trim_js_whitespace(units: &[u16]) -> &[u16] {
+    let start = units.iter().position(|&unit| !is_js_whitespace(unit)).unwrap_or(units.len());
+    let end = units.iter().rposition(|&unit| !is_js_whitespace(unit)).map_or(start, |last| last + 1);
+    &units[start..end]
+}
+
 /// Whether `unit` matches `\s` of a JavaScript regular expression: the
 /// ECMAScript WhiteSpace and LineTerminator code points (all in the BMP).
 fn is_js_whitespace(unit: u16) -> bool {
@@ -98,6 +106,15 @@ mod tests {
         assert_eq!(truncate_utf8(&text, 5), &units("a😀")[..]);
         assert_eq!(truncate_utf8(&text, 0), &[] as &[u16]);
         assert_eq!(truncate_utf8(&[0x61, 0xd800, 0x62], 4), &[0x61, 0xd800]);
+    }
+
+    #[test]
+    fn trims_what_javascript_trims() {
+        assert_eq!(trim_js_whitespace(&units("\u{feff}\t a b\u{3000}\n\u{2028}")), &units("a b")[..]);
+        // U+0085 and U+200B are not whitespace in JavaScript.
+        assert_eq!(trim_js_whitespace(&units("\u{85}a\u{200b}")), &units("\u{85}a\u{200b}")[..]);
+        assert_eq!(trim_js_whitespace(&units(" \u{a0} ")), &[] as &[u16]);
+        assert_eq!(trim_js_whitespace(&[0x20, 0xd800, 0x20]), &[0xd800]);
     }
 
     #[test]

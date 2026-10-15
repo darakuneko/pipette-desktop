@@ -77,6 +77,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         file_commands::file_export_csv_bundle,
         file_commands::file_export_json,
         file_commands::file_sideload_json,
+        store_commands::keyboard_data::list_stored_keyboards,
+        store_commands::keyboard_data::keyboard_meta_name_if_missing,
     ]
 }
 
@@ -122,6 +124,7 @@ fn main() {
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             dev_commands::manage_dialogs(app.handle());
+            store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
