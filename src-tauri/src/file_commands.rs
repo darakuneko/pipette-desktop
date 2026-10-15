@@ -159,6 +159,16 @@ fn save_with_dialog(
         title: dialog.title.to_owned(),
         filters: vec![FileFilter::new(filter_name, &[extension]), FileFilter::all_files()],
     };
+    write_with_dialog(dialogs, request, contents)
+}
+
+/// Shows the save dialog `request` and writes `contents` where the user
+/// chose.
+pub(crate) fn write_with_dialog(
+    dialogs: &Dialogs,
+    request: DialogRequest,
+    contents: &[u8],
+) -> FileSaveResult {
     let Some(path) = dialogs.show(request) else { return FileSaveResult::failed(CANCELLED) };
     match std::fs::write(&path, contents) {
         Ok(()) => FileSaveResult { success: true, file_path: Some(path_text(&path)), error: None },
@@ -167,7 +177,7 @@ fn save_with_dialog(
 }
 
 /// Asks for a file and reads it as text.
-fn open_with_dialog(dialogs: &Dialogs, request: DialogRequest) -> FileOpenResult {
+pub(crate) fn open_with_dialog(dialogs: &Dialogs, request: DialogRequest) -> FileOpenResult {
     let Some(path) = dialogs.show(request) else { return FileOpenResult::failed(CANCELLED) };
     match std::fs::read(&path) {
         Ok(bytes) => FileOpenResult {

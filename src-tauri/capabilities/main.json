@@ -12,6 +12,7 @@
     "sync-pending",
     "files",
     "keyboard-data",
+    "favorites",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]
