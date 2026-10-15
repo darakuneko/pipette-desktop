@@ -146,7 +146,14 @@ function record(dir: string, prefix = ''): Tree {
   return tree
 }
 
-async function play(scenario: Scenario, dir: string): Promise<unknown> {
+interface Played {
+  restored: Tree
+  hasPending: boolean
+  generations: [string, number][]
+  after: Tree
+}
+
+async function play(scenario: Scenario, dir: string): Promise<Played> {
   vi.resetModules()
   const runtime = await import('../../src/main/sync/sync-runtime-state')
   const store = await import('../../src/main/sync/sync-pending-store')
@@ -186,7 +193,7 @@ async function play(scenario: Scenario, dir: string): Promise<unknown> {
 describe('sync pending fixtures', () => {
   it('records each scenario’s files after the restore and after its steps', async () => {
     root = mkdtempSync(join(tmpdir(), 'sync-pending-fixtures-'))
-    const results: unknown[] = []
+    const results: (Scenario & Played)[] = []
     for (const [i, scenario] of SCENARIOS.entries()) {
       const dir = join(root, String(i))
       mkdirSync(dir)
@@ -194,7 +201,7 @@ describe('sync pending fixtures', () => {
     }
     writeJsonFixture(OUT, results)
     // The unreadable file is left as it was.
-    const unreadable = results[SCENARIOS.findIndex((s) => s.name === 'a file that cannot be read')] as { after: Tree }
+    const unreadable = results[SCENARIOS.findIndex((s) => s.name === 'a file that cannot be read')]
     expect(unreadable.after[PENDING]).toEqual({ symlink: 'sync-pending.json' })
   })
 })
