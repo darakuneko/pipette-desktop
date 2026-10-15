@@ -112,7 +112,7 @@ describe('definition decompression fixtures', () => {
       ['garbage', garbage(4096)],
     ]
 
-    const cases = []
+    const cases: { name: string; input: string; expected: { utf8Length: number; sha256: string } | null }[] = []
     for (const [name, input] of inputs) {
       const text = await handler(null, Array.from(input))
       writeFixture(resolve(OUT_DIR, `${name}.bin`), input)
