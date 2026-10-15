@@ -115,6 +115,7 @@ pub fn snapshot_response_json(result: Result<Option<(&str, Value)>, SnapshotErro
 
 /// The index file: its top-level object, whose `entries` holds the place
 /// of [`Self::entries`] (the entries as v2 entries) for a write.
+#[derive(Clone)]
 struct SnapshotIndex {
     root: Object,
     entries: Vec<Entry>,
@@ -167,10 +168,10 @@ fn read_index(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotError> {
     Ok(SnapshotIndex { root, entries })
 }
 
-fn write_index(dir: &Path, index: &SnapshotIndex) -> io::Result<()> {
+fn write_index(dir: &Path, index: SnapshotIndex) -> io::Result<()> {
     fs::create_dir_all(dir)?;
-    let mut root = index.root.clone();
-    root.insert("entries", Value::Array(index.entries.iter().cloned().map(Value::from).collect()));
+    let SnapshotIndex { mut root, entries } = index;
+    root.insert("entries", Value::Array(entries.into_iter().map(Value::from).collect()));
     let text = pipette_js_json::stringify_with_gap(&Value::Object(root), "  ");
     pipette_fs::write_file_atomic(&dir.join("index.json"), text.as_bytes())
 }
@@ -179,7 +180,9 @@ fn write_index(dir: &Path, index: &SnapshotIndex) -> io::Result<()> {
 /// moved to id-carrying ones (written back when any moved).
 fn read_index_locked(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotError> {
     let mut index = read_index(dir, uid)?;
-    migrate_body_filenames(STORE, dir, &mut index, |index| write_index(dir, index))?;
+    // The move keeps the index it renamed, so its write takes a copy; this
+    // runs only while legacy names are left.
+    migrate_body_filenames(STORE, dir, &mut index, |index| write_index(dir, index.clone()))?;
     Ok(index)
 }
 
@@ -255,7 +258,7 @@ pub fn save_snapshot(
         }
         let entry = create_entry(STORE, fields, now);
         index.entries.insert(0, entry.clone());
-        write_index(&dir, &index)?;
+        write_index(&dir, index)?;
         ctx.notify(&snapshots_sync_unit(uid));
 
         let recorded = upsert_keyboard_meta(ctx, uid, &JsString::from(device_name));
@@ -330,7 +333,7 @@ pub fn update_snapshot(
             }
         };
         index.entries[at] = updated;
-        write_index(&dir, &index)?;
+        write_index(&dir, index)?;
         ctx.notify(&snapshots_sync_unit(uid));
         Ok(())
     })
@@ -353,7 +356,7 @@ fn change_entry(
         if apply_entry_mutation(&mut index.entries, &id, mutation, ctx.now_ms(), mutate)?.is_none() {
             return Err(SnapshotError::NotFound);
         }
-        write_index(&dir, &index)?;
+        write_index(&dir, index)?;
         ctx.notify(&snapshots_sync_unit(uid));
         Ok(())
     })
