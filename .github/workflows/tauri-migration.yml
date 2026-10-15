@@ -49,9 +49,20 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
 
+      # The ts-rs export tests in the next step write every declaration
+      # again, so one whose Rust type is gone shows up as deleted below.
+      - name: Clear the generated TypeScript declarations
+        run: rm -rf src/tauri-shim/generated
+
       - name: Test
         working-directory: src-tauri
         run: cargo test --workspace --features pipette-app/dev-tools
+
+      # --intent-to-add makes a new declaration show up in the diff too.
+      - name: Check the generated TypeScript declarations are committed
+        run: |
+          git add --intent-to-add src/tauri-shim/generated
+          git diff --exit-code -- src/tauri-shim/generated
 
       # Builds the renderer for Tauri too, so it also checks the frontend
       # build and its wiring in tauri.conf.json.
