@@ -232,6 +232,15 @@ impl Object {
         }
     }
 
+    /// Removes `key`, returning its value. The other keys keep their order,
+    /// as with JavaScript's `delete`.
+    pub fn remove(&mut self, key: &str) -> Option<Value> {
+        match array_index(key) {
+            Some(index) => self.indexed.remove(&index).map(|(_, value)| value),
+            None => self.named.shift_remove(key),
+        }
+    }
+
     pub fn contains_key(&self, key: &str) -> bool {
         self.get(key).is_some()
     }
@@ -289,6 +298,18 @@ mod tests {
         assert_eq!(object.insert("a", 3.0.into()), Some(1.0.into()));
         assert_eq!(keys(&object), ["a", "b"]);
         assert_eq!(object.get("a"), Some(&3.0.into()));
+    }
+
+    #[test]
+    fn remove_keeps_the_order_of_the_other_keys() {
+        let mut object: Object =
+            ["a", "1", "b", "c", "0"].into_iter().map(|key| (key, Value::from(key))).collect();
+        assert_eq!(object.remove("b"), Some(Value::from("b")));
+        assert_eq!(object.remove("1"), Some(Value::from("1")));
+        assert_eq!(object.remove("missing"), None);
+        assert_eq!(keys(&object), ["0", "a", "c"]);
+        object.insert("b", Value::Null);
+        assert_eq!(keys(&object), ["0", "a", "c", "b"]);
     }
 
     #[test]
