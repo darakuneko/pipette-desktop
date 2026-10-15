@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-hid"
+description = "Raw HID transport for Vial keyboards (hidapi, Linux hidraw) with the virtual keyboard wired in"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+pipette-virtual-device = { workspace = true }
+hidapi = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
