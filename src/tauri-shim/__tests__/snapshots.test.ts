@@ -93,6 +93,27 @@ describe('snapshotsApi', () => {
     expect(links).toEqual(['{"id":"p","url":"/u","expiresAt":null}', 'null'])
   })
 
+  it('sends the objects of a queued write as they were when it was called', async () => {
+    const sent: unknown[] = []
+    mockIPC((_cmd, payload) => {
+      sent.push(payload)
+      return { success: true }
+    })
+    const options = { migrateFrom: 'before' }
+    const link = { id: 'p', url: '/before', expiresAt: null }
+    // Queued behind the rename, so they are sent after the changes below.
+    const first = snapshotsApi.snapshotStoreRename('0xA', 'id', 'x')
+    const update = snapshotsApi.snapshotStoreUpdate('0xA', 'id', '{}', 2, options)
+    const hub = snapshotsApi.snapshotStoreSetHubPrivate('0xA', 'id', link)
+    options.migrateFrom = 'after'
+    link.url = '/after'
+    await Promise.all([first, update, hub])
+    expect(sent.slice(1)).toEqual([
+      { uid: '0xA', entryId: 'id', json: '{}', vilVersion: 2, options: { migrateFrom: 'before' } },
+      { uid: '0xA', entryId: 'id', link: '{"id":"p","url":"/before","expiresAt":null}' },
+    ])
+  })
+
   it('runs the next write after a failed one', async () => {
     mockIPC((cmd) => {
       if (cmd === 'snapshot_store_save') throw 'disk full'

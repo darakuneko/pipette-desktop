@@ -5,7 +5,9 @@
 // share, so they reach the backend one at a time in the order the renderer
 // made them; the list and the load read without waiting, as the Electron
 // handlers do. A private Hub link crosses as the text of
-// JSON.stringify(link), so the backend keeps its keys in their order.
+// JSON.stringify(link), so the backend keeps its keys in their order. As
+// with Electron's IPC, which copies the arguments when the member is
+// called, a queued write sends its objects as they were at the call.
 
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
 import type { VialAPI } from '../../shared/types/vial-api'
@@ -29,13 +31,17 @@ export const snapshotsApi = {
     ),
   snapshotStoreLoad: (uid, entryId) =>
     call<{ success: boolean; data?: string; error?: string }>('snapshot_store_load', { uid, entryId }),
-  snapshotStoreUpdate: (uid, entryId, json, vilVersion, options) =>
-    enqueue(uid, () => call<Result>('snapshot_store_update', { uid, entryId, json, vilVersion, options })),
+  snapshotStoreUpdate: (uid, entryId, json, vilVersion, options) => {
+    const sent = options && { ...options }
+    return enqueue(uid, () => call<Result>('snapshot_store_update', { uid, entryId, json, vilVersion, options: sent }))
+  },
   snapshotStoreRename: (uid, entryId, newLabel) =>
     enqueue(uid, () => call<Result>('snapshot_store_rename', { uid, entryId, newLabel })),
   snapshotStoreDelete: (uid, entryId) => enqueue(uid, () => call<Result>('snapshot_store_delete', { uid, entryId })),
   snapshotStoreSetHubPostId: (uid, entryId, hubPostId) =>
     enqueue(uid, () => call<Result>('snapshot_store_set_hub_post_id', { uid, entryId, hubPostId })),
-  snapshotStoreSetHubPrivate: (uid, entryId, link) =>
-    enqueue(uid, () => call<Result>('snapshot_store_set_hub_private', { uid, entryId, link: JSON.stringify(link) })),
+  snapshotStoreSetHubPrivate: (uid, entryId, link) => {
+    const text = JSON.stringify(link)
+    return enqueue(uid, () => call<Result>('snapshot_store_set_hub_private', { uid, entryId, link: text }))
+  },
 } satisfies Partial<VialAPI>
