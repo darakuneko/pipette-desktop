@@ -2595,9 +2595,11 @@ dependencies = [
  "log",
  "lzma-rs",
  "pipette-app-config",
+ "pipette-entry-store",
  "pipette-fs",
  "pipette-hid",
  "pipette-js-json",
+ "pipette-keyboard-stores",
  "pipette-logger",
  "pipette-sync-pending",
  "serde",
@@ -2692,6 +2694,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-keyboard-stores"
+version = "0.0.0"
+dependencies = [
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-time",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "pipette-logger"
 version = "0.0.0"
 dependencies = [
@@ -2740,6 +2754,9 @@ dependencies = [
 [[package]]
 name = "pipette-time"
 version = "0.0.0"
+dependencies = [
+ "pipette-js-json",
+]
 
 [[package]]
 name = "pipette-typing-analytics-db"

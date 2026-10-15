@@ -10,6 +10,7 @@
     "shell",
     "window",
     "sync-pending",
+    "keyboard-data",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

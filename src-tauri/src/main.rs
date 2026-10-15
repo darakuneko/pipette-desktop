@@ -67,6 +67,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         window_commands::window_started_hidden,
         window_commands::window_is_visible,
         store_commands::sync_pending::sync_has_pending_changes,
+        store_commands::keyboard_data::list_stored_keyboards,
+        store_commands::keyboard_data::keyboard_meta_name_if_missing,
     ]
 }
 
@@ -111,6 +113,7 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
+            store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);

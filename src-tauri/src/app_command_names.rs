@@ -35,4 +35,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "window_is_visible",
     // src/store_commands/sync_pending.rs
     "sync_has_pending_changes",
+    // src/store_commands/keyboard_data.rs
+    "list_stored_keyboards",
+    "keyboard_meta_name_if_missing",
 ];

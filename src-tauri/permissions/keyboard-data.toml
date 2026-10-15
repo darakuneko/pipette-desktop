@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/keyboard_data.rs: the stored keyboards
+# and the keyboard names.
+
+[[set]]
+identifier = "keyboard-data"
+description = "Lists the stored keyboards and records a keyboard's name when it connects."
+permissions = [
+  "allow-list-stored-keyboards",
+  "allow-keyboard-meta-name-if-missing",
+]

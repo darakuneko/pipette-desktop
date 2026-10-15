@@ -23,7 +23,6 @@ const EXPECTED_FAKES = [
   'pipetteSettingsGet',
   'pipetteSettingsEnsureDir',
   'pipetteSettingsPatch',
-  'keyboardMetaNameIfMissing',
   'snapshotStoreList',
   'typingRunLogList',
 ]

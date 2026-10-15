@@ -2,4 +2,5 @@
 //! The commands of the stores under the userData directory, one module per
 //! store.
 
+pub mod keyboard_data;
 pub mod sync_pending;
