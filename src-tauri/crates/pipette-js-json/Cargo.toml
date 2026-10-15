@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-js-json"
+description = "JSON.parse and JSON.stringify with JavaScript's semantics: f64 numbers, ECMAScript number formatting, the JS property order"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Named properties in insertion order, replaced in place on a duplicate key.
+indexmap = "=2.14.2"
+# ECMAScript Number::toString, the number formatting of JSON.stringify.
+ryu-js = "=1.0.3"
+thiserror = "=2.0.21"
+
+[dev-dependencies]
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+
+[lints]
+workspace = true
