@@ -35,9 +35,6 @@ export const fakes = {
   pipetteSettingsEnsureDir: () => Promise.resolve({ success: true }),
   pipetteSettingsPatch: () => Promise.resolve({ success: true }),
 
-  // Snapshot store.
-  snapshotStoreList: () => Promise.resolve({ success: true, entries: [] }),
-
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
 } satisfies Partial<VialAPI>
