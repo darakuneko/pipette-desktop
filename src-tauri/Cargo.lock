@@ -2627,6 +2627,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-entry-store"
+version = "0.0.0"
+dependencies = [
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-time",
+ "regex",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
 name = "pipette-fs"
 version = "0.0.0"
 dependencies = [
