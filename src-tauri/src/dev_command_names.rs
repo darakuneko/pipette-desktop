@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // The development commands of src/dev_commands.rs by name. build.rs
-// includes this file to generate their permissions in builds with debug
-// assertions only, and dev_commands.rs routes these names to its own
+// includes this file to generate their permissions in builds with the
+// dev-tools feature only, and dev_commands.rs routes these names to its own
 // handler.
 
 /// The development commands on every platform.

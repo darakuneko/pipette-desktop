@@ -6,8 +6,12 @@
 // Release builds on Windows must not open a console next to the window.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+// The development tools serve debug builds only (see Cargo.toml).
+#[cfg(all(feature = "dev-tools", not(debug_assertions)))]
+compile_error!("the dev-tools feature is for builds with debug assertions only");
+
 mod definition;
-#[cfg(debug_assertions)]
+#[cfg(feature = "dev-tools")]
 mod dev_commands;
 mod fs_atomic;
 mod hid_commands;
@@ -45,9 +49,9 @@ fn main() {
             Ok(())
         })
         .on_window_event(lifecycle::on_window_event);
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "dev-tools")]
     let builder = dev_commands::install(builder, app_commands());
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(feature = "dev-tools"))]
     let builder = builder.invoke_handler(app_commands());
     match builder.build(tauri::generate_context!()) {
         Ok(app) => app.run(lifecycle::on_run_event),

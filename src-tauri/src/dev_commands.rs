@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Development tools, compiled only with debug assertions: the virtual
-//! keyboard controller (the Electron build exposes the same operations to
-//! its E2E tests as `globalThis.__pipetteVirtualDevice`), a log sink, window
+//! Development tools, compiled only with the dev-tools feature (builds with
+//! debug assertions only, see Cargo.toml): the virtual keyboard controller
+//! (the Electron build exposes the same operations to its E2E tests as
+//! `globalThis.__pipetteVirtualDevice`), a log sink, window
 //! screenshots (Linux), and a script hook that runs a local file in the
 //! window once the first page has loaded, so the UI can be driven without a
 //! WebDriver.
