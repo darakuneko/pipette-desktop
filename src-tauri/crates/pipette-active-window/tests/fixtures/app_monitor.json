@@ -1,0 +1,2804 @@
+{
+  "gdbusCommand": "gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/shell/extensions/FocusedWindow --method org.gnome.shell.extensions.FocusedWindow.Get",
+  "gdbusOptions": {
+    "timeout": 500
+  },
+  "cases": [
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "VSCode",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "VSCode",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "VSCode"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "VSCode",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": " "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "   ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "   "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\t\n\u000b\f\r x \r\n",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "\t\n\u000b\f\r x \r\n"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "Bad\u0001Name",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "BadName",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "Bad\u0001Name"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "BadName",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0000\u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "\u0000\u001f"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "abc",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "abc",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "abc"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "abc",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "x",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "x"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "  ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "  "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿x﻿",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "﻿x﻿"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "　全角　",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "全角",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "　全角　"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "全角",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " x ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": " x "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "​x​",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​x​",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "​x​"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​x​",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " x᠎",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x᠎",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": " x᠎"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x᠎",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " x ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": " x "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "  x  ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "  x  "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "x\u0000 ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "x\u0000 "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \u0000x",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": " \u0000x"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "x",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "日本語",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "日本語",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "日本語"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "日本語",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "Ä",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Ä",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "Ä"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Ä",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "😀",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "😀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "😀"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "😀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "          BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "          BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx y",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx y"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "\ud800"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "a\udc00b",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "a\udc00b",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "a\udc00b"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "a\udc00b",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\udc00\ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\udc00\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "\udc00\ud800"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\udc00\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "main.ts — pipette-desktop — Visual Studio Code",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "main.ts — pipette-desktop — Visual Studio Code",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "main.ts — pipette-desktop — Visual Studio Code"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "main.ts — pipette-desktop — Visual Studio Code",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "org.gnome.Nautilus",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "org.gnome.Nautilus",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "org.gnome.Nautilus"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "org.gnome.Nautilus",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\n\u0001\r  \tあ\u001f\ud83d\t​\u0000　あ\ude00\ud83d \ud83d~ \t~\u001f\ud83dあ\rあ\n﻿\u0000﻿ 　​\ud800.\ud83d\u0000　\u0001\ud800\ud800 .あ\r\u0000\u001fA ~\u001f ​\udc00\udc00🐀\u0001A ﻿​ \ude00あA\r　\ud800\n​\ude00\n　\u001f\u0000🐀\ude00\ud800\u0001\n\ud83d\nA\u0001 　A﻿﻿A.\ud83dあ\ude00 \ude00 \u0001~\ude00\ud83dA﻿\u0001\ude00\n\u0001. ~~\u0000 ~~ A﻿\n　\r\ud83d A\udc00あ~\ud83d　\n\udc00\t\t\r\ud83d　\ud800 ​﻿\u0000.~\r\ud800A​ \ud83dAA\udc00. ​﻿\ud83d​ \udc00Aあ~\udc00\ud83dA\udc00\u0000\r\n\t\t \u001f\n\r\ude00\n\n\udc00\ude00~\u001fあ\ud800\ud83d\ud83d\ud800﻿A\ud83d \nA\r​\ud83d \udc00 ﻿\u001f\u001f \udc00\r　   A\nAあ\u0001A\n\ud83d 　\ud83dA\n\u001f​​​  　あ \r​ \ud800\n ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "  あ\ud83d​　あ\ude00\ud83d \ud83d~ ~\ud83dああ﻿﻿ 　​\ud800.\ud83d　\ud800\ud800 .あA ~ ​\udc00\udc00🐀A ﻿​ \ude00あA　\ud800​\ude00　🐀\ude00\ud800\ud83dA 　A﻿﻿A.\ud83dあ\ude00 \ude00 ~\ude00\ud83dA﻿\ude00. ~~ ~~ A﻿　\ud83d A\udc00あ~\ud83d　\udc00\ud83d　\ud800 ​﻿.~\ud800A​ \ud83dAA\udc00. ​﻿\ud83d​ \udc00Aあ~\udc00\ud83dA\udc00 \ude00\udc00\ude00~あ\ud800\ud83d\ud83d\ud800﻿A\ud83d A​\ud83d \udc00 ﻿ \udc00　   AAあA\ud83d 　\ud83dA​​​  　あ ​ \ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿ .   \ude00\u001f\u001f. ~\u0000.  \n\nA\ud83dあ\u0000\ud800A\ud83d\ud83d\t﻿　\ude00 ~\nA﻿ \u0000.~\u001f\u0000\u001fA\tあ\n\u001f\udc00 \u0000\u0000\ud83d\r.\u001f\ude00\ud800 A　\u0000~.\ude00\u0000\u001f\u001f\ud800 \ude00\u0000　\ud800.\ude00\n\ud83d ~​　​\ud83d\u0001﻿\ud83d\u0000\ud800あ\r.  \r\u001f \udc00.\u001f ​\n﻿A\u0001 \t  \ud83d\ud83d\ud800\u0001﻿​\udc00\ud800\n\ud800﻿\ud83d﻿~ あ.\u0001\ud800\u001f \u0000 \t　﻿",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": ".   \ude00. ~.  A\ud83dあ\ud800A\ud83d\ud83d﻿　\ude00 ~A﻿ .~Aあ\udc00 \ud83d.\ude00\ud800 A　~.\ude00\ud800 \ude00　\ud800.\ude00\ud83d ~​　​\ud83d﻿\ud83d\ud800あ.   \udc00. ​﻿A   \ud83d\ud83d\ud800﻿​\udc00\ud800\ud800﻿\ud83d﻿~ あ.\ud800 ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0001\u001f.\u0000\n~  \u0001\r﻿\udc00  \u0001​​.あA\ud800\r\udc00\udc00\ud800​​ \ud800﻿\udc00\t",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": ".~  ﻿\udc00  ​​.あA𐀀\udc00\ud800​​ \ud800﻿\udc00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "​\ud83d  ​\ud800 あ \u001f.\ud83d﻿.\ud800\u001f\r ﻿\ude00\ud800\n\n\r~あ\u001f\r\ud800 ﻿\u0001\t\u0001\u0001\u001fA~.あ\ud800\u0001​﻿\udc00\u001f\udc00\u0001.\ud800~ 　\r~ .A\t~\t​\u0000\r\ude00..\udc00\rあ\u001f \udc00 　\u0001﻿　\ud800\rA\rああああ​\udc00\u001f  \u0001 \ud83d \udc00A ~﻿\ud800A\ude00 A\u001f  　\u0001\n \u0000\n~ああ 　 \ude00\r　\u0000\n\u0001𐀀 \tA　\ud800\u0000​\ude00 \udc00　あ.\r\udc00\ud83d\t\u0001\ude00\r\u0001​\ude00\r\t\udc00\r\r\rA\ud83d\r  \u0001﻿\udc00~ \u0001 \t .~\ud83d\u001f\u001f\r.~\r　\ud800​\ud800\n​A\ud800 .\ude00\udc00\udc00﻿~\u0001\u001f\u0000\ud83d\u0001 🐀あ\ude00\t\t\ud83d \n\n\ude00​　\t\udc00\ude00 \n~ ﻿ .\ude00.​\u0000\u001f\t​\u0000​あ\n  \ud83d .\n\u0001\ud800\u0000\ude00\ud83d \udc00\u0000\u001f\u0001﻿A\ude00",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​\ud83d  ​\ud800 あ .\ud83d﻿.\ud800 ﻿\ude00\ud800~あ\ud800 ﻿A~.あ\ud800​﻿\udc00\udc00.\ud800~ 　~ .A~​\ude00..\udc00あ \udc00 　﻿　\ud800Aああああ​\udc00   \ud83d \udc00A ~﻿\ud800A\ude00 A  　 ~ああ 　 \ude00　𐀀 A　\ud800​\ude00 \udc00　あ.\udc00😀​\ude00\udc00A\ud83d  ﻿\udc00~   .~\ud83d.~　\ud800​\ud800​A\ud800 .\ude00\udc00\udc00﻿~\ud83d 🐀あ\ude00\ud83d \ude00​　\udc00\ude00 ~ ﻿ .\ude00.​​​あ  \ud83d .𐈀\ud83d \udc00﻿A\ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " あ \udc00\n\u001fあ　 \ud800\ud83d\n\u001f~ \n﻿\n\t　\rあ\ude00~ 　\u0000\u0000\t.\u001f\n\r\udc00\n\u0001\u0000.​\ud800\r　\n \ud83d\u001f﻿ \ude00\u0000\r\u0000 .\ud800\u0001\t~ 　\ud800​\u001f\t\u0001~.あ　 \ud83d\ude00.​　\t​  \r𐈀あ​　\u0000　\ude00 \n .\u001f ~ 　 \ud83d　\u001f\ud83d\u0001~\u0001\ude00 ​\ud800\t\t~ \u0001\ud83d　\u0000あA\u001f　\u0000Aあ\n \n﻿A​\u0000\ud800 ~\n\n \udc00 \ud83d　 \ud800\u0001\ude00\ud800\u001f　​\udc00\n\u001f​\u0001　.\u0001\ude00\r",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ \udc00あ　 \ud800\ud83d~ ﻿　あ\ude00~ 　.\udc00.​\ud800　 \ud83d﻿ \ude00 .\ud800~ 　\ud800​~.あ　 \ud83d\ude00.​　​  𐈀あ​　　\ude00  . ~ 　 \ud83d　\ud83d~\ude00 ​\ud800~ \ud83d　あA　Aあ ﻿A​\ud800 ~ \udc00 \ud83d　 𐈀\ud800　​\udc00​　.\ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "Aあ \ud83d\t\u0001\ude00﻿\ud83d\u0000~\n\udc00 \ude00\ude00~\u001f﻿\u0000\u0001.\t \r",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Aあ 😀﻿\ud83d~\udc00 \ude00\ude00~﻿.",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " A\u0001  \u001f\r﻿​\ud800\r　\u0001 \u0000\u0001\u0000A あ\ud800 ﻿\ude00~A\u0000\ud800　~\t\ud83d \u0000\udc00​~﻿﻿ \ud83d　  \n\t\u0001　\u0001﻿​ あ\ude00\u0000\ude00\u001f\u001f\u0001\u0000\nA\ud83d​\udc00\ude00あAああ　あA　\ude00\u0000\r 　﻿\u0000\udc00 \udc00\n\ud83d ~\udc00\u0001あ\t　\ud800\n.\ud800\n\r ﻿\u0000\rあ \t\n\u0000 .\udc00\t​\r\ude00\u0001\ude00\ude00\udc00\ud800.\u001f\u0001~A\u0001A\u001f\u0001\u0000\n\ud800Aあ \u0001\ude00\ud83d﻿𐀀あ﻿\u0001~あ​\u0000﻿ \u0000\r ﻿​\udc00 A \u001f\u0000 Aああ\n \r ​\u001f\n\ude00\ud800 \ud800\ud83d \ud800​\r​あ\u0001\u0000​​\udc00﻿あ ~　.\u0001",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A  ﻿​\ud800　 A あ\ud800 ﻿\ude00~A\ud800　~\ud83d \udc00​~﻿﻿ \ud83d　  　﻿​ あ\ude00\ude00A\ud83d​\udc00\ude00あAああ　あA　\ude00 　﻿\udc00 \udc00\ud83d ~\udc00あ　\ud800.\ud800 ﻿あ  .\udc00​\ude00\ude00\ude00\udc00\ud800.~AA\ud800Aあ \ude00\ud83d﻿𐀀あ﻿~あ​﻿  ﻿​\udc00 A  Aああ  ​\ude00\ud800 \ud800\ud83d \ud800​​あ​​\udc00﻿あ ~　.",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\r​\ude00 \u0001  ~\u001f\u0001\r.　\r﻿A\u0000あA　​\u001f\u0001\ud83d\u001f..\n﻿\ude00\tA \udc00　 ​ \n~ ​​\t\u0001\u001f.​ \u0001.​\udc00 \ud800𐈀 \t\ude00\t \u0001 A  \ud83d\u0000\ude00",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​\ude00   ~.　﻿AあA　​\ud83d..﻿\ude00A \udc00　 ​ ~ ​​.​ .​\udc00 \ud800𐈀 \ude00  A  😀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0000\rあ\u0000A\t\n　\u0000\u001f\r~\r \u0000　~\udc00\udc00​\u0001 \ude00\udc00\n \ude00\u0000　\udc00\n~~\u001f﻿\ud83d..​~﻿\n\ud800\u0000\t\ud83d 　\ud83d .\r\ud800A🐀 \r  \u0000\rあ\u0001\u0000あ\u0001あ  𐀀 あ\ude00AA　​\u0000​..\udc00  .\ude00\t 　\u001f\ud800\u0000\ud800\n\ud800\r　\udc00\u001f\u001f\ud83d 𐀀　\udc00🐀​\ude00.\n\u0001﻿\ud800 　　\u0000\u0000\r",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あA　~ 　~\udc00\udc00​ \ude00\udc00 \ude00　\udc00~~﻿\ud83d..​~﻿\ud800\ud83d 　\ud83d .\ud800A🐀   あああ  𐀀 あ\ude00AA　​​..\udc00  .\ude00 　\ud800\ud800\ud800　\udc00\ud83d 𐀀　\udc00🐀​\ude00.﻿\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "A..~\nあ\u0000\u0000\udc00​😀\ud83d\ud800\u0001﻿\u0001  \t..\ude00 \t\ude00﻿  　\n~ \r\t\u001f~\n\t AA\r\t~﻿~﻿﻿\ude00\n𐀀\t\ud83d\ud83d~\u001f​​A\ud83dA​ ﻿ ​　　 A\u001f\n.\n\ude00 \u001fあ\t\u001f ~​\n \ude00﻿\u0000﻿\r \u0001﻿  　\t  .\ud800\r​  \udc00\ude00　​\u001f\u0001﻿ .あ𐀀\n​﻿\n\ud800  \ude00\u0001\udc00\ude00﻿\ude00\udc00 \u0001\udc00​\udc00\u0000\u0000~\ud800\r\t​\udc00​. ﻿　\ud83d.﻿ A\n\r.\ud800A\n \ud800\u0001.\t\t \u001f\u001f　\t​..~ \n\ud800\r\u0000​\n\t\ud800\ud83d",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A..~あ\udc00​😀\ud83d\ud800﻿  ..\ude00 \ude00﻿  　~ ~ AA~﻿~﻿﻿\ude00𐀀\ud83d\ud83d~​​A\ud83dA​ ﻿ ​　　 A.\ude00 あ ~​ \ude00﻿﻿ ﻿  　  .\ud800​  \udc00\ude00　​﻿ .あ𐀀​﻿\ud800  \ude00\udc00\ude00﻿\ude00\udc00 \udc00​\udc00~\ud800​\udc00​. ﻿　\ud83d.﻿ A.\ud800A \ud800. 　​..~ \ud800​\ud800\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud800あ\u001f\ude00\u0000あ  あ\n あ\ud83d\r\ude00\r \t~\u0001 .\u0000　\u0000~\udc00 .\ud83d\u0001　\u0000\u0000あ\u001f \ude00\ude00\u0000 ﻿A\ude00\udc00​﻿\u0001\n \u0000\ude00\ud83dAあ \u0001\t​  \u0000\u0000",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud800あ\ude00あ  あ あ😀 ~ .　~\udc00 .\ud83d　あ \ude00\ude00 ﻿A\ude00\udc00​﻿ \ude00\ud83dAあ ​  ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\udc00\udc00.\r\ud800~\u0000 ﻿​~ ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\udc00\udc00.\ud800~ ﻿​~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "A​\u001f　\u001f　　A\u0001﻿﻿\t\ude00.　​\n\udc00A \ud83dA \ud800 \n\t﻿ あ\u0001\ud800\u0000.\udc00A \ude00\udc00\ud800\n\n \ude00 \ud800\u0000　あ~\ud83d.　\n.​A\udc00 .あ\t.\r\ud83d​\u001f ﻿ ~\ude00 \n　 \u0000　\ud800\ud83d\t\u0000あ\u0000\u0001\u001f.\u0000.\ud83d \t　\u0000.\t​~\ud83d.\udc00\r\ude00\u0001\ude00 \u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A​　　　A﻿﻿\ude00.　​\udc00A \ud83dA \ud800 ﻿ あ\ud800.\udc00A \ude00\udc00\ud800 \ude00 \ud800　あ~\ud83d.　.​A\udc00 .あ.\ud83d​ ﻿ ~\ude00 　 　\ud800\ud83dあ..\ud83d 　.​~\ud83d.\udc00\ude00\ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿​ ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \u0000﻿\t.\r\u0001\ud83d ​\ud800 A~\ude00 \u0000A\ud800.\ud800\u0001\u0001\t\u0000\r\u001f\u001f\ud800 \ud800\ud83d.​　\ud800\t\u001f　ああA  \u0000 \udc00\n\u0000 \u0001\udc00\n  \u0000\u0001　\n \u001f　\u0001\ud83d \u0000A\r~ \r​ \u0000​\u001f\u0000 \ud800~\ud83d\nあ\ud800~\u0001",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": ".\ud83d ​\ud800 A~\ude00 A\ud800.\ud800\ud800 \ud800\ud83d.​　\ud800　ああA   \udc00 \udc00  　 　\ud83d A~ ​ ​ \ud800~\ud83dあ\ud800~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " ﻿A~﻿𐀀~𐈀あ\r\ud83d\ud83dAあ.あ\ude00 　A\u0001\u001f　\ud800\u0000　",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A~﻿𐀀~𐈀あ\ud83d\ud83dAあ.あ\ude00 　A　\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\r A﻿\ud800あ\n   \u0000 \ud83d﻿\ud800\ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A﻿\ud800あ    \ud83d﻿\ud800\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \r\n\t\u0000\ude00　\t\u0001~\ud83d　\r\udc00\udc00.\r​​　\u0001\u001f\u0001   A\u0001\rA\ud800﻿\udc00\ud83d\u001f\u0000\ud83d \u001f あ\u0000\r .\ude00 \u0000\r\u0001\u001fA \r\ud800 \n\u0000~\ud83d\u001f\r﻿",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ude00　~\ud83d　\udc00\udc00.​​　   AA\ud800﻿\udc00\ud83d\ud83d  あ .\ude00 A \ud800 ~\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0001\udc00 .A~ \u0000\n\u001f\u0001あ~\u0001\udc00~\udc00\n​\ude00\udc00 \u0001\t🐀\n A\u0000​A\udc00\u0000\ude00 .\t.あ\n\ud800　 \u0001A\u0000\ud83d ​　\t\u001f\u001f\ud800\u0000​\udc00~　\n   ﻿ \ud800　\ud83d~\nあ\ud83d\t\u0001\u0000\ud800A",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\udc00 .A~ あ~\udc00~\udc00​\ude00\udc00 🐀 A​A\udc00\ude00 ..あ\ud800　 A\ud83d ​　\ud800​\udc00~　   ﻿ \ud800　\ud83d~あ\ud83d\ud800A",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "　あ\ude00 \t.​\udc00　\udc00 \u001f\n\ud83d\ud83d​\t\u0000\u0000\t\udc00\ud800​ \udc00\t\u0000\u0001\t .\t.\u0000.​\udc00​\u0000\u001f\n\ud800﻿\r\ud83d\u0001\u001f\ude00\ud800​\ud800\u001f \u001f .\t~\t\r\u0000\ud800.\tA ﻿\ud800\u0001.\u0000A\r\nA.\ud800あ あ\ud800\u0001﻿\n.﻿  \r　 A\t\ude00Aあ\r~  \n\u001f\udc00 \ude00\ud83d﻿\u0001 \u0000 \ud83dA\ude00 \u0000\ude00\t 　\r \u0001﻿A​\ude00\u0000　 \r\r\ude00 \u001f\ude00 .\ude00\udc00\udc00 \ud800\ud83d..\ude00\ud800A ~\u0000\r \udc00​   \u001f \u001f﻿\u0001AAA ﻿あ\n\n\ude00\t﻿\u0001\ud800🐀\u0000A​あ\ud800あ﻿\u0001\u001f\t﻿\n \n ~A 　﻿\r\u0000\udc00\u0001\t\ud83d ﻿﻿\r﻿. ﻿\n\ud83d\ud800.　.​\t ~​\u0001   \ude00\n\ude00\ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ\ude00 .​\udc00　\udc00 \ud83d\ud83d​\udc00\ud800​ \udc00 ...​\udc00​\ud800﻿😀\ud800​\ud800  .~\ud800.A ﻿\ud800.AA.\ud800あ あ\ud800﻿.﻿  　 A\ude00Aあ~  \udc00 \ude00\ud83d﻿  \ud83dA\ude00 \ude00 　 ﻿A​\ude00　 \ude00 \ude00 .\ude00\udc00\udc00 \ud800\ud83d..\ude00\ud800A ~ \udc00​    ﻿AAA ﻿あ\ude00﻿\ud800🐀A​あ\ud800あ﻿﻿  ~A 　﻿\udc00\ud83d ﻿﻿﻿. ﻿\ud83d\ud800.　.​ ~​   \ude00\ude00\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": ".\nあ﻿~\u0001 A\u0000\t \t\r \ude00﻿~ \r\ud83d\ud83dA﻿\r あ\t﻿.​~\ud800\u001f\u001f \ud800~ \ud800\r~ AA\u001f.~~ \u001f~\tA\u001f𐈀\r\r.\u0000\u001f\ud83d\u001f\ud800 .​　.​﻿　\ud83d \r﻿\r﻿\r\u0001　\ude00　​　 ​A\u0001\ude00\t ~\u0000 \ud83d\ud800\ud83d~\u0000\ude00 ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": ".あ﻿~ A  \ude00﻿~ \ud83d\ud83dA﻿ あ﻿.​~\ud800 \ud800~ \ud800~ AA.~~ ~A𐈀.\ud83d\ud800 .​　.​﻿　\ud83d ﻿﻿　\ude00　​　 ​A\ude00 ~ \ud83d\ud800\ud83d~\ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "あ~\ud83d 　\t\ude00﻿ あ​~\udc00﻿あ\udc00\ud800.  \udc00\udc00​﻿\u0000﻿ ~　~\t\n \u0000.　~A\ud800~\ude00\n \n ​ \ude00.\u0001\u0000　 A\u0000\udc00\u001f\n A\udc00\t﻿ あ\ud800﻿~﻿\t \u0000Aあ\r\ud800~  ~あ\ude00\rA　.\udc00\t　~\n\udc00 \n\u0001\ud83d\tA\udc00 A\r　あ\t ~\ud800 A \ud800\nA\u001f﻿~​あ\udc00~\ud800​　\ud800﻿\u001f　 あ\r ..A\t\t.\ud83d\u001f\u0001\ud800 .A﻿A\udc00~ .~\ud800　 .. \ud800~~\u001f\n\n\u0001.  あ\u001f\t\ud800​\udc00\t😀.. .~\ud83d \u0001\n\u0000   A\udc00 ~ \u0000😀\ud800\u0001​A\u001f\t\ud800 🐀　A..　\udc00あ\udc00　.﻿\ude00 ~\r\n\u0000　あ\u0001~\r　.\n　\u001f　　",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ~\ud83d 　\ude00﻿ あ​~\udc00﻿あ\udc00\ud800.  \udc00\udc00​﻿﻿ ~　~ .　~A\ud800~\ude00  ​ \ude00.　 A\udc00 A\udc00﻿ あ\ud800﻿~﻿ Aあ\ud800~  ~あ\ude00A　.\udc00　~\udc00 \ud83dA\udc00 A　あ ~\ud800 A \ud800A﻿~​あ\udc00~\ud800​　\ud800﻿　 あ ..A.\ud83d\ud800 .A﻿A\udc00~ .~\ud800　 .. \ud800~~.  あ\ud800​\udc00😀.. .~\ud83d    A\udc00 ~ 😀\ud800​A\ud800 🐀　A..　\udc00あ\udc00　.﻿\ude00 ~　あ~　.　",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "​ \u0001\n\n　あ\u0000\ud83d　~~ ~\t\udc00~\u0001\r\ud800A\u0000\u0000 \u0000\udc00あ A.\ude00~\u001f\r. \u001f\u0001\ude00​~A  ~　A\nA ​\u0000あ\udc00\u001fA ﻿\ud800\ud800\u001f　﻿​\r\n.\n. .\t A \u0001~　\ude00\ude00\t \udc00\n\ude00~\u0001﻿\ude00A\r~\u001f\n\r ﻿A \t​\udc00　\ud800\ud800あ A​　\u0001﻿.\u0000~​~ \ud83d.\t",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​ 　あ\ud83d　~~ ~\udc00~\ud800A \udc00あ A.\ude00~. \ude00​~A  ~　AA ​あ\udc00A ﻿\ud800\ud800　﻿​.. . A ~　\ude00\ude00 \udc00\ude00~﻿\ude00A~ ﻿A ​\udc00　\ud800\ud800あ A​　﻿.~​~ \ud83d.",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " A~\u0001\tあ\ude00 \nあ\t𐀀\ud800 .\r \ude00 .A A   \t\n　\u001f​\ude00\ud800\t\n\ud83d~A　\u0000\n\r \ud800\udc00 \u0001\ud83d\ud83dA\ud800 \ude00\n\r \udc00.　  ﻿\r~~. A​　 \u0001\nあ\u0000\r​A  ~あ\ud83d..\r\udc00\n​\u0000 .あA\ud800 .\u0001\udc00A\ud83d​ 　﻿　\u001f \ud800 \udc00\n​ \rA\n \ud800​ あ~\t ﻿ ~~~  　\n　　\ud800~ \u001f\ud83d　 ​ \udc00\u0001﻿​\ud83d\n\u0001\u001f\ude00　~あ\u001f﻿​ \t ~ \u001f\r.\u001f \n\ud83d\r\r\ud83d\u001f​ ~\t\rああ\ud83dあA~\n ﻿. ​﻿ 　\u0000\u0001\u001f\r\ude00\udc00.​\u001f　 A\ud83dA\u0001\ude00\ud83d\r\ud83d\t  \ud83d 　​ \u0001\r\ud83d~",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A~あ\ude00 あ𐀀\ud800 . \ude00 .A A   　​\ude00\ud800\ud83d~A　 \ud800\udc00 \ud83d\ud83dA\ud800 \ude00 \udc00.　  ﻿~~. A​　 あ​A  ~あ\ud83d..\udc00​ .あA\ud800 .\udc00A\ud83d​ 　﻿　 \ud800 \udc00​ A \ud800​ あ~ ﻿ ~~~  　　　\ud800~ \ud83d　 ​ \udc00﻿​😀　~あ﻿​  ~ . \ud83d\ud83d​ ~ああ\ud83dあA~ ﻿. ​﻿ 　\ude00\udc00.​　 A\ud83dA\ude00\ud83d\ud83d  \ud83d 　​ \ud83d~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\t​.~~ \u001f\u001f ~あ.\u0000あ \t𐀀  \ud800　あ\u0001 .\ud800\u001f  A\ud83d​​\t \n\ud800\n\ude00 あ\rあ \ud800​\u0001\r\u0000\ud800 ~あ\tああ​\nあ\udc00\n \r\u0000\u0001\ud800 \ude00\n~A﻿ \u0000\r\tあ \t\u0001\ud800\u0000​\u0000\u001f\ude00あ\udc00\r\u001f\t\ude00\ud800.\ud800.  \ud800\u0000\t\r\ud800\ud83dあ \ud83d\ud800﻿ 　\ude00\t\u0000 .A\udc00　 \ude00\t \ude00\n\u0000\n\n\u0001﻿\u0000あ  \u001f~\ude00 \n﻿ \ud83d\t　あ ~あ\u0000　 \u001f﻿\r​. \u0001.\t\udc00\udc00  \u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​.~~  ~あ.あ 𐀀  \ud800　あ .\ud800  A\ud83d​​ 𐈀 ああ \ud800​\ud800 ~あああ​あ\udc00 \ud800 \ude00~A﻿ あ \ud800​\ude00あ\udc00\ude00\ud800.\ud800.  \ud800\ud800\ud83dあ \ud83d\ud800﻿ 　\ude00 .A\udc00　 \ude00 \ude00﻿あ  ~\ude00 ﻿ \ud83d　あ ~あ　 ﻿​. .\udc00\udc00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0000﻿\n\u0000 \t.\t　\t~\u0001\t \ude00\u0001A.\r\r﻿\u0001𐈀A\u001f \ud83d 　　\u001f\u001f﻿\udc00",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": " .　~ \ude00A.﻿𐈀A \ud83d 　　﻿\udc00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿​A　\u0000\ud83d\u0000~\ud800😀\n\u001f A﻿\u0000\tあ\r﻿​\t\ud800\t~~\t\ud800 ​\ude00 ﻿A﻿ \u0000\n.\ud800\n\u0000. .あ\r\t\t\ud83dA\t\ud83d~\n\t　　\u001fA \ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​A　\ud83d~\ud800😀 A﻿あ﻿​\ud800~~\ud800 ​\ude00 ﻿A﻿ .\ud800. .あ\ud83dA\ud83d~　　A \ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " A\ude00 \u0000\rA​\ud83d\t \udc00﻿あ\ud83d\tA\ud800\t﻿\u0001​. A\udc00あ\u0001\ud83d🐀 \n\tA​\t.\t \ude00\udc00A\udc00  \u0001\n  A\u0001\n﻿ ~\u0001 \ude00   ​​A\u0001A\ud83d\u001f\r~ \udc00\ud83d\t .\ude00\u0001~​\u001f\tA  \u0000\ud83d​あ\r\nあ\u001fあAA\t　\udc00あ\ude00  ~​﻿​\ud800.\udc00A \t\u001f\udc00あ﻿\n​\n~﻿\r\u0001\ud83d.\t﻿A 　~​\udc00.\u0000\n  \r\r\u001f\t\ude00　\n~",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A\ude00 A​\ud83d \udc00﻿あ\ud83dA\ud800﻿​. A\udc00あ\ud83d🐀 A​. \ude00\udc00A\udc00    A﻿ ~ \ude00   ​​AA\ud83d~ \udc00\ud83d .\ude00~​A  \ud83d​あああAA　\udc00あ\ude00  ~​﻿​\ud800.\udc00A \udc00あ﻿​~﻿\ud83d.﻿A 　~​\udc00.  \ude00　~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\n あ.A\u001f\udc00.\n ~Aあ. \r​\u0000\ud800\u0000\u0001\u001f\ude00𐈀..\udc00 \t ​\ud83d\n  \u001fA\ud800\ud800\r​\u0000​\r\n \ud83d\u0000\n \r~🐀.\t\u001f\u0000A\t \u001f \t​\ud83d\u0001　 \r\r\rあ \ude00​A\t\u0001  　あ\n \u0001\n\udc00 ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ.A\udc00. ~Aあ. ​𐈀𐈀..\udc00  ​\ud83d  A\ud800\ud800​​ \ud83d ~🐀.A  ​\ud83d　 あ \ude00​A  　あ \udc00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0000​𐈀𐈀\r.あ\udc00\u0000あ　~\nA \r\r~.\u0000 \ud800\t\u0001　A~\n﻿ \r\u0000 あ\ud800​\ude00\u0001\ud83d\n\u0000\u0000\udc00\u0000 \r　 ~　あ　​  \udc00\ude00あ\ude00.\ude00あ \n\r﻿\r\u001f A\r　\u0001 \udc00　\udc00​\ud800﻿ \ude00.\r﻿​\u0000 \t\u0000\ud83d ﻿\u0001　\u0000 \r\u0001 𐈀\ud800\ud800A​\udc00 あ\ud800\r\u001f .　あ﻿\ud83d\r\tA\u001f\u0001~﻿​~A\ude00 \t \u0001\ud83d\n\t\n\rAA\r\r\r\ude00　 A\u0001​.\udc00あ\u0000\t ​ああ~あ~\udc00 \u001f\ud800~​ \ud800  ﻿\rA​.　",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​𐈀𐈀.あ\udc00あ　~A ~. \ud800　A~﻿  あ\ud800​\ude00🐀 　 ~　あ　​  \udc00\ude00あ\ude00.\ude00あ ﻿ A　 \udc00　\udc00​\ud800﻿ \ude00.﻿​ \ud83d ﻿　  𐈀\ud800\ud800A​\udc00 あ\ud800 .　あ﻿\ud83dA~﻿​~A\ude00  \ud83dAA\ude00　 A​.\udc00あ ​ああ~あ~\udc00 \ud800~​ \ud800  ﻿A​.",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "~\ude00\ud800AA\n\n~\u0001A\t.\u0001　\n\udc00\ud800﻿.​A.\t\u001f.\n\u0001\ud83d​\ud800\t😀\ude00A.\ud800あ .​\u0000\udc00​\u0001﻿\ud800\u0001あ~\u001f.﻿\ud800\n \n..",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "~\ude00\ud800AA~A.　\udc00\ud800﻿.​A..\ud83d​\ud800😀\ude00A.\ud800あ .​\udc00​﻿\ud800あ~.﻿\ud800 ..",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud83d  \u0000　 \u001f​\u0000~　\t\t \u0001\n　あ\u001f\r\r\u0000あ\udc00\t\u0001. \ud83d  \u0000 .AA.\ud83d\u0000 ​\n\udc00 あ\u001f\u0001​\t\ude00A\u0000~﻿\ude00😀\u0000\u0000\udc00﻿\ude00 \r\udc00\ud800\u001f\r﻿A\u001f\ude00 \ude00\n",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d  　 ​~　 　ああ\udc00. \ud83d   .AA.\ud83d ​\udc00 あ​\ude00A~﻿\ude00😀\udc00﻿\ude00 \udc00\ud800﻿A\ude00 \ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "　\u0000​\ude00\u0000~\u001f\ud800　\udc00\ud800\u0001\udc00 A~\ud83d\t~.﻿\u0000\u0000\u0001\ud83d\u0001 あ\nA​​\u0001\u0001​\u001f😀\udc00\u0000﻿あ.　\n　　\u0000\ud83d\n\r﻿\ud800A \n\ud800~\u001f\ud800\ud800あ\u001f A​\rA🐀\r　\t",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​\ude00~\ud800　\udc00𐀀 A~\ud83d~.﻿\ud83d あA​​​😀\udc00﻿あ.　　　\ud83d﻿\ud800A \ud800~\ud800\ud800あ A​A🐀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "　 \ud800\ud800\ud83d\u0000\u001f\u0001　\u0001  .﻿あ\ud800.﻿A\t\u0001あ　\u0001 \ud83d\r~あ\ude00﻿\u0001 \udc00~\ud83d\u0000\u0000\n\u001f \u0001　﻿　\ud800\tA\u0000  \u001f\ude00 ~\r~ 　 \ud800\ud800﻿  \n.\ude00\ud800\u001f\ud83d﻿\u0000\ude00 ﻿\ud800AA​\r　​\ude00. \ud83d﻿\n\ud800\u0001. \ude00あ　A\ude00﻿~ああ\n~\u0000﻿\ud83d\ud83d \t \u0001　\ud800\n.\n ​\u0001あ\u0001 　\ud83d~\ud83d\u0001\u0000\ud800 \u001f\ud800　\u001f~\ud83d\u0000\udc00~  \u001f\udc00　\n﻿.　.\n​ \u0000\r\ud83d\u0000\tああ \u0001 ​ \udc00\n\r\n﻿ \t﻿  ~  \n\ud800あ\nああ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": " \ud800\ud800\ud83d　  .﻿あ\ud800.﻿Aあ　 \ud83d~あ\ude00﻿ \udc00~\ud83d 　﻿　\ud800A  \ude00 ~~ 　 \ud800\ud800﻿  .\ude00\ud800\ud83d﻿\ude00 ﻿\ud800AA​　​\ude00. \ud83d﻿\ud800. \ude00あ　A\ude00﻿~ああ~﻿\ud83d\ud83d  　\ud800. ​あ 　\ud83d~\ud83d\ud800 \ud800　~🐀~  \udc00　﻿.　.​ \ud83dああ  ​ \udc00﻿ ﻿  ~  \ud800あああ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿A\u001f A.\ud800 .﻿\u0000\ude00　​~\r\r\ud83d \u0000​　\r\udc00 \ud800A\ude00\r\u0000 .\u001f\ud800   ﻿\n\n​🐀\n\udc00　 .あ~A\t　~\n\udc00\ud83d​\u0000 \u001f\ude00​A.\ud83d\u0000\n\u001f~\u0001\u0001ああ\u0000\ude00 \u0001​.　\ud800~ \r\ud800　\t\ude00\ud83d.\udc00\u0001\ude00\n\ud83d\u0001﻿あ​A\u0000.A\ud83d\ud83d \u0000あ\u0001\u001f\ude00\u001f\n\u0001 \udc00\ud800\n\ud83d\ud800🐀\r\t  \n\ud800.\ude00\u0000\t﻿.\t\udc00​﻿\ude00\t\r﻿ ​ ~",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A A.\ud800 .﻿\ude00　​~\ud83d ​　\udc00 \ud800A\ude00 .\ud800   ﻿​🐀\udc00　 .あ~A　~\udc00\ud83d​ \ude00​A.\ud83d~ああ\ude00 ​.　\ud800~ \ud800　\ude00\ud83d.\udc00\ude00\ud83d﻿あ​A.A\ud83d\ud83d あ\ude00 \udc00\ud800\ud83d\ud800🐀  \ud800.\ude00﻿.\udc00​﻿\ude00﻿ ​ ~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "　\u001f　\t\u001f　 \n~~\ud83dA 　\udc00​\u0001 \udc00  あ　 ﻿\u001f \rA　\udc00　 \u001f\tあ﻿あ\ud83d \u0001\n \t\ude00\u0000\ud800　\u0001　﻿​~\u0000\u001f\tA\t\u0000\ud800A\u0001~\u0000\ude00﻿\rA\udc00  ~A\n ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "~~\ud83dA 　\udc00​ \udc00  あ　 ﻿ A　\udc00　 あ﻿あ\ud83d  \ude00\ud800　　﻿​~A\ud800A~\ude00﻿A\udc00  ~A",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "​",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud83d\ud800\ud83d\r\ude00\ud800﻿\u0001  \n\n \u0000A\udc00あ\tあ\r\u0001​​\u0001\u0000\ude00  .　\tあ\ude00\ud83d \t﻿\ude00.   \ude00\udc00​\n\r \n\udc00\u0001\n\t\n﻿A\ude00​\r\u0001   \ud800\r﻿\ud83d\u0001\ud83d\t\n\t\u001f\udc00\ude00\udc00A\t\u0001\u0000\n\udc00\u001f\ud83d\t\t \udc00\ud800\u001f~\u0001 \u0001 \t\t\u001f\r\ude00﻿\r.\n\tA \u001f.\r\ud800あ　AA\n\u001f.​\ude00   \ud800\u0000 .あ \ude00A..　  \ud83d\u0001~ \r\u0000\ud83d ~\n \r\u001f \u0001 あ\n　﻿\r\u0001\r \t\ude00\u0000\u001f\ude00\t.​~\ud800\t\u0000\n\n\u001fあ​ ​ \ud83d\u0000.﻿﻿~\ud83d　.\u0000​\udc00　\r.\u001f\ud800\ud800\u0001あ\n\u0001 \udc00~あ​ \u001f\ud800𐈀あ.​\t\ude00あ \u001f~\ud83d~\r \ud83d\u0000​ \n~\u001f\udc00\u001f\ude00\ude00\nあ.\t\ud83d",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d\ud800😀\ud800﻿   A\udc00ああ​​\ude00  .　あ\ude00\ud83d ﻿\ude00.   \ude00\udc00​ \udc00﻿A\ude00​   \ud800﻿\ud83d🐀\ude00\udc00A\udc00\ud83d \udc00\ud800~  \ude00﻿.A .\ud800あ　AA.​\ude00   \ud800 .あ \ude00A..　  \ud83d~ \ud83d ~   あ　﻿ \ude00\ude00.​~\ud800あ​ ​ \ud83d.﻿﻿~\ud83d　.​\udc00　.\ud800\ud800あ \udc00~あ​ \ud800𐈀あ.​\ude00あ ~\ud83d~ \ud83d​ ~\udc00\ude00\ude00あ.\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "　A\rあ \r\n\ude00~ あ\r\ud83d﻿\ude00\t\n~\r\u0001あ\ude00\ude00　\n  A\n\ud800\t  ~ .\u0001\r \n﻿​.﻿ あ﻿﻿\u0000あ\udc00\ude00.​\u001f\u0000\ud800\u0000A\u0001  あ\t .~  ~\r\u001f\ud83d\ud800\r\r .\u001f .\ud83d \udc00 \u0001.\ud83d𐈀\u0000\u0000  😀 \ud800   \n﻿\ud800​﻿\u001f\ud83d \ude00.\u0001​~\u001f \ud83d あ~\u0000\ud83d﻿\u0001﻿\u001f\ude00.\u001f\ude00\ude00\u001f\ude00あ あ.A 　\rあA\ude00A\n \ud800\n\ude00\r~\t   \ud83d \u001f\udc00\u0001\ud800\u001f﻿​\n \u0001\udc00\u0001あ　\n\u001f ﻿\u001fあ \u001f\t\u001f\r  \n\u001f\u001f﻿﻿\ude00\u001f﻿\t\u001f\t﻿\t\u0001\u0001\n あ~\ud83d\u0001  ​\n\t\udc00 \n\u001f \r A\ud800🐀\t",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Aあ \ude00~ あ\ud83d﻿\ude00~あ\ude00\ude00　  A\ud800  ~ . ﻿​.﻿ あ﻿﻿あ\udc00\ude00.​\ud800A  あ .~  ~\ud83d\ud800 . .\ud83d \udc00 .\ud83d𐈀  😀 \ud800   ﻿\ud800​﻿\ud83d \ude00.​~ \ud83d あ~\ud83d﻿﻿\ude00.\ude00\ude00\ude00あ あ.A 　あA\ude00A 𐈀~   \ud83d \udc00\ud800﻿​ \udc00あ　 ﻿あ   ﻿﻿\ude00﻿﻿ あ~\ud83d  ​\udc00   A\ud800🐀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "あ\ud83d \u0001\r.~\u001f\u001f\nあ\n　 \u0000\u0001.𐈀あ\n\ud83d \u001fA\ud83dA\t\udc00 ﻿​A\u0000\u001f\ude00 \ude00\n﻿﻿あ\ud800\ud83d~﻿​ \udc00　 \u001f 　\ud83d\u001f　. ​\udc00 \ude00~\t\ud83d\n\ud83d\u0001\ud800😀​A\u0000\t\ud800\n\n~\ud83d\u001f.​\u0001あ\t \t\ud83d\ud83d あ\u001f\n\t 😀~.\n\t\u0001\u0000​\udc00\u001f\n\ude00~​あ\ud800\u001f~\ud83dあ \r​..\ude00 ~A﻿~​\ud800\r\n\t\u0001​　\u0001~A~\u001f​　\nA\u0001A\u0000\ude00 A\u0000\t\u001f  ﻿~\n\udc00A​ ~.\u001f\u0000\ud83d﻿. ~\t \ud800​\ud800\u001f ~ああ\ud83d​A~ あ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ\ud83d .~あ　 .𐈀あ\ud83d A\ud83dA\udc00 ﻿​A\ude00 \ude00﻿﻿あ\ud800\ud83d~﻿​ \udc00　  　\ud83d　. ​\udc00 \ude00~\ud83d\ud83d\ud800😀​A\ud800~\ud83d.​あ \ud83d\ud83d あ 😀~.​\udc00\ude00~​あ\ud800~\ud83dあ ​..\ude00 ~A﻿~​\ud800​　~A~​　AA\ude00 A  ﻿~\udc00A​ ~.\ud83d﻿. ~ \ud800​\ud800 ~ああ\ud83d​A~ あ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0001あ　 \n\u001f　\u001f \ud800​ あ\u0000\r\u001f\u0000\t\t\udc00\udc00\ud800 \udc00.\t.\n \u001f\u0001\ude00 \n\ud800﻿﻿\nA\u0001 \r​\r\ude00﻿あ\ude00\ud83d \r​A​\udc00 ﻿​\r あ\ud83d \u0001~あ\r ﻿\n﻿\udc00 \udc00  　 \ud800\ud83d~\u0000\r\ud83d ﻿﻿~\u0000\u0001\n　\tあ あ \u001f\u001f﻿あ​A\nあ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ　 　 \ud800​ あ\udc00\udc00\ud800 \udc00.. \ude00 \ud800﻿﻿A ​\ude00﻿あ\ude00\ud83d ​A​\udc00 ﻿​ あ\ud83d ~あ ﻿﻿\udc00 \udc00  　 \ud800\ud83d~\ud83d ﻿﻿~　あ あ ﻿あ​Aあ",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "あ\ude00A\udc00\u0000A\ud83d​　.\t\u0000AA\u0000\n\n\ude00\udc00\tA\ude00\n\u001f ​　\n\udc00 \ude00 \n \ud83dあ\udc00 　 ​\u001f ~~\tA\ud800\ud83d.\ud800\ud83d~~　\n.~\t.\udc00​﻿\t 　\n\u001f.あ \u0000\u0000  あ\ud800\r \ud83d\n\u001f\u001f　　​.\r ~.　 \u0000　 \u0001​\u0000.\r.\t \u0000\n\nあ\t\ud83d~\u0001\n~\u001fあ\u0000​\ude00\udc00\r\u001f　 ~​\ud83d\ud800 \u0000\u0000\ud83d\r　\n　A\u0001..\tA ​​\r\ud83d~ \u0001\r~\ude00​\ud800\ud83d",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ\ude00A\udc00A\ud83d​　.AA\ude00\udc00A\ude00 ​　\udc00 \ude00  \ud83dあ\udc00 　 ​ ~~A\ud800\ud83d.\ud800\ud83d~~　.~.\udc00​﻿ 　.あ   あ\ud800 \ud83d　　​. ~.　 　 ​.. あ\ud83d~~あ​\ude00\udc00　 ~​\ud83d\ud800 \ud83d　　A..A ​​\ud83d~ ~\ude00​\ud800\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\t\t\ud83d\ud83d\ud800  \ud800 \u0000A　 ﻿",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d\ud83d\ud800  \ud800 A",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿\n\r \r﻿ あ​\u0001\rあ\t~ .\ude00\r﻿\t\ud83d\n\u0000\ud800\u0000\udc00 ~\u001f\u0001　 　\u001f\u0000\ude00\rあ\ude00~\ud800あ\ud83d\u0001\ud83d\u0000. \u0001\r\udc00\ud800\r　\ud800~A~A~\t\u001f\udc00\ud800\ud83d \t﻿あ  \u001f\u001f　 \u0000\ud83d.\r　\ude00 \ude00\u001f\ud83d　\r﻿﻿A\u0000\u0000​\n​.\ud83d\n\u0001\ud800\u0000　 ~\ud800あ\n~\u001f\ude00\ude00 \t \ud83d\u0000\r~A\udc00 \ud800 A\u001f\u0001　 \ud83dあA~A\u0001あ 　.あ \r\u0000​ \udc00\u0001 \ud800 \ud83d~~~あ\nA\ud800\n\u001f\udc00​　   \u0000﻿　A\r　 ﻿\u0000\ud83d\u001f　あ\n​\u0001\ud800﻿A \ude00 \udc00﻿\nあA\ud800\n\u001f　\u001f~\udc00\u0000\ud83d\u0000あ\u0001 \n~\u001f\u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ​あ~ .\ude00﻿\ud83d𐀀 ~　 　\ude00あ\ude00~\ud800あ\ud83d\ud83d. \udc00\ud800　\ud800~A~A~\udc00\ud800\ud83d ﻿あ  　 \ud83d.　\ude00 \ude00\ud83d　﻿﻿A​​.\ud83d\ud800　 ~\ud800あ~\ude00\ude00  \ud83d~A\udc00 \ud800 A　 \ud83dあA~Aあ 　.あ ​ \udc00 \ud800 \ud83d~~~あA𐀀​　   ﻿　A　 ﻿\ud83d　あ​\ud800﻿A \ude00 \udc00﻿あA\ud800　~\udc00\ud83dあ ~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": ".\tあ\u0001~A​\ude00.﻿\r\ude00 A\u0000\ud800　​ \u0000\ude00\u0000\u001f\u0001\n﻿\u0001A\u0001A   　\r\u001f\u0001​ 😀\t \u0001~\n\n. \t   \u0001 ~~　~\n　.\ud800\ud800\ud83d~\t\ud83dああ​ ​\ud800😀\r~\udc00 \ud800🐀 ​\u0000\n\ud83d𐈀\u001f ​\t.\ude00.~.\u0001\ud800\u0000\u0000　\ude00\ud800 \n\r \udc00あ\u0001\u001f​\ud800~ ​\n\u001f﻿　\udc00~A~​​\ud83d~　\t\t \n　\ud800　\n​\ud83d\r\ude00\u0001 \n﻿あA\ude00\ud83d \u001f\n\ud83d\ud800  A\r\u0001 \u0001 \udc00\udc00\udc00﻿A\ud83d ​\u0001 A\t　\u0000 あ﻿ \u0000.~あA\u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": ".あ~A​\ude00.﻿\ude00 A\ud800　​ \ude00﻿AA   　​ 😀 ~.     ~~　~　.\ud800\ud800\ud83d~\ud83dああ​ ​\ud800😀~\udc00 \ud800🐀 ​\ud83d𐈀 ​.\ude00.~.\ud800　\ude00\ud800  \udc00あ​\ud800~ ​﻿　\udc00~A~​​\ud83d~　 　\ud800　​😀 ﻿あA\ude00\ud83d \ud83d\ud800  A  \udc00\udc00\udc00﻿A\ud83d ​ A　 あ﻿ .~あA",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \ud83d𐀀\ud800\r \u0001\n\n\udc00\ude00\ud800\u0000  \r あ 　\u0000\r  .\udc00\ud83d\ud83d﻿\n\n\u0000 .\u001f\r   \r\ude00\ud800\u0001 \u0001\ud83d\ud800\udc00  \ude00\u0001\ude00\ude00\udc00\u001f\ude00﻿A\n\r\u001f \nあ.\ud800あ\u0001\u0001\u001f  \t \u0001﻿~",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d𐀀\ud800 \udc00\ude00\ud800   あ 　  .\udc00\ud83d\ud83d﻿ .   \ude00\ud800 \ud83d\ud800\udc00  \ude00\ude00\ude00\udc00\ude00﻿A あ.\ud800あ   ﻿~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0000​\ude00~\u0000~\t\u0000\udc00 　あ\r \ud83d　\u0001\ude00\tあ~​\r\t\u001f﻿　\udc00あ ﻿\ud83d​あ.\udc00​.\u0001\u0001 𐀀 ﻿..A​\u001f\ud800　\u0000\ud83d\u001f​﻿あ﻿\ude00~\udc00.~~𐈀\udc00あ \u0001\u0000\ud83d　\ud800\nA\u001f\udc00\ud83d\tA\ud800\ud83d\ud800\r\u001f\t\u0000\ud83d \u0001\udc00\udc00​\ude00\ud800 \u001f\ude00​ \ud800​ \t\r\ud83d\n\u001f\ud800\u0001\ude00.A\u0001\u0001\u0000あ\ud800\u0000　~\t　あ\ud800AA~ \n\n\u0001 \t\u0000\rA\u001f\u0001A\udc00\udc00 \ud83d\u001f\n\ud83d\n\ude00\nあ\u001f \ud83d.​\r\ude00​あA\ud800\ud800\t\r　\n~A.\udc00 ﻿\u001f.\ude00\ud800\ud83d ﻿　\ude00\rA~A\udc00 ​\u0001\u0000 \t\u001f \u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​\ude00~~\udc00 　あ \ud83d　\ude00あ~​﻿　\udc00あ ﻿\ud83d​あ.\udc00​. 𐀀 ﻿..A​\ud800　\ud83d​﻿あ﻿\ude00~\udc00.~~𐈀\udc00あ \ud83d　\ud800A\udc00\ud83dA\ud800\ud83d\ud800\ud83d \udc00\udc00​\ude00\ud800 \ude00​ \ud800​ \ud83d𐈀.Aあ\ud800　~　あ\ud800AA~  AA\udc00\udc00 \ud83d😀あ \ud83d.​\ude00​あA\ud800\ud800　~A.\udc00 ﻿.\ude00\ud800\ud83d ﻿　\ude00A~A\udc00 ​",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "A  🐀\ude00 \u0001~\ud83d ﻿\ude00\u0000​​~\ud83d\r\u0001\n\ude00\n\u0001\ud83d﻿ \rA ﻿ .​\tAあ~﻿\udc00あ  \r\ude00..\u0001A\u0001 \u0001﻿\udc00\udc00AA\u0001　.\u0000.\u0001\ud83d\n﻿\ud800\r﻿​　\ud800A﻿ \ud83d　​\ude00\t.\u0000~ \ude00 \r﻿​\u0000.あ\r\t. \n\u001f.  \n﻿ \ud800\n.A﻿\ude00~. \u0001 ​\u0001\udc00\u0000\udc00 \ude00\t​\ud83d .\u0000\u0001 \ude00\n\u0000Aあ\ud83dA\udc00.\u001f\udc00　\ud83d​\udc00A~　\t.　　.\t \u0000\u001f　﻿﻿.\ude00　\rAあ​﻿\u0001　\ud83dああ 　~ \ud83d\t \u001f\udc00\ude00\u0001\r﻿\u0000 \u0000\u0000\u001fあ~​あ\u0001\ud83d",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "A  🐀\ude00 ~\ud83d ﻿\ude00​​~😀\ud83d﻿ A ﻿ .​Aあ~﻿\udc00あ  \ude00..A ﻿\udc00\udc00AA　..\ud83d﻿\ud800﻿​　\ud800A﻿ \ud83d　​\ude00.~ \ude00 ﻿​.あ. .  ﻿ \ud800.A﻿\ude00~.  ​\udc00\udc00 \ude00​\ud83d . \ude00Aあ\ud83dA\udc00.\udc00　\ud83d​\udc00A~　.　　. 　﻿﻿.\ude00　Aあ​﻿　\ud83dああ 　~ \ud83d \udc00\ude00﻿ あ~​あ\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud83d\n﻿　\t\u0001\ude00  \u0000\t\ud83d\r\u0001\udc00\ud83d​\ud800A ~\u001f .　\u0000\u001f \ud800~\udc00.\u0000 　.　  ~あ\udc00\u0001\r\udc00 ​\r  \nA\t\n\u0001​\ud800 ~　\u001f.\t\udc00\ude00\rあ\t\n\ude00\nあ\u001f　\t\u001f\n\u001f.\udc00\ude00\n \u001f.\t​ .\ud800  \r﻿  ​\t\r \ud800🐀\n \u0001\u001f\u0001\ud83d　 \ud800\ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d﻿　\ude00  🐀\ud83d​\ud800A ~ .　 \ud800~\udc00. 　.　  ~あ\udc00\udc00 ​  A​\ud800 ~　.\udc00\ude00あ\ude00あ　.\udc00\ude00 .​ .\ud800  ﻿  ​ \ud800🐀 \ud83d　 \ud800\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "~~あ\udc00\rA\udc00A\n\r　\n\udc00\udc00😀\u0000​\u0000  \ud83d\u0000あ\ud800あA\ude00 \ud800\u0001\ude00﻿\r.~\u001f\ud800\t　\ud800A~A\u0001~ \u0000\t\u0000\ud800A　\ude00 \u0001\ude00  ﻿A\u0000\u0001\u0000\n ​",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "~~あ\udc00A\udc00A　\udc00\udc00😀​  \ud83dあ\ud800あA\ude00 𐈀﻿.~\ud800　\ud800A~A~ \ud800A　\ude00 \ude00  ﻿A ​",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\t \udc00 \r\u001f\u0001  \u0000​  ~ \ud800﻿\u0001.﻿.\ude00 \udc00 あ\tあ\t\n.\t\tあ\n\ude00\u0001 　﻿\ude00 ​~\u0000~\ud800﻿~\u001f\ude00~あ \ud83d　\n　　\udc00\r\ud800あ A​~\t\ude00\ud83d\ud800あ \u0000A\u0001\r  \r ​\ud83d　 \t\r~  　~.𐈀\u0000",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\udc00   ​  ~ \ud800﻿.﻿.\ude00 \udc00 ああ.あ\ude00 　﻿\ude00 ​~~\ud800﻿~\ude00~あ \ud83d　　　\udc00\ud800あ A​~\ude00\ud83d\ud800あ A   ​\ud83d　 ~  　~.𐈀",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud800​\t\r　 あ\ude00A\ud83d\r\ud800​\udc00  \t \u001f ~.\udc00\ud83d .\u0001 　あ\u0001\rAA\r .~ .\ud800\ud83d\u001f\r\ud83dあ😀~\u0001あ   \ude00A.\u0001\u0001\r \u0001\n  　\u001f \r\ude00\t﻿ ﻿A\u001f ~\u0001\u0000﻿\ud83d\r\udc00.\r\ud83d　\ud83d\u001f　\n\u001f \ud800~﻿​\n\rA\n \ud800\u0000~あ﻿​\u0001​\ud800　\tあ\ud800\u001f .\u0000 \udc00 ~~\t~　\ud800​\ude00　🐀​\t\u0001​﻿A. \u001f﻿\t﻿ ~ A\udc00\u0001\u0001~\u001f  \ude00\udc00\u0000~\u0000\ude00\ud800\ud800 A​~A　\r\u0000A﻿.​\ud83d\ude00\ud83d\u0001​\ud800 ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud800​　 あ\ude00A\ud83d\ud800​\udc00    ~.\udc00\ud83d . 　あAA .~ .\ud800\ud83d\ud83dあ😀~あ   \ude00A.   　 \ude00﻿ ﻿A ~﻿\ud83d\udc00.\ud83d　\ud83d　 \ud800~﻿​A \ud800~あ﻿​​\ud800　あ\ud800 . \udc00 ~~~　\ud800​\ude00　🐀​​﻿A. ﻿﻿ ~ A\udc00~  \ude00\udc00~\ude00\ud800\ud800 A​~A　A﻿.​\ud83d\ude00\ud83d​\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "﻿\u0000  ​\u001f﻿A\ude00　 \u0001﻿\u0001 \n　﻿\udc00.. \ude00\r\u001f\t\ud800  \r   ~﻿\n\u0001\ude00🐀~\t\n あ\ude00あ~. ​ ​A \r.\u0001\u0001​A　　.あ\ud83d\t.あ﻿\ud800\n ~\udc00\udc00~ \t　~\t　あ\ude00\t\u0000 \t  \u001f　.\u0000 A\u001f﻿~　 \ud83d\u0000\r \ud83d　~\udc00あ \udc00A\ude00\ude00~​\u001f \tあ あ\r. ​\ud800\u001f.​.﻿﻿~\ud83d.\ud800\u0000\ude00\n \u001f~ 　　 \ud83d \u0000\u001f\ud83d\ud83d\u0001\rあ\ude00 .　​😀\ud800\u0001  ﻿..　\u0000 \u0001 A\ude00\ude00\ude00~\r 　~\ud800﻿\u001f\n\n​A\udc00\t.  ﻿﻿\u001f\nあ\ud800~ 　\t~ ~ . 　A\t​\t\u0000﻿\t\nあ\u0001.AA\udc00A\u001f~😀.﻿A﻿~~\n  ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​﻿A\ude00　 ﻿ 　﻿\udc00.. \ude00\ud800     ~﻿\ude00🐀~ あ\ude00あ~. ​ ​A .​A　　.あ\ud83d.あ﻿\ud800 ~\udc00\udc00~ 　~　あ\ude00   　. A﻿~　 \ud83d \ud83d　~\udc00あ \udc00A\ude00\ude00~​ あ あ. ​\ud800.​.﻿﻿~\ud83d.𐈀 ~ 　　 \ud83d \ud83d\ud83dあ\ude00 .　​😀\ud800  ﻿..　  A\ude00\ude00\ude00~ 　~\ud800﻿​A\udc00.  ﻿﻿あ\ud800~ 　~ ~ . 　A​﻿あ.AA\udc00A~😀.﻿A﻿~~",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\tあ\udc00\t  \u0000\n~﻿\udc00\ud83d　\r~\udc00\tA\n​\udc00\ud800\ud800~\t.\ude00\ude00 ",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "あ\udc00  ~﻿\udc00\ud83d　~\udc00A​\udc00\ud800\ud800~.\ude00\ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "​\u0000.\u001fA .\udc00\ud800　あ 　\r ﻿\ude00\ud83d\u0000​​\u001f​\u0001﻿  \n\ud800~\n \u001f\u0001\ud83d\u001f𐀀\ud83d​.\n \u001f.\ude00\u0000\t\ud83d\u0000\ud83d.\u0000\u0001 \udc00A​\rA\ud800\r\n A.\u001f\nあ\u0000.\n  ~\ud83d \n\u001f\udc00　\ud83d~\u0000\u0000.  \ud83dあ \ud800\ud800あ\u0000﻿あ  ​. A\ud83d\n ~\u001f\t　\u001f\u0000  A あ　\ud83d",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "​.A .\udc00\ud800　あ 　 ﻿\ude00\ud83d​​​﻿  \ud800~ \ud83d𐀀\ud83d​. .\ude00\ud83d\ud83d. \udc00A​A\ud800 A.あ.  ~\ud83d \udc00　\ud83d~.  \ud83dあ \ud800\ud800あ﻿あ  ​. A\ud83d ~　  A あ　\ud83d",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud83d\r~ 　　 \u0000  ﻿\r\n\udc00~~~﻿A\udc00\ud800 ​\ud83d~ \ud800 あ​﻿\n\u001f.\u0001　 ﻿\u0000\r.~あ\u0000　あ \ud83d\u0001あ\u0000\udc00\u001f.~\n𐈀 \u0001\ude00\u0000 \ud83d ~\n﻿﻿　​ .あ\u0001\n　A﻿  \ud800 ﻿  \u0000ああ\u0001\u001f　\ude00  \r\r\r​\ude00\u001f. \r~\ude00\u0001\rあA\udc00\u0000.\ud800\ud83d~\u0001　 \u001f\u001f﻿﻿あ\tあ.あ.あ　.　\udc00\u001f",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d~ 　　   ﻿\udc00~~~﻿A\udc00\ud800 ​\ud83d~ \ud800 あ​﻿.　 ﻿.~あ　あ \ud83dあ\udc00.~𐈀 \ude00 \ud83d ~﻿﻿　​ .あ　A﻿  \ud800 ﻿  ああ　\ude00  ​\ude00. ~\ude00あA\udc00.\ud800\ud83d~　 ﻿﻿ああ.あ.あ　.　\udc00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0001　\r \ud800",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\ud83d\t  　 \t\udc00\u001f \n あ\r \ude00​~　\t\n\t\ud800 \ude00\udc00\ud800A ​A\udc00あ\ude00\t\n﻿​\udc00\u001f.\t　\ud800~\ude00 \u0001 \ud800\u001f\ud83dAA　\n﻿あ\t.　あ\u0001　.\u0001\n\udc00 \ud800\ud800　\ude00.\udc00﻿\u0000\udc00A\nA.あ\ud800\u0000\t\ude00\udc00\tあ﻿\ud800AA\u0001~\ud800\t\ud83d　A\ud83d\n. \u0000\udc00 \ude00 \n~ \u0001\u0000 \n\udc00\ude00\ud83d　\u001f ~\u0001 ~\udc00 \n\u0000A\u0001\n",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d  　 \udc00  あ \ude00​~　\ud800 \ude00\udc00\ud800A ​A\udc00あ\ude00﻿​\udc00.　\ud800~\ude00  \ud800\ud83dAA　﻿あ.　あ　.\udc00 \ud800\ud800　\ude00.\udc00﻿\udc00AA.あ𐈀\udc00あ﻿\ud800AA~\ud800\ud83d　A\ud83d. \udc00 \ude00 ~  \udc00\ude00\ud83d　 ~ ~\udc00 A",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "\u0000　\ud83d ~😀\u001f   ​\udc00あ\u0000﻿.　𐈀\t\t \udc00.\ud83d\tあ~\u001f \u0001  \u0000\n\ude00あ\u001f \udc00A.\udc00\u001f\n\ude00あ\r \n .\ud83d.\ude00\n\ude00 \r \ud83dA~~ A ~\nあ\r\udc00\u0000​\n.\ud800~ \r\u001f\u0000​\r\ude00\n\u0001\ud800 ​﻿　\n. \n\ud83d\u0001あ ﻿A\n\ud800.\t\ud800　　\u0000\t\ud800﻿",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "\ud83d ~😀   ​\udc00あ﻿.　𐈀 \udc00.\ud83dあ~   \ude00あ \udc00A.\udc00\ude00あ  .\ud83d.\ude00\ude00  \ud83dA~~ A ~あ\udc00​.\ud800~ ​\ude00\ud800 ​﻿　. \ud83dあ ﻿A\ud800.\ud800　　\ud800",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "~﻿\ud800あ﻿\u0000あ\ude00\ud800\ud800﻿\udc00\ude00A\u001f  \u001fあ﻿　﻿ \t\ud800​　\ud800\ud800あ \u001f\ud83d​ A​\n  \u001f.\n\u0001\n\ud83dあA　 \t\ude00あ.~\r\u001f​\ude00\u0000\t 　𐀀\u0000\r\r\ud83dあ　​~\ude00﻿\u0001​\u001f﻿ \u0000~\n\u0000\t~\t\udc00\ud800\u001f \t ​A\rA　\ude00\u0001\udc00. \u001f\ud83d~\n \ud800\ud800~\udc00 \udc00~\ud800 \u0001 \n\ud83d　 \udc00\n \r\ud800~\t\r\ude00\ude00\ud83dあ\u001f\u0000 ​~~\r~​\ude00\n\u001f\u001fA\ude00",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "~﻿\ud800あ﻿あ\ude00\ud800\ud800﻿\udc00\ude00A  あ﻿　﻿ \ud800​　\ud800\ud800あ \ud83d​ A​  .\ud83dあA　 \ude00あ.~​\ude00 　𐀀\ud83dあ　​~\ude00﻿​﻿ ~~\udc00\ud800  ​AA　\ude00\udc00. \ud83d~ \ud800\ud800~\udc00 \udc00~\ud800  \ud83d　 \udc00 \ud800~\ude00\ude00\ud83dあ ​~~~​\ude00A\ude00",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Nautilus\",\"title\":\"Home\"}',)\n"
+      },
+      "result": "Nautilus",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"title\":\"main.ts - pipette\",\"wm_class\":\"Code\",\"wm_class_instance\":\"code\",\"pid\":4242,\"id\":123456,\"width\":1920,\"height\":1080,\"x\":0,\"y\":0,\"focus\":true,\"in_current_workspace\":true,\"maximized\":1,\"display\":{},\"frame_type\":0,\"window_type\":0,\"layer\":2,\"monitor\":0,\"role\":\"\",\"area\":{}}',)\n"
+      },
+      "result": "Code",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"gnome-terminal-server\"}',)\n"
+      },
+      "result": "gnome-terminal-server",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.mozilla.firefox\"}',)\n"
+      },
+      "result": "firefox",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"日本語.アプリ\"}',)\n"
+      },
+      "result": "アプリ",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org. x \"}',)\n"
+      },
+      "result": "x",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"a.b.\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\".\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":null}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"title\":\"no class\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":5}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":0}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":true}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":[\"a.b\"]}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":{\"x\":1}}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"X\\u0000Y\"}',)\n"
+      },
+      "result": "XY",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"\\u0001\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"a.\\ud800\"}',)\n"
+      },
+      "result": "\ud800",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"\\ud83d\\ude00.x\"}',)\n"
+      },
+      "result": "x",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\"}',)\n"
+      },
+      "result": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"A\",\"wm_class\":\"B\"}',)\n"
+      },
+      "result": "B",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{ \"wm_class\" : \"Spaced\" }',)\n"
+      },
+      "result": "Spaced",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "(\"{\\\"title\\\":\\\"it's\\\",\\\"wm_class\\\":\\\"Quoted\\\"}\",)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"title\":\"C:\\\\\\\\dir\",\"wm_class\":\"Slash\"}',)\n"
+      },
+      "result": "Slash",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('null',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('\"org.x\"',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('[]',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('1',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"NoNewline\"}',)"
+      },
+      "result": "NoNewline",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "  ('{\"wm_class\":\"Padded\"}',)  \n\n"
+      },
+      "result": "Padded",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"Crlf\"}',)\r\n"
+      },
+      "result": "Crlf",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "﻿('{\"wm_class\":\"Bom\"}',)﻿"
+      },
+      "result": "Bom",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"X\"}' ,)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "(\"{\\\"wm_class\\\":\\\"X\\\"}\",)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"X\"}',)\n('{\"wm_class\":\"Y\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "(😀{\"wm_class\":\"X\"}',)"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"X\"}😀,)"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"X\"}x😀)"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "Error: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown: The name is not activatable\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "()"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('',)"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": ""
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "\n"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "1234"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "12345"
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "unavailable"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Shell",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "unavailable"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "throws"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Shell",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "throws"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Shell",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "App",
+        "title": "Title"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "App",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "App",
+        "title": "Title"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "App",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "Title"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "Title"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": " Title "
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": " Title "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": ""
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Shell",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": "\t"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Shell",
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "linux",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": "\t"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 1,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "unavailable"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "unavailable"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "throws"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": true
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "throws"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": true
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "null"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": "App",
+        "title": "Title"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "App",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": "App",
+        "title": "Title"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "App",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "Title"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": "Title"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": " Title "
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": " Title "
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": "Title",
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": ""
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": "",
+        "title": ""
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": "\t"
+      },
+      "gdbus": {
+        "stdout": "('{\"wm_class\":\"org.gnome.Shell\"}',)\n"
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    },
+    {
+      "platform": "darwin",
+      "native": {
+        "kind": "window",
+        "application": " \u0001 ",
+        "title": "\t"
+      },
+      "gdbus": {
+        "fails": true
+      },
+      "result": null,
+      "gdbusRuns": 0,
+      "warned": false
+    }
+  ]
+}
