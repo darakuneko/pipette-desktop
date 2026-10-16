@@ -58,34 +58,14 @@ pub(crate) fn local_date_string_to_ms(date: &str) -> f64 {
     }
 }
 
-/// `Number.parseInt(text, 10)`: leading white space, an optional sign and
-/// the decimal digits that follow; NaN when there is no digit. A value too
+/// `Number.parseInt(text, 10)` for the parts of a date `strftime` writes
+/// (ASCII digits): the leading digits, NaN when there is none. A value too
 /// large for an i64 saturates, which the local date then rejects as a Date
 /// rejects it.
 fn parse_int(text: &str) -> f64 {
-    let text = text.trim_start_matches(is_js_white_space);
-    let (negative, rest) = match text.as_bytes().first() {
-        Some(b'-') => (true, &text[1..]),
-        Some(b'+') => (false, &text[1..]),
-        _ => (false, text),
-    };
-    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
-    if digits == 0 {
-        return f64::NAN;
-    }
+    let digits = text.bytes().take_while(u8::is_ascii_digit).count();
     // Only ASCII digits, so the parse cannot fail.
-    let value: f64 = rest[..digits].parse().unwrap_or(f64::NAN);
-    if negative { -value } else { value }
-}
-
-/// The white space `parseInt` skips: JavaScript's WhiteSpace and
-/// LineTerminator.
-fn is_js_white_space(c: char) -> bool {
-    matches!(
-        c,
-        '\u{9}' | '\u{a}' | '\u{b}' | '\u{c}' | '\u{d}' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
-            ..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'
-    )
+    text[..digits].parse().unwrap_or(f64::NAN)
 }
 
 #[cfg(test)]
@@ -113,11 +93,9 @@ mod tests {
     fn parse_int_reads_a_leading_integer() {
         assert_eq!(parse_int("2026"), 2026.0);
         assert_eq!(parse_int("07"), 7.0);
-        assert_eq!(parse_int(" +12x"), 12.0);
-        assert_eq!(parse_int("-3"), -3.0);
+        assert_eq!(parse_int("12x"), 12.0);
         assert!(parse_int("").is_nan());
         assert!(parse_int("x1").is_nan());
-        assert!(parse_int("-").is_nan());
     }
 
     #[test]
