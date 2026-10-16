@@ -1,0 +1,169 @@
+[
+  {
+    "member": "typingAnalyticsListAppsForRange",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, "own"],
+    "command": "typing_analytics_list_apps_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": "own"
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListTypingTestsForRange",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, "own"],
+    "command": "typing_analytics_list_typing_tests_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": "own"
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsGetAppUsageForRange",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, "own"],
+    "command": "typing_analytics_get_app_usage_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": "own"
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsGetWpmByAppForRange",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, "own"],
+    "command": "typing_analytics_get_wpm_by_app_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": "own"
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListTypingTestRunsForRange",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, "all", ["words (english)"]],
+    "command": "typing_analytics_list_typing_test_runs_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": "all",
+      "typingTestScopes": ["words (english)"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsGetMatrixHeatmapForRange",
+    "args": [
+      "0xA1B2",
+      0,
+      1760500000000,
+      1760503600000,
+      { "kind": "hash", "machineHash": "hash-1" }
+    ],
+    "command": "typing_analytics_get_matrix_heatmap_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "layer": 0,
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": { "kind": "hash", "machineHash": "hash-1" },
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": {}
+  },
+  {
+    "member": "typingAnalyticsGetBigramAggregateForRange",
+    "args": [
+      "0xA1B2",
+      1760500000000,
+      1760503600000,
+      "slow",
+      "all",
+      { "minSampleCount": 2, "limit": 10, "gram": 3 },
+      ["Code"],
+      ["words (english)"],
+      ["run-1"]
+    ],
+    "command": "typing_analytics_get_bigram_aggregate_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "view": "slow",
+      "scope": "all",
+      "options": { "minSampleCount": 2, "limit": 10, "gram": 3 },
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": { "view": "slow", "entries": [], "truncated": false, "observedRolloverRatio": null }
+  },
+  {
+    "member": "typingAnalyticsListRolloverMinutes",
+    "args": ["0xA1B2", "own", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_rollover_minutes",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "scope": "own",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListDurationCells",
+    "args": ["0xA1B2", "all", 1760500000000, 1760503600000, ["Code"]],
+    "command": "typing_analytics_list_duration_cells",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "scope": "all",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsGetLayoutComparisonForRange",
+    "args": [
+      "0xA1B2",
+      1760500000000,
+      1760503600000,
+      "own",
+      {
+        "source": { "id": "qwerty", "map": {} },
+        "targets": [{ "id": "colemak", "map": { "KC_E": "F", "KC_D": "S" } }],
+        "metrics": ["fingerLoad"],
+        "fingerOverrides": { "1,1": "left-index" }
+      }
+    ],
+    "command": "typing_analytics_get_layout_comparison_for_range",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "scope": "own",
+      "options": "{\"source\":{\"id\":\"qwerty\",\"map\":{}},\"targets\":[{\"id\":\"colemak\",\"map\":{\"KC_E\":\"F\",\"KC_D\":\"S\"}}],\"metrics\":[\"fingerLoad\"],\"fingerOverrides\":{\"1,1\":\"left-index\"}}",
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": null
+  }
+]
