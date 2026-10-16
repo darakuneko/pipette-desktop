@@ -15,7 +15,8 @@
 //! - [`preflight`]: what every entry point runs before it touches data,
 //!   with its parts in [`format`] and [`format_status`] (the sync-format
 //!   marker and the status of the update banner) and [`password`] (the
-//!   guard and the password-check).
+//!   guard and the password-check);
+//! - [`meta_backfill`]: the keyboard names a full download fills in.
 
 pub mod account;
 pub mod bundle;
@@ -23,6 +24,7 @@ pub mod crypto;
 pub mod format;
 pub mod format_status;
 pub mod merge;
+pub mod meta_backfill;
 pub mod password;
 pub mod preflight;
 mod single_flight;
