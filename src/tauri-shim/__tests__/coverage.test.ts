@@ -7,7 +7,7 @@
 // pipette settings stores, stored keyboards, pending sync units) and the
 // pack and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
-// real; the Hub's are fakes or stubs.
+// real; the members named after the Hub are fakes or stubs.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -152,9 +152,13 @@ const TYPING_DATASET_MEMBERS = [
   'aozoraImport',
 ]
 
-/** Whether `name` is a member that asks the Hub. The local setters of a
- *  store's Hub link (`…SetHubPostId`, `…SetHubPrivate`) are not. */
-const asksHub = (name: string): boolean => /^hub|Hub/.test(name) && !/SetHub/.test(name)
+/** Whether `name` is a member named after the Hub that is not answered
+ *  locally: the setters of a store's Hub link (`…SetHubPostId`,
+ *  `…SetHubPrivate`) and `hubGetOrigin` (the configured origin) are. The
+ *  word list dataset members and the Aozora Bunko import also reach the
+ *  Hub but are real, and are not named after it. */
+const namedAfterHub = (name: string): boolean =>
+  /^hub|Hub/.test(name) && !/SetHub/.test(name) && name !== 'hubGetOrigin'
 
 describe('shim coverage', () => {
   it('backs every pack and label member with backend commands', () => {
@@ -173,8 +177,8 @@ describe('shim coverage', () => {
     expect(stores.filter((name) => !members.includes(name))).toEqual([])
   })
 
-  it('leaves every Hub request to a fake or a stub', () => {
-    const hub = VIAL_API_MEMBER_NAMES.filter(asksHub)
+  it('leaves the members named after the Hub to fakes or stubs', () => {
+    const hub = VIAL_API_MEMBER_NAMES.filter(namedAfterHub)
     expect(hub.length).toBeGreaterThan(0)
     expect(hub.filter((name) => name in real)).toEqual([])
   })
