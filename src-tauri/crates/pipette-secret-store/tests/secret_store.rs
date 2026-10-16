@@ -52,7 +52,11 @@ async fn store_in_state(user_data: &Path, file: &str, available: bool) -> Secret
         other => panic!("unknown file state {other}"),
     }
     keystore.set_unavailable(!available);
-    store_on(user_data, &keystore)
+    let store = store_on(user_data, &keystore);
+    // The masters of one key store share the key in memory; a new process
+    // starts without it.
+    store.master_key().forget();
+    store
 }
 
 #[tokio::test]
