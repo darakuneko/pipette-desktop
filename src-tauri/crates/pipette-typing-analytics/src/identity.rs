@@ -213,7 +213,11 @@ mod tests {
         std::fs::write(&path, format!("{ID_A}\n")).unwrap();
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
         if std::fs::read(&path).is_ok() {
-            return; // running as root, which reads any file
+            // Root reads any file, so there is no read error to test.
+            eprintln!(
+                "SKIPPED another_read_error_fails_and_leaves_the_file: the unreadable file was read (root)"
+            );
+            return;
         }
         let err = load_or_create_installation_id(dir.path(), ids(&[ID_B]).as_ref()).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::PermissionDenied);
