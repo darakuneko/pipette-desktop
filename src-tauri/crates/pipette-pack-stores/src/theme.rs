@@ -10,13 +10,12 @@
 //! a rename changes the meta only. Unlike the language packs, there is no
 //! built-in pack and no enabled state.
 
-use pipette_entry_store::{Entry, EntryStore, OverwriteOptions, overwrite_entry};
+use pipette_entry_store::{Entry, EntryStore};
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
-use pipette_time::iso_8601_millis;
 
 pub use crate::pack_meta::Cached;
-use crate::pack_meta::{blank_clears, pack_header};
+use crate::pack_meta::{SaveHub, insert_save_tail};
 use crate::pack_store::{Field, PackStore};
 use crate::result::{ErrorCode, PackError, PackResult};
 
@@ -27,6 +26,7 @@ pub const THEME_PACKS: PackStore = PackStore {
     local_only_ids: &[],
     not_found: "Theme pack not found",
     duplicate_name: "A theme pack with the same name already exists",
+    max_name_length: 64,
 };
 
 /// The live metas, in the index's order (`listMetas`).
@@ -89,13 +89,23 @@ pub fn export_text(ctx: &StoreContext, id: &JsString) -> PackResult<(Option<Valu
     Ok((meta.get("name").cloned(), pipette_js_json::stringify_with_gap(&Value::Object(pack), "  ")))
 }
 
+/// `name` and `version` of a pack JSON, both trimmed and not empty.
+fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
+    let Some(Value::Object(pack)) = pack else { return None };
+    let text = |key: &str| match pack.get(key) {
+        Some(Value::String(s)) => Some(pipette_entry_store::js_trim(s)).filter(|s| !s.is_empty()),
+        _ => None,
+    };
+    Some((text("name")?, text("version")?))
+}
+
 /// A save of a pack (`savePack`'s input).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SaveThemeInput {
     /// The pack to save over; a new one (or the live one of the same name)
     /// when `None`.
     pub id: Option<JsString>,
-    /// The pack JSON the page checked; `None` is `undefined`.
+    /// The pack JSON; `None` is `undefined`.
     pub pack: Option<Value>,
     pub hub_post_id: Field<JsString>,
     pub hub_updated_at: Field<JsString>,
@@ -119,44 +129,20 @@ pub fn save_pack(ctx: &StoreContext, input: SaveThemeInput) -> PackResult<Entry>
         THEME_PACKS.write_body(ctx, &id, &pipette_js_json::stringify_with_gap(pack, "  "))?;
 
         let now = ctx.now_ms();
-        let at = index.position(&id);
-        let existing = at.map(|at| &index.metas[at]);
-        let old = |key: &str| existing.and_then(|meta| meta.get(key));
-        let truthy = |value: Option<Value>| value.filter(Value::is_truthy);
-        let optional = [
-            ("hubPostId", truthy(input.hub_post_id.resolve(old("hubPostId"), Value::String))),
-            (
-                "hubUpdatedAt",
-                truthy(blank_clears(input.hub_updated_at).resolve(old("hubUpdatedAt"), Value::String)),
-            ),
-            (
-                "uploaderName",
-                truthy(blank_clears(input.uploader_name).resolve(old("uploaderName"), Value::String)),
-            ),
-        ];
-        let saved_at = old("savedAt")
-            .filter(|v| **v != Value::Null)
-            .cloned()
-            .unwrap_or_else(|| iso_8601_millis(now).into());
-
         let mut fields = Object::new();
         fields.insert("id", Value::String(id.clone()));
         fields.insert("filename", Value::String(THEME_PACKS.filename_of(&id)));
         fields.insert("name", name);
         fields.insert("version", Value::String(version));
-        for (key, value) in optional {
-            if let Some(value) = value {
-                fields.insert(key, value);
-            }
-        }
-        fields.insert("savedAt", saved_at);
-        let options = OverwriteOptions { body: true, explicit: true };
-        let meta = overwrite_entry(EntryStore::ThemePacks, existing, fields, now, options)?;
-        index.put(at, meta.clone());
-        THEME_PACKS.write_index(ctx, &index)?;
-        THEME_PACKS.notify_pack_change(ctx, &id);
-        THEME_PACKS.notify_index_change(ctx);
-        Ok(meta)
+        let hub = SaveHub {
+            hub_post_id: &input.hub_post_id,
+            hub_updated_at: &input.hub_updated_at,
+            uploader_name: &input.uploader_name,
+            drop_empty_post: true,
+        };
+        insert_save_tail(&mut fields, hub, index.find(&id), now);
+        let (at, meta) = THEME_PACKS.saved_meta(&index, &id, fields, now, true)?;
+        THEME_PACKS.put_saved(ctx, &mut index, at, &id, meta)
     })
 }
 

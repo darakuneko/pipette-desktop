@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use pipette_js_json::Value;
 use pipette_keyboard_stores::StoreContext;
-use pipette_pack_stores::i18n_handlers::Answer;
+use pipette_pack_stores::handlers::Answer;
 use pipette_pack_stores::response_json;
 use tauri::State;
 use tauri::ipc::Response;

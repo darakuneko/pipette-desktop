@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, UNIX_EPOCH};
 
 use pipette_js_json::{Object, Value};
-use pipette_pack_stores::i18n_handlers::Answer;
+use pipette_pack_stores::handlers::Answer;
 use pipette_pack_stores::{ImportFileRead, read_import_file, response};
 
 use super::{Harness, Node, build, ms, recorded, tree_of};

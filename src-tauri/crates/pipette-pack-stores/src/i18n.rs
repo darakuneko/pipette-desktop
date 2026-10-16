@@ -15,15 +15,13 @@
 //! syncs. It can be renamed and reordered but not deleted or overwritten.
 
 use pipette_entry_store::{
-    EPOCH_ISO, Entry, EntryGroup, EntryStore, OverwriteOptions, builtin_entry, clock_ms, overwrite_entry,
-    touch_clock,
+    EPOCH_ISO, Entry, EntryGroup, EntryStore, builtin_entry, clock_ms, js_trim, touch_clock,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
-use pipette_time::iso_8601_millis;
 
 pub use crate::pack_meta::Cached;
-use crate::pack_meta::{blank_clears, pack_header};
+use crate::pack_meta::{SaveHub, insert_save_tail};
 use crate::pack_store::{Field, PackStore};
 use crate::result::{ErrorCode, PackError, PackResult};
 
@@ -37,6 +35,7 @@ pub const I18N_PACKS: PackStore = PackStore {
     local_only_ids: &[BUILTIN_ENGLISH_PACK_ID],
     not_found: "Language pack not found",
     duplicate_name: "A language pack with the same name already exists",
+    max_name_length: 64,
 };
 
 fn is_english(id: &JsString) -> bool {
@@ -159,6 +158,16 @@ pub struct SavePackInput {
     pub unattended: bool,
 }
 
+/// `name` and `version` of a pack JSON, both trimmed and not empty.
+fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
+    let Some(Value::Object(pack)) = pack else { return None };
+    let text = |key: &str| match pack.get(key) {
+        Some(Value::String(s)) => Some(js_trim(s)).filter(|s| !s.is_empty()),
+        _ => None,
+    };
+    Some((text("name")?, text("version")?))
+}
+
 /// Saves a pack (`savePack`), over the pack `input.id`, over the live pack
 /// of the same name (never the built-in English one), or as a new pack.
 /// Answers its meta.
@@ -189,22 +198,16 @@ pub fn save_pack(ctx: &StoreContext, input: SavePackInput) -> PackResult<Entry> 
         I18N_PACKS.write_body(ctx, &id, &pipette_js_json::stringify_with_gap(pack, "  "))?;
 
         let now = ctx.now_ms();
-        let at = index.position(&id);
-        let existing = at.map(|at| &index.metas[at]);
-        let live = existing.filter(|meta| !meta.is_deleted());
-        let fields = save_fields(&I18N_PACKS, &input, &id, name, header_version, existing, live, now);
-        let options = OverwriteOptions { body: true, explicit: !input.unattended };
-        let mut meta = overwrite_entry(EntryStore::I18nPacks, existing, fields, now, options)?;
+        let existing = index.find(&id);
+        let live = existing.is_some_and(|meta| !meta.is_deleted());
+        let fields = save_fields(&input, &id, name, header_version, existing, now);
+        let (at, mut meta) = I18N_PACKS.saved_meta(&index, &id, fields, now, !input.unattended)?;
         // A save that keeps the pack alive over a delete must not come back
         // disabled: the delete disabled it at its own time.
-        if !input.unattended && live.is_some() {
+        if !input.unattended && live {
             touch_clock(&mut meta, EntryGroup::Enabled, now)?;
         }
-        index.put(at, meta.clone());
-        I18N_PACKS.write_index(ctx, &index)?;
-        I18N_PACKS.notify_pack_change(ctx, &id);
-        I18N_PACKS.notify_index_change(ctx);
-        Ok(meta)
+        I18N_PACKS.put_saved(ctx, &mut index, at, &id, meta)
     })
 }
 
@@ -217,25 +220,19 @@ fn input_hub_post_id(field: &Field<JsString>) -> Option<JsString> {
     }
 }
 
-/// The meta fields of a save, in the order `savePack` writes them.
-#[allow(clippy::too_many_arguments)]
+/// The meta fields of a save over `existing`, in the order `savePack`
+/// writes them.
 fn save_fields(
-    store: &PackStore,
     input: &SavePackInput,
     id: &JsString,
     name: Value,
     version: JsString,
     existing: Option<&Entry>,
-    live: Option<&Entry>,
     now: i64,
 ) -> Object {
     let old = |key: &str| existing.and_then(|meta| meta.get(key));
+    let live = existing.filter(|meta| !meta.is_deleted());
     let truthy = |value: Option<Value>| value.filter(Value::is_truthy);
-    let hub_post_id = input.hub_post_id.clone().resolve(old("hubPostId"), Value::String);
-    let hub_updated_at =
-        truthy(blank_clears(input.hub_updated_at.clone()).resolve(old("hubUpdatedAt"), Value::String));
-    let uploader_name =
-        truthy(blank_clears(input.uploader_name.clone()).resolve(old("uploaderName"), Value::String));
     let matched_base_version =
         truthy(input.matched_base_version.clone().resolve(old("matchedBaseVersion"), Value::String));
     let coverage = truthy(input.coverage.clone().resolve(old("coverage"), Value::Object));
@@ -249,23 +246,20 @@ fn save_fields(
         .map(Value::from)
         .or_else(|| live.and_then(|meta| meta.get("enabled")).filter(|v| **v != Value::Null).cloned())
         .unwrap_or(Value::Bool(true));
-    let saved_at =
-        old("savedAt").filter(|v| **v != Value::Null).cloned().unwrap_or_else(|| iso_8601_millis(now).into());
 
     let mut fields = Object::new();
     fields.insert("id", Value::String(id.clone()));
-    fields.insert("filename", Value::String(store.filename_of(id)));
+    fields.insert("filename", Value::String(I18N_PACKS.filename_of(id)));
     fields.insert("name", name);
     fields.insert("version", Value::String(version));
     fields.insert("enabled", enabled);
-    let optional =
-        [("hubPostId", hub_post_id), ("hubUpdatedAt", hub_updated_at), ("uploaderName", uploader_name)];
-    for (key, value) in optional {
-        if let Some(value) = value {
-            fields.insert(key, value);
-        }
-    }
-    fields.insert("savedAt", saved_at);
+    let hub = SaveHub {
+        hub_post_id: &input.hub_post_id,
+        hub_updated_at: &input.hub_updated_at,
+        uploader_name: &input.uploader_name,
+        drop_empty_post: false,
+    };
+    insert_save_tail(&mut fields, hub, existing, now);
     let app_version = input.app_version_at_import.clone().filter(|v| !v.is_empty()).map(Value::String);
     let derived = [
         ("appVersionAtImport", app_version),

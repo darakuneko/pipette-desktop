@@ -5,30 +5,19 @@
 //! the name a save takes, renaming, linking to the Hub and deleting. Each
 //! write runs under the store's write lock and reports its sync units.
 
-use pipette_entry_store::{Entry, EntryGroup, js_trim, mark_deleted, touch_clock, utf16_len};
-use pipette_js_json::{JsString, Value};
+use pipette_entry_store::{
+    Entry, EntryGroup, OverwriteOptions, js_trim, mark_deleted, overwrite_entry, touch_clock, utf16_len,
+};
+use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
+use pipette_time::iso_8601_millis;
 
 use crate::pack_store::{Field, PackIndex, PackStore, find_active_by_name};
 use crate::result::{ErrorCode, PackError, PackResult};
 
-/// The longest name a rename gives (UTF-16 units): 64 for the language
-/// packs, and `THEME_PACK_LIMITS.MAX_NAME_LENGTH` for the theme packs.
-pub const MAX_NAME_LENGTH: usize = 64;
-
-/// `name` and `version` of a pack JSON, both trimmed and not empty.
-pub(crate) fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
-    let Some(Value::Object(pack)) = pack else { return None };
-    let text = |key: &str| match pack.get(key) {
-        Some(Value::String(s)) => Some(js_trim(s)).filter(|s| !s.is_empty()),
-        _ => None,
-    };
-    Some((text("name")?, text("version")?))
-}
-
 /// An empty or blank string clears the field, as `''` does for the Hub's
 /// time and uploader.
-pub(crate) fn blank_clears(field: Field<JsString>) -> Field<JsString> {
+fn blank_clears(field: Field<JsString>) -> Field<JsString> {
     match field {
         Field::Set(s) => {
             let trimmed = js_trim(&s);
@@ -36,6 +25,39 @@ pub(crate) fn blank_clears(field: Field<JsString>) -> Field<JsString> {
         }
         other => other,
     }
+}
+
+/// The Hub fields of a save, each set, cleared or inherited.
+pub(crate) struct SaveHub<'a> {
+    pub hub_post_id: &'a Field<JsString>,
+    pub hub_updated_at: &'a Field<JsString>,
+    pub uploader_name: &'a Field<JsString>,
+    /// Whether an empty post id is left out (the theme packs) rather than
+    /// written (the language packs).
+    pub drop_empty_post: bool,
+}
+
+/// Adds the fields every save ends its meta with, in `savePack`'s order:
+/// the Hub fields that have a value over `existing` (the Hub time and
+/// uploader trimmed, a blank one clearing it) and `savedAt`, kept from
+/// `existing` or `now`.
+pub(crate) fn insert_save_tail(fields: &mut Object, hub: SaveHub<'_>, existing: Option<&Entry>, now: i64) {
+    let old = |key: &str| existing.and_then(|meta| meta.get(key));
+    let truthy = |value: Option<Value>| value.filter(Value::is_truthy);
+    let post = hub.hub_post_id.clone().resolve(old("hubPostId"), Value::String);
+    let post = if hub.drop_empty_post { truthy(post) } else { post };
+    let updated =
+        truthy(blank_clears(hub.hub_updated_at.clone()).resolve(old("hubUpdatedAt"), Value::String));
+    let uploader =
+        truthy(blank_clears(hub.uploader_name.clone()).resolve(old("uploaderName"), Value::String));
+    for (key, value) in [("hubPostId", post), ("hubUpdatedAt", updated), ("uploaderName", uploader)] {
+        if let Some(value) = value {
+            fields.insert(key, value);
+        }
+    }
+    let saved_at =
+        old("savedAt").filter(|v| **v != Value::Null).cloned().unwrap_or_else(|| iso_8601_millis(now).into());
+    fields.insert("savedAt", saved_at);
 }
 
 /// How a Hub link change treats an optional cached field: left alone, or
@@ -104,6 +126,40 @@ impl PackStore {
         Ok((id, name))
     }
 
+    /// The meta of a save of the pack `id`: `fields` over the meta `index`
+    /// has for `id` (`overwriteEntry`, the body clock moved; `explicit`
+    /// when the user asked for it), and that meta's position.
+    pub(crate) fn saved_meta(
+        &self,
+        index: &PackIndex,
+        id: &JsString,
+        fields: Object,
+        now: i64,
+        explicit: bool,
+    ) -> PackResult<(Option<usize>, Entry)> {
+        let at = index.position(id);
+        let existing = at.map(|at| &index.metas[at]);
+        let options = OverwriteOptions { body: true, explicit };
+        Ok((at, overwrite_entry(self.entry_store, existing, fields, now, options)?))
+    }
+
+    /// Writes the saved `meta` of the pack `id` at `at` (appended when
+    /// `None`), and reports the body and the index.
+    pub(crate) fn put_saved(
+        &self,
+        ctx: &StoreContext,
+        index: &mut PackIndex,
+        at: Option<usize>,
+        id: &JsString,
+        meta: Entry,
+    ) -> PackResult<Entry> {
+        index.put(at, meta.clone());
+        self.write_index(ctx, index)?;
+        self.notify_pack_change(ctx, id);
+        self.notify_index_change(ctx);
+        Ok(meta)
+    }
+
     /// The live meta `id` under the lock, changed by `change`: written and
     /// reported as an index change when `change` answers true, answered as
     /// it is otherwise.
@@ -134,8 +190,8 @@ impl PackStore {
         if name.is_empty() {
             return Err(PackError::new(ErrorCode::InvalidName, "Name must not be empty"));
         }
-        if utf16_len(&name) > MAX_NAME_LENGTH {
-            let message = format!("Name must be at most {MAX_NAME_LENGTH} characters");
+        if utf16_len(&name) > self.max_name_length {
+            let message = format!("Name must be at most {} characters", self.max_name_length);
             return Err(PackError::new(ErrorCode::InvalidName, message));
         }
         self.change_live_meta(ctx, id, |index, meta| {

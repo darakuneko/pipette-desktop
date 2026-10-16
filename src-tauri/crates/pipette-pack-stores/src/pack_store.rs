@@ -37,6 +37,8 @@ pub struct PackStore {
     pub not_found: &'static str,
     /// The error of a name another live pack has.
     pub duplicate_name: &'static str,
+    /// The longest name a rename gives (UTF-16 units).
+    pub max_name_length: usize,
 }
 
 /// An index as read: the file's top-level object, whose `metas` holds the

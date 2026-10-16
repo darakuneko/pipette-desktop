@@ -24,7 +24,7 @@
 //!
 //! [`StoreContext`]: pipette_keyboard_stores::StoreContext
 
-mod handlers;
+pub mod handlers;
 pub mod i18n;
 pub mod i18n_handlers;
 mod import_file;
@@ -36,6 +36,6 @@ pub mod theme;
 pub mod theme_handlers;
 
 pub use import_file::{ImportFileRead, read_import_file};
-pub use pack_meta::{Cached, MAX_NAME_LENGTH};
+pub use pack_meta::Cached;
 pub use pack_store::{Field, PackIndex, PackStore, find_active_by_name};
 pub use result::{ErrorCode, PackError, PackResult, response, response_json};
