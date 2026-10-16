@@ -52,3 +52,23 @@ impl EnvelopeCodec for EnvelopeCrypto {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn seals_an_envelope_that_opens_with_the_password_only() {
+        let content = EnvelopeCrypto
+            .seal("{\"a\":1}".into(), Zeroizing::new("pw".into()), "favorites/macro".into())
+            .await
+            .unwrap();
+        let envelope: Envelope = serde_json::from_str(&content).unwrap();
+        assert_eq!(envelope.sync_unit, "favorites/macro");
+        let opened = EnvelopeCrypto.open(content.clone().into_bytes(), Zeroizing::new("pw".into())).await;
+        assert_eq!(opened.unwrap(), "{\"a\":1}");
+        let wrong = EnvelopeCrypto.open(content.into_bytes(), Zeroizing::new("other".into())).await;
+        assert_eq!(wrong.unwrap_err(), "Unsupported state or unable to authenticate data");
+        assert!(EnvelopeCrypto.open(b"not json".to_vec(), Zeroizing::new("pw".into())).await.is_err());
+    }
+}

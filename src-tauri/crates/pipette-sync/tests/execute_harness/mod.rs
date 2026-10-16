@@ -19,7 +19,7 @@ use pipette_drive::canonical::Listing;
 use pipette_drive::client::DriveClient;
 use pipette_entry_store::{FixedClock, RandomUuid, WriteLocks};
 use pipette_keyboard_stores::StoreContext;
-use pipette_sync::codec::{CodecFuture, EnvelopeCodec, EnvelopeCrypto};
+use pipette_sync::codec::{CodecFuture, EnvelopeCodec};
 use pipette_sync::dispatch::{UnitSync, UnitSyncDeps};
 use pipette_sync::execute::{
     ExecuteDeps, KeyboardMetaBackfill, PassAccount, PassHooks, SyncExecuteResult, SyncExecutor,
@@ -28,6 +28,10 @@ use pipette_sync::format::{SYNC_FORMAT_VERSION, marker_content};
 use pipette_sync::merge::{MergeEvents, PackKind};
 use pipette_sync::preflight::{BoxFuture, Preflight, PreflightDeps, PreflightError};
 use pipette_sync::scope::SyncScope;
+use pipette_sync_format::Envelope;
+use pipette_sync_format::crypto::{
+    IV_LENGTH, KEY_LENGTH, SALT_LENGTH, decrypt_with_key, encrypt_with_key, key_for,
+};
 use pipette_sync_format::drive_names::{drive_file_name, sync_format_file_name};
 use pipette_sync_pending::{PendingStore, Scheduler};
 use pipette_sync_runtime::{SyncDirection, SyncProgress, SyncRuntime};
@@ -57,6 +61,67 @@ impl EnvelopeCodec for PlainCodec {
 
     fn open(&self, content: Vec<u8>, _: zeroize::Zeroizing<String>) -> CodecFuture {
         Box::pin(std::future::ready(Ok(String::from_utf8_lossy(&content).into_owned())))
+    }
+}
+
+/// The envelope format of the Electron build with each key derived once
+/// per password and salt: a recorded pass opens and seals dozens of
+/// envelopes. It seals with one fixed salt and a new IV each time.
+#[derive(Default)]
+pub struct KeyCachedCodec {
+    keys: Mutex<std::collections::HashMap<KeyId, [u8; KEY_LENGTH]>>,
+    sealed: AtomicUsize,
+}
+
+/// A password and a salt.
+type KeyId = (String, Vec<u8>);
+
+const SEAL_SALT: [u8; SALT_LENGTH] = [7; SALT_LENGTH];
+
+impl KeyCachedCodec {
+    pub async fn key(self: &Arc<Self>, password: &str, salt: &[u8]) -> [u8; KEY_LENGTH] {
+        let id = (password.to_owned(), salt.to_vec());
+        if let Some(key) = self.keys.lock().unwrap().get(&id) {
+            return *key;
+        }
+        let (p, s) = id.clone();
+        let key = tokio::task::spawn_blocking(move || key_for(&p, &s)).await.unwrap();
+        self.keys.lock().unwrap().insert(id, key);
+        key
+    }
+
+    pub async fn seal_text(self: &Arc<Self>, plaintext: &str, password: &str, unit: &str) -> String {
+        let key = self.key(password, &SEAL_SALT).await;
+        let n = self.sealed.fetch_add(1, Ordering::SeqCst) as u64;
+        let mut iv = [0u8; IV_LENGTH];
+        iv[..8].copy_from_slice(&n.to_be_bytes());
+        let envelope =
+            encrypt_with_key(plaintext, &key, unit, &SEAL_SALT, &iv, "2026-10-16T00:00:00.000Z").unwrap();
+        serde_json::to_string(&envelope).unwrap()
+    }
+
+    pub async fn open_text(self: &Arc<Self>, content: &[u8], password: &str) -> Result<String, String> {
+        let envelope: Envelope =
+            serde_json::from_str(&String::from_utf8_lossy(content)).map_err(|err| err.to_string())?;
+        let salt = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &envelope.salt)
+            .map_err(|err| err.to_string())?;
+        let key = self.key(password, &salt).await;
+        decrypt_with_key(&envelope, &key).map_err(|err| err.to_string())
+    }
+}
+
+/// The codec of a world, as a handle the test keeps.
+pub struct SharedCodec(pub Arc<KeyCachedCodec>);
+
+impl EnvelopeCodec for SharedCodec {
+    fn seal(&self, plaintext: String, password: zeroize::Zeroizing<String>, unit: String) -> CodecFuture {
+        let codec = self.0.clone();
+        Box::pin(async move { Ok(codec.seal_text(&plaintext, &password, &unit).await) })
+    }
+
+    fn open(&self, content: Vec<u8>, password: zeroize::Zeroizing<String>) -> CodecFuture {
+        let codec = self.0.clone();
+        Box::pin(async move { codec.open_text(&content, &password).await })
     }
 }
 
@@ -144,7 +209,8 @@ pub struct World {
 }
 
 pub struct Options {
-    pub real_crypto: bool,
+    /// The envelope; the bundle's text itself when none is given.
+    pub codec: Option<Arc<dyn EnvelopeCodec>>,
     pub concurrency: usize,
     /// Seeds a password-check of [`PASSWORD`] and stores the password.
     pub password: bool,
@@ -154,7 +220,7 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Self { real_crypto: false, concurrency: 10, password: true, marker: true }
+        Self { codec: None, concurrency: 10, password: true, marker: true }
     }
 }
 
@@ -219,8 +285,7 @@ impl World {
             now_ms: Arc::new(|| START_MS),
         });
         let applied = Arc::new(Applied::default());
-        let codec: Arc<dyn EnvelopeCodec> =
-            if options.real_crypto { Arc::new(EnvelopeCrypto) } else { Arc::new(PlainCodec) };
+        let codec = options.codec.clone().unwrap_or_else(|| Arc::new(PlainCodec));
         let units = Arc::new(UnitSync::new(UnitSyncDeps {
             drive: client,
             runtime: runtime.clone(),
