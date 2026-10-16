@@ -37,7 +37,8 @@ pub enum DatasetError {
     #[error(transparent)]
     Io(#[from] io::Error),
     /// An overrides file nested deeper than pipette-js-json reads.
-    /// `JSON.parse` reads it, so it is never replaced by an update.
+    /// `JSON.parse` reads it, so every call that needs the overrides fails
+    /// rather than reading it as empty (and an update never replaces it).
     #[error("{0}: nested too deeply to read")]
     TooDeep(PathBuf),
     /// The blocking task of the call did not finish.
