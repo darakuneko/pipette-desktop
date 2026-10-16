@@ -160,24 +160,9 @@ impl From<BodyPathError> for KeyLabelError {
     }
 }
 
-/// The handler's answer as JSON text: `{"success":true}` with `data` when
-/// there is one, or `{"success":false,"errorCode":…,"error":…}`.
+/// The handler's answer as JSON text ([`crate::coded_response`]).
 pub fn key_label_response(result: Result<Option<Value>, KeyLabelError>) -> String {
-    let mut response = Object::new();
-    match result {
-        Ok(data) => {
-            response.insert("success", true.into());
-            if let Some(data) = data {
-                response.insert("data", data);
-            }
-        }
-        Err(err) => {
-            response.insert("success", false.into());
-            response.insert("errorCode", err.code().into());
-            response.insert("error", err.to_string().into());
-        }
-    }
-    pipette_js_json::stringify(&Value::Object(response))
+    crate::coded_response_json(result.map_err(|err| (err.code(), err.to_string())))
 }
 
 /// The index file: its top-level object, whose `entries` holds the place of

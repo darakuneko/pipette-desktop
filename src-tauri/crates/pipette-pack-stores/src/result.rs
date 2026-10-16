@@ -86,23 +86,10 @@ impl Display for PackError {
 /// answers no data), or the failure.
 pub type PackResult<T> = Result<T, PackError>;
 
-/// The handler's answer for `result` as an object.
+/// The handler's answer for `result` as an object
+/// ([`pipette_keyboard_stores::coded_response`]).
 pub fn response(result: PackResult<Option<Value>>) -> Object {
-    let mut out = Object::new();
-    match result {
-        Ok(data) => {
-            out.insert("success", true.into());
-            if let Some(data) = data {
-                out.insert("data", data);
-            }
-        }
-        Err(err) => {
-            out.insert("success", false.into());
-            out.insert("errorCode", err.code.as_str().into());
-            out.insert("error", err.message.into());
-        }
-    }
-    out
+    pipette_keyboard_stores::coded_response(result.map_err(|err| (err.code.as_str(), err.message)))
 }
 
 /// [`response`] as the JSON text `JSON.stringify` writes for it.

@@ -55,7 +55,7 @@ pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
 };
-pub use response::{done, field, response_json};
+pub use response::{CodedError, coded_response, coded_response_json, done, field, response_json};
 pub use settings::{
     KeyboardSettingsFile, SETTINGS_ETAG_ABSENT, SettingsError, SettingsFile, SettingsWrite,
     ensure_pipette_settings_dir, keyboard_settings_files_json, read_all_pipette_settings,
