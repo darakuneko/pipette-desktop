@@ -23,6 +23,7 @@
 
 use std::future::Future;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use pipette_google_auth::{AuthError, GoogleAuth, StoreTokens, SwitchFuture, TokenSwitch};
@@ -124,6 +125,22 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         let sub = self.account.account_sub().await;
         self.pending.adopt_for_account(sub.as_deref());
         sub
+    }
+
+    /// The startup's `adoptPendingForSignedInAccount`, which runs alongside
+    /// the commands: `changes` counts the changes of the stored sign-in
+    /// (bumped by `GoogleAuth::on_account_changed`). A sign-in or sign-out
+    /// that changed it after the account was read hands the units over
+    /// itself, so the account read is then stale and nothing is adopted.
+    /// The check and the hand-over run with the switch marked, so no switch
+    /// lands between them; one that starts meanwhile is refused as busy.
+    pub async fn adopt_pending_at_startup(&self, changes: &AtomicU64) {
+        let seen = changes.load(Ordering::SeqCst);
+        let sub = self.account.account_sub().await;
+        let Some(_switch) = self.runtime.try_begin_account_switch() else { return };
+        if changes.load(Ordering::SeqCst) == seen {
+            self.pending.adopt_for_account(sub.as_deref());
+        }
     }
 
     /// `claimOwnerlessForSignedInAccount`: gives ownerless units to the

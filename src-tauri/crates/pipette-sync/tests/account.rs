@@ -388,6 +388,85 @@ mod switching_to_a_new_sign_in {
     }
 }
 
+mod the_startup {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use tokio::sync::Notify;
+
+    use super::*;
+
+    /// A stored sign-in whose first read waits until the test lets it
+    /// finish.
+    struct SlowAccount {
+        sub: Mutex<Option<String>>,
+        read: Notify,
+        first: std::sync::atomic::AtomicBool,
+    }
+
+    impl SignedInAccount for SlowAccount {
+        async fn account_sub(&self) -> Option<String> {
+            let sub = self.sub.lock().unwrap().clone();
+            if self.first.swap(false, Ordering::SeqCst) {
+                self.read.notified().await;
+            }
+            sub
+        }
+
+        async fn sign_out(&self) {
+            *self.sub.lock().unwrap() = None;
+        }
+    }
+
+    fn startup(file: serde_json::Value) -> (TempDir, PendingStore, SyncRuntime, Arc<SlowAccount>) {
+        let h = Harness::new(file, Arc::default());
+        let account = Arc::new(SlowAccount {
+            sub: Mutex::new(Some("account-a".to_owned())),
+            read: Notify::new(),
+            first: true.into(),
+        });
+        (h.dir, h.pending, h.runtime, account)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn hands_the_units_to_the_stored_sign_in() {
+        let (_dir, pending, runtime, account) =
+            startup(json!({ "owner": null, "units": ["favorites/macro"], "held": {} }));
+        let switcher = AccountSwitcher::new(runtime, pending.clone(), Arc::clone(&account));
+        account.read.notify_one();
+
+        switcher.adopt_pending_at_startup(&AtomicU64::new(0)).await;
+
+        assert_eq!(owner(&pending).as_deref(), Some("account-a"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn adopts_nothing_when_the_sign_in_changed_while_it_read_the_account() {
+        let (_dir, pending, runtime, account) =
+            startup(json!({ "owner": null, "units": ["favorites/macro"], "held": {} }));
+        let switcher = Arc::new(AccountSwitcher::new(runtime, pending.clone(), Arc::clone(&account)));
+        let changes = Arc::new(AtomicU64::new(0));
+        let (starting, counted) = (Arc::clone(&switcher), Arc::clone(&changes));
+        let adoption = tokio::spawn(async move { starting.adopt_pending_at_startup(&counted).await });
+        settle().await;
+
+        // A sign-in of account-b completes while account-a is being read.
+        let bump = Arc::clone(&changes);
+        let store = async move {
+            bump.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        };
+        switcher.switch_account_keeping_pending(store, Some("account-b".to_owned())).await.unwrap();
+        account.read.notify_one();
+        adoption.await.unwrap();
+
+        // The sign-in gave the ownerless units to account-a and held them
+        // for it; the stale read of account-a takes nothing back.
+        assert_eq!(owner(&pending).as_deref(), Some("account-b"));
+        assert_eq!(held(&pending), [("account-a".to_owned(), vec!["favorites/macro".to_owned()])]);
+        assert!(active(&pending).is_empty());
+    }
+}
+
 mod signing_out {
     use super::*;
 

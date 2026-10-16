@@ -270,6 +270,7 @@ fn main() {
             typing_dataset_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
+            sync_commands::adopt_pending_at_startup(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
