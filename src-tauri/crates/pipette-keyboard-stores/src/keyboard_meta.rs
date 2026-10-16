@@ -295,8 +295,10 @@ pub enum TombstoneOutcome {
     Tombstoned,
 }
 
-/// Marks `entry` deleted at `now`. Assigning a property of a value that is
-/// not an object throws in JavaScript's strict mode.
+/// Marks `entry` deleted at `now`. Assigning a property of a primitive
+/// throws in JavaScript's strict mode; an array takes the properties, but
+/// `JSON.stringify` writes only its items, so it stays as it is and counts
+/// again in the next delete of every name.
 fn mark_entry_deleted(entry: &mut Value, now: &str) -> Result<(), StoreError> {
     match entry {
         Value::Object(entry) => {
@@ -304,6 +306,7 @@ fn mark_entry_deleted(entry: &mut Value, now: &str) -> Result<(), StoreError> {
             entry.insert("deletedAt", now.into());
             Ok(())
         }
+        Value::Array(_) => Ok(()),
         other => Err(StoreError::PrimitiveEntry("updatedAt", pipette_js_json::stringify(other))),
     }
 }

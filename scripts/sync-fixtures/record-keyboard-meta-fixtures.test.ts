@@ -135,6 +135,11 @@ const SCENARIOS: Scenario[] = [
     steps: [{ tombstoneAll: true }, { tombstone: '0xZ' }],
   },
   {
+    name: 'an entry that is a list is counted by every tombstone of all and left as it is',
+    tree: { [META]: meta([[], [1], { uid: '0xA', deviceName: 'A', updatedAt: D(2) }]) },
+    steps: [{ tombstoneAll: true }, { tombstoneAll: true }, { tombstone: '0xZ' }],
+  },
+  {
     name: 'a names file that is not an index is replaced',
     tree: { [META]: '{"type":"other","entries":[]}' },
     steps: [{ tombstone: '0xA' }],

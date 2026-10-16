@@ -251,6 +251,58 @@
     ]
   },
   {
+    "name": "an entry that is a list is counted by every tombstone of all and left as it is",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 3
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 2
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstone": "0xZ"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xZ\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
     "name": "a names file that is not an index is replaced",
     "tree": {
       "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
