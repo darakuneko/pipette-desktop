@@ -12,9 +12,9 @@ import { mockIPC } from '@tauri-apps/api/mocks'
 import type { VialAPI } from '../../../shared/types/vial-api'
 import { analyzeFiltersApi } from '../../../tauri-shim/api/analyze-filters'
 
-type Spy = (...args: unknown[]) => unknown
 type AnalyzeFilterMember = Extract<keyof VialAPI, `analyzeFilterStore${string}`>
-export type AnalyzeFilterSpies = Partial<Record<AnalyzeFilterMember, Spy>>
+/** A spy per member, called with the member's own arguments. */
+export type AnalyzeFilterSpies = { [K in AnalyzeFilterMember]?: (...args: Parameters<VialAPI[K]>) => unknown }
 
 export interface AnalyzeFilterBackend {
   name: string
@@ -25,7 +25,7 @@ function installVialAPI(members: object): void {
   Object.defineProperty(window, 'vialAPI', { value: members, writable: true, configurable: true })
 }
 
-function spy(spies: AnalyzeFilterSpies, member: AnalyzeFilterMember): Spy {
+function spy<K extends AnalyzeFilterMember>(spies: AnalyzeFilterSpies, member: K): NonNullable<AnalyzeFilterSpies[K]> {
   const found = spies[member]
   if (!found) throw new Error(`no spy for ${member}`)
   return found
@@ -38,7 +38,7 @@ export function analyzeFilterBackends(spies: AnalyzeFilterSpies, extra: object =
       name: 'Tauri shim over mockIPC',
       install: () => {
         mockIPC((cmd, payload) => {
-          const a = payload as Record<string, unknown>
+          const a = payload as Record<string, string>
           switch (cmd) {
             case 'analyze_filter_store_list': return spy(spies, 'analyzeFilterStoreList')(a.uid)
             case 'analyze_filter_store_save':
@@ -51,7 +51,7 @@ export function analyzeFilterBackends(spies: AnalyzeFilterSpies, extra: object =
             case 'analyze_filter_store_set_hub_post_id':
               return spy(spies, 'analyzeFilterStoreSetHubPostId')(a.uid, a.entryId, a.hubPostId)
             case 'analyze_filter_store_set_hub_private':
-              return spy(spies, 'analyzeFilterStoreSetHubPrivate')(a.uid, a.entryId, JSON.parse(String(a.link)))
+              return spy(spies, 'analyzeFilterStoreSetHubPrivate')(a.uid, a.entryId, JSON.parse(a.link))
             default: throw new Error(`unexpected command ${cmd}`)
           }
         })
