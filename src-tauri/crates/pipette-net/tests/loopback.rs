@@ -82,12 +82,21 @@ fn without_length(body: &[u8]) -> Vec<u8> {
     response("200 OK", "", body)
 }
 
+fn redirect_to(location: &str) -> Vec<u8> {
+    response("302 Found", &format!("Location: {location}\r\nContent-Length: 0\r\n"), b"")
+}
+
 fn routes(path: &str) -> Reply {
+    if let Some(hops) = path.strip_prefix("/hops/") {
+        // `/hops/n` redirects n more times before `/ok`.
+        let hops: u32 = hops.parse().unwrap();
+        return whole(redirect_to(&if hops == 0 { "/ok".to_owned() } else { format!("/hops/{}", hops - 1) }));
+    }
     match path {
         "/ok" => whole(with_length("200 OK", b"hello")),
         "/empty" => whole(with_length("204 No Content", b"")),
         "/missing" => whole(with_length("404 Not Found", b"not here")),
-        "/moved" => whole(response("302 Found", "Location: /ok\r\nContent-Length: 0\r\n", b"")),
+        "/moved" => whole(redirect_to("/ok")),
         "/16" => whole(with_length("200 OK", &[7; 16])),
         "/17" => whole(with_length("200 OK", &[7; 17])),
         "/16-unsized" => whole(without_length(&[7; 16])),
@@ -135,9 +144,14 @@ fn returns_a_failed_status_without_its_body() {
 }
 
 #[test]
-fn follows_redirects() {
+fn follows_up_to_ten_redirects() {
     let base = serve(routes);
-    assert_eq!(get(&format!("{base}/moved")).unwrap(), HttpResponse { status: 200, body: b"hello".to_vec() });
+    let hello = HttpResponse { status: 200, body: b"hello".to_vec() };
+    assert_eq!(get(&format!("{base}/moved")).unwrap(), hello);
+    // 10 redirects: `/hops/9` .. `/hops/0`, then `/ok`.
+    assert_eq!(get(&format!("{base}/hops/9")).unwrap(), hello);
+    let err = get(&format!("{base}/hops/10")).unwrap_err();
+    assert!(matches!(&err, HttpError::Network(message) if message.contains("too many redirects")), "{err:?}");
 }
 
 #[test]

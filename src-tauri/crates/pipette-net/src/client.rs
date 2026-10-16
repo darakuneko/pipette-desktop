@@ -102,10 +102,28 @@ impl Limits {
     };
 }
 
-/// The real client. reqwest follows up to 10 redirects, as fetch follows
-/// 20, and reads the proxy from the environment (and from the system
-/// settings on Windows and macOS). The reqwest client is built on the first
-/// request, so the app's start does not pay for it.
+/// As many redirects as reqwest's default policy follows.
+const MAX_REDIRECTS: usize = 10;
+
+/// Why a redirect from `previous` (the URLs requested so far, the first
+/// one first) to `next` is not followed: too many hops, or a step down from
+/// https to anything else, which would send the rest of the request in the
+/// clear.
+fn redirect_refusal(previous: &[reqwest::Url], next: &reqwest::Url) -> Option<&'static str> {
+    // `previous` starts with the URL first requested, which is no redirect.
+    if previous.len() > MAX_REDIRECTS {
+        Some("too many redirects")
+    } else if next.scheme() != "https" && previous.iter().any(|url| url.scheme() == "https") {
+        Some("refused a redirect from https to a URL that is not https")
+    } else {
+        None
+    }
+}
+
+/// The real client. It follows up to 10 redirects (fetch follows 20) but
+/// none from https to plain http, and reads the proxy from the environment
+/// (and from the system settings on Windows and macOS). The reqwest client
+/// is built on the first request, so the app's start does not pay for it.
 pub struct ReqwestClient {
     limits: Limits,
     user_agent: String,
@@ -129,6 +147,12 @@ impl ReqwestClient {
             .connect_timeout(self.limits.connect_timeout)
             .read_timeout(self.limits.read_timeout)
             .timeout(self.limits.total_timeout)
+            .redirect(reqwest::redirect::Policy::custom(|attempt| {
+                match redirect_refusal(attempt.previous(), attempt.url()) {
+                    Some(reason) => attempt.error(reason),
+                    None => attempt.follow(),
+                }
+            }))
             .build()
             .map_err(network_error)?;
         // A request racing this one may have set it first; either is fine.
@@ -227,6 +251,23 @@ mod tests {
         assert_eq!(Limits::DEFAULT.read_timeout, Duration::from_secs(60));
         assert_eq!(Limits::DEFAULT.total_timeout, Duration::from_secs(1800));
         assert_eq!(Limits::DEFAULT.max_body_bytes, 67_108_864);
+    }
+
+    #[test]
+    fn refuses_redirects_down_from_https_and_past_ten_hops() {
+        let url = |u: &str| reqwest::Url::parse(u).unwrap();
+        let https = url("https://a/x");
+        let http = url("http://a/x");
+        assert_eq!(redirect_refusal(std::slice::from_ref(&https), &url("https://b/y")), None);
+        assert_eq!(redirect_refusal(std::slice::from_ref(&http), &url("http://b/y")), None);
+        assert_eq!(redirect_refusal(std::slice::from_ref(&http), &url("https://b/y")), None);
+        assert!(redirect_refusal(std::slice::from_ref(&https), &url("http://b/y")).is_some());
+        // Down from an https hop after a plain start, too.
+        assert!(redirect_refusal(&[http.clone(), https.clone()], &url("http://b/y")).is_some());
+
+        // The first request and 9 redirects, then the 10th and the 11th.
+        assert_eq!(redirect_refusal(&vec![http.clone(); 10], &http), None);
+        assert_eq!(redirect_refusal(&vec![http.clone(); 11], &http), Some("too many redirects"));
     }
 
     #[test]
