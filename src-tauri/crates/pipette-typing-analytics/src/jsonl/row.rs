@@ -223,14 +223,14 @@ fn is_number_or_null(p: &Object, key: &str) -> bool {
     matches!(p.get(key), Some(Value::Null)) || is_number(p, key)
 }
 
-/// `allOrNone`: `Some(false)` when none of `keys` is present, `Some(true)`
-/// when all are, `None` for a partial group (a malformed row).
-fn all_or_none(p: &Object, keys: &[&str]) -> Option<bool> {
-    let present = keys.iter().filter(|key| p.contains_key(key)).count();
-    match present {
-        0 => Some(false),
-        n if n == keys.len() => Some(true),
-        _ => None,
+/// `allOrNone` and the check of the group: true when none of `keys` is
+/// present, or when all are and `check` holds; false for a partial group (a
+/// malformed row).
+fn group_is_valid(p: &Object, keys: &[&str], check: impl FnOnce() -> bool) -> bool {
+    match keys.iter().filter(|key| p.contains_key(key)).count() {
+        0 => true,
+        n if n == keys.len() => check(),
+        _ => false,
     }
 }
 
@@ -271,11 +271,9 @@ fn is_char_minute_payload(p: &Object) -> bool {
 
 /// `dh` / `ds` / `dq`: none, or a histogram and two finite numbers.
 fn is_valid_duration_triple(p: &Object) -> bool {
-    match all_or_none(p, &["dh", "ds", "dq"]) {
-        None => false,
-        Some(false) => true,
-        Some(true) => is_hist(p.get("dh")) && is_number(p, "ds") && is_number(p, "dq"),
-    }
+    group_is_valid(p, &["dh", "ds", "dq"], || {
+        is_hist(p.get("dh")) && is_number(p, "ds") && is_number(p, "dq")
+    })
 }
 
 fn is_matrix_minute_payload(p: &Object) -> bool {
@@ -289,11 +287,9 @@ fn is_matrix_minute_payload(p: &Object) -> bool {
 
 /// `pollP50Ms` / `pollP95Ms`: none, or both, each null or a finite number.
 fn is_valid_poll_stats_pair(p: &Object) -> bool {
-    match all_or_none(p, &["pollP50Ms", "pollP95Ms"]) {
-        None => false,
-        Some(false) => true,
-        Some(true) => is_number_or_null(p, "pollP50Ms") && is_number_or_null(p, "pollP95Ms"),
-    }
+    group_is_valid(p, &["pollP50Ms", "pollP95Ms"], || {
+        is_number_or_null(p, "pollP50Ms") && is_number_or_null(p, "pollP95Ms")
+    })
 }
 
 fn is_minute_stats_payload(p: &Object) -> bool {
@@ -331,19 +327,13 @@ fn is_non_negative_integer(value: Option<&Value>) -> Option<f64> {
 /// non-negative integers with `oc <= on`.
 fn is_ngram_entry(value: &Value) -> bool {
     let Value::Object(o) = value else { return false };
-    let sums_ok = match all_or_none(o, &["s", "sq"]) {
-        None => false,
-        Some(false) => true,
-        Some(true) => is_number(o, "s") && is_number(o, "sq"),
-    };
-    let overlap_ok = match all_or_none(o, &["oc", "on"]) {
-        None => false,
-        Some(false) => true,
-        Some(true) => match (is_non_negative_integer(o.get("oc")), is_non_negative_integer(o.get("on"))) {
-            (Some(oc), Some(on)) => oc <= on,
-            _ => false,
-        },
-    };
+    let sums_ok = group_is_valid(o, &["s", "sq"], || is_number(o, "s") && is_number(o, "sq"));
+    let overlap_ok = group_is_valid(o, &["oc", "on"], || {
+        matches!(
+            (is_non_negative_integer(o.get("oc")), is_non_negative_integer(o.get("on"))),
+            (Some(oc), Some(on)) if oc <= on
+        )
+    });
     is_number(o, "c") && is_hist(o.get("h")) && sums_ok && overlap_ok
 }
 

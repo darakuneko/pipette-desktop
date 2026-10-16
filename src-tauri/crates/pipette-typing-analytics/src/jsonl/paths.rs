@@ -127,7 +127,7 @@ pub fn list_all_device_day_jsonl_files(user_data: &Path) -> Vec<DeviceDayJsonlRe
         for machine_hash in subdirectories(&devices_dir(user_data, &uid)) {
             let dir = device_day_dir(user_data, &uid, &machine_hash);
             for utc_day in days_in(&dir) {
-                let path = dir.join(format!("{utc_day}{JSONL_EXT}"));
+                let path = device_day_jsonl_path(user_data, &uid, &machine_hash, &utc_day);
                 refs.push(DeviceDayJsonlRef {
                     uid: uid.clone(),
                     machine_hash: machine_hash.clone(),
