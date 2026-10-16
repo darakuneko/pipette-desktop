@@ -161,7 +161,10 @@ type MergeStep =
 interface MergeScenario {
   name: string
   tree: Tree
-  /** Day files applied to the cache before the steps. */
+  /** Day files applied to the cache before the steps. The cache is set
+   *  here without a rebuild, while the Rust replay opens it from the tree;
+   *  every day file of the tree that holds rows is listed here, so both
+   *  start from the same rows. */
   cache?: string[]
   steps: MergeStep[]
 }

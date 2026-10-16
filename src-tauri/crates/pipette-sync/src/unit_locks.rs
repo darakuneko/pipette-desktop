@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The locks a sync of one unit holds across its awaits (`withWriteLock`
 //! of src/main/per-uid-write-lock.ts, as src/main/sync/sync-merge-dispatch.ts
-//! takes it with the `sync:` and `upload:` keys). The store locks
+//! takes it with the `sync:` key, and with the `upload:` key around an
+//! upload). The store locks
 //! (`pipette_entry_store::WriteLocks`) are held only around a read or a
 //! write of the files; these are held while a task downloads, merges and
 //! uploads. Tasks of one key run one at a time in the order they asked;
