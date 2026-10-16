@@ -2761,6 +2761,7 @@ dependencies = [
  "pipette-net",
  "pipette-pack-stores",
  "pipette-sync-pending",
+ "pipette-typing-analytics",
  "pipette-typing-datasets",
  "rfd",
  "serde",
