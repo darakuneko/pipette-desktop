@@ -10,15 +10,17 @@ import { defineConfig, type TestUserConfig, type ViteUserConfig } from 'vitest/c
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Config that runs only the `*.test.ts` files under `scripts/<dir>`, with
- *  the `test` options in `extraTest` merged over the defaults. */
-export function fixtureConfig(dir: string, extraTest: TestUserConfig = {}): ViteUserConfig {
+ *  the `test` options in `extraTest` merged over the defaults. `electron`
+ *  replaces the stub of the `electron` module (a path from the repository
+ *  root). */
+export function fixtureConfig(dir: string, extraTest: TestUserConfig = {}, electron?: string): ViteUserConfig {
   return defineConfig({
     root: REPO_ROOT,
     resolve: {
       alias: {
         // Same stub the root config uses: the real `electron` package throws
         // at import time outside an Electron runtime.
-        electron: resolve(REPO_ROOT, 'src/main/__tests__/electron-stub.ts'),
+        electron: resolve(REPO_ROOT, electron ?? 'src/main/__tests__/electron-stub.ts'),
       },
     },
     test: {
