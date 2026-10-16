@@ -19,6 +19,7 @@ import { shellApi } from './api/shell'
 import { snapshotsApi } from './api/snapshots'
 import { syncPendingApi } from './api/sync-pending'
 import { themePacksApi } from './api/theme-packs'
+import { typingAnalyticsApi } from './api/typing-analytics'
 import { typingDatasetsApi } from './api/typing-datasets'
 import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
@@ -41,6 +42,7 @@ export const real = {
   ...runLogsApi,
   ...settingsApi,
   ...typingDatasetsApi,
+  ...typingAnalyticsApi,
   ...i18nPacksApi,
   ...themePacksApi,
 } satisfies Partial<VialAPI>

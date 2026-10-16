@@ -54,6 +54,7 @@ interface Shim {
   typingTexts: typeof import('../api/typing-texts')
   syncPending: typeof import('../api/sync-pending')
   themePacks: typeof import('../api/theme-packs')
+  typingAnalytics: typeof import('../api/typing-analytics')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
@@ -78,6 +79,7 @@ async function load(): Promise<Shim> {
     typingTexts: await import('../api/typing-texts'),
     syncPending: await import('../api/sync-pending'),
     themePacks: await import('../api/theme-packs'),
+    typingAnalytics: await import('../api/typing-analytics'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
@@ -278,6 +280,18 @@ const CALLERS: Record<string, Caller> = {
   },
   typingRunLogSave: {
     run: ({ runLogs }, [uid, log]) => runLogs.runLogsApi.typingRunLogSave(uid as string, log as RunKeystrokeLog),
+  },
+  typingAnalyticsListKeyboards: { run: ({ typingAnalytics }) => typingAnalytics.typingAnalyticsApi.typingAnalyticsListKeyboards() },
+  typingAnalyticsListItems: {
+    run: ({ typingAnalytics }, [uid, apps, tests, runs]) =>
+      typingAnalytics.typingAnalyticsApi.typingAnalyticsListItems(uid as string, apps as string[], tests as string[], runs as string[]),
+  },
+  typingAnalyticsListItemsLocal: {
+    run: ({ typingAnalytics }, [uid]) => typingAnalytics.typingAnalyticsApi.typingAnalyticsListItemsLocal(uid as string),
+  },
+  typingAnalyticsListItemsForHash: {
+    run: ({ typingAnalytics }, [uid, hash]) =>
+      typingAnalytics.typingAnalyticsApi.typingAnalyticsListItemsForHash(uid as string, hash as string),
   },
   typingRunLogList: { run: ({ runLogs }, [uid]) => runLogs.runLogsApi.typingRunLogList(uid as string) },
   typingRunLogGet: {
