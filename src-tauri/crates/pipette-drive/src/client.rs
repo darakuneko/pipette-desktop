@@ -35,8 +35,10 @@ const RENAME: RetryPolicy = policy("rename", true);
 const DELETE: RetryPolicy = policy("delete", true);
 
 /// The outcome of a bulk delete or rename (`DeleteMatchingFilesResult`):
-/// `attempted` files, of which `failed` failed, the first of them with
-/// `first_error` in the order the files were given.
+/// `attempted` files, of which `failed` failed. `first_error` is the error
+/// of the first failed file in the order the files were given, not the
+/// first to fail in time (`moveFilesToTrash` of drive-trash.ts keeps the
+/// one that completes first); it is only shown as a message.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BulkOutcome {
     pub attempted: usize,
