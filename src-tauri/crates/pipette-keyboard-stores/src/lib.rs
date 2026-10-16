@@ -188,4 +188,10 @@ impl StoreContext {
     pub fn locks(&self) -> &WriteLocks {
         &self.locks
     }
+
+    /// The write locks of the process, for a writer outside the stores
+    /// (the typing analytics' deleted-ranges files).
+    pub fn shared_locks(&self) -> Arc<WriteLocks> {
+        self.locks.clone()
+    }
 }

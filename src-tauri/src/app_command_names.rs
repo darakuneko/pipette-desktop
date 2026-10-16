@@ -106,6 +106,12 @@ pub const APP_COMMANDS: &[&str] = &[
     // src/analytics_commands/record.rs
     "typing_analytics_event",
     "typing_analytics_flush",
+    // src/analytics_commands/data.rs
+    "typing_analytics_delete_items",
+    "typing_analytics_delete_all",
+    "typing_analytics_delete_device_data",
+    "typing_analytics_export",
+    "typing_analytics_import",
     // src/store_commands/settings.rs
     "pipette_settings_read",
     "pipette_settings_write",

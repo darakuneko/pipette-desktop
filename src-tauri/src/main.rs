@@ -132,6 +132,11 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         analytics_commands::keymaps::typing_analytics_list_keymap_snapshots,
         analytics_commands::record::typing_analytics_event,
         analytics_commands::record::typing_analytics_flush,
+        analytics_commands::data::typing_analytics_delete_items,
+        analytics_commands::data::typing_analytics_delete_all,
+        analytics_commands::data::typing_analytics_delete_device_data,
+        analytics_commands::data::typing_analytics_export,
+        analytics_commands::data::typing_analytics_import,
         store_commands::settings::pipette_settings_read,
         store_commands::settings::pipette_settings_write,
         store_commands::settings::pipette_settings_ensure_dir,
@@ -258,6 +263,7 @@ fn main() {
             typing_dataset_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
+            analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);

@@ -225,11 +225,9 @@ mod tests {
     #[test]
     fn rejected_arguments_get_the_handlers_answers_without_the_cache() {
         let user_data = TempDir::new().unwrap();
-        // No sync state and a day file to replay: the cache needs a rebuild,
-        // which this build cannot do, so every wait for the analytics fails.
-        let day = user_data.path().join("sync/keyboards/0xA1/devices/h/2026-04-14.jsonl");
-        std::fs::create_dir_all(day.parent().unwrap()).unwrap();
-        std::fs::write(&day, "").unwrap();
+        // A directory where the database would be: every wait for the
+        // analytics fails.
+        std::fs::create_dir_all(user_data.path().join("local/typing-analytics.db")).unwrap();
         let app = tauri::test::mock_app();
         manage_with_machine_id(app.handle(), user_data.path(), "machine");
         let state = || app.state::<Arc<TypingAnalytics>>();

@@ -1,0 +1,37 @@
+[
+  {
+    "member": "typingAnalyticsDeleteItems",
+    "args": ["0xA1B2", []],
+    "command": "typing_analytics_delete_items",
+    "invokeArgs": { "uid": "0xA1B2", "dates": [] },
+    "response": { "success": true }
+  },
+  {
+    "member": "typingAnalyticsDeleteAll",
+    "args": ["0xA1/B2"],
+    "command": "typing_analytics_delete_all",
+    "invokeArgs": { "uid": "0xA1/B2" },
+    "response": { "success": false, "error": "Invalid uid" }
+  },
+  {
+    "member": "typingAnalyticsDeleteDeviceData",
+    "args": ["0xA1B2", "hash-1", ["2026-02-30"]],
+    "command": "typing_analytics_delete_device_data",
+    "invokeArgs": { "uid": "0xA1B2", "machineHash": "hash-1", "dates": ["2026-02-30"] },
+    "response": { "success": false, "error": "Invalid dates" }
+  },
+  {
+    "member": "typingAnalyticsExport",
+    "args": ["0xA1B2", ["2026-04-14"]],
+    "command": "typing_analytics_export",
+    "invokeArgs": { "uid": "0xA1B2", "dates": ["2026-04-14"] },
+    "response": { "written": 0, "cancelled": true }
+  },
+  {
+    "member": "typingAnalyticsImport",
+    "args": [],
+    "command": "typing_analytics_import",
+    "invokeArgs": {},
+    "response": { "success": true, "result": { "imported": 0, "rejections": [] }, "cancelled": true }
+  }
+]

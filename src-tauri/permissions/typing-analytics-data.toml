@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/analytics_commands/data.rs: the Data modal's
+# operations on the typing analytics.
+
+[[set]]
+identifier = "typing-analytics-data"
+description = "Deletes days or all of this device's typing data, deletes another device's typing data, and exports and imports the typing day files."
+permissions = [
+  "allow-typing-analytics-delete-items",
+  "allow-typing-analytics-delete-all",
+  "allow-typing-analytics-delete-device-data",
+  "allow-typing-analytics-export",
+  "allow-typing-analytics-import",
+]
