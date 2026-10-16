@@ -14,7 +14,9 @@
 //! generated and granted only in these builds (see build.rs and
 //! capabilities/dev/).
 
+use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -117,24 +119,43 @@ pub fn dev_log(message: String) {
     log::info!("[webview] {message}");
 }
 
-/// Answers for the next file dialogs, in order: the paths the user would
-/// choose, none for a dialog the user cancels. Each answer is used once.
-#[derive(Default)]
-pub struct DialogQueue(Mutex<VecDeque<Vec<PathBuf>>>);
+/// Answers queued for what will ask for them, in order for each key. Each
+/// answer is used once.
+pub struct AnswerQueue<K, V>(Mutex<HashMap<K, VecDeque<V>>>);
 
-impl DialogQueue {
-    fn push(&self, answer: Vec<PathBuf>) {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).push_back(answer);
-    }
-
-    fn len(&self) -> usize {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).len()
-    }
-
-    fn pop(&self) -> Option<Vec<PathBuf>> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).pop_front()
+impl<K, V> Default for AnswerQueue<K, V> {
+    fn default() -> Self {
+        Self(Mutex::new(HashMap::new()))
     }
 }
+
+impl<K: Eq + Hash, V> AnswerQueue<K, V> {
+    fn push(&self, key: K, answer: V) {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).entry(key).or_default().push_back(answer);
+    }
+
+    /// How many answers are queued under all keys.
+    fn len(&self) -> usize {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).values().map(VecDeque::len).sum()
+    }
+
+    fn pop<Q: Eq + Hash + ?Sized>(&self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+    {
+        let mut queues = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let queue = queues.get_mut(key)?;
+        let answer = queue.pop_front();
+        if queue.is_empty() {
+            queues.remove(key);
+        }
+        answer
+    }
+}
+
+/// Answers for the next file dialogs, in order: the paths the user would
+/// choose, none for a dialog the user cancels.
+pub type DialogQueue = AnswerQueue<(), Vec<PathBuf>>;
 
 /// The queue's next answer, or `fallback`'s dialog when the queue is empty,
 /// so a build with these tools still shows the native dialogs when nothing
@@ -146,7 +167,7 @@ struct QueuedDialogs<F> {
 
 impl<F: DialogProvider> DialogProvider for QueuedDialogs<F> {
     fn show(&self, request: DialogRequest) -> Vec<PathBuf> {
-        match self.queue.pop() {
+        match self.queue.pop(&()) {
             Some(answer) => {
                 log::info!("[dev] answered the file dialog {:?} from the queue: {answer:?}", request.title);
                 answer
@@ -173,7 +194,7 @@ pub fn dev_dialog_respond(
     path: Option<PathBuf>,
     paths: Option<Vec<PathBuf>>,
 ) -> Result<(), CommandError> {
-    queue.push(dialog_answer(path, paths)?);
+    queue.push((), dialog_answer(path, paths)?);
     Ok(())
 }
 
@@ -193,29 +214,8 @@ pub fn dev_dialog_queued(queue: State<'_, Arc<DialogQueue>>) -> usize {
 }
 
 /// Recorded responses for the next requests, by URL and in order for each
-/// URL. Each is used once.
-#[derive(Default)]
-pub struct ResponseQueue(Mutex<HashMap<String, VecDeque<HttpResponse>>>);
-
-impl ResponseQueue {
-    fn push(&self, url: String, response: HttpResponse) {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).entry(url).or_default().push_back(response);
-    }
-
-    fn len(&self) -> usize {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).values().map(VecDeque::len).sum()
-    }
-
-    fn pop(&self, url: &str) -> Option<HttpResponse> {
-        let mut queues = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        let queue = queues.get_mut(url)?;
-        let response = queue.pop_front();
-        if queue.is_empty() {
-            queues.remove(url);
-        }
-        response
-    }
-}
+/// URL.
+pub type ResponseQueue = AnswerQueue<String, HttpResponse>;
 
 /// The recorded response for the URL, or `fallback`'s request when none is
 /// queued for it, so a build with these tools still reaches the network
@@ -451,9 +451,9 @@ mod tests {
             title: title.to_owned(),
             filters: Vec::new(),
         };
-        queue.push(vec![PathBuf::from("/tmp/a.vil")]);
-        queue.push(Vec::new());
-        queue.push(vec![PathBuf::from("/tmp/b.json"), PathBuf::from("/tmp/c.json")]);
+        queue.push((), vec![PathBuf::from("/tmp/a.vil")]);
+        queue.push((), Vec::new());
+        queue.push((), vec![PathBuf::from("/tmp/b.json"), PathBuf::from("/tmp/c.json")]);
 
         assert_eq!(queue.len(), 3);
         assert_eq!(dialogs.show(request("first")), [PathBuf::from("/tmp/a.vil")]);
