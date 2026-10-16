@@ -44,6 +44,7 @@ use schema::SchemaOutcome;
 pub use apply::ApplyRowsResult;
 pub use ingest::{CharMinuteInput, MatrixMinuteInput, MinuteStatsInput, ScopeInput, SessionInput};
 pub use js::ToJs;
+pub use jsonl::HIST_BUCKETS;
 pub use ngram::Gram;
 pub use query::ScopeFilters;
 pub use range::AppAggregate;

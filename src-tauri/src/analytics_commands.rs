@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The typing analytics (crates/pipette-typing-analytics) in the app: the
 //! analytics service and the sync lock the resets, deletes and imports
-//! hold, and the commands of each area ([`keymaps`], [`queries`]).
+//! hold, and the commands of each area ([`keymaps`], [`queries`], [`range`]).
 //!
 //! The initialization is not started at launch, unlike
 //! `setupTypingAnalytics` in the Electron main process: this build cannot
@@ -18,6 +18,7 @@ use tauri::{AppHandle, Manager, Runtime};
 
 pub mod keymaps;
 pub mod queries;
+pub mod range;
 
 /// Manages the analytics of `user_data` and the sync lock. The analytics
 /// initialize when a command first waits for them.

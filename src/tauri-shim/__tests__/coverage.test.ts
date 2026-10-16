@@ -105,12 +105,53 @@ const RUN_LOG_AND_FILTER_MEMBERS = [
   'analyzeFilterStoreSetHubPrivate',
 ]
 
-/** The typing analytics members that read the cache directly, all real. */
+/** The typing analytics members that read the cache (the Analyze and Data
+ *  modal lists and aggregates, and the range aggregates), all real. */
 const TYPING_ANALYTICS_CACHE_MEMBERS = [
   'typingAnalyticsListKeyboards',
   'typingAnalyticsListItems',
   'typingAnalyticsListItemsLocal',
   'typingAnalyticsListItemsForHash',
+  'typingAnalyticsListIntervalItems',
+  'typingAnalyticsListIntervalItemsLocal',
+  'typingAnalyticsListIntervalItemsForHash',
+  'typingAnalyticsListActivityGrid',
+  'typingAnalyticsListActivityGridLocal',
+  'typingAnalyticsListActivityGridForHash',
+  'typingAnalyticsListLayerUsage',
+  'typingAnalyticsListLayerUsageLocal',
+  'typingAnalyticsListLayerUsageForHash',
+  'typingAnalyticsListMatrixCells',
+  'typingAnalyticsListMatrixCellsLocal',
+  'typingAnalyticsListMatrixCellsForHash',
+  'typingAnalyticsListMatrixCellsByDay',
+  'typingAnalyticsListMatrixCellsByDayLocal',
+  'typingAnalyticsListMatrixCellsByDayForHash',
+  'typingAnalyticsListMinuteStats',
+  'typingAnalyticsListMinuteStatsLocal',
+  'typingAnalyticsListMinuteStatsForHash',
+  'typingAnalyticsListSessions',
+  'typingAnalyticsListSessionsLocal',
+  'typingAnalyticsListSessionsForHash',
+  'typingAnalyticsListBksMinute',
+  'typingAnalyticsListBksMinuteLocal',
+  'typingAnalyticsListBksMinuteForHash',
+  'typingAnalyticsGetPeakRecords',
+  'typingAnalyticsGetPeakRecordsLocal',
+  'typingAnalyticsGetPeakRecordsForHash',
+  'typingAnalyticsGetMatrixHeatmap',
+  'typingAnalyticsListDeviceInfos',
+  'typingAnalyticsListLocalDeviceDays',
+  'typingAnalyticsListAppsForRange',
+  'typingAnalyticsListTypingTestsForRange',
+  'typingAnalyticsListTypingTestRunsForRange',
+  'typingAnalyticsGetAppUsageForRange',
+  'typingAnalyticsGetWpmByAppForRange',
+  'typingAnalyticsGetMatrixHeatmapForRange',
+  'typingAnalyticsGetBigramAggregateForRange',
+  'typingAnalyticsListRolloverMinutes',
+  'typingAnalyticsListDurationCells',
+  'typingAnalyticsGetLayoutComparisonForRange',
 ]
 
 /** The typing analytics' keymap snapshot members, all real. */
@@ -226,6 +267,7 @@ describe('shim coverage', () => {
   })
 
   it('backs the typing analytics members that read the cache with backend commands', () => {
+    expect(new Set(TYPING_ANALYTICS_CACHE_MEMBERS).size).toBe(44)
     expect(TYPING_ANALYTICS_CACHE_MEMBERS.filter((name) => !(name in real))).toEqual([])
     expect(TYPING_ANALYTICS_CACHE_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })

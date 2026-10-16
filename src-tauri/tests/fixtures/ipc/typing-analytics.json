@@ -37,5 +37,392 @@
       "runIdScopes": []
     },
     "response": []
+  },
+  {
+    "member": "typingAnalyticsListIntervalItems",
+    "args": ["0xA1B2"],
+    "command": "typing_analytics_list_interval_items",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListIntervalItemsLocal",
+    "args": ["0xA1B2"],
+    "command": "typing_analytics_list_interval_items_local",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListIntervalItemsForHash",
+    "args": ["0xA1B2", "hash-1"],
+    "command": "typing_analytics_list_interval_items_for_hash",
+    "invokeArgs": { "uid": "0xA1B2", "machineHash": "hash-1" },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListActivityGrid",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_activity_grid",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListActivityGridLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_activity_grid_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListActivityGridForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_activity_grid_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListLayerUsage",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_layer_usage",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListLayerUsageLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_layer_usage_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListLayerUsageForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_layer_usage_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMatrixCells",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_matrix_cells",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMatrixCellsLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_matrix_cells_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMatrixCellsForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_matrix_cells_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMatrixCellsByDay",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_matrix_cells_by_day",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMatrixCellsByDayLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_matrix_cells_by_day_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMatrixCellsByDayForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_matrix_cells_by_day_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMinuteStats",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_minute_stats",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMinuteStatsLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_minute_stats_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListMinuteStatsForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_minute_stats_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListBksMinute",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_bks_minute",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListBksMinuteLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_bks_minute_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListBksMinuteForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_bks_minute_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsGetPeakRecords",
+    "args": ["0xA1B2", 1760500000000, 1760503600000, ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_get_peak_records",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": {
+      "peakWpm": null,
+      "lowestWpm": null,
+      "peakKeystrokesPerMin": null,
+      "peakKeystrokesPerDay": null,
+      "longestSession": null
+    }
+  },
+  {
+    "member": "typingAnalyticsGetPeakRecordsLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_get_peak_records_local",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": {
+      "peakWpm": null,
+      "lowestWpm": null,
+      "peakKeystrokesPerMin": null,
+      "peakKeystrokesPerDay": null,
+      "longestSession": null
+    }
+  },
+  {
+    "member": "typingAnalyticsGetPeakRecordsForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_get_peak_records_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000,
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": {
+      "peakWpm": null,
+      "lowestWpm": null,
+      "peakKeystrokesPerMin": null,
+      "peakKeystrokesPerDay": null,
+      "longestSession": null
+    }
+  },
+  {
+    "member": "typingAnalyticsListSessions",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_sessions",
+    "invokeArgs": { "uid": "0xA1B2", "sinceMs": 1760500000000, "untilMs": 1760503600000 },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListSessionsLocal",
+    "args": ["0xA1B2", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_sessions_local",
+    "invokeArgs": { "uid": "0xA1B2", "sinceMs": 1760500000000, "untilMs": 1760503600000 },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListSessionsForHash",
+    "args": ["0xA1B2", "hash-1", 1760500000000, 1760503600000],
+    "command": "typing_analytics_list_sessions_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "sinceMs": 1760500000000,
+      "untilMs": 1760503600000
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsGetMatrixHeatmap",
+    "args": ["0xA1B2", 0, 1760500000000],
+    "command": "typing_analytics_get_matrix_heatmap",
+    "invokeArgs": { "uid": "0xA1B2", "layer": 0, "sinceMs": 1760500000000 },
+    "response": {}
+  },
+  {
+    "member": "typingAnalyticsListDeviceInfos",
+    "args": [""],
+    "command": "typing_analytics_list_device_infos",
+    "invokeArgs": { "uid": "" },
+    "response": null
+  },
+  {
+    "member": "typingAnalyticsListLocalDeviceDays",
+    "args": ["0xA1B2", "hash-1"],
+    "command": "typing_analytics_list_local_device_days",
+    "invokeArgs": { "uid": "0xA1B2", "machineHash": "hash-1" },
+    "response": []
   }
 ]

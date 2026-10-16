@@ -21,6 +21,7 @@ import { syncPendingApi } from './api/sync-pending'
 import { themePacksApi } from './api/theme-packs'
 import { typingAnalyticsApi } from './api/typing-analytics'
 import { typingAnalyticsKeymapsApi } from './api/typing-analytics-keymaps'
+import { typingAnalyticsRangeApi } from './api/typing-analytics-range'
 import { typingDatasetsApi } from './api/typing-datasets'
 import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
@@ -45,6 +46,7 @@ export const real = {
   ...settingsApi,
   ...typingDatasetsApi,
   ...typingAnalyticsApi,
+  ...typingAnalyticsRangeApi,
   ...i18nPacksApi,
   ...themePacksApi,
 } satisfies Partial<VialAPI>

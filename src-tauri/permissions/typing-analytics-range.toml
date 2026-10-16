@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/analytics_commands/range.rs: the typing analytics
+# aggregates over a window and a device scope.
+
+[[set]]
+identifier = "typing-analytics-range"
+description = "Reads the typing analytics aggregates of a window: the Monitor App lists, the key heatmap, the bigram ranking, the rollover trend, the keypress durations and the Layout Comparison."
+permissions = [
+  "allow-typing-analytics-list-apps-for-range",
+  "allow-typing-analytics-list-typing-tests-for-range",
+  "allow-typing-analytics-list-typing-test-runs-for-range",
+  "allow-typing-analytics-get-app-usage-for-range",
+  "allow-typing-analytics-get-wpm-by-app-for-range",
+  "allow-typing-analytics-get-matrix-heatmap-for-range",
+  "allow-typing-analytics-get-bigram-aggregate-for-range",
+  "allow-typing-analytics-list-rollover-minutes",
+  "allow-typing-analytics-list-duration-cells",
+  "allow-typing-analytics-get-layout-comparison-for-range",
+]
