@@ -5,6 +5,7 @@
 //! `pipette_sync_runtime::SyncRuntime`.
 //!
 //! - [`units`]: what a unit name says (its store, its lock, its shape);
+//! - [`account`]: the sign-in and sign-out around the pending units;
 //! - [`bundle`]: the bundle a unit is uploaded as, and the units a pass
 //!   sends;
 //! - [`merge`]: the merge of a downloaded bundle into the local files;
@@ -16,6 +17,7 @@
 //!   marker and the status of the update banner) and [`password`] (the
 //!   guard and the password-check).
 
+pub mod account;
 pub mod bundle;
 pub mod crypto;
 pub mod format;

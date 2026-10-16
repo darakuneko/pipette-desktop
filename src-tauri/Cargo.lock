@@ -3141,16 +3141,20 @@ dependencies = [
 name = "pipette-sync"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
  "indexmap 2.14.2",
  "log",
  "pipette-drive",
  "pipette-entry-store",
  "pipette-fs",
+ "pipette-google-auth",
  "pipette-js-json",
  "pipette-keyboard-stores",
+ "pipette-net",
  "pipette-pack-stores",
  "pipette-secret-store",
  "pipette-sync-format",
+ "pipette-sync-pending",
  "pipette-sync-runtime",
  "pipette-time",
  "pipette-typing-analytics",
@@ -3194,6 +3198,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

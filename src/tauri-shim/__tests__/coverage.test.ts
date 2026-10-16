@@ -300,12 +300,14 @@ const SYNC_MEMBERS = [
   },
 ]
 
-/** The Cloud Sync members that are real: the sign-in and password
- *  statuses, setting and re-entering the password, whether Drive has a
- *  password-check, the sync format status and its event (backend commands)
- *  and the password strength check (in the shim). */
+/** The Cloud Sync members that are real: the sign-in, the sign-out, the
+ *  sign-in and password statuses, setting and re-entering the password,
+ *  whether Drive has a password-check, the sync format status and its event
+ *  (backend commands) and the password strength check (in the shim). */
 const SYNC_REAL = [
+  'syncAuthStart',
   'syncAuthStatus',
+  'syncAuthSignOut',
   'syncPasswordStatus',
   'syncValidatePassword',
   'syncSetPassword',

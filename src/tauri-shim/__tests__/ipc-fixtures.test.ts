@@ -169,6 +169,8 @@ const CALLERS: Record<string, Caller> = {
   windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
   syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
   syncAuthStatus: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStatus() },
+  syncAuthStart: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStart() },
+  syncAuthSignOut: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthSignOut() },
   syncPasswordStatus: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncPasswordStatus() },
   syncSetPassword: { run: ({ syncPassword }, [password]) => syncPassword.syncPasswordApi.syncSetPassword(password as string) },
   syncReplacePassword: {

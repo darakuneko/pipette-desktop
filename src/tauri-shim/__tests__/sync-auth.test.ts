@@ -41,6 +41,25 @@ describe('sync sign-in and password', () => {
     await expect(syncPasswordApi.syncPasswordStatus()).resolves.toBe('keystoreUnavailable')
   })
 
+  it('signs in and out through the backend, answering its results', async () => {
+    const calls: string[] = []
+    mockIPC((cmd) => {
+      calls.push(cmd)
+      if (cmd === 'sync_auth_start') {
+        return { success: false, error: 'Cannot switch accounts while sync is in progress. Try again in a moment.', reason: 'syncBusy' }
+      }
+      if (cmd === 'sync_auth_sign_out') return { success: true }
+      return undefined
+    })
+    await expect(syncAuthApi.syncAuthStart()).resolves.toEqual({
+      success: false,
+      error: 'Cannot switch accounts while sync is in progress. Try again in a moment.',
+      reason: 'syncBusy',
+    })
+    await expect(syncAuthApi.syncAuthSignOut()).resolves.toEqual({ success: true })
+    expect(calls).toEqual(['sync_auth_start', 'sync_auth_sign_out'])
+  })
+
   it('rates passwords as the Electron main process does, without the backend', async () => {
     const backend = vi.fn()
     mockIPC(backend)

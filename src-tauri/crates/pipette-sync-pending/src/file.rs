@@ -7,7 +7,7 @@
 use std::io::ErrorKind;
 use std::path::Path;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use pipette_entry_store::is_safe_path_segment;
 use pipette_js_json::{JsString, Object, Value};
 
@@ -24,13 +24,20 @@ pub(crate) struct PendingFile {
     pub held: Vec<(JsString, Vec<JsString>)>,
 }
 
-/// The file's text for this state.
+/// The file's text for this state. An account with no held unit is left
+/// out, as `snapshotKeeping` of src/main/sync/sync-runtime-state.ts leaves
+/// it, and so is `__proto__`, which `held[sub] = kept` on a plain object
+/// turns into its prototype instead of a property.
 pub(crate) fn content<'a>(
     owner: Option<&JsString>,
     units: impl Iterator<Item = &'a JsString>,
-    held: &[(JsString, Vec<JsString>)],
+    held: &IndexMap<JsString, IndexSet<JsString>>,
 ) -> String {
-    let held: Object = held.iter().map(|(sub, list)| (sub.clone(), string_array(list.iter()))).collect();
+    let held: Object = held
+        .iter()
+        .filter(|(sub, list)| !list.is_empty() && sub.as_str() != Some("__proto__"))
+        .map(|(sub, list)| (sub.clone(), string_array(list.iter())))
+        .collect();
     let mut file = Object::new();
     file.insert("version", Value::Number(FILE_VERSION));
     file.insert("owner", owner.map_or(Value::Null, |owner| Value::String(owner.clone())));

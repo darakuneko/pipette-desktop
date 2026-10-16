@@ -216,6 +216,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::theme_packs::theme_pack_import_apply,
         store_commands::theme_packs::theme_pack_export,
         sync_commands::auth::sync_auth_status,
+        sync_commands::auth::sync_auth_start,
+        sync_commands::auth::sync_auth_sign_out,
         sync_commands::password::sync_password_status,
         sync_commands::password::sync_set_password,
         sync_commands::password::sync_replace_password,
@@ -273,6 +275,7 @@ fn main() {
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             sync_commands::preflight::manage(app.handle());
+            sync_commands::adopt_pending_at_startup(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());

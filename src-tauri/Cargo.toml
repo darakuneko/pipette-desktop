@@ -48,8 +48,9 @@ pipette-typing-analytics-db = { path = "crates/pipette-typing-analytics-db" }
 # The sync's secrets and its Google sign-in (src/sync_commands.rs).
 pipette-secret-store = { path = "crates/pipette-secret-store" }
 pipette-google-auth = { path = "crates/pipette-google-auth" }
-# The Drive client and the parts every sync entry point runs before it
-# touches data (src/sync_commands/preflight.rs).
+# The Drive client, the parts every sync entry point runs before it
+# touches data (src/sync_commands/preflight.rs) and the account switch of
+# the sign-in and sign-out commands (src/sync_commands/auth.rs).
 pipette-drive = { path = "crates/pipette-drive" }
 pipette-sync = { path = "crates/pipette-sync" }
 pipette-sync-runtime = { path = "crates/pipette-sync-runtime" }

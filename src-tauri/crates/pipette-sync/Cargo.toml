@@ -14,6 +14,8 @@ pipette-drive = { path = "../pipette-drive" }
 # The entry merge, the body filename rules and the store write locks.
 pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-fs = { path = "../pipette-fs" }
+# The sign-in whose token switch keeps the pending units with their account.
+pipette-google-auth = { path = "../pipette-google-auth" }
 pipette-js-json = { path = "../pipette-js-json" }
 # The stores whose units the bundles read and the merges write.
 pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
@@ -22,6 +24,7 @@ pipette-pack-stores = { path = "../pipette-pack-stores" }
 pipette-secret-store = { path = "../pipette-secret-store" }
 # The Drive file name of a unit, whose remembered revision a roster merge forgets.
 pipette-sync-format = { path = "../pipette-sync-format" }
+pipette-sync-pending = { path = "../pipette-sync-pending" }
 pipette-sync-runtime = { path = "../pipette-sync-runtime" }
 pipette-time = { path = "../pipette-time" }
 # The day files and deleted-ranges files of the typing analytics.
@@ -37,19 +40,22 @@ serde_json = { workspace = true }
 sha2 = { version = "=0.10.9", default-features = false }
 thiserror = "=2.0.21"
 # The analytics merges wait for the database thread and the flush chain,
-# and the `sync:` locks are held across awaits; "macros": the two listings
-# of the guard run at once.
-tokio = { version = "=1.53.3", features = ["rt", "sync", "macros"] }
+# the `sync:` locks are held across awaits, and a switch of accounts waits
+# for running sync work; "macros": the two listings of the guard run at once.
+tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time"] }
 zeroize = "=1.9.0"
 
 [dev-dependencies]
+# The id_token of the sign-in through GoogleAuth.
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
+pipette-net = { path = "../pipette-net" }
+pipette-secret-store = { path = "../pipette-secret-store", features = ["test-util"] }
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
 pipette-drive = { path = "../pipette-drive", features = ["test-util"] }
 # Reads the cache tables the analytics merges wrote.
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 tempfile = { workspace = true }
-tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time"] }
-pipette-secret-store = { path = "../pipette-secret-store", features = ["test-util"] }
+tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time", "test-util"] }
 
 [lints]
 workspace = true

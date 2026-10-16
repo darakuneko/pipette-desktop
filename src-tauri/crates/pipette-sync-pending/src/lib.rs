@@ -7,24 +7,30 @@
 //! with the account they were changed under, and the units held for other
 //! accounts.
 //!
-//! Every change to the set goes through [`PendingStore::notify_change`],
-//! which gives the unit a new generation and writes the whole state
-//! [`PENDING_WRITE_DELAY`] after the first change of a burst. Each write
-//! replaces the file through a temp file and a rename, and writes never
-//! interleave: they take one lock in turn, and each writes the state as it
-//! is when it starts.
+//! A change to the set ([`PendingStore::notify_change`]) gives the unit a
+//! new generation and writes the whole state [`PENDING_WRITE_DELAY`] after
+//! the first change of a burst. The upload side settles what it sent and
+//! cancels what a reset removes ([`upload`]); the units belong to the
+//! account they were changed under, and another account's wait in its held
+//! set ([`owner`]). Each write replaces the file through a temp file and a
+//! rename, and writes never interleave: they take one lock in turn, and
+//! each writes the state as it is when it starts.
 
 mod file;
+mod owner;
+mod upload;
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use pipette_js_json::JsString;
 
 use crate::file::PendingFile;
+
+pub use upload::{PendingStateCopy, PendingWriteError};
 
 /// How long a change waits before the pending state is written. Changes in
 /// that window share one write. `PENDING_WRITE_DELAY_MS` of
@@ -41,9 +47,11 @@ pub trait Scheduler: Send + Sync {
     fn schedule(&self, delay: Duration, task: Box<dyn FnOnce() + Send>);
 }
 
-/// Told whether anything is pending after each change, under the store's
-/// lock so the values arrive in the order of the changes. It must not call
-/// back into the store.
+/// Told whether anything is pending ([`PendingStore::broadcast_status`]),
+/// outside the store's state lock: it may read the store. The calls never
+/// overlap, and each reads the status after the change that asked for it,
+/// so the last value told is the current one. It must not change the store
+/// (that would ask for another call while this one runs).
 pub type StatusListener = Box<dyn Fn(bool) + Send + Sync>;
 
 /// The pending state of this process and the file that keeps it. Cheap to
@@ -60,6 +68,8 @@ struct Shared {
     persist: bool,
     scheduler: Arc<dyn Scheduler>,
     listener: StatusListener,
+    /// Held while the listener is told.
+    status: Mutex<()>,
     state: Mutex<State>,
     /// Taken for each write, before `state`.
     write: Mutex<()>,
@@ -73,8 +83,12 @@ struct State {
     /// Source of the generations. Never reset: values stay unique, so a
     /// unit removed and changed again never matches an older generation.
     last_generation: u64,
+    /// The account the active units were changed under; `None` while
+    /// signed out or when the account is unknown.
     owner: Option<JsString>,
-    held: Vec<(JsString, Vec<JsString>)>,
+    /// The units of accounts other than the owner, kept until that account
+    /// signs in again; no upload reads them. No set is empty.
+    held: IndexMap<JsString, IndexSet<JsString>>,
     /// The ticket of the write that is due, if one is.
     due_write: Option<u64>,
     last_ticket: u64,
@@ -100,6 +114,7 @@ impl PendingStore {
         let restored = file::read(&path, &user_data.join("sync").join("keyboards"));
         let persist = restored.is_some();
         let PendingFile { owner, units, held } = restored.unwrap_or_default();
+        let held = held.into_iter().map(|(sub, units)| (sub, units.into_iter().collect())).collect();
         let mut state = State { owner, held, ..State::default() };
         for unit in units {
             state.mark(unit);
@@ -110,6 +125,7 @@ impl PendingStore {
                 persist,
                 scheduler,
                 listener,
+                status: Mutex::new(()),
                 state: Mutex::new(state),
                 write: Mutex::new(()),
             }),
@@ -126,16 +142,26 @@ impl PendingStore {
     /// what `notifyChange` of src/main/sync/sync-flush.ts does before it arms
     /// the upload.
     pub fn notify_change(&self, unit: &str) {
-        let ticket = {
-            let mut state = lock(&self.shared.state);
-            let added = state.mark(JsString::from(unit));
-            // A unit already pending is on disk unless the last write failed.
-            let ticket =
-                if self.shared.persist && (added || state.dirty) { state.reserve_write() } else { None };
-            (self.shared.listener)(!state.units.is_empty());
-            ticket
-        };
+        let ticket = self.mark_pending(&mut lock(&self.shared.state), JsString::from(unit));
         self.schedule_write(ticket);
+        self.broadcast_status();
+    }
+
+    /// `markPending`: adds `unit` with a new generation; the ticket of the
+    /// write it needs, if any.
+    fn mark_pending(&self, state: &mut State, unit: JsString) -> Option<u64> {
+        let added = state.mark(unit);
+        // A unit already pending is on disk unless the last write failed.
+        if self.shared.persist && (added || state.dirty) { state.reserve_write() } else { None }
+    }
+
+    /// Tells the listener whether anything is pending now
+    /// (`broadcastPendingStatus`). A change, a cancel, putting units back
+    /// and a change of owner call it themselves; a settle does not, so a
+    /// pass calls it once after its settles.
+    pub fn broadcast_status(&self) {
+        let _telling = lock(&self.shared.status);
+        (self.shared.listener)(self.has_pending_changes());
     }
 
     pub fn has_pending_changes(&self) -> bool {
@@ -197,6 +223,36 @@ impl PendingStore {
         state.due_write = None;
         state.dirty = true;
         Some(file::content(state.owner.as_ref(), state.units.keys(), &state.held))
+    }
+
+    /// Runs `change` holding the write lock and the state, so a write it
+    /// makes ([`Self::write_locked`]) and the change to memory after it are
+    /// one step: no other write starts and no change lands in between. A
+    /// change made meanwhile on another thread waits for the write.
+    fn with_write_lock<T>(&self, change: impl FnOnce(&mut State) -> T) -> T {
+        let _writing = lock(&self.shared.write);
+        change(&mut lock(&self.shared.state))
+    }
+
+    /// Writes `content` now, in place of a write that is due
+    /// (`writePendingNow`); nothing when the file could not be read at
+    /// startup. Called by [`Self::with_write_lock`]'s `change`.
+    fn write_locked(&self, state: &mut State, content: &str) -> std::io::Result<()> {
+        if !self.shared.persist {
+            return Ok(());
+        }
+        state.due_write = None;
+        state.dirty = true;
+        write_file(&self.shared.path, content.as_bytes())?;
+        state.dirty = false;
+        Ok(())
+    }
+
+    /// `commitPendingState`: writes the state now (a failure is logged and
+    /// left to the next write) and tells the listener.
+    fn commit_state(&self) {
+        self.persist_now();
+        self.broadcast_status();
     }
 }
 

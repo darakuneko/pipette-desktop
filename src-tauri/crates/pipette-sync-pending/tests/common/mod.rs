@@ -101,4 +101,51 @@ impl Harness {
     pub fn add_keyboard_dir(&self, uid: &str) {
         std::fs::create_dir_all(self.user_data().join("sync").join("keyboards").join(uid)).unwrap();
     }
+
+    /// Puts a non-empty directory in the file's place, so the rename of
+    /// every write fails.
+    pub fn block_writes(&self) {
+        let _ = std::fs::remove_file(self.pending_path());
+        std::fs::create_dir_all(self.pending_path().join("blocker")).unwrap();
+    }
+
+    pub fn unblock_writes(&self) {
+        std::fs::remove_dir_all(self.pending_path()).unwrap();
+    }
+
+    /// The temp files writes left in the file's directory.
+    pub fn temp_files(&self) -> Vec<String> {
+        std::fs::read_dir(self.user_data().join("local"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.ends_with(".tmp"))
+            .collect()
+    }
+
+    /// Takes away the file's read permission; false (and the test skips)
+    /// when it stays readable, as it does for root, or without Unix
+    /// permissions.
+    pub fn make_unreadable(&self) -> bool {
+        #[cfg(unix)]
+        {
+            self.set_mode(0o000);
+            if std::fs::read(self.pending_path()).is_err() {
+                return true;
+            }
+            self.set_mode(0o600);
+        }
+        eprintln!("skipped: the file stays readable without the permission");
+        false
+    }
+
+    pub fn make_readable(&self) {
+        #[cfg(unix)]
+        self.set_mode(0o600);
+    }
+
+    #[cfg(unix)]
+    fn set_mode(&self, mode: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(self.pending_path(), std::fs::Permissions::from_mode(mode)).unwrap();
+    }
 }
