@@ -58,6 +58,11 @@ pub type MachineHash = Arc<dyn Fn() -> Result<String, String> + Send + Sync>;
 /// A new random lock id (`randomUUID`).
 pub type NewLockId = Arc<dyn Fn() -> String + Send + Sync>;
 
+/// A random version-4 UUID, as `randomUUID` writes it.
+pub fn random_lock_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
 /// What a [`PasswordChange`] is built from.
 pub struct PasswordChangeDeps {
     pub preflight: Arc<Preflight>,
@@ -150,10 +155,12 @@ pub struct PasswordChange {
     memory: Mutex<ChangeMemory>,
 }
 
-fn lock_failure(outcome: &AcquireOutcome) -> PasswordChangeError {
+/// The file id of a lock taken, or the error of one not taken.
+fn acquired_file_id(outcome: AcquireOutcome) -> Result<String, PasswordChangeError> {
     match outcome {
-        AcquireOutcome::Locked(_) => ChangeErrorKey::Locked.into(),
-        AcquireOutcome::Lost | AcquireOutcome::Acquired(_) => ChangeErrorKey::Lost.into(),
+        AcquireOutcome::Acquired(file_id) => Ok(file_id),
+        AcquireOutcome::Locked(_) => Err(ChangeErrorKey::Locked.into()),
+        AcquireOutcome::Lost => Err(ChangeErrorKey::Lost.into()),
     }
 }
 
@@ -266,8 +273,7 @@ impl PasswordChange {
         let mut state = state;
         if !self.is_own_lock_held(&state).await? {
             let (saved, outcome) = self.acquire_lock_for(&state).await?;
-            let AcquireOutcome::Acquired(file_id) = outcome else { return Err(lock_failure(&outcome)) };
-            state = PasswordChangeState { lock_file_id: Some(file_id), ..saved };
+            state = PasswordChangeState { lock_file_id: Some(acquired_file_id(outcome)?), ..saved };
             self.write_state(&state).await?;
         }
         self.memory().lock_lost = false;
@@ -328,9 +334,12 @@ impl PasswordChange {
                 }
             };
             state = saved;
-            let AcquireOutcome::Acquired(file_id) = outcome else {
-                self.undo_locking(&state).await;
-                return Err(lock_failure(&outcome));
+            let file_id = match acquired_file_id(outcome) {
+                Ok(file_id) => file_id,
+                Err(err) => {
+                    self.undo_locking(&state).await;
+                    return Err(err);
+                }
             };
             state =
                 PasswordChangeState { lock_file_id: Some(file_id), step: ChangeStep::Reencrypting, ..state };
@@ -548,5 +557,19 @@ impl PasswordChange {
             lock_lost: memory.lock_lost,
             undecryptable: memory.undecryptable.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_lock_id_is_a_random_uuid_as_random_uuid_writes_it() {
+        let id = random_lock_id();
+        assert_eq!(id.len(), 36);
+        assert_eq!(id.as_bytes()[14], b'4');
+        assert!(id.chars().all(|c| c == '-' || c.is_ascii_digit() || c.is_ascii_lowercase()));
+        assert_ne!(id, random_lock_id());
     }
 }

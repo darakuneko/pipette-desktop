@@ -294,9 +294,12 @@ impl DriveApi for TestDrive {
 /// time.
 #[derive(Default)]
 pub struct KeyCachedCodec {
-    keys: Mutex<HashMap<(String, Vec<u8>), [u8; KEY_LENGTH]>>,
+    keys: Mutex<HashMap<KeyId, [u8; KEY_LENGTH]>>,
     sealed: AtomicU64,
 }
+
+/// A password and a salt.
+type KeyId = (String, Vec<u8>);
 
 const SEAL_SALT: [u8; SALT_LENGTH] = [7; SALT_LENGTH];
 
