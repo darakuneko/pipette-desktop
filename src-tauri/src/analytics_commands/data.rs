@@ -170,7 +170,9 @@ async fn show(
 
 /// `{ written, cancelled }`: this device's days `dates` of `uid` copied
 /// into a folder the user picks. An argument the handler rejects, an empty
-/// list (no dialog then) or a cancelled dialog answer `cancelled`.
+/// list (no dialog then) or a cancelled dialog answer `cancelled`. A uid
+/// that is not a safe key is rejected like an empty one, so a `../` uid
+/// cannot point the day listing outside the keyboard directory.
 #[tauri::command]
 pub async fn typing_analytics_export(
     ops: State<'_, Arc<DataOps>>,
@@ -179,9 +181,7 @@ pub async fn typing_analytics_export(
     dates: Arg,
 ) -> Result<serde_json::Value, CommandError> {
     let cancelled = json!({ "written": 0, "cancelled": true });
-    let Some(uid) = uid.as_ref().and_then(serde_json::Value::as_str).filter(|uid| !uid.is_empty()) else {
-        return Ok(cancelled);
-    };
+    let Ok(uid) = uid_arg(&uid) else { return Ok(cancelled) };
     let days: Option<HashSet<String>> = match &dates {
         Some(serde_json::Value::Array(items)) if !items.is_empty() => {
             items.iter().map(|day| day.as_str().map(str::to_owned)).collect()
@@ -391,6 +391,26 @@ mod tests {
         assert_eq!(export(Some(json!(UID)), Some(json!([DAY]))), cancelled);
         assert_eq!(export(Some(json!(UID)), Some(json!([DAY]))), json!({ "written": 1, "cancelled": false }));
         assert_eq!(std::fs::read_dir(out).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn export_rejects_a_uid_outside_the_keyboard_directory() {
+        let user_data = TempDir::new().unwrap();
+        let out = user_data.path().join("out");
+        let app = app(user_data.path(), vec![vec![out.clone()]]);
+        let hash = hash(&app);
+        let outside = user_data.path().join(format!("sync/x/devices/{hash}/{DAY}.jsonl"));
+        std::fs::create_dir_all(outside.parent().unwrap()).unwrap();
+        std::fs::copy(seed_day(user_data.path(), &hash), &outside).unwrap();
+        let answer = block_on(typing_analytics_export(
+            app.state(),
+            app.state(),
+            Some(json!("../x")),
+            Some(json!([DAY])),
+        ))
+        .unwrap();
+        assert_eq!(answer, json!({ "written": 0, "cancelled": true }));
+        assert!(!out.exists());
     }
 
     #[test]
