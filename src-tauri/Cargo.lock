@@ -2951,6 +2951,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-sync-runtime"
+version = "0.0.0"
+dependencies = [
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "pipette-time"
 version = "0.0.0"
 dependencies = [
@@ -2970,6 +2978,7 @@ dependencies = [
  "pipette-js-json",
  "pipette-sync-format",
  "pipette-sync-pending",
+ "pipette-sync-runtime",
  "pipette-time",
  "pipette-typing-analytics-db",
  "rusqlite",

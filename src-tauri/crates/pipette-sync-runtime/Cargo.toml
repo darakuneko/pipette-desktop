@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-sync-runtime"
+description = "The in-memory state the sync shares across its passes: the sync lock, the reset lock built on it and the lock-free writers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = "=2.0.21"
+# The waits of the sync lock and the reset lock.
+tokio = { version = "=1.53.3", features = ["sync", "time"] }
+
+[dev-dependencies]
+tokio = { version = "=1.53.3", features = ["sync", "time", "rt", "macros", "test-util"] }
+
+[lints]
+workspace = true
