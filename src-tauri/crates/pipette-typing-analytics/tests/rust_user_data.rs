@@ -8,8 +8,8 @@
 //!   another device applied as a sync download applies it, the deletes of
 //!   the Data modal (local days, another device's days, everything of a
 //!   keyboard), an export and its import, keymap snapshots and the quit;
-//! - `answers.json`: the machine hash, the sync state, the deleted ranges
-//!   and the applied ids, the cache tables, and the answer of every query
+//! - `answers.json`: the machine hash, the sync state, the deleted ranges,
+//!   the units announced, the cache tables, and the answer of every query
 //!   member call of tests/fixtures/queries.json and queries_tz/utc.json
 //!   (their uids and hashes swapped for the ones recorded here), as JSON
 //!   text, twice: on the cache the recording left (`live`) and on the
