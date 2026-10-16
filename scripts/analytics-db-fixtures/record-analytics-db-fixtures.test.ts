@@ -12,7 +12,8 @@
 // - data/sql.rs — the SQL text the Rust crate runs (sql-source.ts).
 // - <CARGO_TARGET_TMPDIR>/pipette-typing-analytics-db/heavy.jsonl,
 //   heavy-expected.json and ts-timings.json — the 21 seeded days in one
-//   file for the benchmark, never committed.
+//   file for the benchmark, never committed, with the answers and timings
+//   of the Analyze reads of BENCH_CALLS on them.
 //
 // Run: pnpm run generate:analytics-db-fixtures
 
@@ -33,6 +34,7 @@ import { readDeletedRangesSync } from '../../src/main/typing-analytics/deleted-r
 import { clipToUtcDay, serializeDeletedRanges, type DeleteRange } from '../../src/main/typing-analytics/deleted-ranges'
 import { writeFixture, writeJsonFixture } from '../fixture-files'
 import { dumpTable, numberCell, type TableDump } from './canonical'
+import { runCall, type MethodCall } from './db-methods'
 import { buildEdgeLines, buildOrphanFile } from './edge-rows'
 import { BENCH_DIR, COMMITTED_FIXTURES_DIR, GENERATED_SQL_PATH } from './paths'
 import { buildSqlSource } from './sql-source'
@@ -56,6 +58,8 @@ interface HideStep {
 interface Step {
   input: string
   hide?: HideStep
+  /** SQL run on the database before the step, to make it fail. */
+  failSql?: string
 }
 
 interface QueryCase {
@@ -100,8 +104,14 @@ function dumpAll(db: TypingAnalyticsDB, withRows: boolean): Record<string, Table
   return Object.fromEntries(DATA_TABLE_NAMES.map((t) => [t, dumpTable(connection, t, withRows)]))
 }
 
+/** A trigger that fails the tombstones of the hidden ranges, which run
+ * after the day's rows are applied (no applied row has their time). */
+const FAIL_TOMBSTONE_SQL = `CREATE TRIGGER fail_range_tombstone BEFORE UPDATE OF is_deleted ON typing_minute_stats
+  WHEN NEW.updated_at = ${HIDE_UPDATED_AT} BEGIN SELECT RAISE(ABORT, 'tombstone failed'); END`
+
 async function applyStep(db: TypingAnalyticsDB, dir: string, step: Step, userData: string): Promise<ApplyRowsResult | { error: true }> {
   const { rows } = await readRows(join(dir, step.input))
+  if (step.failSql) db.getConnection().exec(step.failSql)
   try {
     if (!step.hide) return applyRowsToCache(db, rows)
     const { uid, machineHash, utcDay, updatedAt } = step.hide
@@ -143,6 +153,10 @@ describe('typing-analytics DB fixtures', () => {
         { name: 'day', steps: [{ input: 'day.jsonl' }] },
         { name: 'reapply-then-rollback', steps: [{ input: 'day.jsonl' }, { input: 'day.jsonl' }, { input: 'orphan.jsonl' }] },
         { name: 'day-hiding-ranges', steps: [{ input: 'day.jsonl', hide }] },
+        // A failure after the rows are applied, or while applying them,
+        // leaves nothing of the file.
+        { name: 'day-hiding-ranges-failing-tombstone', steps: [{ input: 'day.jsonl', hide, failSql: FAIL_TOMBSTONE_SQL }] },
+        { name: 'orphan-hiding-ranges', steps: [{ input: 'day.jsonl' }, { input: 'orphan.jsonl', hide }] },
       ]
       const queries = queryCases(dayStartMs)
       const out = []
@@ -172,6 +186,31 @@ describe('typing-analytics DB fixtures', () => {
   })
 })
 
+/** The reads the first Analyze view makes of a keyboard's whole history,
+ * timed on the 21 seeded days. */
+const BENCH_CALLS: MethodCall[] = [
+  { method: 'listDailySummariesForUid', args: [DUMMY_TA_UID] },
+  { method: 'listMinuteStatsInRangeForUid', args: [DUMMY_TA_UID, 0, Number.MAX_SAFE_INTEGER] },
+  { method: 'aggregateMatrixCountsForUidInRange', args: [DUMMY_TA_UID, 0, 0, Number.MAX_SAFE_INTEGER] },
+  { method: 'listMatrixCellsForUid', args: [DUMMY_TA_UID, 0, Number.MAX_SAFE_INTEGER] },
+  { method: 'listNgramMinutesInRangeForUid', args: [2, DUMMY_TA_UID, 0, Number.MAX_SAFE_INTEGER] },
+]
+
+/** The median time of each of BENCH_CALLS on `db`, the method called
+ * directly (`runCall` would add the canonical form to the time). */
+function timeCalls(db: TypingAnalyticsDB): Record<string, number> {
+  const methods = db as unknown as Record<string, (...args: unknown[]) => unknown>
+  return Object.fromEntries(BENCH_CALLS.map((call) => {
+    const ms: number[] = []
+    for (let run = 0; run <= BENCH_RUNS; run += 1) {
+      const t0 = performance.now()
+      methods[call.method].apply(db, call.args)
+      if (run > 0) ms.push(performance.now() - t0)
+    }
+    return [call.method, median(ms)]
+  }))
+}
+
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b)
   return sorted[Math.floor(sorted.length / 2)]
@@ -184,6 +223,7 @@ async function recordBench(userData: string, seededPaths: string[], dayStartMs: 
   writeFixture(join(BENCH_DIR, 'heavy.jsonl'), seededPaths.map((p) => readFileSync(p, 'utf8')).join(''))
   const timings: Record<string, { applyMs: number[]; queryMs: number[] }> = {}
   let pragmas: Record<string, unknown> = {}
+  let methodMs: Record<string, number> = {}
   for (const input of ['day.jsonl', 'heavy.jsonl']) {
     const dir = input === 'heavy.jsonl' ? BENCH_DIR : COMMITTED_FIXTURES_DIR
     const applyMs: number[] = []
@@ -209,7 +249,9 @@ async function recordBench(userData: string, seededPaths: string[], dayStartMs: 
         writeJsonFixture(join(BENCH_DIR, 'heavy-expected.json'), {
           tables: dumpAll(db, false),
           queries: queries.map((q) => ({ ...q, rows: runQuery(db, q) })),
+          calls: BENCH_CALLS.map((call) => ({ ...call, result: runCall(db, call) })),
         })
+        methodMs = timeCalls(db)
       }
       db.close()
       rmSync(dbPath, { force: true })
@@ -225,6 +267,6 @@ async function recordBench(userData: string, seededPaths: string[], dayStartMs: 
     applyMs: v.applyMs,
     queryMs: v.queryMs,
   }]))
-  writeJsonFixture(join(BENCH_DIR, 'ts-timings.json'), { dayStartMs, runtime: process.versions, pragmas, timings: summary })
-  console.log('TypeScript timings', JSON.stringify(summary))
+  writeJsonFixture(join(BENCH_DIR, 'ts-timings.json'), { dayStartMs, runtime: process.versions, pragmas, timings: summary, methodMs })
+  console.log('TypeScript timings', JSON.stringify(summary), JSON.stringify(methodMs))
 }

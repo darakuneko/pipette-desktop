@@ -4477,6 +4477,1202 @@
           ]
         }
       ]
+    },
+    {
+      "name": "day-hiding-ranges-failing-tombstone",
+      "steps": [
+        {
+          "input": "day.jsonl",
+          "hide": {
+            "uid": "doc-ta-keyboard-1",
+            "machineHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "utcDay": "2026-09-13",
+            "ranges": [
+              {
+                "startMs": 1789318800000,
+                "endMs": 1789322400000,
+                "cutoffMs": 1789318920000
+              },
+              {
+                "startMs": 1789304400000,
+                "endMs": 1789304580000,
+                "cutoffMs": 1790895600000
+              }
+            ],
+            "updatedAt": 1790895660000
+          },
+          "failSql": "CREATE TRIGGER fail_range_tombstone BEFORE UPDATE OF is_deleted ON typing_minute_stats\n  WHEN NEW.updated_at = 1790895660000 BEGIN SELECT RAISE(ABORT, 'tombstone failed'); END"
+        }
+      ],
+      "applied": [
+        {
+          "error": true
+        }
+      ],
+      "tables": {
+        "typing_char_minute": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "typing_matrix_minute": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "typing_minute_stats": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "typing_bigram_minute": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "typing_trigram_minute": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "typing_sessions": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "typing_scopes": {
+          "count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "queries": [
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [],
+          "runIdScopes": [],
+          "name": "all",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": []
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [],
+          "runIdScopes": [],
+          "name": "window",
+          "sinceMs": 1789300800000,
+          "untilMs": 1789322400000,
+          "rows": []
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [
+            "Code",
+            "Slack"
+          ],
+          "typingTestScopes": [],
+          "runIdScopes": [],
+          "name": "apps",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": []
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [
+            "tatoeba-japanese"
+          ],
+          "runIdScopes": [],
+          "name": "typing-test",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": []
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [],
+          "runIdScopes": [
+            "doc-run-tatoeba-1",
+            ""
+          ],
+          "name": "run",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "orphan-hiding-ranges",
+      "steps": [
+        {
+          "input": "day.jsonl"
+        },
+        {
+          "input": "orphan.jsonl",
+          "hide": {
+            "uid": "doc-ta-keyboard-1",
+            "machineHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "utcDay": "2026-09-13",
+            "ranges": [
+              {
+                "startMs": 1789318800000,
+                "endMs": 1789322400000,
+                "cutoffMs": 1789318920000
+              },
+              {
+                "startMs": 1789304400000,
+                "endMs": 1789304580000,
+                "cutoffMs": 1790895600000
+              }
+            ],
+            "updatedAt": 1790895660000
+          }
+        }
+      ],
+      "applied": [
+        {
+          "scopes": 2,
+          "charMinutes": 7,
+          "matrixMinutes": 674,
+          "minuteStats": 29,
+          "sessions": 2,
+          "bigramMinutes": 26,
+          "trigramMinutes": 25
+        },
+        {
+          "error": true
+        }
+      ],
+      "tables": {
+        "typing_char_minute": {
+          "count": 6,
+          "sha256": "5b43b2dad2e253cb90606e7b2528f38ed66035dfe2e046f1d6c8ae59cb2de43f"
+        },
+        "typing_matrix_minute": {
+          "count": 673,
+          "sha256": "a3bd26b4a337f90e06399c36b6b9558b032143f9c3c4331e35aa4f92e552c24d"
+        },
+        "typing_minute_stats": {
+          "count": 26,
+          "sha256": "fca226297c923e6dfffd47bcc7ba458b7316146b5c1d5eee273f1199a390b5d1"
+        },
+        "typing_bigram_minute": {
+          "count": 675,
+          "sha256": "3a5aab5cccf4e0bf34814963b204882e091573ac19d94d66c96a240ed1c51fc9"
+        },
+        "typing_trigram_minute": {
+          "count": 97,
+          "sha256": "315de0ac8ba2a24b6acd059d2eec23ec5c8d0234c961564000767d409c937dfa"
+        },
+        "typing_sessions": {
+          "count": 2,
+          "sha256": "0db1fce75db3f5959c36a5ffe5d2ac5e376deac8a3895249347e1da1b458898b"
+        },
+        "typing_scopes": {
+          "count": 2,
+          "sha256": "6ff81a88391258998e68bcd4e2c4a587dab3220a9cdaa479549937b034625916"
+        }
+      },
+      "queries": [
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [],
+          "runIdScopes": [],
+          "name": "all",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": [
+            {
+              "minuteMs": "r:427a099feae80000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a099ff98e0000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a008340000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a016da0000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a025800000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a034260000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09ada6880000",
+              "keystrokes": "r:407c500000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4056800000000000",
+              "intervalP50Ms": "r:4059500000000000",
+              "intervalP75Ms": "r:4066800000000000",
+              "intervalMaxMs": "r:4079000000000000",
+              "pollP50Ms": "r:4036800000000000",
+              "pollP95Ms": "r:403d200000000000"
+            },
+            {
+              "minuteMs": "r:427a09adb52e0000",
+              "keystrokes": "r:4070b00000000000",
+              "activeMs": "r:40f5f90000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4060800000000000",
+              "intervalP50Ms": "r:4069b40000000000",
+              "intervalP75Ms": "r:4075500000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adc3d40000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09add27a0000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09ade1200000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adefc60000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb62280000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb70ce0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb7f740000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb8e1a0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb9cc00000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bbab660000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c91dc80000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c92c6e0000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c93b140000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c949ba0000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c958600000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c967060000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            }
+          ]
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [],
+          "runIdScopes": [],
+          "name": "window",
+          "sinceMs": 1789300800000,
+          "untilMs": 1789322400000,
+          "rows": [
+            {
+              "minuteMs": "r:427a09ada6880000",
+              "keystrokes": "r:407c500000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4056800000000000",
+              "intervalP50Ms": "r:4059500000000000",
+              "intervalP75Ms": "r:4066800000000000",
+              "intervalMaxMs": "r:4079000000000000",
+              "pollP50Ms": "r:4036800000000000",
+              "pollP95Ms": "r:403d200000000000"
+            },
+            {
+              "minuteMs": "r:427a09adb52e0000",
+              "keystrokes": "r:4070b00000000000",
+              "activeMs": "r:40f5f90000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4060800000000000",
+              "intervalP50Ms": "r:4069b40000000000",
+              "intervalP75Ms": "r:4075500000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adc3d40000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09add27a0000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09ade1200000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adefc60000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb62280000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb70ce0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb7f740000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb8e1a0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb9cc00000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bbab660000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            }
+          ]
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [
+            "Code",
+            "Slack"
+          ],
+          "typingTestScopes": [],
+          "runIdScopes": [],
+          "name": "apps",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": [
+            {
+              "minuteMs": "r:427a09ada6880000",
+              "keystrokes": "r:407c500000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4056800000000000",
+              "intervalP50Ms": "r:4059500000000000",
+              "intervalP75Ms": "r:4066800000000000",
+              "intervalMaxMs": "r:4079000000000000",
+              "pollP50Ms": "r:4036800000000000",
+              "pollP95Ms": "r:403d200000000000"
+            },
+            {
+              "minuteMs": "r:427a09adb52e0000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adc3d40000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09add27a0000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09ade1200000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adefc60000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb62280000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb70ce0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb7f740000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb8e1a0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb9cc00000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bbab660000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            }
+          ]
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [
+            "tatoeba-japanese"
+          ],
+          "runIdScopes": [],
+          "name": "typing-test",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": [
+            {
+              "minuteMs": "r:427a099feae80000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a099ff98e0000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a008340000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a016da0000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a025800000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a034260000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            }
+          ]
+        },
+        {
+          "uid": "doc-ta-keyboard-1",
+          "appScopes": [],
+          "typingTestScopes": [],
+          "runIdScopes": [
+            "doc-run-tatoeba-1",
+            ""
+          ],
+          "name": "run",
+          "sinceMs": 0,
+          "untilMs": 9007199254740991,
+          "rows": [
+            {
+              "minuteMs": "r:427a099feae80000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a099ff98e0000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a008340000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a016da0000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a025800000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09a034260000",
+              "keystrokes": "r:4067200000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4051c00000000000",
+              "intervalP25Ms": "r:4064400000000000",
+              "intervalP50Ms": "r:4072100000000000",
+              "intervalP75Ms": "r:407d300000000000",
+              "intervalMaxMs": "r:408d480000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09ada6880000",
+              "keystrokes": "r:407c500000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4056800000000000",
+              "intervalP50Ms": "r:4059500000000000",
+              "intervalP75Ms": "r:4066800000000000",
+              "intervalMaxMs": "r:4079000000000000",
+              "pollP50Ms": "r:4036800000000000",
+              "pollP95Ms": "r:403d200000000000"
+            },
+            {
+              "minuteMs": "r:427a09adb52e0000",
+              "keystrokes": "r:4070b00000000000",
+              "activeMs": "r:40f5f90000000000",
+              "intervalMinMs": "r:4044000000000000",
+              "intervalP25Ms": "r:4060800000000000",
+              "intervalP50Ms": "r:4069b40000000000",
+              "intervalP75Ms": "r:4075500000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adc3d40000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09add27a0000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09ade1200000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09adefc60000",
+              "keystrokes": "r:4065800000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053400000000000",
+              "intervalP25Ms": "r:4065c00000000000",
+              "intervalP50Ms": "r:4073600000000000",
+              "intervalP75Ms": "r:407f600000000000",
+              "intervalMaxMs": "r:408f800000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:403f000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb62280000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb70ce0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb7f740000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb8e1a0000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bb9cc00000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09bbab660000",
+              "keystrokes": "r:4065400000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4053800000000000",
+              "intervalP25Ms": "r:4066000000000000",
+              "intervalP50Ms": "r:4073a00000000000",
+              "intervalP75Ms": "r:407fc00000000000",
+              "intervalMaxMs": "r:408fe00000000000",
+              "pollP50Ms": "r:4039000000000000",
+              "pollP95Ms": "r:403d000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c91dc80000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c92c6e0000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c93b140000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c949ba0000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c958600000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            },
+            {
+              "minuteMs": "r:427a09c967060000",
+              "keystrokes": "r:4064000000000000",
+              "activeMs": "r:40ed4c0000000000",
+              "intervalMinMs": "r:4054c00000000000",
+              "intervalP25Ms": "r:4067800000000000",
+              "intervalP50Ms": "r:4074e00000000000",
+              "intervalP75Ms": "r:4080e00000000000",
+              "intervalMaxMs": "r:4090f00000000000",
+              "pollP50Ms": "r:4038000000000000",
+              "pollP95Ms": "r:4040000000000000"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

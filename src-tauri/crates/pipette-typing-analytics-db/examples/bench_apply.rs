@@ -5,9 +5,13 @@
 //! Each input is applied into a fresh file-backed database once as a
 //! warm-up and then RUNS times; the medians are printed next to the
 //! TypeScript ones. heavy.jsonl is also checked against the tables and query
-//! results the TypeScript side recorded for it.
+//! results the TypeScript side recorded for it, and the Analyze reads the
+//! generator timed on it (`BENCH_CALLS`) are checked and timed too.
 //!
-//! Run: cargo run --release -p pipette-typing-analytics-db --example bench_apply
+//! The generator records in UTC and one of the reads groups by local days,
+//! so this runs in UTC as well.
+//!
+//! Run: TZ=UTC cargo run --release -p pipette-typing-analytics-db --example bench_apply
 
 #![allow(clippy::unwrap_used)]
 
@@ -18,9 +22,10 @@ use std::path::Path;
 use std::time::Instant;
 
 use common::{
-    assert_tables, bench_dir, fixtures_dir, open_read_only, query_row_cells, read_json, remove_db, strings,
+    assert_tables, bench_dir, fixtures_dir, open_read_only, query_row_cells, read_json, remove_db, run_call,
+    strings,
 };
-use pipette_typing_analytics_db::{ScopeFilters, TypingAnalyticsDb};
+use pipette_typing_analytics_db::{Gram, ScopeFilters, TypingAnalyticsDb};
 use serde_json::Value;
 
 const RUNS: usize = 7;
@@ -87,7 +92,56 @@ fn bench(input: &Path, queries: &Value, check: Option<&Value>) -> (f64, f64) {
     (median(&mut apply_ms), median(&mut query_ms))
 }
 
+/// Each of the generator's `BENCH_CALLS` on the heavy database: checked
+/// against its recorded answer, then timed RUNS times after a warm-up,
+/// the method called directly.
+fn bench_calls(expected: &Value, ts_ms: &Value) {
+    let path = bench_dir().join("bench-rust-calls.db");
+    remove_db(&path);
+    let mut db = TypingAnalyticsDb::open(&path).unwrap();
+    db.apply_day_jsonl(&std::fs::read_to_string(bench_dir().join("heavy.jsonl")).unwrap()).unwrap();
+    println!("| read | TS ms | Rust ms |");
+    println!("|---|---|---|");
+    for call in expected["calls"].as_array().unwrap() {
+        let method = call["method"].as_str().unwrap();
+        let args = call["args"].as_array().unwrap();
+        assert_eq!(run_call(&mut db, method, args), call["result"], "heavy: {method}");
+        let uid = args.iter().find_map(Value::as_str).unwrap();
+        let all = ScopeFilters::default();
+        let max = 9_007_199_254_740_991.0;
+        let mut ms = Vec::new();
+        for run in 0..=RUNS {
+            let t0 = Instant::now();
+            match method {
+                "listDailySummariesForUid" => drop(db.daily_summaries(uid, None, &all).unwrap()),
+                "listMinuteStatsInRangeForUid" => {
+                    drop(db.minute_stats_in_range(uid, None, 0.0, max, &all).unwrap())
+                }
+                "aggregateMatrixCountsForUidInRange" => {
+                    drop(db.matrix_counts_in_range(uid, None, 0.0, 0.0, max, &all).unwrap());
+                }
+                "listMatrixCellsForUid" => drop(db.matrix_cells(uid, None, 0.0, max, &all).unwrap()),
+                "listNgramMinutesInRangeForUid" => {
+                    drop(db.ngram_minutes_in_range(Gram::Bigram, uid, None, 0.0, max, &all).unwrap());
+                }
+                other => panic!("no timing for {other}"),
+            }
+            if run > 0 {
+                ms.push(t0.elapsed().as_secs_f64() * 1000.0);
+            }
+        }
+        println!("| {method} | {:.2} | {:.2} |", ts_ms[method].as_f64().unwrap(), median(&mut ms));
+    }
+    drop(db);
+    remove_db(&path);
+}
+
 fn main() {
+    assert_eq!(
+        std::env::var("TZ").as_deref(),
+        Ok("UTC"),
+        "run with TZ=UTC, the zone the generator records in"
+    );
     let expected = read_json(fixtures_dir().join("expected.json"));
     let day_queries = expected["scenarios"][0]["queries"].clone();
     let heavy_expected = read_json(bench_dir().join("heavy-expected.json"));
@@ -119,4 +173,5 @@ fn main() {
             t["medianQueryMs"].as_f64().unwrap()
         );
     }
+    bench_calls(&heavy_expected, &ts["methodMs"]);
 }
