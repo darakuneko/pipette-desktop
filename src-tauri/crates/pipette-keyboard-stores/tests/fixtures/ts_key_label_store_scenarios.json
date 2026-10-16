@@ -1,0 +1,1823 @@
+[
+  {
+    "name": "a fresh store creates QWERTY, which cannot be deleted",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "qwerty"
+      },
+      {
+        "op": "hasName",
+        "name": "qwerty"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "get",
+        "id": "qwerty"
+      },
+      {
+        "op": "hasName",
+        "name": " Qwerty "
+      },
+      {
+        "op": "hasName",
+        "name": "QWERTY",
+        "excludeId": "qwerty"
+      },
+      {
+        "op": "delete",
+        "id": "qwerty"
+      },
+      {
+        "op": "export",
+        "id": "qwerty",
+        "dialog": "exports/qwerty.json"
+      },
+      {
+        "op": "rename",
+        "id": "qwerty",
+        "name": "Base"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":true,\"data\":false}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},\"data\":{\"name\":\"QWERTY\",\"map\":{}}}}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":false}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"QWERTY cannot be deleted\"}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/qwerty.json\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"qwerty\",\"name\":\"Base\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"Base\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-QWERTY.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [],
+      []
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/qwerty.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {},\n  \"composite_labels\": null,\n  \"keymap_applicable\": false\n}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"Base\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "imports, renames, hub ids, deletes, reorders and exports",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "exports/": null,
+      "in/alpha.json": "{\"name\":\"Alpha\",\"map\":{\"KC_A\":\"Å\",\"KC_B\":\"b\"},\"composite_labels\":{\"KC_C\":\"C\"},\"keymap_applicable\":true}",
+      "in/beta.json": "{\"name\":\"  Beta  \",\"map\":[\"x\",\"y\"],\"compositeLabels\":null,\"composite_labels\":{\"KC_D\":\"D\"}}",
+      "in/gamma.json": "{\"name\":\"Gamma\",\"map\":{},\"compositeLabels\":{},\"keymapApplicable\":\"yes\",\"author\":\"kept out\"}",
+      "in/alpha-again.json": "{\"name\":\"ALPHA\",\"map\":{\"KC_Z\":\"Z\"},\"keymapApplicable\":false}",
+      "in/long.json": "{\"name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/hundred.json": "{\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/blank.json": "{\"name\":\"   \",\"map\":{\"KC_A\":\"A\"}}",
+      "in/no-map.json": "{\"name\":\"No map\"}",
+      "in/proto.json": "{\"name\":\"Proto\",\"map\":{\"KC_A\":\"A\",\"__proto__\":\"x\"}}",
+      "in/ctor.json": "{\"name\":\"Ctor\",\"map\":{\"KC_A\":\"A\"},\"composite_labels\":{\"constructor\":\"x\"}}",
+      "in/bad-composite.json": "{\"name\":\"Bad composite\",\"map\":{\"KC_A\":\"A\"},\"compositeLabels\":\"x\"}",
+      "in/number-value.json": "{\"name\":\"Number\",\"map\":{\"KC_A\":1}}",
+      "in/not-json.json": "{\"name\":",
+      "in/bom.json": "﻿{\"name\":\"Bom\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/array.json": "[]",
+      "in/lone.json": "{\"name\":\"Lone \\ud800\",\"map\":{\"KC_A\":\"\\udc00\"}}",
+      "in/bad-utf8.json": {
+        "hex": "7b226e616d65223a2242616420ffc3222c226d6170223a7b7d7d"
+      }
+    },
+    "steps": [
+      {
+        "op": "import",
+        "dialog": [
+          "in/alpha.json",
+          "in/beta.json",
+          "in/gamma.json",
+          "in/missing.json",
+          "in/not-json.json",
+          "in/bom.json",
+          "in/array.json"
+        ]
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/alpha-again.json",
+          "in/long.json",
+          "in/hundred.json",
+          "in/blank.json",
+          "in/no-map.json",
+          "in/proto.json",
+          "in/ctor.json",
+          "in/bad-composite.json",
+          "in/number-value.json",
+          "in/lone.json",
+          "in/bad-utf8.json"
+        ]
+      },
+      {
+        "op": "import",
+        "dialog": null
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000003"
+      },
+      {
+        "op": "get",
+        "id": 5
+      },
+      {
+        "op": "get",
+        "id": "missing"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "  Alpha Prime  "
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "name": "alpha prime"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "name": "beta"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "name": " "
+      },
+      {
+        "op": "rename",
+        "id": "missing",
+        "name": "x"
+      },
+      {
+        "op": "rename",
+        "id": 7,
+        "name": "x"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "name": 7
+      },
+      {
+        "op": "hasName",
+        "name": "ALPHA PRIME"
+      },
+      {
+        "op": "hasName",
+        "name": "alpha prime",
+        "excludeId": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "hasName",
+        "name": "alpha prime",
+        "excludeId": 5
+      },
+      {
+        "op": "hasName",
+        "name": 5
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": " post-1 "
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": "post-2"
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": "　"
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000003",
+        "hubPostId": 5
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000003",
+        "hubPostId": null
+      },
+      {
+        "op": "hubPostId",
+        "id": "missing",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPostId",
+        "id": 9,
+        "hubPostId": "p"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:03:00.000Z"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/alpha.json"
+        ]
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:04:00.000Z"
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "delete",
+        "id": "missing"
+      },
+      {
+        "op": "delete",
+        "id": 3
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "name": "Back"
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": "post-3"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/beta.json"
+        ]
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "00000000-0000-4000-8000-000000000003",
+          "missing",
+          "00000000-0000-4000-8000-000000000002",
+          "00000000-0000-4000-8000-000000000003",
+          "qwerty"
+        ]
+      },
+      {
+        "op": "reorder",
+        "ids": "not a list"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "00000000-0000-4000-8000-000000000001",
+          5
+        ]
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "dialog": "exports/alpha.json"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000003",
+        "dialog": "exports/gamma.json"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "dialog": "exports/beta.json"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "dialog": null
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "dialog": "exports/deleted.json"
+      },
+      {
+        "op": "export",
+        "id": "missing",
+        "dialog": "exports/missing.json"
+      },
+      {
+        "op": "export",
+        "id": 5,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "dialog": "no-such-dir/alpha.json"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"alpha.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}},{\"fileName\":\"beta.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}},{\"fileName\":\"gamma.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}],\"rejections\":[{\"fileName\":\"missing.json\",\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"},{\"fileName\":\"not-json.json\",\"errorCode\":\"IO_ERROR\",\"error\":\"<parse error>\"},{\"fileName\":\"bom.json\",\"errorCode\":\"IO_ERROR\",\"error\":\"<parse error>\"},{\"fileName\":\"array.json\",\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid key label file\"}]}}",
+      null,
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"alpha-again.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"ALPHA\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}},{\"fileName\":\"hundred.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000004\",\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"filename\":\"00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}},{\"fileName\":\"lone.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000005\",\"name\":\"Lone \\ud800\",\"filename\":\"00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}},{\"fileName\":\"bad-utf8.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000006\",\"name\":\"Bad ��\",\"filename\":\"00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}}],\"rejections\":[{\"fileName\":\"long.json\",\"errorCode\":\"INVALID_NAME\",\"error\":\"name must be at most 100 characters\"},{\"fileName\":\"blank.json\",\"errorCode\":\"INVALID_NAME\",\"error\":\"name must not be empty\"},{\"fileName\":\"no-map.json\",\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid key label file\"},{\"fileName\":\"proto.json\",\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid key label file\"},{\"fileName\":\"ctor.json\",\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid key label file\"},{\"fileName\":\"bad-composite.json\",\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid key label file\"},{\"fileName\":\"number-value.json\",\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid key label file\"}]}}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"cancelled\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"ALPHA\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"filename\":\"00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"name\":\"Lone \\ud800\",\"filename\":\"00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"name\":\"Bad ��\",\"filename\":\"00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"ALPHA\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},\"data\":{\"name\":\"ALPHA\",\"map\":{\"KC_Z\":\"Z\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},\"data\":{\"name\":\"Beta\",\"map\":[\"x\",\"y\"],\"compositeLabels\":{\"KC_D\":\"D\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},\"data\":{\"name\":\"Gamma\",\"map\":{},\"compositeLabels\":{}}}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha Prime\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\"}}",
+      "{\"success\":false,\"errorCode\":\"DUPLICATE_NAME\",\"error\":\"A label with the same name already exists\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"name must be at most 100 characters\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"name must not be empty\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Invalid name\"}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":false}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Invalid name\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha Prime\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\",\"hubPostId\":\"post-1\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha Prime\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\",\"hubPostId\":\"post-2\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:02:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\"}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      null,
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"alpha.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000007\",\"name\":\"Alpha\",\"filename\":\"00000000-0000-4000-8000-000000000007_2026-10-16T12-03-00.000Z.json\",\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"}}],\"rejections\":[]}}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\",\"deletedAt\":\"2026-10-16T12:04:00.000Z\",\"hubPostId\":\"post-3\"}}",
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"beta.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000008\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000008_2026-10-16T12-04-00.000Z.json\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}],\"rejections\":[]}}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha Prime\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\",\"hubPostId\":\"post-2\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\",\"deletedAt\":\"2026-10-16T12:04:00.000Z\",\"hubPostId\":\"post-3\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"filename\":\"00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"name\":\"Lone \\ud800\",\"filename\":\"00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"name\":\"Bad ��\",\"filename\":\"00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"name\":\"Alpha\",\"filename\":\"00000000-0000-4000-8000-000000000007_2026-10-16T12-03-00.000Z.json\",\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000008\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000008_2026-10-16T12-04-00.000Z.json\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}",
+      "{\"success\":true}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid order list\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid order list\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\"},{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha Prime\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\",\"hubPostId\":\"post-2\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"filename\":\"00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"name\":\"Lone \\ud800\",\"filename\":\"00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"name\":\"Bad ��\",\"filename\":\"00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"name\":\"Alpha\",\"filename\":\"00000000-0000-4000-8000-000000000007_2026-10-16T12-03-00.000Z.json\",\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000008\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000008_2026-10-16T12-04-00.000Z.json\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"Gamma\",\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\"},{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Alpha Prime\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\",\"hubPostId\":\"post-2\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"beta\",\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\",\"deletedAt\":\"2026-10-16T12:04:00.000Z\",\"hubPostId\":\"post-3\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"filename\":\"00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"name\":\"Lone \\ud800\",\"filename\":\"00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"name\":\"Bad ��\",\"filename\":\"00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"name\":\"Alpha\",\"filename\":\"00000000-0000-4000-8000-000000000007_2026-10-16T12-03-00.000Z.json\",\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000008\",\"name\":\"Beta\",\"filename\":\"00000000-0000-4000-8000-000000000008_2026-10-16T12-04-00.000Z.json\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/alpha.json\"}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/gamma.json\"}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/beta.json\"}}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"cancelled\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"}"
+    ],
+    "dialogs": [
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Alpha_Prime.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Gamma.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Alpha_Prime.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Alpha_Prime.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ]
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/alpha.json": "{\n  \"name\": \"Alpha Prime\",\n  \"map\": {\n    \"KC_Z\": \"Z\"\n  },\n  \"composite_labels\": null,\n  \"keymap_applicable\": false\n}",
+      "exports/beta.json": "{\n  \"name\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\n  \"map\": {\n    \"KC_A\": \"A\"\n  },\n  \"composite_labels\": null,\n  \"keymap_applicable\": false\n}",
+      "exports/gamma.json": "{\n  \"name\": \"Gamma\",\n  \"map\": {},\n  \"composite_labels\": {},\n  \"keymap_applicable\": false\n}",
+      "in/": null,
+      "in/alpha-again.json": "{\"name\":\"ALPHA\",\"map\":{\"KC_Z\":\"Z\"},\"keymapApplicable\":false}",
+      "in/alpha.json": "{\"name\":\"Alpha\",\"map\":{\"KC_A\":\"Å\",\"KC_B\":\"b\"},\"composite_labels\":{\"KC_C\":\"C\"},\"keymap_applicable\":true}",
+      "in/array.json": "[]",
+      "in/bad-composite.json": "{\"name\":\"Bad composite\",\"map\":{\"KC_A\":\"A\"},\"compositeLabels\":\"x\"}",
+      "in/bad-utf8.json": {
+        "hex": "7b226e616d65223a2242616420ffc3222c226d6170223a7b7d7d"
+      },
+      "in/beta.json": "{\"name\":\"  Beta  \",\"map\":[\"x\",\"y\"],\"compositeLabels\":null,\"composite_labels\":{\"KC_D\":\"D\"}}",
+      "in/blank.json": "{\"name\":\"   \",\"map\":{\"KC_A\":\"A\"}}",
+      "in/bom.json": "﻿{\"name\":\"Bom\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/ctor.json": "{\"name\":\"Ctor\",\"map\":{\"KC_A\":\"A\"},\"composite_labels\":{\"constructor\":\"x\"}}",
+      "in/gamma.json": "{\"name\":\"Gamma\",\"map\":{},\"compositeLabels\":{},\"keymapApplicable\":\"yes\",\"author\":\"kept out\"}",
+      "in/hundred.json": "{\"name\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/lone.json": "{\"name\":\"Lone \\ud800\",\"map\":{\"KC_A\":\"\\udc00\"}}",
+      "in/long.json": "{\"name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/no-map.json": "{\"name\":\"No map\"}",
+      "in/not-json.json": "{\"name\":",
+      "in/number-value.json": "{\"name\":\"Number\",\"map\":{\"KC_A\":1}}",
+      "in/proto.json": "{\"name\":\"Proto\",\"map\":{\"KC_A\":\"A\",\"__proto__\":\"x\"}}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json": "{\n  \"name\": \"ALPHA\",\n  \"map\": {\n    \"KC_Z\": \"Z\"\n  }\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"Beta\",\n  \"map\": [\n    \"x\",\n    \"y\"\n  ],\n  \"compositeLabels\": {\n    \"KC_D\": \"D\"\n  }\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"Gamma\",\n  \"map\": {},\n  \"compositeLabels\": {}\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json": "{\n  \"name\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\n  \"map\": {\n    \"KC_A\": \"A\"\n  }\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json": "{\n  \"name\": \"Lone \\ud800\",\n  \"map\": {\n    \"KC_A\": \"\\udc00\"\n  }\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json": "{\n  \"name\": \"Bad ��\",\n  \"map\": {}\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000007_2026-10-16T12-03-00.000Z.json": "{\n  \"name\": \"Alpha\",\n  \"map\": {\n    \"KC_A\": \"Å\",\n    \"KC_B\": \"b\"\n  },\n  \"compositeLabels\": {\n    \"KC_C\": \"C\"\n  },\n  \"keymapApplicable\": true\n}",
+      "sync/key-labels/00000000-0000-4000-8000-000000000008_2026-10-16T12-04-00.000Z.json": "{\n  \"name\": \"Beta\",\n  \"map\": [\n    \"x\",\n    \"y\"\n  ],\n  \"compositeLabels\": {\n    \"KC_D\": \"D\"\n  }\n}",
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000003\",\n      \"name\": \"Gamma\",\n      \"filename\": \"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:02:00.001Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:02:00.001Z\"\n    },\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"Alpha Prime\",\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-01-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:01:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:02:00.000Z\",\n        \"hub\": \"2026-10-16T12:02:00.001Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:02:00.001Z\",\n      \"hubPostId\": \"post-2\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"name\": \"beta\",\n      \"filename\": \"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:02:00.000Z\",\n        \"hub\": \"2026-10-16T12:04:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:04:00.000Z\",\n      \"deletedAt\": \"2026-10-16T12:04:00.000Z\",\n      \"hubPostId\": \"post-3\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000004\",\n      \"name\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀\",\n      \"filename\": \"00000000-0000-4000-8000-000000000004_2026-10-16T12-01-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:01:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000005\",\n      \"name\": \"Lone \\ud800\",\n      \"filename\": \"00000000-0000-4000-8000-000000000005_2026-10-16T12-01-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:01:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000006\",\n      \"name\": \"Bad ��\",\n      \"filename\": \"00000000-0000-4000-8000-000000000006_2026-10-16T12-01-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:01:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000007\",\n      \"name\": \"Alpha\",\n      \"filename\": \"00000000-0000-4000-8000-000000000007_2026-10-16T12-03-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:03:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:03:00.000Z\",\n        \"body\": \"2026-10-16T12:03:00.000Z\",\n        \"name\": \"2026-10-16T12:03:00.000Z\",\n        \"hub\": \"2026-10-16T12:03:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:03:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000008\",\n      \"name\": \"Beta\",\n      \"filename\": \"00000000-0000-4000-8000-000000000008_2026-10-16T12-04-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:04:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:04:00.000Z\",\n        \"body\": \"2026-10-16T12:04:00.000Z\",\n        \"name\": \"2026-10-16T12:04:00.000Z\",\n        \"hub\": \"2026-10-16T12:04:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:04:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "a v1 index with legacy names, unknown fields and a QWERTY without an author",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\n  \"before\": [1, 2.50, 1e21],\n  \"entries\": [\n    {\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"extra\":{\"keep\":true}},\n    {\"id\":\"a\",\"name\":\"Legacy A\",\"filename\":\"2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\"},\n    {\"id\":\"b\",\"name\":\"Legacy B\",\"filename\":\"2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\"},\n    {\"id\":\"gone\",\"name\":\"Gone\",\"filename\":\"2026-10-16T10-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"deletedAt\":\"2026-10-16T11:50:00.000Z\"},\n    {\"note\":\"first\",\"id\":\"future\",\"name\":\"Future\",\"filename\":\"future_2030-01-01T00-00-00.000Z.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2030-01-02T00:00:00.000Z\",\"hub\":\"nonsense\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"},\n    \"a string entry\",\n    null,\n    42,\n    {\"name\":\"no id\"},\n    {\"id\":7,\"name\":\"numeric id\"}\n  ],\n  \"after\": \"kept\"\n}\n",
+      "sync/key-labels/qwerty_builtin.json": "{\"name\":\"QWERTY\",\"map\":{}}",
+      "sync/key-labels/2026-10-16T11-00-00.000Z.json": "{\"name\":\"Legacy\",\"map\":{\"KC_A\":\"a\"},\"composite_labels\":{\"KC_B\":\"b\"},\"keymap_applicable\":true}",
+      "sync/key-labels/2026-10-16T10-00-00.000Z.json": "{\"name\":\"Gone\",\"map\":{}}",
+      "sync/key-labels/future_2030-01-01T00-00-00.000Z.json": "{\"name\":\"Future\",\"map\":{\"KC_F\":\"f\"}}",
+      "exports/": null,
+      "in/legacy-a.json": "{\"name\":\"legacy a\",\"map\":{\"KC_N\":\"n\"}}",
+      "in/gone.json": "{\"name\":\"Gone\",\"map\":{\"KC_G\":\"g\"}}"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "a"
+      },
+      {
+        "op": "hasName",
+        "name": "legacy b"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "get",
+        "id": "a"
+      },
+      {
+        "op": "get",
+        "id": "b"
+      },
+      {
+        "op": "get",
+        "id": "gone"
+      },
+      {
+        "op": "export",
+        "id": "a",
+        "dialog": "exports/a.json"
+      },
+      {
+        "op": "rename",
+        "id": "future",
+        "name": "Renamed future"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/legacy-a.json",
+          "in/gone.json"
+        ]
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "b",
+          "qwerty"
+        ]
+      },
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"a\",\"name\":\"Legacy A\",\"filename\":\"2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},\"data\":{\"name\":\"Legacy A\",\"map\":{\"KC_A\":\"a\"},\"compositeLabels\":{\"KC_B\":\"b\"},\"keymapApplicable\":true}}}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\"},{\"id\":\"a\",\"name\":\"Legacy A\",\"filename\":\"a_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},{\"id\":\"b\",\"name\":\"Legacy B\",\"filename\":\"b_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"name\":\"Future\",\"filename\":\"future_2030-01-01T00-00-00.000Z.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.000Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\"},{\"id\":\"a\",\"name\":\"Legacy A\",\"filename\":\"a_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},{\"id\":\"b\",\"name\":\"Legacy B\",\"filename\":\"b_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"gone\",\"name\":\"Gone\",\"filename\":\"gone_2026-10-16T10-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"deletedAt\":\"2026-10-16T11:50:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:50:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"name\":\"Future\",\"filename\":\"future_2030-01-01T00-00-00.000Z.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.000Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"a\",\"name\":\"Legacy A\",\"filename\":\"a_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},\"data\":{\"name\":\"Legacy A\",\"map\":{\"KC_A\":\"a\"},\"compositeLabels\":{\"KC_B\":\"b\"},\"keymapApplicable\":true}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"b\",\"name\":\"Legacy B\",\"filename\":\"b_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},\"data\":{\"name\":\"Legacy B\",\"map\":{\"KC_A\":\"a\"},\"compositeLabels\":{\"KC_B\":\"b\"},\"keymapApplicable\":true}}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/a.json\"}}",
+      "{\"success\":true,\"data\":{\"note\":\"first\",\"id\":\"future\",\"name\":\"Renamed future\",\"filename\":\"future_2030-01-01T00-00-00.000Z.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.001Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.001Z\"}}",
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"legacy-a.json\",\"meta\":{\"id\":\"a\",\"name\":\"legacy a\",\"filename\":\"a_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}},{\"fileName\":\"gone.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Gone\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}],\"rejections\":[]}}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\"},{\"id\":\"a\",\"name\":\"legacy a\",\"filename\":\"a_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"b\",\"name\":\"Legacy B\",\"filename\":\"b_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"gone\",\"name\":\"Gone\",\"filename\":\"gone_2026-10-16T10-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"deletedAt\":\"2026-10-16T11:50:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:50:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"name\":\"Renamed future\",\"filename\":\"future_2030-01-01T00-00-00.000Z.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.001Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.001Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Gone\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"b\",\"name\":\"Legacy B\",\"filename\":\"b_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\"},{\"id\":\"a\",\"name\":\"legacy a\",\"filename\":\"a_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"uploaderName\":\"someone\",\"hubPostId\":\"hub-a\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"gone\",\"name\":\"Gone\",\"filename\":\"gone_2026-10-16T10-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"deletedAt\":\"2026-10-16T11:50:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:50:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"name\":\"Renamed future\",\"filename\":\"future_2030-01-01T00-00-00.000Z.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.001Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.001Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Gone\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Legacy_A.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [],
+      []
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels",
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/a.json": "{\n  \"name\": \"Legacy A\",\n  \"map\": {\n    \"KC_A\": \"a\"\n  },\n  \"composite_labels\": {\n    \"KC_B\": \"b\"\n  },\n  \"keymap_applicable\": true\n}",
+      "in/": null,
+      "in/gone.json": "{\"name\":\"Gone\",\"map\":{\"KC_G\":\"g\"}}",
+      "in/legacy-a.json": "{\"name\":\"legacy a\",\"map\":{\"KC_N\":\"n\"}}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"Gone\",\n  \"map\": {\n    \"KC_G\": \"g\"\n  }\n}",
+      "sync/key-labels/a_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"legacy a\",\n  \"map\": {\n    \"KC_N\": \"n\"\n  }\n}",
+      "sync/key-labels/b_2026-10-16T11-00-00.000Z.json": "{\"name\":\"Legacy\",\"map\":{\"KC_A\":\"a\"},\"composite_labels\":{\"KC_B\":\"b\"},\"keymap_applicable\":true}",
+      "sync/key-labels/future_2030-01-01T00-00-00.000Z.json": "{\"name\":\"Future\",\"map\":{\"KC_F\":\"f\"}}",
+      "sync/key-labels/gone_2026-10-16T10-00-00.000Z.json": "{\"name\":\"Gone\",\"map\":{}}",
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"name\": \"Legacy B\",\n      \"filename\": \"b_2026-10-16T11-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"extra\": {\n        \"keep\": true\n      },\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\"\n    },\n    {\n      \"id\": \"a\",\n      \"name\": \"legacy a\",\n      \"filename\": \"a_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"uploaderName\": \"someone\",\n      \"hubPostId\": \"hub-a\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:30:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"gone\",\n      \"name\": \"Gone\",\n      \"filename\": \"gone_2026-10-16T10-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:50:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:50:00.000Z\"\n    },\n    {\n      \"note\": \"first\",\n      \"id\": \"future\",\n      \"name\": \"Renamed future\",\n      \"filename\": \"future_2030-01-01T00-00-00.000Z.json\",\n      \"savedAt\": \"2030-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2030-01-01T00:00:00.000Z\",\n        \"body\": \"2030-01-01T00:00:00.000Z\",\n        \"name\": \"2031-01-01T00:00:00.001Z\",\n        \"hub\": \"2031-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2031-01-01T00:00:00.001Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"Gone\",\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\"name\":\"QWERTY\",\"map\":{}}"
+    }
+  },
+  {
+    "name": "a QWERTY entry with an author is not rewritten by a list",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\n  \"first\": true,\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\"name\":\"QWERTY\",\"map\":{}}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "get",
+        "id": "qwerty"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},\"data\":{\"name\":\"QWERTY\",\"map\":{}}}}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      []
+    ],
+    "notified": [],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"first\": true,\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\"name\":\"QWERTY\",\"map\":{}}"
+    }
+  },
+  {
+    "name": "a QWERTY tombstone gets its author back and stays deleted",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}",
+      "in/qwerty.json": "{\"name\":\"qwerty\",\"map\":{\"KC_Q\":\"q\"}}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "listAll"
+      },
+      {
+        "op": "get",
+        "id": "qwerty"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/qwerty.json"
+        ]
+      },
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[]}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"deletedAt\":\"2026-10-16T11:59:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:59:00.000Z\"}]}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"qwerty.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"qwerty\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}],\"rejections\":[]}}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"deletedAt\":\"2026-10-16T11:59:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:59:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"qwerty\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      []
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "in/": null,
+      "in/qwerty.json": "{\"name\":\"qwerty\",\"map\":{\"KC_Q\":\"q\"}}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"qwerty\",\n  \"map\": {\n    \"KC_Q\": \"q\"\n  }\n}",
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:59:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"qwerty\",\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an import over the QWERTY name overwrites the built-in entry",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "in/qwerty.json": "{\"name\":\" Qwerty \",\"map\":{\"KC_Q\":\"q\"},\"composite_labels\":{\"KC_W\":\"w\"}}",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/qwerty.json"
+        ]
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "qwerty"
+      },
+      {
+        "op": "export",
+        "id": "qwerty",
+        "dialog": "exports/qwerty.json"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"qwerty.json\",\"meta\":{\"id\":\"qwerty\",\"name\":\"Qwerty\",\"filename\":\"qwerty_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}],\"rejections\":[]}}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"Qwerty\",\"filename\":\"qwerty_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"qwerty\",\"name\":\"Qwerty\",\"filename\":\"qwerty_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},\"data\":{\"name\":\"Qwerty\",\"map\":{\"KC_Q\":\"q\"},\"compositeLabels\":{\"KC_W\":\"w\"}}}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/qwerty.json\"}}"
+    ],
+    "dialogs": [
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Qwerty.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ]
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/qwerty.json": "{\n  \"name\": \"Qwerty\",\n  \"map\": {\n    \"KC_Q\": \"q\"\n  },\n  \"composite_labels\": {\n    \"KC_W\": \"w\"\n  },\n  \"keymap_applicable\": false\n}",
+      "in/": null,
+      "in/qwerty.json": "{\"name\":\" Qwerty \",\"map\":{\"KC_Q\":\"q\"},\"composite_labels\":{\"KC_W\":\"w\"}}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"Qwerty\",\n      \"filename\": \"qwerty_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"uploaderName\": \"pipette\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"Qwerty\",\n  \"map\": {\n    \"KC_Q\": \"q\"\n  },\n  \"compositeLabels\": {\n    \"KC_W\": \"w\"\n  }\n}"
+    }
+  },
+  {
+    "name": "duplicate ids and names that are not strings",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\"\n    },\n    {\n      \"id\": \"dup\",\n      \"name\": \"First\",\n      \"filename\": \"dup_first.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"dup\",\n      \"name\": \"Second\",\n      \"filename\": \"dup_second.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"n\",\n      \"name\": 5,\n      \"filename\": \"n_n.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"nul\",\n      \"name\": null,\n      \"filename\": \"nul_nul.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"u\",\n      \"filename\": \"u_u.json\",\n      \"savedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/dup_first.json": "{\"name\":\"First\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/dup_second.json": "{\"name\":\"Second\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/n_n.json": "{\"name\":\"N\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/nul_nul.json": "{\"name\":\"Nul\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/u_u.json": "{\"name\":\"U\",\"map\":{\"KC_A\":\"A\"}}",
+      "exports/": null,
+      "in/zzz.json": "{\"name\":\"Zzz\",\"map\":{\"KC_A\":\"A\"}}"
+    },
+    "steps": [
+      {
+        "op": "hasName",
+        "name": "first"
+      },
+      {
+        "op": "hasName",
+        "name": "second"
+      },
+      {
+        "op": "hasName",
+        "name": "zzz"
+      },
+      {
+        "op": "get",
+        "id": "dup"
+      },
+      {
+        "op": "get",
+        "id": "n"
+      },
+      {
+        "op": "get",
+        "id": "nul"
+      },
+      {
+        "op": "get",
+        "id": "u"
+      },
+      {
+        "op": "export",
+        "id": "n",
+        "dialog": "exports/n.json"
+      },
+      {
+        "op": "export",
+        "id": "nul",
+        "dialog": "exports/nul.json"
+      },
+      {
+        "op": "export",
+        "id": "u",
+        "dialog": "exports/u.json"
+      },
+      {
+        "op": "rename",
+        "id": "dup",
+        "name": "zzz"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/zzz.json"
+        ]
+      },
+      {
+        "op": "hubPostId",
+        "id": "n",
+        "hubPostId": "p"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "n",
+          "dup"
+        ]
+      },
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: e.name.trim is not a function\"}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"dup\",\"name\":\"First\",\"filename\":\"dup_first.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},\"data\":{\"name\":\"First\",\"map\":{\"KC_A\":\"A\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"n\",\"name\":5,\"filename\":\"n_n.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},\"data\":{\"name\":5,\"map\":{\"KC_A\":\"A\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"nul\",\"name\":null,\"filename\":\"nul_nul.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},\"data\":{\"name\":null,\"map\":{\"KC_A\":\"A\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"u\",\"filename\":\"u_u.json\",\"savedAt\":\"2026-10-16T11:59:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:59:00.000Z\",\"body\":\"2026-10-16T11:59:00.000Z\",\"name\":\"2026-10-16T11:59:00.000Z\",\"hub\":\"2026-10-16T11:59:00.000Z\"},\"updatedAt\":\"2026-10-16T11:59:00.000Z\"},\"data\":{\"map\":{\"KC_A\":\"A\"}}}}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: name.replace is not a function\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: Cannot read properties of null (reading 'replace')\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: Cannot read properties of undefined (reading 'replace')\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: e.name.trim is not a function\"}",
+      "{\"success\":true,\"data\":{\"imported\":[],\"rejections\":[{\"fileName\":\"zzz.json\",\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: e.name.trim is not a function\"}]}}",
+      "{\"success\":true,\"data\":{\"id\":\"n\",\"name\":5,\"filename\":\"n_n.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"hubPostId\":\"p\"}}",
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"n\",\"name\":5,\"filename\":\"n_n.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"hubPostId\":\"p\"},{\"id\":\"dup\",\"name\":\"Second\",\"filename\":\"dup_second.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"nul\",\"name\":null,\"filename\":\"nul_nul.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"u\",\"filename\":\"u_u.json\",\"savedAt\":\"2026-10-16T11:59:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:59:00.000Z\",\"body\":\"2026-10-16T11:59:00.000Z\",\"name\":\"2026-10-16T11:59:00.000Z\",\"hub\":\"2026-10-16T11:59:00.000Z\"},\"updatedAt\":\"2026-10-16T11:59:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      [],
+      [],
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "exports/": null,
+      "in/": null,
+      "in/zzz.json": "{\"name\":\"Zzz\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/dup_first.json": "{\"name\":\"First\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/dup_second.json": "{\"name\":\"Second\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"n\",\n      \"name\": 5,\n      \"filename\": \"n_n.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"hubPostId\": \"p\"\n    },\n    {\n      \"id\": \"dup\",\n      \"name\": \"Second\",\n      \"filename\": \"dup_second.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"nul\",\n      \"name\": null,\n      \"filename\": \"nul_nul.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"u\",\n      \"filename\": \"u_u.json\",\n      \"savedAt\": \"2026-10-16T11:59:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:59:00.000Z\",\n        \"body\": \"2026-10-16T11:59:00.000Z\",\n        \"name\": \"2026-10-16T11:59:00.000Z\",\n        \"hub\": \"2026-10-16T11:59:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/n_n.json": "{\"name\":\"N\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/nul_nul.json": "{\"name\":\"Nul\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/u_u.json": "{\"name\":\"U\",\"map\":{\"KC_A\":\"A\"}}"
+    }
+  },
+  {
+    "name": "body files that are unsafe, missing or malformed",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\"\n    },\n    {\n      \"id\": \"up\",\n      \"name\": \"Up\",\n      \"filename\": \"../escape.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"none\",\n      \"name\": \"None\",\n      \"filename\": \"missing_none.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"not-json\",\n      \"name\": \"Not JSON\",\n      \"filename\": \"not-json_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"bad-map\",\n      \"name\": \"Bad map\",\n      \"filename\": \"bad-map_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"bad-composite\",\n      \"name\": \"Bad composite\",\n      \"filename\": \"bad-composite_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"aliases\",\n      \"name\": \"Renamed in the index\",\n      \"filename\": \"aliases_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"array\",\n      \"name\": \"Array\",\n      \"filename\": \"array_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"empty\",\n      \"name\": \"Empty\",\n      \"filename\": \"\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"no-file\",\n      \"name\": \"No file\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/escape.json": "{\"name\":\"Up\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/not-json_x.json": "nope",
+      "sync/key-labels/bad-map_x.json": "{\"name\":\"Bad map\",\"map\":{\"KC_A\":[\"A\"]}}",
+      "sync/key-labels/bad-composite_x.json": "{\"name\":\"Bad composite\",\"map\":{},\"composite_labels\":5}",
+      "sync/key-labels/aliases_x.json": "{\"name\":\"Last name\",\"map\":{\"KC_A\":\"A\"},\"extra\":1,\"composite_labels\":{\"KC_B\":\"B\"},\"keymap_applicable\":true,\"keymapApplicable\":null}",
+      "sync/key-labels/array_x.json": "[\"name\",\"map\"]",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "up"
+      },
+      {
+        "op": "export",
+        "id": "up",
+        "dialog": "exports/up.json"
+      },
+      {
+        "op": "get",
+        "id": "none"
+      },
+      {
+        "op": "export",
+        "id": "none",
+        "dialog": "exports/none.json"
+      },
+      {
+        "op": "get",
+        "id": "not-json"
+      },
+      {
+        "op": "export",
+        "id": "not-json",
+        "dialog": "exports/not-json.json"
+      },
+      {
+        "op": "get",
+        "id": "bad-map"
+      },
+      {
+        "op": "export",
+        "id": "bad-map",
+        "dialog": "exports/bad-map.json"
+      },
+      {
+        "op": "get",
+        "id": "bad-composite"
+      },
+      {
+        "op": "export",
+        "id": "bad-composite",
+        "dialog": "exports/bad-composite.json"
+      },
+      {
+        "op": "get",
+        "id": "aliases"
+      },
+      {
+        "op": "export",
+        "id": "aliases",
+        "dialog": "exports/aliases.json"
+      },
+      {
+        "op": "get",
+        "id": "array"
+      },
+      {
+        "op": "export",
+        "id": "array",
+        "dialog": "exports/array.json"
+      },
+      {
+        "op": "get",
+        "id": "empty"
+      },
+      {
+        "op": "export",
+        "id": "empty",
+        "dialog": "exports/empty.json"
+      },
+      {
+        "op": "get",
+        "id": "no-file"
+      },
+      {
+        "op": "export",
+        "id": "no-file",
+        "dialog": "exports/no-file.json"
+      },
+      {
+        "op": "delete",
+        "id": "none"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "import",
+        "dialog": []
+      },
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<parse error>\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<parse error>\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Stored file is malformed\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Stored file is malformed\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Stored file is malformed\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Stored file is malformed\"}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"aliases\",\"name\":\"Renamed in the index\",\"filename\":\"aliases_x.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},\"data\":{\"name\":\"Renamed in the index\",\"map\":{\"KC_A\":\"A\"},\"compositeLabels\":{\"KC_B\":\"B\"},\"keymapApplicable\":true}}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/aliases.json\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Stored file is malformed\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Stored file is malformed\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"cancelled\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"uploaderName\":\"pipette\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"up\",\"name\":\"Up\",\"filename\":\"../escape.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"none\",\"name\":\"None\",\"filename\":\"none_missing_none.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"deletedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"not-json\",\"name\":\"Not JSON\",\"filename\":\"not-json_x.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"bad-map\",\"name\":\"Bad map\",\"filename\":\"bad-map_x.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"bad-composite\",\"name\":\"Bad composite\",\"filename\":\"bad-composite_x.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"aliases\",\"name\":\"Renamed in the index\",\"filename\":\"aliases_x.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"array\",\"name\":\"Array\",\"filename\":\"array_x.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"empty\",\"name\":\"Empty\",\"filename\":\"\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"no-file\",\"name\":\"No file\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Export Key Label",
+          "defaultPath": "key-labels-Renamed_in_the_index.json",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/aliases.json": "{\n  \"name\": \"Renamed in the index\",\n  \"map\": {\n    \"KC_A\": \"A\"\n  },\n  \"composite_labels\": {\n    \"KC_B\": \"B\"\n  },\n  \"keymap_applicable\": true\n}",
+      "sync/": null,
+      "sync/escape.json": "{\"name\":\"Up\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/": null,
+      "sync/key-labels/aliases_x.json": "{\"name\":\"Last name\",\"map\":{\"KC_A\":\"A\"},\"extra\":1,\"composite_labels\":{\"KC_B\":\"B\"},\"keymap_applicable\":true,\"keymapApplicable\":null}",
+      "sync/key-labels/array_x.json": "[\"name\",\"map\"]",
+      "sync/key-labels/bad-composite_x.json": "{\"name\":\"Bad composite\",\"map\":{},\"composite_labels\":5}",
+      "sync/key-labels/bad-map_x.json": "{\"name\":\"Bad map\",\"map\":{\"KC_A\":[\"A\"]}}",
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"up\",\n      \"name\": \"Up\",\n      \"filename\": \"../escape.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"none\",\n      \"name\": \"None\",\n      \"filename\": \"none_missing_none.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"not-json\",\n      \"name\": \"Not JSON\",\n      \"filename\": \"not-json_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"bad-map\",\n      \"name\": \"Bad map\",\n      \"filename\": \"bad-map_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"bad-composite\",\n      \"name\": \"Bad composite\",\n      \"filename\": \"bad-composite_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"aliases\",\n      \"name\": \"Renamed in the index\",\n      \"filename\": \"aliases_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"array\",\n      \"name\": \"Array\",\n      \"filename\": \"array_x.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"empty\",\n      \"name\": \"Empty\",\n      \"filename\": \"\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"no-file\",\n      \"name\": \"No file\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/not-json_x.json": "nope"
+    }
+  },
+  {
+    "name": "an index that is not JSON",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "not json!!!"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "x"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "listAll"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Key label not found\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "an index that is null",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "null"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "an index that is an array",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "[{\"entries\":[]}]"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "an index without an entries list",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\"keep\":1,\"entries\":{\"0\":{\"id\":\"x\"}}}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "an index with a byte order mark",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "﻿{\"entries\":[]}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "dialogs": [
+      []
+    ],
+    "notified": [
+      "key-labels"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}"
+    }
+  },
+  {
+    "name": "invalid UTF-8 in the index",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": {
+        "hex": "7b22656e7472696573223a5b7b226964223a2278222c226e616d65223a2242616420ffe697222c2266696c656e616d65223a22785f782e6a736f6e222c2273617665644174223a22323032362d30312d30315430303a30303a30302e3030305a227d5d7d"
+      },
+      "sync/key-labels/x_x.json": "{\"name\":\"X\",\"map\":{\"KC_A\":\"A\"}}"
+    },
+    "steps": [
+      {
+        "op": "hasName",
+        "name": "bad ��"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "id": "x",
+        "name": "Good"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"qwerty\",\"name\":\"QWERTY\",\"uploaderName\":\"pipette\",\"filename\":\"qwerty_builtin.json\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"x\",\"name\":\"Bad ��\",\"filename\":\"x0078_x_x.json\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-01-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"x\",\"name\":\"Bad ��\",\"filename\":\"x0078_x_x.json\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-01-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-01-01T00:00:00.000Z\"},\"data\":{\"name\":\"Bad ��\",\"map\":{\"KC_A\":\"A\"}}}}",
+      "{\"success\":true,\"data\":{\"id\":\"x\",\"name\":\"Good\",\"filename\":\"x0078_x_x.json\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-01-01T00:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "dialogs": [
+      [],
+      [],
+      [],
+      []
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"uploaderName\": \"pipette\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"x\",\n      \"name\": \"Good\",\n      \"filename\": \"x0078_x_x.json\",\n      \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:00.000Z\",\n        \"body\": \"2026-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/qwerty_builtin.json": "{\n  \"name\": \"QWERTY\",\n  \"map\": {}\n}",
+      "sync/key-labels/x0078_x_x.json": "{\"name\":\"X\",\"map\":{\"KC_A\":\"A\"}}"
+    }
+  },
+  {
+    "name": "a save over the index keeps no other top-level field, a rename keeps them",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/key-labels/index.json": "{\n  \"version\": 9,\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\"\n    },\n    {\n      \"id\": \"a\",\n      \"name\": \"A\",\n      \"filename\": \"a_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/key-labels/a_a.json": "{\"name\":\"A\",\"map\":{\"KC_A\":\"A\"}}",
+      "in/b.json": "{\"name\":\"B\",\"map\":{\"KC_A\":\"A\"}}"
+    },
+    "steps": [
+      {
+        "op": "rename",
+        "id": "a",
+        "name": "A2"
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "in/b.json"
+        ]
+      },
+      {
+        "op": "rename",
+        "id": "a",
+        "name": "A3"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"id\":\"a\",\"name\":\"A2\",\"filename\":\"a_a.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"imported\":[{\"fileName\":\"b.json\",\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"B\",\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}],\"rejections\":[]}}",
+      "{\"success\":true,\"data\":{\"id\":\"a\",\"name\":\"A3\",\"filename\":\"a_a.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.001Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.001Z\"}}"
+    ],
+    "dialogs": [
+      [],
+      [
+        {
+          "title": "Import Key Label",
+          "filters": [
+            {
+              "name": "JSON",
+              "extensions": [
+                "json"
+              ]
+            },
+            {
+              "name": "All Files",
+              "extensions": [
+                "*"
+              ]
+            }
+          ],
+          "properties": [
+            "openFile",
+            "multiSelections"
+          ]
+        }
+      ],
+      []
+    ],
+    "notified": [
+      "key-labels",
+      "key-labels",
+      "key-labels"
+    ],
+    "after": {
+      "in/": null,
+      "in/b.json": "{\"name\":\"B\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/": null,
+      "sync/key-labels/": null,
+      "sync/key-labels/00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"B\",\n  \"map\": {\n    \"KC_A\": \"A\"\n  }\n}",
+      "sync/key-labels/a_a.json": "{\"name\":\"A\",\"map\":{\"KC_A\":\"A\"}}",
+      "sync/key-labels/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"qwerty\",\n      \"name\": \"QWERTY\",\n      \"filename\": \"qwerty_builtin.json\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"uploaderName\": \"pipette\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"a\",\n      \"name\": \"A3\",\n      \"filename\": \"a_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.001Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.001Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"B\",\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  }
+]
