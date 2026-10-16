@@ -41,6 +41,11 @@ const EXPECTED_FAKES = [
   'keyLabelHubSync',
   'keyLabelHubTimestamps',
   'keyLabelHubDelete',
+  'typingAnalyticsHasRemote',
+  'typingAnalyticsListRemoteCloudHashes',
+  'typingAnalyticsListRemoteCloudDays',
+  'typingAnalyticsFetchRemoteDay',
+  'syncAnalyticsNow',
   'typingRunLogList',
 ]
 

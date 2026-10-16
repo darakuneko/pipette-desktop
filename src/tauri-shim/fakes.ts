@@ -71,6 +71,18 @@ export const fakes = {
   keyLabelHubTimestamps: hubUnavailable,
   keyLabelHubDelete: hubUnavailable,
 
+  // Typing analytics on Drive, signed out: no remote data and no sync. The
+  // Data modal spreads the remote hash list into the cached ones
+  // (`useDataNavTree`); a stub's `undefined` would throw there, and the
+  // catch would empty the keyboard's list, local hashes included. The
+  // analytics sync of the Analyze pane reports a failure, so the pane tries
+  // again on its next mount.
+  typingAnalyticsHasRemote: () => Promise.resolve(false),
+  typingAnalyticsListRemoteCloudHashes: () => Promise.resolve([]),
+  typingAnalyticsListRemoteCloudDays: () => Promise.resolve([]),
+  typingAnalyticsFetchRemoteDay: () => Promise.resolve(false),
+  syncAnalyticsNow: () => Promise.resolve(false),
+
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
 } satisfies Partial<VialAPI>
