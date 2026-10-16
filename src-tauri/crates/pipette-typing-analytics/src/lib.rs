@@ -3,12 +3,14 @@
 //! above the SQLite layer (`pipette-typing-analytics-db`): who recorded
 //! the data ([`identity`]), the sync bookkeeping file ([`sync_state`]),
 //! when the cache is rebuilt ([`cache_rebuild`]), the database thread
-//! ([`db_actor`]), startup ([`service`]) and the lock the resets and
-//! deletes hold against the sync passes ([`reset_lock`]).
+//! ([`db_actor`]), startup ([`service`]), the lock the resets and
+//! deletes hold against the sync passes ([`reset_lock`]) and the per-day
+//! JSONL masters ([`jsonl`]).
 
 pub mod cache_rebuild;
 pub mod db_actor;
 pub mod identity;
+pub mod jsonl;
 pub mod reset_lock;
 pub mod service;
 pub mod sync_state;

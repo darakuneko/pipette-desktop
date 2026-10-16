@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-typing-analytics"
-description = "The typing analytics above the SQLite cache: the installation id and machine hash, the sync state file, the cache freshness check, the database thread, startup, and the reset lock"
+description = "The typing analytics above the SQLite cache: the installation id and machine hash, the sync state file, the cache freshness check, the database thread, startup, the reset lock and the JSONL masters"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
