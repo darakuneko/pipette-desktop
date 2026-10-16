@@ -1,0 +1,554 @@
+{
+  "uid": "kb",
+  "hash": "hash-r",
+  "ownHash": "hash-own",
+  "other": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+  "files": [
+    {
+      "name": "missing",
+      "file": "missing",
+      "read": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": false
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "a directory",
+      "file": "dir",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json/": null
+      }
+    },
+    {
+      "name": "valid",
+      "file": "{\"version\":1,\"entries\":[{\"id\":\"b\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":5},{\"id\":\"a\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100}]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 5\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 5\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 5\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 5\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": true
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 5\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "invalid entries",
+      "file": "{\"version\":1,\"entries\":[{\"id\":\"ok\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100},null,5,\"x\",[],{\"startMs\":0,\"endMs\":1,\"cutoffMs\":1},{\"id\":\"\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":1},{\"id\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":1},{\"id\":\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":1},{\"id\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":1},{\"id\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":1},{\"id\":\"eq\",\"startMs\":5,\"endMs\":5,\"cutoffMs\":1},{\"id\":\"rev\",\"startMs\":6,\"endMs\":5,\"cutoffMs\":1},{\"id\":\"neg\",\"startMs\":-1,\"endMs\":5,\"cutoffMs\":1},{\"id\":\"frac\",\"startMs\":0.5,\"endMs\":5,\"cutoffMs\":1},{\"id\":\"str\",\"startMs\":\"0\",\"endMs\":5,\"cutoffMs\":1},{\"id\":\"safe\",\"startMs\":0,\"endMs\":9007199254740991,\"cutoffMs\":9007199254740991},{\"id\":\"unsafe\",\"startMs\":0,\"endMs\":9007199254740992,\"cutoffMs\":1},{\"id\":\"negcut\",\"startMs\":0,\"endMs\":5,\"cutoffMs\":-1},{\"id\":7,\"startMs\":0,\"endMs\":5,\"cutoffMs\":1},{\"id\":\"extra\",\"startMs\":0,\"endMs\":5,\"cutoffMs\":2,\"note\":\"x\",\"id2\":1}]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"extra\",\n      \"startMs\": 0,\n      \"endMs\": 5,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"safe\",\n      \"startMs\": 0,\n      \"endMs\": 9007199254740991,\n      \"cutoffMs\": 9007199254740991\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"extra\",\n      \"startMs\": 0,\n      \"endMs\": 5,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"safe\",\n      \"startMs\": 0,\n      \"endMs\": 9007199254740991,\n      \"cutoffMs\": 9007199254740991\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"extra\",\n      \"startMs\": 0,\n      \"endMs\": 5,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"safe\",\n      \"startMs\": 0,\n      \"endMs\": 9007199254740991,\n      \"cutoffMs\": 9007199254740991\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"extra\",\n      \"startMs\": 0,\n      \"endMs\": 5,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"safe\",\n      \"startMs\": 0,\n      \"endMs\": 9007199254740991,\n      \"cutoffMs\": 9007199254740991\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": true
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"extra\",\n      \"startMs\": 0,\n      \"endMs\": 5,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"safe\",\n      \"startMs\": 0,\n      \"endMs\": 9007199254740991,\n      \"cutoffMs\": 9007199254740991\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "odd numbers",
+      "file": "{\"version\":1.0,\"entries\":[{\"id\":\"z\",\"startMs\":-0,\"endMs\":1e3,\"cutoffMs\":1E2},{\"id\":\"inf\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":1e400}]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"z\",\n      \"startMs\": 0,\n      \"endMs\": 1000,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"z\",\n      \"startMs\": 0,\n      \"endMs\": 1000,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"z\",\n      \"startMs\": 0,\n      \"endMs\": 1000,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"z\",\n      \"startMs\": 0,\n      \"endMs\": 1000,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": true
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"z\",\n      \"startMs\": 0,\n      \"endMs\": 1000,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "duplicate ids",
+      "file": "{\"version\":1,\"entries\":[{\"id\":\"a\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":9},{\"id\":\"b\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":1},{\"id\":\"a\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":2}]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 9\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 9\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 9\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 9\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": true
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"b\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 9\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "ids in UTF-16 order",
+      "file": "{\"version\":1,\"entries\":[{\"id\":\"～\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100},{\"id\":\"😀\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100},{\"id\":\"Z\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100},{\"id\":\"a\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100},{\"id\":\"\\ud800x\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100},{\"id\":\"é\",\"startMs\":0,\"endMs\":50,\"cutoffMs\":100}]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"Z\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"é\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"\\ud800x\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"😀\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"～\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"Z\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"é\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"\\ud800x\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"😀\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"～\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"Z\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"é\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"\\ud800x\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"😀\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"～\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"Z\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"é\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"\\ud800x\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"😀\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"～\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": true
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"Z\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"é\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"\\ud800x\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"😀\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    },\n    {\n      \"id\": \"～\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "equal cutoffs and a duplicate key",
+      "file": "{\"version\":1,\"entries\":[{\"id\":\"b\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":3}],\"entries\":[{\"id\":\"c\",\"startMs\":0,\"endMs\":1,\"cutoffMs\":3},{\"id\":\"a\",\"startMs\":2,\"endMs\":3,\"cutoffMs\":3}]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 2,\n      \"endMs\": 3,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 3\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 2,\n      \"endMs\": 3,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 3\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 2,\n      \"endMs\": 3,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 3\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 2,\n      \"endMs\": 3,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": false
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 2,\n      \"endMs\": 3,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 3\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "invalid UTF-8 in an id",
+      "file": {
+        "hex": "7b2276657273696f6e223a312c22656e7472696573223a5b7b226964223a2261ff222c2273746172744d73223a302c22656e644d73223a312c226375746f66664d73223a317d5d7d"
+      },
+      "read": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a�\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    }\n  ]\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a�\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    }\n  ]\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a�\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    }\n  ]\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"a�\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": true
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"a�\",\n      \"startMs\": 0,\n      \"endMs\": 1,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "no entries",
+      "file": "{\"version\":1,\"entries\":[]}",
+      "read": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "update": {
+        "entries": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}",
+        "localChanged": true,
+        "remoteNeedsUpdate": false
+      },
+      "unchangedError": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"startMs\": 0,\n      \"endMs\": 10,\n      \"cutoffMs\": 1\n    },\n    {\n      \"id\": \"c\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 2\n    },\n    {\n      \"id\": \"ok\",\n      \"startMs\": 0,\n      \"endMs\": 50,\n      \"cutoffMs\": 100\n    }\n  ]\n}"
+      }
+    },
+    {
+      "name": "version 2",
+      "file": "{\"version\":2,\"entries\":[]}",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\"version\":2,\"entries\":[]}"
+      }
+    },
+    {
+      "name": "version as text",
+      "file": "{\"version\":\"1\",\"entries\":[]}",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\"version\":\"1\",\"entries\":[]}"
+      }
+    },
+    {
+      "name": "entries not an array",
+      "file": "{\"version\":1,\"entries\":{}}",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\"version\":1,\"entries\":{}}"
+      }
+    },
+    {
+      "name": "no version",
+      "file": "{\"entries\":[]}",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{\"entries\":[]}"
+      }
+    },
+    {
+      "name": "an array",
+      "file": "[]",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "[]"
+      }
+    },
+    {
+      "name": "null",
+      "file": "null",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "null"
+      }
+    },
+    {
+      "name": "a byte order mark",
+      "file": "﻿{\"version\":1,\"entries\":[]}",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "﻿{\"version\":1,\"entries\":[]}"
+      }
+    },
+    {
+      "name": "not JSON",
+      "file": "{not json",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": "{not json"
+      }
+    },
+    {
+      "name": "empty",
+      "file": "",
+      "read": null,
+      "lenient": "{\n  \"version\": 1,\n  \"entries\": []\n}",
+      "bundle": null,
+      "update": null,
+      "unchangedError": true,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-r/": null,
+        "sync/keyboards/kb/devices/hash-r/deleted-ranges.json": ""
+      }
+    }
+  ],
+  "clips": [
+    {
+      "entries": [
+        {
+          "startMs": 0,
+          "endMs": 1776646800000,
+          "cutoffMs": 7
+        }
+      ],
+      "day": "2026-04-20",
+      "clipped": [
+        {
+          "startMs": 1776643200000,
+          "endMs": 1776646800000,
+          "cutoffMs": 7
+        }
+      ]
+    },
+    {
+      "entries": [
+        {
+          "startMs": 1776643199999,
+          "endMs": 1776643200000,
+          "cutoffMs": 1
+        },
+        {
+          "startMs": 1776729600000,
+          "endMs": 1776729600001,
+          "cutoffMs": 2
+        }
+      ],
+      "day": "2026-04-20",
+      "clipped": []
+    },
+    {
+      "entries": [
+        {
+          "startMs": 1776643200010,
+          "endMs": 1776643200020,
+          "cutoffMs": 3
+        },
+        {
+          "startMs": 0,
+          "endMs": 9000000000000000,
+          "cutoffMs": 4
+        }
+      ],
+      "day": "2026-04-20",
+      "clipped": [
+        {
+          "startMs": 1776643200010,
+          "endMs": 1776643200020,
+          "cutoffMs": 3
+        },
+        {
+          "startMs": 1776643200000,
+          "endMs": 1776729600000,
+          "cutoffMs": 4
+        }
+      ]
+    },
+    {
+      "entries": [],
+      "day": "2026-04-20",
+      "clipped": []
+    },
+    {
+      "entries": [
+        {
+          "startMs": 0,
+          "endMs": 1,
+          "cutoffMs": 1
+        }
+      ],
+      "day": "2026-02-30",
+      "clipped": null
+    }
+  ],
+  "applied": [
+    {
+      "name": "missing",
+      "file": "missing",
+      "id": "b",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"b\"]"
+      }
+    },
+    {
+      "name": "ids",
+      "file": "[\"c\",\"a\"]",
+      "id": "b",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"a\",\"b\",\"c\"]"
+      }
+    },
+    {
+      "name": "the id already there",
+      "file": "[\"b\"]",
+      "id": "b",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"b\"]"
+      }
+    },
+    {
+      "name": "other values",
+      "file": "[\"a\",\"a\",1,null,{\"id\":\"x\"},\"c\"]",
+      "id": "b",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"a\",\"b\",\"c\"]"
+      }
+    },
+    {
+      "name": "UTF-16 order",
+      "file": "[\"～\",\"😀\",\"Z\",\"a\",\"é\",\"\\ud800\"]",
+      "id": "\udc00",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"Z\",\"a\",\"é\",\"\\ud800\",\"😀\",\"\\udc00\",\"～\"]"
+      }
+    },
+    {
+      "name": "an object",
+      "file": "{\"0\":\"a\"}",
+      "id": "b",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"b\"]"
+      }
+    },
+    {
+      "name": "not JSON",
+      "file": "[not json",
+      "id": "b",
+      "error": false,
+      "after": {
+        "sync/": null,
+        "sync/keyboards/": null,
+        "sync/keyboards/kb/": null,
+        "sync/keyboards/kb/devices/": null,
+        "sync/keyboards/kb/devices/hash-own/": null,
+        "sync/keyboards/kb/devices/hash-own/deleted-ranges-applied.json": "[\"b\"]"
+      }
+    },
+    {
+      "name": "no device directory",
+      "file": "no-dir",
+      "id": "b",
+      "error": true,
+      "after": {}
+    }
+  ]
+}
