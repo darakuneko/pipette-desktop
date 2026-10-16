@@ -2,13 +2,14 @@
 // @vitest-environment jsdom
 // The run log members over the mocked Tauri IPC: a save crosses as the
 // JSON text of the log at the call, queued under the keyboard's uid behind
-// the keyboard's other store writes, and the list and the get read without
-// waiting.
+// the keyboard's other store writes and the app config sets made before it,
+// and the list and the get read without waiting.
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import { runLogsApi } from '../api/run-logs'
+import { appConfigApi } from '../api/app-config'
 import { snapshotsApi } from '../api/snapshots'
 
 afterEach(() => {
@@ -74,5 +75,31 @@ describe('runLogsApi', () => {
     expect(log).toContain('start typing_run_log_save')
     releases.splice(0).forEach((release) => release())
     await save
+  })
+
+  it('saves only after the app config sets made before it have finished', async () => {
+    let consent = true
+    const releases: (() => void)[] = []
+    const sent: string[] = []
+    mockIPC((cmd, payload) => {
+      sent.push(cmd)
+      if (cmd === 'app_config_set') {
+        return new Promise<void>((resolve) => {
+          releases.push(() => {
+            consent = JSON.parse((payload as { value: string }).value) as boolean
+            resolve()
+          })
+        })
+      }
+      return consent ? { success: true, entry: {} } : { success: false, error: 'consent' }
+    })
+    const set = appConfigApi.appConfigSet('typingRecordingConsentAccepted', false)
+    const save = runLogsApi.typingRunLogSave('0xA', runLog())
+    await settle()
+    expect(sent).toEqual(['app_config_set'])
+    releases.splice(0).forEach((release) => release())
+    await set
+    expect(await save).toEqual({ success: false, error: 'consent' })
+    expect(sent).toEqual(['app_config_set', 'typing_run_log_save'])
   })
 })

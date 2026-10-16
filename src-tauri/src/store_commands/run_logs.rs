@@ -8,12 +8,12 @@
 //! command fails only when its task cannot run or the log it is sent is not
 //! JSON text.
 
-use pipette_js_json::{Object, Value};
-use pipette_keyboard_stores::{RunLogError, StoreContext, field};
+use pipette_js_json::{Object, ParseError, Value};
+use pipette_keyboard_stores::{RunLogError, StoreContext, field, response_json};
 use tauri::State;
 use tauri::ipc::Response;
 
-use super::answer;
+use super::{answer, blocking};
 use crate::app_config::AppConfig;
 use crate::command_error::CommandError;
 
@@ -39,14 +39,17 @@ pub async fn typing_run_log_save(
     uid: String,
     log: Option<String>,
 ) -> Result<Response, CommandError> {
-    let log = log.as_deref().map(pipette_js_json::parse).transpose()?;
     let config = config.inner().clone();
-    answer(&stores, move |stores| -> Answer {
-        let entry =
-            pipette_keyboard_stores::save_run_log(stores, &uid, log.as_ref(), consent_accepted(&config))?;
-        Ok(field("entry", entry))
+    // The text is parsed on the blocking-task thread too; text that is not
+    // JSON fails the command rather than answering `success: false`.
+    let result = blocking(&stores, move |stores| -> Result<Answer, ParseError> {
+        let log = log.as_deref().map(pipette_js_json::parse).transpose()?;
+        let saved =
+            pipette_keyboard_stores::save_run_log(stores, &uid, log.as_ref(), consent_accepted(&config));
+        Ok(saved.map(|entry| field("entry", entry)))
     })
-    .await
+    .await?;
+    Ok(Response::new(response_json(result)))
 }
 
 #[tauri::command]
