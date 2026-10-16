@@ -4,7 +4,9 @@
 //! sync-format marker (`syncFormatMarker*`, src/main/sync/sync-format.ts).
 //! Memory only.
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::Mutex;
+
+use crate::lock;
 
 /// A password-check that opened, with the SHA-256 digest of the password
 /// that opened it (never the password itself). A listing whose chosen
@@ -34,10 +36,6 @@ pub struct SyncFormatMemory {
 pub struct CredentialMemory {
     validated: Mutex<Option<ValidatedPasswordCheck>>,
     sync_format: Mutex<SyncFormatMemory>,
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 impl CredentialMemory {

@@ -3,7 +3,9 @@
 //! `emitProgress` of src/main/sync/sync-runtime-state.ts), and the report
 //! (`SyncProgress` of src/shared/types/sync.ts).
 
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
+
+use crate::lock;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SyncDirection {
@@ -70,12 +72,12 @@ pub struct ProgressSink {
 
 impl ProgressSink {
     pub fn set(&self, callback: impl Fn(&SyncProgress) + Send + Sync + 'static) {
-        *self.callback.lock().unwrap_or_else(PoisonError::into_inner) = Some(Arc::new(callback));
+        *lock(&self.callback) = Some(Arc::new(callback));
     }
 
     pub fn emit(&self, progress: &SyncProgress) {
         // Called outside the lock, so the callback may set another one.
-        let callback = self.callback.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        let callback = lock(&self.callback).clone();
         if let Some(callback) = callback {
             callback(progress);
         }

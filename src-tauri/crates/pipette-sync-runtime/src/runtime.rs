@@ -22,12 +22,13 @@
 
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use tokio::sync::watch;
 use tokio::time::Instant;
 
+use crate::lock;
 use crate::memory::CredentialMemory;
 use crate::progress::ProgressSink;
 use crate::remote_state::RemoteMemory;
@@ -231,7 +232,7 @@ impl SyncRuntime {
     }
 
     fn lock(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(PoisonError::into_inner)
+        lock(&self.state)
     }
 
     /// `isSyncInProgress`: whether anything holds the sync lock.

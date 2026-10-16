@@ -9,7 +9,9 @@
 //! of created files are cleared when the account changes or signs out.
 
 use std::collections::HashMap;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::Mutex;
+
+use crate::lock;
 
 /// One revision of a Drive file: which file and when it was written. The
 /// id is part of it because Drive can list several files with one name:
@@ -29,10 +31,6 @@ pub struct RemoteMemory {
     /// created, so a pass whose listing was taken before that create
     /// updates the file instead of creating a second one with the name.
     created: Mutex<HashMap<String, String>>,
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 impl RemoteMemory {
