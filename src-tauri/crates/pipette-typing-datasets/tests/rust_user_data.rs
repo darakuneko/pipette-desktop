@@ -7,7 +7,8 @@
 //!   (`local/typing-test-dataset.json`), the downloaded word lists (one
 //!   moved from the legacy flat directory) and the imported work in the
 //!   typing test texts;
-//! - `replies.json`: the Hub's answers the requests got, by URL;
+//! - `replies.json`: the Hub's answers by URL, with a newer tatoeba
+//!   version than its override so that one update check finds an update;
 //! - `answers.json`: what the store answers on that tree, as the app's
 //!   commands answer it (JSON text).
 //!
@@ -139,14 +140,14 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     replies.insert(format!("{BASE}/tatoeba/japanese.json"), kana.into_bytes());
     replies.insert(format!("{CARDS}/{WORK}"), zip);
 
-    let http = {
+    let http = |replies: &BTreeMap<String, Vec<u8>>| {
         let replies = replies.clone();
         Http::new(move |url: &str| match replies.get(url) {
             Some(body) => Ok(HttpResponse { status: 200, body: body.clone() }),
             None => Err(HttpError::Network(format!("no reply recorded for {url}"))),
         })
     };
-    let store = LanguageStore::new(&user_data, http.clone(), || HUB.to_owned());
+    let store = LanguageStore::new(&user_data, http(&replies), || HUB.to_owned());
     let ctx = StoreContext::new(
         &user_data,
         Arc::new(SystemClock),
@@ -172,8 +173,15 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     let legacy_path = user_data.join("local/downloads/languages/dutch.json");
     write(&legacy_path, legacy.as_bytes());
 
+    // The Hub has moved on to a newer tatoeba version since the update,
+    // so only that provider has an update available.
+    replies.insert(
+        format!("{HUB}/api/typing-test/datasets/tatoeba/version"),
+        envelope(r#"{"provider":"tatoeba","version":"t-3"}"#),
+    );
+
     // What the store answers on the finished tree, from a new process.
-    let store = LanguageStore::new(&user_data, http, || HUB.to_owned());
+    let store = LanguageStore::new(&user_data, http(&replies), || HUB.to_owned());
     let mut answers = Object::new();
     block_on(async {
         store.migrated().await;
@@ -181,7 +189,7 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
         let mut checks = Object::new();
         for (provider, _) in &datasets {
             let check = store.check(Some(provider)).await.unwrap();
-            assert!(!check.update_available);
+            assert_eq!(check.update_available, *provider == "tatoeba", "{provider}");
             checks.insert(*provider, check.update_available.into());
         }
         answers.insert("checks", Value::Object(checks));

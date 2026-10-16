@@ -12,8 +12,8 @@
 //
 // - LANG_LIST of every provider, LANG_GET of the downloaded lists and of a
 //   bundled one;
-// - TYPING_DATASET_CHECK of every provider (the overrides' versions are
-//   the Hub's);
+// - TYPING_DATASET_CHECK of every provider (the Hub has a newer tatoeba
+//   version than its override; the others are the Hub's);
 // - TYPING_TEST_TEXT_LIST / TYPING_TEST_TEXT_GET of the imported work.
 //
 // Run: pnpm run verify:typing-dataset-rust-user-data
@@ -28,7 +28,7 @@ import { readTree } from '../rust-user-data-tree'
 const { handlers, notified, state } = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
   notified: [] as string[],
-  state: { userData: '', replies: {} as Record<string, string>, urls: [] as string[] },
+  state: { userData: '', replies: {} as Record<string, string>, urls: [] as string[], misses: [] as string[] },
 }))
 
 vi.mock('electron', () => ({
@@ -37,7 +37,12 @@ vi.mock('electron', () => ({
     fetch: async (url: string) => {
       state.urls.push(url)
       const hex = state.replies[url]
-      if (hex === undefined) throw new Error(`no reply recorded for ${url}`)
+      if (hex === undefined) {
+        // The handlers turn a failed fetch into "no update", which the
+        // recorded answers could match; the test fails on any miss instead.
+        state.misses.push(url)
+        throw new Error(`no reply recorded for ${url}`)
+      }
       return new Response(Buffer.from(hex, 'hex'), { status: 200 })
     },
   },
@@ -109,11 +114,17 @@ describe('the userData tree the Rust language store writes', () => {
     }
   })
 
-  it('finds no update of a dataset the crate stored the Hub’s version of', async () => {
+  it('finds the same updates as the crate from the Hub’s recorded versions', async () => {
+    expect(answers.checks).toEqual({ monkeytype: false, tatoeba: true, aozora: false })
     for (const [provider, updateAvailable] of Object.entries(answers.checks)) {
       expect(await handler(IpcChannels.TYPING_DATASET_CHECK)({}, provider)).toEqual({ provider, updateAvailable })
     }
-    expect(state.urls).toHaveLength(Object.keys(answers.checks).length)
+    expect(state.misses).toEqual([])
+    expect([...state.urls].sort()).toEqual(
+      Object.keys(answers.checks)
+        .map((provider) => `https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/${provider}/version`)
+        .sort(),
+    )
   })
 
   it('lists and reads the imported Aozora Bunko work as the crate does', async () => {
