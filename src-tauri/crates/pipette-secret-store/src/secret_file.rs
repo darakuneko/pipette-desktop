@@ -151,12 +151,19 @@ pub struct SecretStore {
 
 impl SecretStore {
     /// The secrets of `user_data`, under its master key in `keystore`.
+    /// Creates `user_data` when it is missing ([`key_account`]).
     pub fn new(user_data: &Path, keystore: Arc<dyn Keystore>) -> Self {
         Self::with_timeout(user_data, keystore, KEYSTORE_TIMEOUT)
     }
 
     /// [`SecretStore::new`] with another time limit for the key store calls.
     pub fn with_timeout(user_data: &Path, keystore: Arc<dyn Keystore>, timeout: Duration) -> Self {
+        // The account name of the key resolves the directory's path, which
+        // needs the directory: made here, the name is the same before and
+        // after anything else creates it.
+        if let Err(err) = std::fs::create_dir_all(user_data) {
+            log::warn!("[secret-store] the userData directory could not be created: {err}");
+        }
         Self {
             auth_dir: user_data.join("local").join("auth"),
             key: MasterKey::with_timeout(keystore, key_account(user_data), timeout),

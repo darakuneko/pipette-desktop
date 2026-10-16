@@ -3107,6 +3107,7 @@ version = "0.0.0"
 dependencies = [
  "aes",
  "aes-gcm",
+ "dunce",
  "getrandom 0.3.4",
  "hex",
  "keyring",

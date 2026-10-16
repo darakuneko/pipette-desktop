@@ -23,6 +23,9 @@ test-util = []
 # key schedule) is zeroed when the cipher is dropped, as the key itself is.
 aes-gcm = { version = "=0.10.3", default-features = false, features = ["aes", "alloc", "zeroize"] }
 aes = { version = "=0.8.4", default-features = false, features = ["zeroize"] }
+# The resolved userData path of the key's account name, without the \\?\
+# prefix of a resolved Windows path.
+dunce = "=1.0.5"
 # The nonce of each write and the master key, from the OS.
 getrandom = "=0.3.4"
 hex = "=0.4.3"

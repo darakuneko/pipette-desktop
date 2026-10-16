@@ -18,7 +18,7 @@
 //! late result. The quit sequence never waits for such a thread.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
 use std::time::Duration;
@@ -38,11 +38,25 @@ pub const KEYSTORE_TIMEOUT: Duration = Duration::from_secs(60);
 pub type Key = Zeroizing<[u8; KEY_LEN]>;
 
 /// `local-auth-key/` and the first 16 hex digits of the SHA-256 of the
-/// userData directory's path, resolved (`canonicalize`) when it exists.
+/// userData directory's path ([`resolved_user_data`]).
+///
+/// The account name follows the path, so the secrets of a userData
+/// directory that was moved or copied elsewhere no longer open there: the
+/// sign-in and the sync password have to be entered again.
 pub fn key_account(user_data: &Path) -> String {
-    let resolved = std::fs::canonicalize(user_data).unwrap_or_else(|_| user_data.to_path_buf());
+    let resolved = resolved_user_data(user_data);
     let digest = Sha256::digest(resolved.to_string_lossy().as_bytes());
     format!("local-auth-key/{}", &hex::encode(digest)[..16])
+}
+
+/// `user_data` resolved (symbolic links, `..`, macOS's `/var` that is
+/// `/private/var`) when it exists, without the `\\?\` prefix Windows
+/// gives a resolved path when the path works without it; else `user_data`
+/// as it is. The caller creates the directory first
+/// ([`crate::SecretStore::new`] does), so the name does not change once the
+/// directory comes to exist.
+fn resolved_user_data(user_data: &Path) -> PathBuf {
+    dunce::canonicalize(user_data).unwrap_or_else(|_| user_data.to_path_buf())
 }
 
 /// The lock of the key store entry of `account`, shared by every
@@ -219,8 +233,6 @@ fn new_key() -> Result<Key, KeystoreError> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::*;
     use crate::keystore::MemoryKeystore;
 
@@ -246,6 +258,16 @@ mod tests {
         let missing = PathBuf::from("/nonexistent/pipette-user-data");
         let digest = hex::encode(Sha256::digest(missing.to_string_lossy().as_bytes()));
         assert_eq!(key_account(&missing), format!("local-auth-key/{}", &digest[..16]));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_to_the_user_data_directory_has_its_account() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        std::os::unix::fs::symlink(&real, dir.path().join("link")).unwrap();
+        assert_eq!(key_account(&dir.path().join("link")), key_account(&real));
     }
 
     #[tokio::test]
