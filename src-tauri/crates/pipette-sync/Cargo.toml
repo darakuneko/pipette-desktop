@@ -14,12 +14,15 @@ pipette-drive = { path = "../pipette-drive" }
 # The entry merge, the body filename rules and the store write locks.
 pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-fs = { path = "../pipette-fs" }
+# The sign-in whose token switch keeps the pending units with their account.
+pipette-google-auth = { path = "../pipette-google-auth" }
 pipette-js-json = { path = "../pipette-js-json" }
 # The stores whose units the bundles read and the merges write.
 pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
 pipette-pack-stores = { path = "../pipette-pack-stores" }
 # The Drive file name of a unit, whose remembered revision a roster merge forgets.
 pipette-sync-format = { path = "../pipette-sync-format" }
+pipette-sync-pending = { path = "../pipette-sync-pending" }
 pipette-sync-runtime = { path = "../pipette-sync-runtime" }
 pipette-time = { path = "../pipette-time" }
 # The day files and deleted-ranges files of the typing analytics.
@@ -31,16 +34,22 @@ indexmap = "=2.14.2"
 log = "=0.4.34"
 thiserror = "=2.0.21"
 # The analytics merges wait for the database thread and the flush chain,
-# and the `sync:` locks are held across awaits.
-tokio = { version = "=1.53.3", features = ["rt", "sync"] }
+# the `sync:` locks are held across awaits, and a switch of accounts waits
+# for running sync work.
+tokio = { version = "=1.53.3", features = ["rt", "sync", "time"] }
 
 [dev-dependencies]
+# The id_token of the sign-in through GoogleAuth.
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
+pipette-net = { path = "../pipette-net" }
+pipette-secret-store = { path = "../pipette-secret-store", features = ["test-util"] }
+serde_json = { workspace = true }
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
 pipette-drive = { path = "../pipette-drive", features = ["test-util"] }
 # Reads the cache tables the analytics merges wrote.
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 tempfile = { workspace = true }
-tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time"] }
+tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time", "test-util"] }
 
 [lints]
 workspace = true
