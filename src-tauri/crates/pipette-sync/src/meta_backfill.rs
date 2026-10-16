@@ -13,8 +13,8 @@ use pipette_drive::canonical::Listing;
 use pipette_drive::client::DriveClient;
 use pipette_js_json::{JsString, Value};
 use pipette_keyboard_stores::{
-    KEYBOARD_META_SYNC_UNIT, StoreContext, StoreError, batch_upsert_keyboard_meta, keyboard_meta_uids,
-    keyboard_uids_of_drive_names, resolve_device_name_from_local_snapshots, snapshot_index_device_name,
+    KEYBOARD_META_SYNC_UNIT, StoreContext, StoreError, keyboard_meta_uids, keyboard_uids_of_drive_names,
+    name_unnamed_keyboards, resolve_device_name_from_local_snapshots, snapshot_index_device_name,
 };
 use pipette_sync_format::Envelope;
 use pipette_sync_format::drive_names::drive_file_name;
@@ -81,7 +81,9 @@ async fn resolve(
 
 /// Names the keyboards Drive's `listing` has snapshots of and the names
 /// index lacks, at most [`BACKFILL_CONCURRENCY`] at a time, and records the
-/// names in one write. Reports `sync:unit-applied` for the names unit when
+/// names in one write. A keyboard that gains an entry while its name is
+/// looked up (a delete leaves a tombstone) keeps that entry; the TypeScript
+/// backfill writes the name over it. Reports `sync:unit-applied` for the names unit when
 /// any name was recorded; the caller marks the unit pending for upload.
 /// Fails only when the names index cannot be read or written.
 pub async fn backfill_keyboard_meta(
@@ -132,7 +134,7 @@ pub async fn backfill_keyboard_meta(
         }
     }
     let write_ctx = ctx.clone();
-    let resolved = tokio::task::spawn_blocking(move || batch_upsert_keyboard_meta(&write_ctx, &found))
+    let resolved = tokio::task::spawn_blocking(move || name_unnamed_keyboards(&write_ctx, &found))
         .await
         .map_err(|err| StoreError::Io(std::io::Error::other(err)))??;
     if resolved > 0 {

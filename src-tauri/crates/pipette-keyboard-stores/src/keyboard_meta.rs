@@ -175,6 +175,8 @@ enum Rule {
     SameName,
     /// Any active entry.
     AnyActive,
+    /// Any entry, active or deleted.
+    AnyEntry,
 }
 
 /// `device_name` trimmed of JavaScript whitespace.
@@ -188,9 +190,9 @@ fn usable_name(uid: &str, device_name: &JsString) -> Option<JsString> {
     (!uid.is_empty() && !name.is_empty()).then_some(name)
 }
 
-/// Gives `uid` the name `name` in `entries` under `rule`: a new entry, a
-/// new name for an entry, or a tombstone revived with it. Answers whether
-/// the entries changed.
+/// Gives `uid` the name `name` in `entries` under `rule`: a new entry, or,
+/// unless `rule` leaves the entry, a new name for it or a tombstone revived
+/// with it. Answers whether the entries changed.
 fn set_name(
     entries: &mut Vec<Value>,
     uid: &str,
@@ -201,14 +203,14 @@ fn set_name(
     match find_entry(entries, uid)? {
         Some(at) => {
             let Value::Object(entry) = &mut entries[at] else { unreachable!("found by its uid field") };
-            if !is_truthy(entry.get("deletedAt")) {
-                let unchanged = match rule {
-                    Rule::SameName => entry.get("deviceName") == Some(&name),
-                    Rule::AnyActive => true,
-                };
-                if unchanged {
-                    return Ok(false);
-                }
+            let active = !is_truthy(entry.get("deletedAt"));
+            let unchanged = match rule {
+                Rule::SameName => active && entry.get("deviceName") == Some(&name),
+                Rule::AnyActive => active,
+                Rule::AnyEntry => true,
+            };
+            if unchanged {
+                return Ok(false);
             }
             entry.insert("deviceName", name);
             entry.insert("updatedAt", now.into());
@@ -259,14 +261,14 @@ fn write_name(
     Ok(if changed { MetaOutcome::Upserted } else { MetaOutcome::Unchanged })
 }
 
-/// Records each `(uid, device_name)` as [`upsert_keyboard_meta`] does, in
-/// one write (`batchUpsertKeyboardMeta`); pairs with an empty uid or name
-/// are skipped. Answers how many entries changed; nothing is written when
-/// none did.
-pub fn batch_upsert_keyboard_meta(
-    ctx: &StoreContext,
-    names: &[(String, JsString)],
-) -> Result<usize, StoreError> {
+/// Records each `(uid, device_name)` (trimmed) for a uid the index has no
+/// entry for, in one write (`batchUpsertKeyboardMeta` as the backfill uses
+/// it); pairs with an empty uid or name are skipped. A uid that has gained
+/// an entry by the time of the write (a name, or a tombstone of a delete
+/// made while the names were being looked up) keeps it, so the backfill
+/// never revives a deleted name. Answers how many entries were added;
+/// nothing is written when none were.
+pub fn name_unnamed_keyboards(ctx: &StoreContext, names: &[(String, JsString)]) -> Result<usize, StoreError> {
     if names.is_empty() {
         return Ok(0);
     }
@@ -276,7 +278,7 @@ pub fn batch_upsert_keyboard_meta(
             let mut count = 0;
             for (uid, device_name) in names {
                 let Some(name) = usable_name(uid, device_name) else { continue };
-                if set_name(entries, uid, Value::String(name), now, Rule::SameName)? {
+                if set_name(entries, uid, Value::String(name), now, Rule::AnyEntry)? {
                     count += 1;
                 }
             }

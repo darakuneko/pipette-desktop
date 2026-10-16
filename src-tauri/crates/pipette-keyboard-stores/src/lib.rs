@@ -78,8 +78,8 @@ pub use key_labels::{
 };
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, TombstoneOutcome, active_keyboard_names,
-    batch_upsert_keyboard_meta, extract_device_name_from_filename, keyboard_meta_name_if_missing,
-    name_keyboard_on_connect, tombstone_all_keyboard_meta, tombstone_keyboard_meta, upsert_keyboard_meta,
+    extract_device_name_from_filename, keyboard_meta_name_if_missing, name_keyboard_on_connect,
+    name_unnamed_keyboards, tombstone_all_keyboard_meta, tombstone_keyboard_meta, upsert_keyboard_meta,
 };
 pub use keyboard_meta_backfill::{
     keyboard_meta_uids, keyboard_uids_of_drive_names, resolve_device_name_from_local_snapshots,

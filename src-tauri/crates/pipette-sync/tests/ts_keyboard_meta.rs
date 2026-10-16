@@ -46,12 +46,16 @@ fn items(value: &Value) -> &[Value] {
     }
 }
 
+type DownloadHook = Box<dyn Fn(&str) + Send + Sync>;
+
 /// A Drive that only downloads: each file's envelope by id, a 404 for any
-/// other id. It logs the ids asked for.
+/// other id. It logs the ids asked for and runs `on_download` with each id
+/// before answering.
 #[derive(Default)]
 struct DownloadOnly {
     files: HashMap<String, Vec<u8>>,
     downloads: Mutex<Vec<String>>,
+    on_download: Option<DownloadHook>,
 }
 
 impl DriveApi for DownloadOnly {
@@ -61,6 +65,9 @@ impl DriveApi for DownloadOnly {
 
     fn download(&self, id: String) -> DriveFuture<'_, Vec<u8>> {
         self.downloads.lock().unwrap().push(id.clone());
+        if let Some(hook) = &self.on_download {
+            hook(&id);
+        }
         let found = self.files.get(&id).cloned();
         Box::pin(async move {
             found.ok_or(DriveError::Status { status: 404, body: "not found".into(), retry_after: None })
@@ -205,4 +212,68 @@ async fn tombstones_and_backfills_as_the_typescript_code_does() {
             assert_eq!(read_tree(root.path()), tree_of(get(step, "tree")), "{label}: tree");
         }
     }
+}
+
+/// A keyboard deleted while the backfill looks its name up on Drive keeps
+/// its tombstone; the others are still named.
+#[tokio::test]
+async fn a_keyboard_deleted_during_the_backfill_stays_deleted() {
+    let root = tempfile::tempdir().unwrap();
+    let ctx = StoreContext::new(
+        root.path(),
+        Arc::new(FixedClock::new(1_790_000_000_000)),
+        Arc::new(WriteLocks::new()),
+        Arc::new(|_: &str| {}),
+    );
+    let key = key_for(PASSWORD, &SALT);
+    let bundle = |name: &str| {
+        format!(
+            r#"{{"type":"layout","key":"x","index":{{"entries":[{{"id":"s","label":"","filename":"{name}_2026-01-01.pipette","savedAt":"2026-10-01T00:00:00.000Z"}}]}},"files":{{}}}}"#
+        )
+    };
+    let tombstone_ctx = ctx.clone();
+    let drive = DownloadOnly {
+        files: [
+            ("gone".to_owned(), seal(&bundle("Gone"), &key, 0)),
+            ("kept".to_owned(), seal(&bundle("Kept"), &key, 1)),
+        ]
+        .into_iter()
+        .collect(),
+        on_download: Some(Box::new(move |id| {
+            if id == "gone" {
+                assert_eq!(
+                    tombstone_keyboard_meta(&tombstone_ctx, "0xGone").unwrap(),
+                    TombstoneOutcome::Tombstoned
+                );
+            }
+        })),
+        ..DownloadOnly::default()
+    };
+    let listed = [("gone", "0xGone"), ("kept", "0xKept")]
+        .map(|(id, uid)| DriveFile {
+            id: id.to_owned(),
+            name: format!("keyboards_{uid}_snapshots.enc"),
+            modified_time: "2026-10-01T00:00:00.000Z".to_owned(),
+            created_time: None,
+        })
+        .to_vec();
+    let client = DriveClient::new(Arc::new(drive), Arc::new(NoWaits));
+    let events = Events::default();
+
+    let result =
+        backfill_keyboard_meta(&ctx, &client, PASSWORD, &Listing::new(listed), &events).await.unwrap();
+
+    assert_eq!(result, BackfillResult { resolved: 1, failed: Vec::new() });
+    assert_eq!(events.0.into_inner().unwrap().len(), 1);
+    let names =
+        parse(&std::fs::read_to_string(root.path().join("sync/meta/keyboard-names.json")).unwrap()).unwrap();
+    let entry = |uid: &str| {
+        items(get(&names, "entries")).iter().find(|e| text(get(e, "uid")) == uid).cloned().unwrap()
+    };
+    let gone = entry("0xGone");
+    assert_eq!(text(get(&gone, "deviceName")), "");
+    assert!(opt(&gone, "deletedAt").is_some(), "{}", stringify(&gone));
+    let kept = entry("0xKept");
+    assert_eq!(text(get(&kept, "deviceName")), "Kept");
+    assert!(opt(&kept, "deletedAt").is_none());
 }
