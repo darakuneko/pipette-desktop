@@ -152,13 +152,17 @@ export async function quitApp(timeoutMs: number): Promise<void> {
 export const E2E_HUB_URL = 'http://127.0.0.1:9'
 
 /** The environment the app of a session runs with: the virtual keyboard
- *  only, the session's userData directory, and a Hub that is not there. */
+ *  only, the session's userData directory, a Hub that is not there, and
+ *  the sync's master key in a file of that directory
+ *  (`PIPETTE_DEV_KEYSTORE=file`, read by the development tools' build), so
+ *  a session never reaches the OS key store of the developer's desktop. */
 function appEnv(userDataDir: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
     PIPETTE_VIRTUAL_DEVICE: 'only',
     PIPETTE_USER_DATA_DIR: userDataDir,
     PIPETTE_HUB_URL: E2E_HUB_URL,
+    PIPETTE_DEV_KEYSTORE: 'file',
   }
 }
 
