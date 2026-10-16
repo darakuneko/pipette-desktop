@@ -103,6 +103,19 @@ struct State {
     pending: Mutex<Option<PendingImport>>,
 }
 
+impl State {
+    /// Holds `import` for the confirmation, replacing any held one; `None`
+    /// drops it.
+    fn set_pending(&self, import: Option<PendingImport>) {
+        *self.pending.lock().unwrap_or_else(PoisonError::into_inner) = import;
+    }
+
+    /// The held import, which is no longer held.
+    fn take_pending(&self) -> Option<PendingImport> {
+        self.pending.lock().unwrap_or_else(PoisonError::into_inner).take()
+    }
+}
+
 /// The store's in-process state; the files live under the context's
 /// userData directory. Cheap to clone; the clones share the state. One per
 /// process, as the Electron build's module state is.

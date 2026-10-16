@@ -6,7 +6,6 @@
 
 use std::fs;
 use std::path::Path;
-use std::sync::PoisonError;
 
 use pipette_entry_store::{Entry, js_trim};
 use pipette_js_json::{JsString, Value};
@@ -69,18 +68,16 @@ impl TypingTextStore {
 
         let entries = read_index(&INDEX, &store_dir(ctx))?.entries;
         let existing = find_active_by_name(&entries, &Value::String(name.clone()), None)?;
-        let mut pending = self.state.pending.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(existing) = existing {
             let message = name.to_string_lossy().into_owned();
-            *pending = Some(PendingImport {
+            self.state.set_pending(Some(PendingImport {
                 name,
                 text: text.into(),
                 existing_id: existing.id().cloned().unwrap_or_else(|| JsString::from("")),
-            });
+            }));
             return Err(TypingTextError::refused(TypingTextErrorCode::DuplicateName, &message));
         }
-        *pending = None;
-        drop(pending);
+        self.state.set_pending(None);
         self.save(
             ctx,
             &TypingTextSave { id: None, name, text: text.into(), source: None, keep_current_name: false },
@@ -91,8 +88,7 @@ impl TypingTextStore {
     /// collided with, keeping that text's current name
     /// (`TYPING_TEST_TEXT_IMPORT_CONFIRM`).
     pub fn confirm_import(&self, ctx: &StoreContext) -> Result<Entry, TypingTextError> {
-        let held = self.state.pending.lock().unwrap_or_else(PoisonError::into_inner).take();
-        let held = held.ok_or_else(|| {
+        let held = self.state.take_pending().ok_or_else(|| {
             TypingTextError::refused(TypingTextErrorCode::NotFound, "No pending import to confirm")
         })?;
         self.save(
