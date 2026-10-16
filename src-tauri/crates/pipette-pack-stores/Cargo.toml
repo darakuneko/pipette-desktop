@@ -17,6 +17,9 @@ pipette-js-json = { path = "../pipette-js-json" }
 # every store of the app shares.
 pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
 pipette-time = { path = "../pipette-time" }
+# The warnings of the sync merge and the GC (src/sync/).
+log = "=0.4.34"
+thiserror = "=2.0.21"
 
 [dev-dependencies]
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }

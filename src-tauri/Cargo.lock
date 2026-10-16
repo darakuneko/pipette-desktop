@@ -2922,6 +2922,7 @@ dependencies = [
 name = "pipette-pack-stores"
 version = "0.0.0"
 dependencies = [
+ "log",
  "pipette-entry-store",
  "pipette-fs",
  "pipette-js-json",
@@ -2929,6 +2930,7 @@ dependencies = [
  "pipette-sync-pending",
  "pipette-time",
  "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2942,6 +2944,20 @@ version = "0.0.0"
 [[package]]
 name = "pipette-sync"
 version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-keyboard-stores",
+ "pipette-pack-stores",
+ "pipette-sync-format",
+ "pipette-sync-runtime",
+ "pipette-time",
+ "pipette-typing-analytics",
+ "tempfile",
+ "thiserror 2.0.21",
+]
 
 [[package]]
 name = "pipette-sync-format"
