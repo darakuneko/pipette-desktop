@@ -10,7 +10,8 @@
         { "op": "listPages", "pageSize": 2, "expect": { "pageSizes": [2, 1], "names": ["favorites_combo.enc", "favorites_macro.enc", "sync-format-v2.json"] } },
         { "op": "listPages", "nameContains": "favorites_", "expect": { "pageSizes": [2], "names": ["favorites_combo.enc", "favorites_macro.enc"] } },
         { "op": "listPages", "nameContains": "sync-format-v", "expect": { "pageSizes": [1], "names": ["sync-format-v2.json"] } },
-        { "op": "listPages", "nameContains": "absent", "expect": { "pageSizes": [0], "names": [] } }
+        { "op": "listPages", "nameContains": "absent", "expect": { "pageSizes": [0], "names": [] } },
+        { "op": "listPages", "nameContains": "avorites_", "expect": { "pageSizes": [0], "names": [] } }
       ]
     },
     {

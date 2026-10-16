@@ -3,9 +3,12 @@
 // into its answers. It behaves as the in-memory Drive of
 // src-tauri/crates/pipette-drive (src/fake.rs) does; both pass the cases of
 // conformance-cases.json:
-//   - files are listed in the order they were created; `name contains` is
-//     a substring match; a page holds up to `pageSize` files (1 to 1000,
-//     100 when the request has none);
+//   - files are listed in the order they were created; `name contains`
+//     matches names that start with the text. Real Drive matches a prefix
+//     of the name or of a word in it, never the middle of a word; every
+//     caller sends a prefix of the name, so the fakes keep to that. A page
+//     holds up to `pageSize` files (1 to 1000, 100 when the request has
+//     none);
 //   - ids are `fake-1`, `fake-2`, …;
 //   - every write (create, update, rename) moves the clock one second on
 //     from 2026-01-01T00:00:00.000Z and stamps the file with it. A rename
@@ -148,7 +151,7 @@ export class DriveState {
       start = Number(match[1])
     }
     const filter = query.nameContains
-    const matching = this.files.filter((file) => filter === null || file.name.includes(filter))
+    const matching = this.files.filter((file) => filter === null || file.name.startsWith(filter))
     const next = start + size
     return { files: matching.slice(start, next), nextPageToken: next < matching.length ? `page-${next}` : null }
   }

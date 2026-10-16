@@ -3,8 +3,9 @@
 //! fake Drive (scripts/fake-drive/server.ts) does; both pass the
 //! conformance cases of scripts/fake-drive/conformance-cases.json:
 //!
-//! - files are listed in the order they were created; `name_contains` is a
-//!   substring match; a page holds up to `page_size` files (1 to 1000);
+//! - files are listed in the order they were created; `name_contains`
+//!   matches names that start with the text (see [`ListQuery::name_contains`]);
+//!   a page holds up to `page_size` files (1 to 1000);
 //! - ids are `fake-1`, `fake-2`, …;
 //! - every write (create, update, rename) moves the clock one second on
 //!   from 2026-01-01T00:00:00.000Z and stamps the file with it, so each
@@ -154,7 +155,7 @@ impl State {
             .files
             .iter()
             .filter(|stored| {
-                query.name_contains.as_ref().is_none_or(|part| stored.file.name.contains(part.as_str()))
+                query.name_contains.as_ref().is_none_or(|part| stored.file.name.starts_with(part.as_str()))
             })
             .collect();
         let files = matching.iter().skip(start).take(size).map(|stored| stored.file.clone()).collect();

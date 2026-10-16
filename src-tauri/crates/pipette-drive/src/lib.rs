@@ -31,7 +31,9 @@ pub struct DriveFile {
 /// One listing request (`listFiles` asks for every page in turn).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ListQuery {
-    /// The `name contains '…'` filter, a substring match on the name.
+    /// The `name contains '…'` filter. Drive matches a prefix of the name
+    /// or of a word in it, never the middle of a word, so callers send a
+    /// prefix of the name.
     pub name_contains: Option<String>,
     pub page_token: Option<String>,
     pub page_size: u32,
