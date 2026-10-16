@@ -20,6 +20,8 @@ pipette-js-json = { path = "../pipette-js-json" }
 # The stores whose units the bundles read and the merges write.
 pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
 pipette-pack-stores = { path = "../pipette-pack-stores" }
+# The stored sync password the password-check is opened with.
+pipette-secret-store = { path = "../pipette-secret-store" }
 # The Drive file name of a unit, whose remembered revision a roster merge forgets.
 pipette-sync-format = { path = "../pipette-sync-format" }
 pipette-sync-pending = { path = "../pipette-sync-pending" }
@@ -32,18 +34,22 @@ pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
 # The JavaScript Map order of the own-hash days on Drive.
 indexmap = "=2.14.2"
 log = "=0.4.34"
+serde = { workspace = true }
+serde_json = { workspace = true }
+# The digest of the password a validated password-check opened with.
+sha2 = { version = "=0.10.9", default-features = false }
 thiserror = "=2.0.21"
 # The analytics merges wait for the database thread and the flush chain,
 # the `sync:` locks are held across awaits, and a switch of accounts waits
-# for running sync work.
-tokio = { version = "=1.53.3", features = ["rt", "sync", "time"] }
+# for running sync work; "macros": the two listings of the guard run at once.
+tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time"] }
+zeroize = "=1.9.0"
 
 [dev-dependencies]
 # The id_token of the sign-in through GoogleAuth.
 base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
 pipette-net = { path = "../pipette-net" }
 pipette-secret-store = { path = "../pipette-secret-store", features = ["test-util"] }
-serde_json = { workspace = true }
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
 pipette-drive = { path = "../pipette-drive", features = ["test-util"] }
 # Reads the cache tables the analytics merges wrote.

@@ -10,6 +10,10 @@ use tauri::{AppHandle, Emitter, Runtime};
 /// `IpcChannels.SYNC_PENDING_STATUS`: whether any sync unit is pending.
 pub const SYNC_PENDING_STATUS: &str = "sync:pending-status";
 
+/// `IpcChannels.SYNC_FORMAT_STATUS_CHANGED`: the sync-format status of the
+/// update banner changed (`None` once forgotten).
+pub const SYNC_FORMAT_STATUS_CHANGED: &str = "sync:format-status-changed";
+
 /// `IpcChannels.I18N_PACK_CHANGED`: the language packs changed outside the
 /// page's own calls.
 #[cfg_attr(not(test), expect(dead_code, reason = "for the language pack store, not in the app yet"))]
@@ -39,6 +43,7 @@ mod tests {
         .unwrap();
         for (key, event) in [
             ("SYNC_PENDING_STATUS", SYNC_PENDING_STATUS),
+            ("SYNC_FORMAT_STATUS_CHANGED", SYNC_FORMAT_STATUS_CHANGED),
             ("I18N_PACK_CHANGED", I18N_PACK_CHANGED),
             ("THEME_PACK_CHANGED", THEME_PACK_CHANGED),
         ] {

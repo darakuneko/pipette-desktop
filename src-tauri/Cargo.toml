@@ -28,8 +28,6 @@ pipette-logger = { path = "crates/pipette-logger" }
 pipette-app-config = { path = "crates/pipette-app-config" }
 pipette-js-json = { path = "crates/pipette-js-json" }
 pipette-sync-pending = { path = "crates/pipette-sync-pending" }
-# The account switch of the sign-in and sign-out commands.
-pipette-sync = { path = "crates/pipette-sync" }
 # The stores of src/store_commands/: the clock and write locks they share,
 # and the stores themselves; sanitize_filename of the file commands
 # (src/file_commands.rs).
@@ -50,6 +48,14 @@ pipette-typing-analytics-db = { path = "crates/pipette-typing-analytics-db" }
 # The sync's secrets and its Google sign-in (src/sync_commands.rs).
 pipette-secret-store = { path = "crates/pipette-secret-store" }
 pipette-google-auth = { path = "crates/pipette-google-auth" }
+# The Drive client, the parts every sync entry point runs before it
+# touches data (src/sync_commands/preflight.rs) and the account switch of
+# the sign-in and sign-out commands (src/sync_commands/auth.rs).
+pipette-drive = { path = "crates/pipette-drive" }
+pipette-sync = { path = "crates/pipette-sync" }
+pipette-sync-runtime = { path = "crates/pipette-sync-runtime" }
+# The sync password the page sends is zeroed once the command is done.
+zeroize = "=1.9.0"
 pipette-time = { path = "crates/pipette-time" }
 log = "=0.4.34"
 serde = { workspace = true }
@@ -121,6 +127,8 @@ toml = "=1.1.8"
 tokio = { version = "=1.53.3", features = ["rt", "macros", "test-util"] }
 # The in-memory key store of the sync command tests.
 pipette-secret-store = { path = "crates/pipette-secret-store", features = ["test-util"] }
+# The in-memory Drive of the sync command tests.
+pipette-drive = { path = "crates/pipette-drive", features = ["test-util"] }
 # The mock runtime the IPC contract tests (src/ipc_contract.rs) run the app
 # commands on. Same version as the tauri dependency.
 tauri = { version = "=2.12.1", features = ["tray-icon", "test"] }

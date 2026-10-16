@@ -32,6 +32,19 @@ pub enum SyncCredentialFailureReason {
     RemoteCheckFailed,
 }
 
+impl SyncCredentialFailureReason {
+    /// The reason as the renderer names it.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Unauthenticated => "unauthenticated",
+            Self::NoPasswordFile => "noPasswordFile",
+            Self::DecryptFailed => "decryptFailed",
+            Self::KeystoreUnavailable => "keystoreUnavailable",
+            Self::RemoteCheckFailed => "remoteCheckFailed",
+        }
+    }
+}
+
 /// One progress report; the absent fields are left out of the event.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SyncProgress {

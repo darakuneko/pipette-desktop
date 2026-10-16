@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The stored sync password's status (`syncPasswordStatus`,
-//! `storedPasswordStatus` of src/main/sync/sync-crypto.ts). The password
-//! itself never leaves the backend.
+//! The sync password (src/main/sync/sync-ipc.ts): its status
+//! (`storedPasswordStatus` of src/main/sync/sync-crypto.ts), the first set,
+//! the re-enter of a password changed on another machine, and whether
+//! Drive has a password-check. The password never leaves the backend.
+
+use std::sync::Arc;
 
 use pipette_secret_store::{SecretFailure, SecretKind, SecretStore};
+use pipette_sync::preflight::Preflight;
 use serde::Serialize;
 use tauri::State;
 use ts_rs::TS;
+use zeroize::Zeroizing;
 
 use super::SyncSecrets;
+use super::result::SyncOperationResult;
 use crate::command_error::CommandError;
 
 /// `StoredPasswordStatus` of src/shared/types/sync.ts.
@@ -45,6 +51,40 @@ pub async fn sync_password_status(
     sync: State<'_, SyncSecrets>,
 ) -> Result<StoredPasswordStatus, CommandError> {
     Ok(stored_password_status(&sync.secrets).await)
+}
+
+/// Sets the first sync password (`setPasswordAndValidate`): stored once
+/// it opens the password-check on Drive, which is created (after the
+/// sync-format marker) when Drive has none.
+#[tauri::command]
+pub async fn sync_set_password(
+    preflight: State<'_, Arc<Preflight>>,
+    password: String,
+) -> Result<SyncOperationResult, CommandError> {
+    let password = Zeroizing::new(password);
+    Ok(preflight.set_password_and_validate(&password).await.into())
+}
+
+/// Replaces the stored password with one changed on another machine
+/// (`replacePasswordAndValidate`): stored only once it opens the
+/// password-check on Drive.
+#[tauri::command]
+pub async fn sync_replace_password(
+    preflight: State<'_, Arc<Preflight>>,
+    password: String,
+) -> Result<SyncOperationResult, CommandError> {
+    let password = Zeroizing::new(password);
+    if password.is_empty() {
+        return Ok(SyncOperationResult::failure("Invalid password".to_owned(), None));
+    }
+    Ok(preflight.replace_password_and_validate(&password).await.into())
+}
+
+/// Whether Drive has a password-check (`checkPasswordCheckExists`); a
+/// Drive failure is the command's error.
+#[tauri::command]
+pub async fn sync_check_password_exists(preflight: State<'_, Arc<Preflight>>) -> Result<bool, CommandError> {
+    Ok(preflight.password_check_exists().await?)
 }
 
 #[cfg(test)]

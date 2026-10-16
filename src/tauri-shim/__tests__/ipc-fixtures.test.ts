@@ -61,6 +61,7 @@ interface Shim {
   syncPending: typeof import('../api/sync-pending')
   syncAuth: typeof import('../api/sync-auth')
   syncPassword: typeof import('../api/sync-password')
+  syncExecute: typeof import('../api/sync-execute')
   themePacks: typeof import('../api/theme-packs')
   typingAnalytics: typeof import('../api/typing-analytics')
   typingAnalyticsRange: typeof import('../api/typing-analytics-range')
@@ -92,6 +93,7 @@ async function load(): Promise<Shim> {
     syncPending: await import('../api/sync-pending'),
     syncAuth: await import('../api/sync-auth'),
     syncPassword: await import('../api/sync-password'),
+    syncExecute: await import('../api/sync-execute'),
     themePacks: await import('../api/theme-packs'),
     typingAnalytics: await import('../api/typing-analytics'),
     typingAnalyticsRange: await import('../api/typing-analytics-range'),
@@ -170,6 +172,12 @@ const CALLERS: Record<string, Caller> = {
   syncAuthStart: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStart() },
   syncAuthSignOut: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthSignOut() },
   syncPasswordStatus: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncPasswordStatus() },
+  syncSetPassword: { run: ({ syncPassword }, [password]) => syncPassword.syncPasswordApi.syncSetPassword(password as string) },
+  syncReplacePassword: {
+    run: ({ syncPassword }, [password]) => syncPassword.syncPasswordApi.syncReplacePassword(password as string),
+  },
+  syncCheckPasswordExists: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncCheckPasswordExists() },
+  syncFormatStatus: { run: ({ syncExecute }) => syncExecute.syncExecuteApi.syncFormatStatus() },
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
   loadLayout: {
     run: ({ files }, [title, extensions]) => files.filesApi.loadLayout(title as string, extensions as string[]),

@@ -20,7 +20,7 @@ use pipette_sync::account::{
     SIGN_OUT_PASSWORD_CHANGING, SignedInAccount,
 };
 use pipette_sync_pending::{PendingStore, Scheduler};
-use pipette_sync_runtime::{SyncRuntime, ValidatedPasswordCheck};
+use pipette_sync_runtime::SyncRuntime;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -104,20 +104,13 @@ impl Harness {
         std::fs::create_dir_all(self.pending_path().join("blocker")).unwrap();
     }
 
-    /// Remembers a created file and a password-check, as the previous
-    /// account's caches.
+    /// Remembers a created file, as the previous account's cache.
     fn fill_caches(&self) {
         self.runtime.remote().remember_created_file("favorites_macro.enc", "file-id");
-        self.runtime.credentials().set_validated_password_check(ValidatedPasswordCheck {
-            id: "check".to_owned(),
-            modified_time: "2026-10-01T00:00:00.000Z".to_owned(),
-            password_fingerprint: [0; 32],
-        });
     }
 
     fn caches_forgotten(&self) -> bool {
         self.runtime.remote().created_file_id("favorites_macro.enc").is_none()
-            && self.runtime.credentials().validated_password_check().is_none()
     }
 
     fn sign_in(

@@ -17,9 +17,12 @@
 //! once.
 //!
 //! Each change of ownership is written before the tokens change; when it
-//! cannot be, the tokens stay. Both forget what this process remembers
-//! about the previous account once the stored sign-in has changed
-//! ([`forget_account_caches`]).
+//! cannot be, the tokens stay. Both forget the files this process created
+//! on the previous account's Drive once the stored sign-in has changed
+//! ([`forget_account_caches`]); the password-check and the sync-format
+//! status are forgotten by `Preflight::forget_account`, which the app calls
+//! from `GoogleAuth::on_account_changed` when the tokens are stored or
+//! removed, inside the switch.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -86,13 +89,14 @@ impl SignedInAccount for GoogleAuth {
     }
 }
 
-/// `forgetAccountCaches`: the files this run created on the previous
-/// account's Drive, and the password-check and sync-format marker it saw
-/// there.
+/// The part of `forgetAccountCaches` the sync runtime holds: the files
+/// this run created on the previous account's Drive. The rest is
+/// [`crate::preflight::Preflight::forget_account`], run once per change of
+/// the stored sign-in by its `GoogleAuth::on_account_changed` listener; it
+/// bumps the sign-out generation before it empties anything, so it is not
+/// repeated here.
 pub fn forget_account_caches(runtime: &SyncRuntime) {
     runtime.remote().clear_created_files();
-    runtime.credentials().forget_validated_password_check();
-    runtime.credentials().forget_sync_format_marker();
 }
 
 /// A switch of tokens under way: the sync lock when it was free in time,

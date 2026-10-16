@@ -47,6 +47,20 @@ impl CredentialMemory {
         *lock(&self.validated) = Some(check);
     }
 
+    /// Remembers `check` unless the generation moved on from `generation`
+    /// (a sign-out or sign-in since the check was listed). The generation
+    /// is held while the check is set, so a sign-out that bumps it either
+    /// comes first and refuses the check, or comes after and its forget
+    /// removes it. Returns whether the check was remembered.
+    pub fn set_validated_password_check_in(&self, generation: u64, check: ValidatedPasswordCheck) -> bool {
+        let memory = lock(&self.sync_format);
+        if memory.generation != generation {
+            return false;
+        }
+        *lock(&self.validated) = Some(check);
+        true
+    }
+
     pub fn forget_validated_password_check(&self) {
         *lock(&self.validated) = None;
     }
@@ -102,8 +116,13 @@ mod tests {
             password_fingerprint: [7; 32],
         };
         memory.set_validated_password_check(check.clone());
-        assert_eq!(memory.validated_password_check(), Some(check));
+        assert_eq!(memory.validated_password_check(), Some(check.clone()));
         memory.forget_validated_password_check();
+        assert_eq!(memory.validated_password_check(), None);
+        assert!(memory.set_validated_password_check_in(0, check.clone()));
+        memory.forget_sync_format_marker();
+        memory.forget_validated_password_check();
+        assert!(!memory.set_validated_password_check_in(0, check));
         assert_eq!(memory.validated_password_check(), None);
     }
 

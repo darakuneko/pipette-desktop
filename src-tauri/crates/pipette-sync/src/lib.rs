@@ -11,11 +11,21 @@
 //! - [`merge`]: the merge of a downloaded bundle into the local files;
 //! - [`typing_remote`]: this device's typing days on Drive and their
 //!   reconcile with the local files before an upload pass;
-//! - [`unit_locks`]: the locks a whole sync of one unit holds.
+//! - [`unit_locks`]: the locks a whole sync of one unit holds;
+//! - [`preflight`]: what every entry point runs before it touches data,
+//!   with its parts in [`format`] and [`format_status`] (the sync-format
+//!   marker and the status of the update banner) and [`password`] (the
+//!   guard and the password-check).
 
 pub mod account;
 pub mod bundle;
+pub mod crypto;
+pub mod format;
+pub mod format_status;
 pub mod merge;
+pub mod password;
+pub mod preflight;
+mod single_flight;
 pub mod typing_remote;
 pub mod unit_locks;
 pub mod units;

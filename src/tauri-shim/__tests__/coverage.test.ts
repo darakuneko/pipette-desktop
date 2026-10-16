@@ -12,7 +12,7 @@
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs, and so are
 // the Cloud Sync members (each listed with the module that holds it) but
-// the sign-in and password statuses and the password strength check.
+// the sign-in status, the password members and the sync format status.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -30,7 +30,6 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
 const EXPECTED_FAKES = [
   'trayStatusUpdate',
-  'syncFormatStatus',
   'notificationFetch',
   'i18nPackHubTimestamps',
   'hubListI18nPosts',
@@ -301,14 +300,25 @@ const SYNC_MEMBERS = [
   },
 ]
 
-/** The Cloud Sync members that are real: the sign-in, the sign-out and the
- *  sign-in and password statuses (backend commands) and the password
- *  strength check (in the shim). */
-const SYNC_REAL = ['syncAuthStart', 'syncAuthStatus', 'syncAuthSignOut', 'syncPasswordStatus', 'syncValidatePassword']
+/** The Cloud Sync members that are real: the sign-in, the sign-out, the
+ *  sign-in and password statuses, setting and re-entering the password,
+ *  whether Drive has a password-check, the sync format status and its event
+ *  (backend commands) and the password strength check (in the shim). */
+const SYNC_REAL = [
+  'syncAuthStart',
+  'syncAuthStatus',
+  'syncAuthSignOut',
+  'syncPasswordStatus',
+  'syncValidatePassword',
+  'syncSetPassword',
+  'syncReplacePassword',
+  'syncCheckPasswordExists',
+  'syncFormatStatus',
+  'syncOnFormatStatusChanged',
+]
 
 /** The fakes the Cloud Sync members replace: the signed-out answers. */
 const SYNC_FAKES = [
-  'syncFormatStatus',
   'syncAnalyticsNow',
   'typingAnalyticsHasRemote',
   'typingAnalyticsListRemoteCloudHashes',
