@@ -130,11 +130,17 @@ impl GoogleAuth {
     /// Signs in through the browser (`startOAuthFlow`): opens the
     /// authorization URL with `browser`, waits for the loopback redirect,
     /// exchanges the code and stores the tokens through `switch`.
+    /// Fails at once, opening nothing, when the build has no usable
+    /// endpoints (empty or not http(s) URLs): the browser would otherwise
+    /// get a URL that is not one.
     pub async fn sign_in(
         &self,
         browser: &dyn BrowserOpener,
         switch: &dyn TokenSwitch,
     ) -> Result<(), AuthError> {
+        if !is_web_url(&self.config.auth_endpoint) || !is_web_url(&self.config.token_endpoint) {
+            return Err(AuthError::Other("the Google sign-in endpoints are unavailable".to_owned()));
+        }
         let attempt = self.begin_attempt();
         let loopback = Loopback::bind().await.map_err(|err| AuthError::Other(err.to_string()))?;
         let port = loopback.port();
@@ -302,4 +308,9 @@ impl GoogleAuth {
     pub async fn account_sub(&self) -> Option<String> {
         jwt::account_sub(self.tokens.load().await?.tokens.id_token.as_deref())
     }
+}
+
+/// Whether `endpoint` is an http or https URL.
+fn is_web_url(endpoint: &str) -> bool {
+    url::Url::parse(endpoint).is_ok_and(|url| matches!(url.scheme(), "http" | "https"))
 }

@@ -11,9 +11,10 @@ mod common;
 use std::sync::Arc;
 use std::time::Duration;
 
-use common::{AUTH_ENDPOINT, Harness, TestBrowser, callback, param, tokens};
+use common::{AUTH_ENDPOINT, Harness, TOKEN_ENDPOINT, TestBrowser, callback, param, tokens};
 use pipette_google_auth::{
-    AuthError, AuthTiming, CLIENT_ID, SCOPE, StoreTokens, SwitchDirectly, SwitchFuture, TokenSwitch,
+    AuthConfig, AuthError, AuthTiming, CLIENT_ID, GoogleAuth, SCOPE, StoreTokens, SwitchDirectly,
+    SwitchFuture, TokenSwitch,
 };
 use serde_json::json;
 use tokio::io::AsyncWriteExt;
@@ -245,4 +246,29 @@ async fn a_browser_that_does_not_open_fails_the_sign_in() {
     let harness = Harness::new();
     let err = harness.auth.sign_in(&NoBrowser, &SwitchDirectly).await.unwrap_err();
     assert_eq!(err.to_string(), "no browser");
+}
+
+#[tokio::test]
+async fn fails_at_once_and_opens_nothing_without_usable_endpoints() {
+    let harness = Harness::new();
+    for (auth_endpoint, token_endpoint) in
+        [("", ""), ("", TOKEN_ENDPOINT), (AUTH_ENDPOINT, ""), ("/auth", TOKEN_ENDPOINT)]
+    {
+        let auth = GoogleAuth::new(
+            AuthConfig {
+                auth_endpoint: auth_endpoint.to_owned(),
+                token_endpoint: token_endpoint.to_owned(),
+                http: harness.endpoint.clone(),
+                timing: AuthTiming::default(),
+                now_ms: Arc::new(|| common::NOW),
+                hub_test_account: Arc::new(|| None),
+            },
+            harness.secrets.clone(),
+        );
+        let browser = TestBrowser::default();
+        let result = auth.sign_in(&browser, &SwitchDirectly).await;
+        assert!(matches!(result, Err(AuthError::Other(_))), "{auth_endpoint:?} {token_endpoint:?}");
+        assert_eq!(browser.opened(), 0);
+    }
+    assert!(harness.endpoint.forms().is_empty());
 }
