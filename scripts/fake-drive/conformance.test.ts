@@ -100,10 +100,17 @@ interface Saved {
 /** Sends one step; resolves with the failed response, or null on success. */
 async function runStep(step: Step, saved: Map<string, Saved>, context: string): Promise<Response | null> {
   const expectation = step.expect ?? {}
-  const idOf = (): string => (step.id === 'missing' ? 'missing-id' : (saved.get(step.id ?? '')?.id ?? ''))
+  // A key no earlier step saved is a mistake in the case, as in the Rust
+  // runner (tests/conformance.rs), not an empty id or time to compare with.
+  const savedFile = (key: string | undefined): Saved => {
+    const file = key === undefined ? undefined : saved.get(key)
+    if (!file) throw new Error(`${context}: no file saved as ${key}`)
+    return file
+  }
+  const idOf = (): string => (step.id === 'missing' ? 'missing-id' : savedFile(step.id).id)
   const save = (file: Saved): void => {
     if (!step.save) return
-    if (expectation.newer) expect(file.modifiedTime > (saved.get(step.save)?.modifiedTime ?? ''), context).toBe(true)
+    if (expectation.newer) expect(file.modifiedTime > savedFile(step.save).modifiedTime, context).toBe(true)
     saved.set(step.save, file)
   }
   const ok = async (response: Response): Promise<unknown> => {
@@ -144,7 +151,7 @@ async function runStep(step: Step, saved: Map<string, Saved>, context: string): 
         })
         const file = (await ok(response)) as Saved & { name: string }
         expect(file.name, context).toBe(expectation.name)
-        if (expectation.sameIdAs) expect(file.id, context).toBe(saved.get(expectation.sameIdAs)?.id)
+        if (expectation.sameIdAs) expect(file.id, context).toBe(savedFile(expectation.sameIdAs).id)
         save(file)
         return null
       }
@@ -232,6 +239,14 @@ describe('the fake Drive', () => {
     const { id } = (await (await create('a.enc', content, 'id')).json()) as { id: string }
     expect(await (await fetch(`${api}/files/${id}?alt=media`, { headers: AUTH })).text()).toBe(content)
     expect(drive.state.files[0].mimeType).toBe('application/json')
+  })
+
+  it('stops a case at a key no earlier step saved', async () => {
+    await expect(runStep({ op: 'download', id: 'unsaved', expect: { content: '' } }, new Map(), 'case')).rejects.toThrow(/no file saved as unsaved/)
+    const saved = new Map<string, Saved>()
+    await runStep({ op: 'create', name: 'a.enc', content: 'x', save: 'a' }, saved, 'case')
+    const update = { op: 'update', id: 'a', content: 'y', save: 'unsaved', expect: { newer: true } }
+    await expect(runStep(update, saved, 'case')).rejects.toThrow(/no file saved as unsaved/)
   })
 
   it('records the requests', async () => {
