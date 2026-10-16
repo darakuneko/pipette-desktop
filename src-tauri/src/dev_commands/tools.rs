@@ -6,8 +6,9 @@
 //! screenshots (Linux), and a script hook that runs a local file in the
 //! window once the first page has loaded, so the UI can be driven without a
 //! WebDriver, a queue of answers for the file dialogs, so the e2e tests
-//! can save and open files without the native dialog, and recorded
-//! responses for the HTTP requests, so they need no network.
+//! can save and open files without the native dialog, recorded
+//! responses for the HTTP requests, so they need no network, and the
+//! typing analytics' machine hash, so they can seed this device's data.
 //!
 //! `install` is the only entry point, called through
 //! `dev_commands::install_or_passthrough`. The permissions of these commands are
@@ -23,6 +24,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use pipette_hid::ControllerState;
 use pipette_net::{Http, HttpClient, HttpFuture, HttpResponse};
+use pipette_typing_analytics::TypingAnalytics;
 use serde::Serialize;
 use tauri::ipc::Invoke;
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
@@ -259,6 +261,18 @@ pub fn dev_http_queued(queue: State<'_, Arc<ResponseQueue>>) -> usize {
 
 /// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
 /// letters, digits and dashes so it cannot leave the directory.
+/// The machine hash the typing analytics record this device's data under,
+/// once their initialization has finished: the e2e tests seed day files
+/// under it.
+#[tauri::command]
+pub async fn dev_typing_analytics_machine_hash(
+    analytics: State<'_, Arc<TypingAnalytics>>,
+) -> Result<String, CommandError> {
+    let analytics = analytics.inner().clone();
+    let ready = analytics.ready().await.map_err(|err| CommandError::new(err.to_string()))?;
+    Ok(ready.machine_hash.clone())
+}
+
 #[cfg(target_os = "linux")]
 fn shot_path(name: &str) -> Result<std::path::PathBuf, CommandError> {
     let valid = !name.is_empty()
@@ -356,6 +370,7 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         dev_dialog_queued,
         dev_http_respond,
         dev_http_queued,
+        dev_typing_analytics_machine_hash,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]
