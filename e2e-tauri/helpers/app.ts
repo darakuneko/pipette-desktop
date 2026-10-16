@@ -10,6 +10,9 @@ import { quitApp } from './driver'
 export const VIRTUAL_DEVICE_NAME = 'Virtual Keyboard'
 export const EDITOR_SELECTOR = '[data-testid="editor-content"]'
 export const UNLOCK_DIALOG_HEADING = 'h2=Unlock Keyboard'
+/** The unlock combo of the virtual keyboard's definition. */
+export const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
+const UNLOCK_TIMEOUT_MS = 15_000
 const CONNECT_TIMEOUT_MS = 20_000
 // Longer than the deadline of the app's own quit sequence (30 s).
 const QUIT_TIMEOUT_MS = 40_000
@@ -79,6 +82,22 @@ export const virtualDevice = {
   releaseKey: (row: number, col: number) => invokeCommand('virtual_device_release_key', { row, col }),
   releaseAll: () => invokeCommand('virtual_device_release_all'),
   getState: () => invokeCommand<VirtualDeviceControllerState>('virtual_device_get_state'),
+}
+
+/** Holds the unlock combo while the unlock dialog is up, if it comes up
+ *  within a few seconds. */
+export async function unlockIfAsked(): Promise<void> {
+  const asked = await $(UNLOCK_DIALOG_HEADING)
+    .waitForDisplayed({ timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!asked) return
+  await virtualDevice.holdKeys(UNLOCK_KEYS)
+  try {
+    await $(UNLOCK_DIALOG_HEADING).waitForDisplayed({ reverse: true, timeout: UNLOCK_TIMEOUT_MS })
+  } finally {
+    await virtualDevice.releaseAll()
+  }
 }
 
 /** The device-list button whose name is exactly `name` (a substring match

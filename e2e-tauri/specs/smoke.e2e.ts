@@ -24,6 +24,7 @@ import {
   restartApp,
   setKeycode,
   UNLOCK_DIALOG_HEADING,
+  UNLOCK_KEYS,
   virtualDevice,
   waitForGone,
 } from '../helpers/app'
@@ -32,8 +33,6 @@ import { appLogPath, launchAppAgain, readAppConfig } from '../helpers/driver'
 const UNLOCK_TIMEOUT_MS = 15_000
 const KC_Z = '001D'
 const KC_X = '001B'
-/** The unlock combo of the virtual keyboard's definition. */
-const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
 /** A key the matrix tester shows pressed. */
 const MATRIX_KEY = { row: 2, col: 3 }
 const SECOND_LAUNCH_TIMEOUT_MS = 30_000
