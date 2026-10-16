@@ -199,7 +199,7 @@ enum Destinations {
 }
 
 /// Whether `url` is on 127.0.0.1 or ::1.
-fn is_loopback(url: &reqwest::Url) -> bool {
+pub(crate) fn is_loopback(url: &reqwest::Url) -> bool {
     match url.host_str() {
         Some(host) => {
             host.parse::<Ipv4Addr>().is_ok_and(|ip| ip == Ipv4Addr::LOCALHOST)
