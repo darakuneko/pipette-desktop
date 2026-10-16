@@ -10,12 +10,20 @@
 // modal members (every typing analytics member but the Drive ones), and the pack
 // and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
-// real; the members named after the Hub are fakes or stubs.
+// real; the members named after the Hub are fakes or stubs, and so are
+// the Cloud Sync members, each listed with the module that holds it.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
 import { implemented, real } from '../implemented'
-import { VIAL_API_MEMBER_NAMES } from '../vial-api-members'
+import { VIAL_API_MEMBER_KINDS, VIAL_API_MEMBER_NAMES } from '../vial-api-members'
+import { syncAuthApi } from '../api/sync-auth'
+import { syncDataApi } from '../api/sync-data'
+import { syncExecuteApi } from '../api/sync-execute'
+import { syncPasswordApi } from '../api/sync-password'
+import { syncPasswordChangeApi } from '../api/sync-password-change'
+import { syncResetApi } from '../api/sync-reset'
+import { typingAnalyticsRemoteApi } from '../api/typing-analytics-remote'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
@@ -242,6 +250,70 @@ const TYPING_DATASET_MEMBERS = [
   'aozoraImport',
 ]
 
+/** The Cloud Sync members, by the shim module that holds them. None is
+ *  real yet: each is a fake of EXPECTED_FAKES or a stub until its module
+ *  backs it with a backend command. */
+const SYNC_MEMBERS = [
+  { module: syncAuthApi, members: ['syncAuthStart', 'syncAuthStatus', 'syncAuthSignOut'] },
+  {
+    module: syncPasswordApi,
+    members: ['syncSetPassword', 'syncReplacePassword', 'syncPasswordStatus', 'syncValidatePassword', 'syncCheckPasswordExists'],
+  },
+  {
+    module: syncExecuteApi,
+    members: ['syncExecute', 'syncAnalyticsNow', 'syncFormatStatus', 'syncOnProgress', 'syncOnFormatStatusChanged', 'syncOnUnitApplied'],
+  },
+  {
+    module: syncPasswordChangeApi,
+    members: [
+      'syncChangePassword',
+      'syncPasswordChangeStatus',
+      'syncPasswordChangeResume',
+      'syncPasswordChangeRevert',
+      'syncPasswordChangeAbandon',
+      'syncPasswordChangeDeleteUndecryptable',
+      'syncPasswordChangeLockStatus',
+      'syncPasswordChangeReleaseLocks',
+      'syncListUndecryptable',
+    ],
+  },
+  {
+    module: syncDataApi,
+    members: [
+      'syncScanRemote',
+      'syncFetchRemoteBundle',
+      'syncDeleteFiles',
+      'syncListTrash',
+      'syncRestoreTrash',
+      'syncDeleteTrash',
+      'exportLocalData',
+      'importLocalData',
+    ],
+  },
+  { module: syncResetApi, members: ['syncResetTargets', 'resetKeyboardData', 'resetLocalTargets'] },
+  {
+    module: typingAnalyticsRemoteApi,
+    members: [
+      'typingAnalyticsHasRemote',
+      'typingAnalyticsListRemoteCloudHashes',
+      'typingAnalyticsListRemoteCloudDays',
+      'typingAnalyticsFetchRemoteDay',
+    ],
+  },
+]
+
+/** The fakes the Cloud Sync members replace: the signed-out answers. */
+const SYNC_FAKES = [
+  'syncAuthStatus',
+  'syncPasswordStatus',
+  'syncFormatStatus',
+  'syncAnalyticsNow',
+  'typingAnalyticsHasRemote',
+  'typingAnalyticsListRemoteCloudHashes',
+  'typingAnalyticsListRemoteCloudDays',
+  'typingAnalyticsFetchRemoteDay',
+]
+
 /** Whether `name` is a member named after the Hub that is not answered
  *  locally: the setters of a store's Hub link (`…SetHubPostId`,
  *  `…SetHubPrivate`) and `hubGetOrigin` (the configured origin) are. The
@@ -324,6 +396,20 @@ describe('shim coverage', () => {
   // not run yet; the renderer only subscribes.
   it('leaves syncOnUnitApplied to the stub', () => {
     expect('syncOnUnitApplied' in implemented).toBe(false)
+  })
+
+  it('lists the Cloud Sync members, each in one module and none real yet', () => {
+    const members = SYNC_MEMBERS.flatMap(({ members }) => members)
+    expect(new Set(members).size).toBe(38)
+    expect(members.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
+    const listeners = members.filter((name) => VIAL_API_MEMBER_KINDS[name as keyof typeof VIAL_API_MEMBER_KINDS] === 'listener')
+    expect(listeners.sort()).toEqual(['syncOnFormatStatusChanged', 'syncOnProgress', 'syncOnUnitApplied'])
+    for (const { module, members: own } of SYNC_MEMBERS) {
+      expect(Object.keys(module).filter((name) => !own.includes(name))).toEqual([])
+    }
+    expect(members.filter((name) => name in real)).toEqual([])
+    expect(SYNC_FAKES.filter((name) => !members.includes(name) || !EXPECTED_FAKES.includes(name))).toEqual([])
+    expect(members.filter((name) => name in fakes).sort()).toEqual([...SYNC_FAKES].sort())
   })
 
   it('fakes exactly the expected members', () => {
