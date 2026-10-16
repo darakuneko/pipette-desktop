@@ -1,0 +1,198 @@
+[
+  {
+    "member": "themePackList",
+    "args": [],
+    "command": "theme_pack_store_list",
+    "invokeArgs": {},
+    "response": {
+      "success": true,
+      "data": []
+    }
+  },
+  {
+    "member": "themePackGet",
+    "args": [
+      "missing"
+    ],
+    "command": "theme_pack_store_get",
+    "invokeArgs": {
+      "id": "missing"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Theme pack not found"
+    }
+  },
+  {
+    "member": "themePackRename",
+    "args": [
+      "missing",
+      "New name"
+    ],
+    "command": "theme_pack_store_rename",
+    "invokeArgs": {
+      "id": "missing",
+      "newName": "New name"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Theme pack not found"
+    }
+  },
+  {
+    "member": "themePackDelete",
+    "args": [
+      "missing"
+    ],
+    "command": "theme_pack_store_delete",
+    "invokeArgs": {
+      "id": "missing"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Theme pack not found"
+    }
+  },
+  {
+    "member": "themePackSetHubPostId",
+    "args": [
+      "missing",
+      "post-1",
+      "alice",
+      "2026-05-01T00:00:00.000Z"
+    ],
+    "command": "theme_pack_store_set_hub_post_id",
+    "invokeArgs": {
+      "id": "missing",
+      "hubPostId": "post-1",
+      "uploaderName": "alice",
+      "hubUpdatedAt": "2026-05-01T00:00:00.000Z"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Theme pack not found"
+    }
+  },
+  {
+    "member": "themePackHasName",
+    "args": [
+      "Nord"
+    ],
+    "command": "theme_pack_store_has_name",
+    "invokeArgs": {
+      "name": "Nord"
+    },
+    "response": {
+      "success": true,
+      "data": false
+    }
+  },
+  {
+    "member": "themePackReorder",
+    "args": [
+      [
+        "b",
+        "a"
+      ]
+    ],
+    "command": "theme_pack_store_reorder",
+    "invokeArgs": {
+      "orderedIds": [
+        "b",
+        "a"
+      ]
+    },
+    "response": {
+      "success": true
+    }
+  },
+  {
+    "member": "theme-packs.openImport",
+    "args": [],
+    "command": "theme_pack_import",
+    "invokeArgs": {},
+    "response": {
+      "canceled": true,
+      "files": []
+    }
+  },
+  {
+    "member": "themePackImportApply",
+    "args": [
+      {
+        "name": "Nord",
+        "version": "1.0.0",
+        "colorScheme": "dark",
+        "colors": {
+          "surface": "#2e3440",
+          "surface-alt": "#2e3440",
+          "surface-dim": "#2e3440",
+          "surface-raised": "#2e3440",
+          "content": "#2e3440",
+          "content-secondary": "#2e3440",
+          "content-muted": "#2e3440",
+          "content-inverse": "#2e3440",
+          "edge": "#2e3440",
+          "edge-subtle": "#2e3440",
+          "edge-strong": "#2e3440",
+          "accent": "#2e3440",
+          "accent-hover": "#2e3440",
+          "accent-alt": "#2e3440",
+          "success": "#2e3440",
+          "warning": "#2e3440",
+          "danger": "#2e3440",
+          "pending": "#2e3440",
+          "key-bg": "#2e3440",
+          "key-bg-hover": "#2e3440",
+          "key-bg-active": "#2e3440",
+          "key-border": "#2e3440",
+          "key-shadow": "#2e3440",
+          "key-label": "#2e3440",
+          "key-sublabel": "#2e3440",
+          "key-label-remap": "#2e3440",
+          "key-bg-multi-selected": "#2e3440",
+          "tab-bg-active": "#2e3440",
+          "tab-text": "#2e3440",
+          "tab-text-active": "#2e3440",
+          "picker-bg": "#2e3440",
+          "picker-item-bg": "#2e3440",
+          "picker-item-hover": "#2e3440",
+          "picker-item-text": "#2e3440",
+          "picker-item-border": "#2e3440"
+        }
+      },
+      {
+        "id": "../bad"
+      }
+    ],
+    "command": "theme_pack_import_apply",
+    "invokeArgs": {
+      "raw": "{\"name\":\"Nord\",\"version\":\"1.0.0\",\"colorScheme\":\"dark\",\"colors\":{\"surface\":\"#2e3440\",\"surface-alt\":\"#2e3440\",\"surface-dim\":\"#2e3440\",\"surface-raised\":\"#2e3440\",\"content\":\"#2e3440\",\"content-secondary\":\"#2e3440\",\"content-muted\":\"#2e3440\",\"content-inverse\":\"#2e3440\",\"edge\":\"#2e3440\",\"edge-subtle\":\"#2e3440\",\"edge-strong\":\"#2e3440\",\"accent\":\"#2e3440\",\"accent-hover\":\"#2e3440\",\"accent-alt\":\"#2e3440\",\"success\":\"#2e3440\",\"warning\":\"#2e3440\",\"danger\":\"#2e3440\",\"pending\":\"#2e3440\",\"key-bg\":\"#2e3440\",\"key-bg-hover\":\"#2e3440\",\"key-bg-active\":\"#2e3440\",\"key-border\":\"#2e3440\",\"key-shadow\":\"#2e3440\",\"key-label\":\"#2e3440\",\"key-sublabel\":\"#2e3440\",\"key-label-remap\":\"#2e3440\",\"key-bg-multi-selected\":\"#2e3440\",\"tab-bg-active\":\"#2e3440\",\"tab-text\":\"#2e3440\",\"tab-text-active\":\"#2e3440\",\"picker-bg\":\"#2e3440\",\"picker-item-bg\":\"#2e3440\",\"picker-item-hover\":\"#2e3440\",\"picker-item-text\":\"#2e3440\",\"picker-item-border\":\"#2e3440\"}}",
+      "options": "{\"id\":\"../bad\"}"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "INVALID_FILE",
+      "error": "Generated pack id is unsafe"
+    }
+  },
+  {
+    "member": "themePackExport",
+    "args": [
+      "missing"
+    ],
+    "command": "theme_pack_export",
+    "invokeArgs": {
+      "id": "missing"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Theme pack not found"
+    }
+  }
+]

@@ -19,6 +19,7 @@ import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
 import type { I18nPackImportApplyOptions } from '../../shared/types/i18n-store'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
+import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store'
 import type { VialAPI } from '../../shared/types/vial-api'
 
 interface Entry {
@@ -48,6 +49,7 @@ interface Shim {
   shell: typeof import('../api/shell')
   snapshots: typeof import('../api/snapshots')
   syncPending: typeof import('../api/sync-pending')
+  themePacks: typeof import('../api/theme-packs')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
@@ -68,6 +70,7 @@ async function load(): Promise<Shim> {
     shell: await import('../api/shell'),
     snapshots: await import('../api/snapshots'),
     syncPending: await import('../api/sync-pending'),
+    themePacks: await import('../api/theme-packs'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
@@ -272,6 +275,26 @@ const CALLERS: Record<string, Caller> = {
       i18nPacks.i18nPacksApi.i18nPackImportApply(raw, options as I18nPackImportApplyOptions),
   },
   i18nPackExport: { run: ({ i18nPacks }, [id]) => i18nPacks.i18nPacksApi.i18nPackExport(id as string) },
+  themePackList: { run: ({ themePacks }) => themePacks.themePacksApi.themePackList() },
+  themePackGet: { run: ({ themePacks }, [id]) => themePacks.themePacksApi.themePackGet(id as string) },
+  themePackRename: {
+    run: ({ themePacks }, [id, name]) => themePacks.themePacksApi.themePackRename(id as string, name as string),
+  },
+  themePackDelete: { run: ({ themePacks }, [id]) => themePacks.themePacksApi.themePackDelete(id as string) },
+  themePackSetHubPostId: {
+    run: ({ themePacks }, [id, postId, uploader, updatedAt]) =>
+      themePacks.themePacksApi.themePackSetHubPostId(id as string, postId as string | null, uploader as string, updatedAt as string),
+  },
+  themePackHasName: {
+    run: ({ themePacks }, [name, excludeId]) => themePacks.themePacksApi.themePackHasName(name as string, excludeId as string | undefined),
+  },
+  themePackReorder: { run: ({ themePacks }, [ids]) => themePacks.themePacksApi.themePackReorder(ids as string[]) },
+  'theme-packs.openImport': { run: ({ themePacks }) => themePacks.openImport() },
+  themePackImportApply: {
+    run: ({ themePacks }, [raw, options]) =>
+      themePacks.themePacksApi.themePackImportApply(raw, options as ThemePackImportApplyOptions),
+  },
+  themePackExport: { run: ({ themePacks }, [id]) => themePacks.themePacksApi.themePackExport(id as string) },
 }
 
 afterEach(() => {

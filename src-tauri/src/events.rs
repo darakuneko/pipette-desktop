@@ -17,7 +17,6 @@ pub const I18N_PACK_CHANGED: &str = "i18n-pack:changed";
 
 /// `IpcChannels.THEME_PACK_CHANGED`: a theme pack was imported, renamed,
 /// reordered, deleted or linked to the Hub.
-#[cfg_attr(not(test), expect(dead_code, reason = "for the theme pack store, not in the app yet"))]
 pub const THEME_PACK_CHANGED: &str = "theme-pack:changed";
 
 /// Sends `payload` on `event` to every page, as `broadcastToAllWindows`

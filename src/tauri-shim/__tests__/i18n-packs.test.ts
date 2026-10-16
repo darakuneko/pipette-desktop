@@ -9,7 +9,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { emit } from '@tauri-apps/api/event'
-import { i18nPacksApi, parseImportFiles } from '../api/i18n-packs'
+import { i18nPacksApi } from '../api/i18n-packs'
+import { parseImportFiles } from '../api/pack-import'
 
 afterEach(() => {
   clearMocks()

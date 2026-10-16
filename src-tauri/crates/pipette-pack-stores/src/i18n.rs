@@ -15,27 +15,28 @@
 //! syncs. It can be renamed and reordered but not deleted or overwritten.
 
 use pipette_entry_store::{
-    EPOCH_ISO, Entry, EntryGroup, EntryStore, OverwriteOptions, builtin_entry, clock_ms, js_trim,
-    mark_deleted, overwrite_entry, touch_clock, utf16_len,
+    EPOCH_ISO, Entry, EntryGroup, EntryStore, builtin_entry, clock_ms, js_trim, touch_clock,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
-use pipette_time::iso_8601_millis;
 
-use crate::pack_store::{Field, PackIndex, PackStore, find_active_by_name};
+pub use crate::pack_meta::Cached;
+use crate::pack_meta::{SaveHub, insert_save_tail};
+use crate::pack_store::{Field, PackStore};
 use crate::result::{ErrorCode, PackError, PackResult};
 
 /// The id of the built-in English entry (`BUILTIN_ENGLISH_PACK_ID`).
 pub const BUILTIN_ENGLISH_PACK_ID: &str = "builtin-english";
 
 /// The language pack store.
-pub const I18N_PACKS: PackStore =
-    PackStore { entry_store: EntryStore::I18nPacks, dir: "i18n", local_only_ids: &[BUILTIN_ENGLISH_PACK_ID] };
-
-const NOT_FOUND: &str = "Language pack not found";
-const DUPLICATE_NAME: &str = "A language pack with the same name already exists";
-/// The longest name a rename gives (UTF-16 units).
-const MAX_NAME_LENGTH: usize = 64;
+pub const I18N_PACKS: PackStore = PackStore {
+    entry_store: EntryStore::I18nPacks,
+    dir: "i18n",
+    local_only_ids: &[BUILTIN_ENGLISH_PACK_ID],
+    not_found: "Language pack not found",
+    duplicate_name: "A language pack with the same name already exists",
+    max_name_length: 64,
+};
 
 fn is_english(id: &JsString) -> bool {
     id.as_str() == Some(BUILTIN_ENGLISH_PACK_ID)
@@ -102,14 +103,7 @@ pub fn list_all_metas(ctx: &StoreContext) -> PackResult<Vec<Entry>> {
 /// `{meta, pack}` of the live pack `id` (`getPack`): the body parsed, with
 /// the meta's name over its own when it is a plain object.
 pub fn get_pack(ctx: &StoreContext, id: &JsString) -> PackResult<Object> {
-    if I18N_PACKS.pack_path(ctx, id).is_none() {
-        return Err(PackError::not_found("Invalid pack id"));
-    }
-    let index = I18N_PACKS.read_index(ctx)?;
-    let meta =
-        index.find(id).filter(|meta| !meta.is_deleted()).ok_or_else(|| PackError::not_found(NOT_FOUND))?;
-    let text = I18N_PACKS.read_body(ctx, id)?;
-    let parsed = pipette_js_json::parse(&text).map_err(|err| PackError::io(format!("SyntaxError: {err}")))?;
+    let (meta, parsed) = I18N_PACKS.read_live_pack(ctx, id)?;
     let pack = match parsed {
         // `{...parsed, name: meta.name}`: a meta without a name leaves the
         // key undefined, which JSON leaves out.
@@ -123,7 +117,7 @@ pub fn get_pack(ctx: &StoreContext, id: &JsString) -> PackResult<Object> {
         other => other,
     };
     let mut record = Object::new();
-    record.insert("meta", meta.clone().into());
+    record.insert("meta", meta.into());
     record.insert("pack", pack);
     Ok(record)
 }
@@ -174,18 +168,6 @@ fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
     Some((text("name")?, text("version")?))
 }
 
-/// An empty or blank string clears the field, as `''` does for the Hub's
-/// time and uploader.
-fn blank_clears(field: Field<JsString>) -> Field<JsString> {
-    match field {
-        Field::Set(s) => {
-            let trimmed = js_trim(&s);
-            if trimmed.is_empty() { Field::Clear } else { Field::Set(trimmed) }
-        }
-        other => other,
-    }
-}
-
 /// Saves a pack (`savePack`), over the pack `input.id`, over the live pack
 /// of the same name (never the built-in English one), or as a new pack.
 /// Answers its meta.
@@ -211,50 +193,21 @@ pub fn save_pack(ctx: &StoreContext, input: SavePackInput) -> PackResult<Entry> 
                 return Err(PackError::not_found("Language pack is no longer linked to this Hub post"));
             }
         }
-        // `if (!resolvedId)`: an empty id also looks the name up, and stays
-        // when no pack has the name.
-        let mut resolved = input.id.clone();
-        if resolved.as_ref().is_none_or(JsString::is_empty) {
-            let by_name = find_active_by_name(&index.metas, &Value::String(header_name.clone()), None)?;
-            if let Some(id) = by_name.and_then(Entry::id).filter(|id| !is_english(id)) {
-                resolved = Some(id.clone());
-            }
-        }
-        // A live pack saved over keeps its (possibly renamed) name.
-        let kept_name = resolved
-            .as_ref()
-            .and_then(|id| index.metas.iter().find(|meta| meta.id() == Some(id) && !meta.is_deleted()))
-            .and_then(|meta| meta.get("name"))
-            .filter(|name| **name != Value::Null)
-            .cloned();
-        let name = kept_name.unwrap_or_else(|| Value::String(header_name.clone()));
-        if find_active_by_name(&index.metas, &name, resolved.as_ref())?.is_some() {
-            return Err(PackError::new(ErrorCode::DuplicateName, DUPLICATE_NAME));
-        }
-        let id = resolved.unwrap_or_else(|| JsString::from(ctx.new_id()));
-        if I18N_PACKS.pack_path(ctx, &id).is_none() {
-            return Err(PackError::new(ErrorCode::InvalidFile, "Generated pack id is unsafe"));
-        }
+        let (id, name) = I18N_PACKS.save_target(ctx, &index, input.id.as_ref(), &header_name)?;
         let pack = input.pack.as_ref().unwrap_or(&Value::Null);
         I18N_PACKS.write_body(ctx, &id, &pipette_js_json::stringify_with_gap(pack, "  "))?;
 
         let now = ctx.now_ms();
-        let at = index.position(&id);
-        let existing = at.map(|at| &index.metas[at]);
-        let live = existing.filter(|meta| !meta.is_deleted());
-        let fields = save_fields(&I18N_PACKS, &input, &id, name, header_version, existing, live, now);
-        let options = OverwriteOptions { body: true, explicit: !input.unattended };
-        let mut meta = overwrite_entry(EntryStore::I18nPacks, existing, fields, now, options)?;
+        let existing = index.find(&id);
+        let live = existing.is_some_and(|meta| !meta.is_deleted());
+        let fields = save_fields(&input, &id, name, header_version, existing, now);
+        let (at, mut meta) = I18N_PACKS.saved_meta(&index, &id, fields, now, !input.unattended)?;
         // A save that keeps the pack alive over a delete must not come back
         // disabled: the delete disabled it at its own time.
-        if !input.unattended && live.is_some() {
+        if !input.unattended && live {
             touch_clock(&mut meta, EntryGroup::Enabled, now)?;
         }
-        index.put(at, meta.clone());
-        I18N_PACKS.write_index(ctx, &index)?;
-        I18N_PACKS.notify_pack_change(ctx, &id);
-        I18N_PACKS.notify_index_change(ctx);
-        Ok(meta)
+        I18N_PACKS.put_saved(ctx, &mut index, at, &id, meta)
     })
 }
 
@@ -267,25 +220,19 @@ fn input_hub_post_id(field: &Field<JsString>) -> Option<JsString> {
     }
 }
 
-/// The meta fields of a save, in the order `savePack` writes them.
-#[allow(clippy::too_many_arguments)]
+/// The meta fields of a save over `existing`, in the order `savePack`
+/// writes them.
 fn save_fields(
-    store: &PackStore,
     input: &SavePackInput,
     id: &JsString,
     name: Value,
     version: JsString,
     existing: Option<&Entry>,
-    live: Option<&Entry>,
     now: i64,
 ) -> Object {
     let old = |key: &str| existing.and_then(|meta| meta.get(key));
+    let live = existing.filter(|meta| !meta.is_deleted());
     let truthy = |value: Option<Value>| value.filter(Value::is_truthy);
-    let hub_post_id = input.hub_post_id.clone().resolve(old("hubPostId"), Value::String);
-    let hub_updated_at =
-        truthy(blank_clears(input.hub_updated_at.clone()).resolve(old("hubUpdatedAt"), Value::String));
-    let uploader_name =
-        truthy(blank_clears(input.uploader_name.clone()).resolve(old("uploaderName"), Value::String));
     let matched_base_version =
         truthy(input.matched_base_version.clone().resolve(old("matchedBaseVersion"), Value::String));
     let coverage = truthy(input.coverage.clone().resolve(old("coverage"), Value::Object));
@@ -299,23 +246,20 @@ fn save_fields(
         .map(Value::from)
         .or_else(|| live.and_then(|meta| meta.get("enabled")).filter(|v| **v != Value::Null).cloned())
         .unwrap_or(Value::Bool(true));
-    let saved_at =
-        old("savedAt").filter(|v| **v != Value::Null).cloned().unwrap_or_else(|| iso_8601_millis(now).into());
 
     let mut fields = Object::new();
     fields.insert("id", Value::String(id.clone()));
-    fields.insert("filename", Value::String(store.filename_of(id)));
+    fields.insert("filename", Value::String(I18N_PACKS.filename_of(id)));
     fields.insert("name", name);
     fields.insert("version", Value::String(version));
     fields.insert("enabled", enabled);
-    let optional =
-        [("hubPostId", hub_post_id), ("hubUpdatedAt", hub_updated_at), ("uploaderName", uploader_name)];
-    for (key, value) in optional {
-        if let Some(value) = value {
-            fields.insert(key, value);
-        }
-    }
-    fields.insert("savedAt", saved_at);
+    let hub = SaveHub {
+        hub_post_id: &input.hub_post_id,
+        hub_updated_at: &input.hub_updated_at,
+        uploader_name: &input.uploader_name,
+        drop_empty_post: false,
+    };
+    insert_save_tail(&mut fields, hub, existing, now);
     let app_version = input.app_version_at_import.clone().filter(|v| !v.is_empty()).map(Value::String);
     let derived = [
         ("appVersionAtImport", app_version),
@@ -331,53 +275,15 @@ fn save_fields(
     fields
 }
 
-/// The live meta `id` under the lock, changed by `change`: written and
-/// reported as an index change when `change` answers true, answered as it
-/// is otherwise.
-fn change_live_meta(
-    ctx: &StoreContext,
-    id: &JsString,
-    change: impl FnOnce(&PackIndex, &mut Entry) -> PackResult<bool>,
-) -> PackResult<Entry> {
-    I18N_PACKS.with_lock(ctx, || {
-        let mut index = I18N_PACKS.read_index(ctx)?;
-        let at = index.live_position(id).ok_or_else(|| PackError::not_found(NOT_FOUND))?;
-        let mut meta = index.metas[at].clone();
-        if change(&index, &mut meta)? {
-            index.metas[at] = meta.clone();
-            I18N_PACKS.write_index(ctx, &index)?;
-            I18N_PACKS.notify_index_change(ctx);
-        }
-        Ok(meta)
-    })
-}
-
 /// Gives the live pack `id` the name `new_name`, trimmed (`renamePack`).
-/// Only the meta changes: the body and its sync unit stay as they are.
 pub fn rename_pack(ctx: &StoreContext, id: &JsString, new_name: &JsString) -> PackResult<Entry> {
-    let name = js_trim(new_name);
-    if name.is_empty() {
-        return Err(PackError::new(ErrorCode::InvalidName, "Name must not be empty"));
-    }
-    if utf16_len(&name) > MAX_NAME_LENGTH {
-        let message = format!("Name must be at most {MAX_NAME_LENGTH} characters");
-        return Err(PackError::new(ErrorCode::InvalidName, message));
-    }
-    change_live_meta(ctx, id, |index, meta| {
-        let named = Value::String(name);
-        if find_active_by_name(&index.metas, &named, Some(id))?.is_some() {
-            return Err(PackError::new(ErrorCode::DuplicateName, DUPLICATE_NAME));
-        }
-        meta.set("name", named);
-        touch_clock(meta, EntryGroup::Name, ctx.now_ms())?;
-        Ok(true)
-    })
+    I18N_PACKS.rename_pack(ctx, id, new_name)
 }
 
 /// Enables or disables the live pack `id` (`setEnabled`); a pack already so
 /// is answered as it is, nothing written.
 pub fn set_enabled(ctx: &StoreContext, id: &JsString, enabled: bool) -> PackResult<Entry> {
-    change_live_meta(ctx, id, |_, meta| {
+    I18N_PACKS.change_live_meta(ctx, id, |_, meta| {
         if meta.get("enabled") == Some(&Value::Bool(enabled)) {
             return Ok(false);
         }
@@ -404,7 +310,7 @@ pub struct CoverageValues {
 pub fn refresh_coverage(ctx: &StoreContext, id: &JsString, values: CoverageValues) -> PackResult<Entry> {
     I18N_PACKS.with_lock(ctx, || {
         let mut index = I18N_PACKS.read_index(ctx)?;
-        let at = index.live_position(id).ok_or_else(|| PackError::not_found(NOT_FOUND))?;
+        let at = index.live_position(id).ok_or_else(|| PackError::not_found(I18N_PACKS.not_found))?;
         let meta = &mut index.metas[at];
         let measured = Value::String(values.measured_body_clock);
         if clock_ms(meta.clock(EntryGroup::Body)) != clock_ms(Some(&measured)) {
@@ -427,28 +333,11 @@ pub fn delete_pack(ctx: &StoreContext, id: &JsString) -> PackResult<()> {
     if is_english(id) {
         return Err(PackError::new(ErrorCode::InvalidName, "English cannot be deleted"));
     }
-    I18N_PACKS.with_lock(ctx, || {
-        let mut index = I18N_PACKS.read_index(ctx)?;
-        let at = index.position(id).ok_or_else(|| PackError::not_found(NOT_FOUND))?;
-        let now = ctx.now_ms();
-        let meta = &mut index.metas[at];
+    I18N_PACKS.tombstone(ctx, id, |meta, now| {
         meta.set("enabled", false);
         touch_clock(meta, EntryGroup::Enabled, now)?;
-        mark_deleted(meta, now);
-        I18N_PACKS.write_index(ctx, &index)?;
-        I18N_PACKS.notify_pack_change(ctx, id);
-        I18N_PACKS.notify_index_change(ctx);
         Ok(())
     })
-}
-
-/// How a Hub link change treats an optional cached field: left alone, or
-/// set to a value (blank once trimmed clears it).
-#[derive(Clone, Debug, Default, PartialEq)]
-pub enum Cached {
-    #[default]
-    Keep,
-    Set(Option<JsString>),
 }
 
 /// Links the pack `id` (live or not) to the Hub post `hub_post_id`, or
@@ -462,25 +351,7 @@ pub fn set_hub_post_id(
     uploader_name: Cached,
     hub_updated_at: Cached,
 ) -> PackResult<Entry> {
-    I18N_PACKS.with_lock(ctx, || {
-        let mut index = I18N_PACKS.read_index(ctx)?;
-        let at = index.position(id).ok_or_else(|| PackError::not_found(NOT_FOUND))?;
-        let meta = &mut index.metas[at];
-        meta.set_trimmed("hubPostId", hub_post_id);
-        if meta.get("hubPostId").is_none() {
-            meta.remove("hubUpdatedAt");
-        }
-        for (key, cached) in [("uploaderName", uploader_name), ("hubUpdatedAt", hub_updated_at)] {
-            if let Cached::Set(value) = cached {
-                meta.set_trimmed(key, value.as_ref());
-            }
-        }
-        touch_clock(meta, EntryGroup::Hub, ctx.now_ms())?;
-        let meta = meta.clone();
-        I18N_PACKS.write_index(ctx, &index)?;
-        I18N_PACKS.notify_index_change(ctx);
-        Ok(meta)
-    })
+    I18N_PACKS.set_hub_post_id(ctx, id, hub_post_id, uploader_name, hub_updated_at)
 }
 
 /// Whether a live pack other than `exclude` has the name `name`

@@ -38,14 +38,15 @@ pub struct PackImportFileRead {
     read_error: Option<String>,
 }
 
-/// Shows the import dialog titled `title` (JSON files, or all files) and
-/// reads the chosen files.
+/// The filters of the pack dialogs: JSON files, or all files.
+pub(crate) fn json_filters() -> Vec<FileFilter> {
+    vec![FileFilter::new("JSON", &["json"]), FileFilter::all_files()]
+}
+
+/// Shows the import dialog titled `title` and reads the chosen files.
 pub(crate) fn read_chosen_packs(dialogs: &Dialogs, title: &str) -> PackImportRead {
-    let request = DialogRequest {
-        kind: DialogKind::OpenMany,
-        title: title.to_owned(),
-        filters: vec![FileFilter::new("JSON", &["json"]), FileFilter::all_files()],
-    };
+    let request =
+        DialogRequest { kind: DialogKind::OpenMany, title: title.to_owned(), filters: json_filters() };
     let paths = dialogs.show_many(request);
     let files = paths
         .iter()

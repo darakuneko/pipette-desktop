@@ -1,72 +1,32 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Fixture generator for the language pack store of
 // src-tauri/crates/pipette-pack-stores: runs the real I18N_PACK_* handlers
-// of src/main/i18n-pack-ipc.ts on a userData directory built in a temp
-// directory, at fixed times and with a fixed sequence of new ids. The file
-// dialogs answer paths under userData (or are cancelled). It records each
-// step's response, the sync units reported to notifyChange, and every file
-// and directory left behind (path → content).
-//
-// The import dialog's answer is recorded as the renderer gets it. The
-// Tauri build reads the files in the backend and parses them in the shim,
-// so the crate rebuilds the same answer from the files it reads.
-//
-// Recorded values are normalized where the two builds differ on purpose:
-// - a path under userData starts with `<userData>/`;
-// - the text of a file-system error is the OS's and Node's (`<os error>`),
-//   and that of a JSON.parse failure the JavaScript engine's
-//   (`<parse error>`);
-// - a response longer than 4 KiB is recorded as the SHA-256 of its JSON,
-//   and a file larger than 4 KiB as `{ sha256, size }` (the sample packs).
-//
-// A scenario's tree can copy a file of the repository (`{ copyOf }`) and
-// set modification times (`mtimes`), which the v1 metas' body clock reads.
-// The times the files got are recorded in nanoseconds (`mtimesNs`), so the
-// crate sets the same ones.
+// of src/main/i18n-pack-ipc.ts through the scenarios below and records
+// what they answer, report and leave behind (pack-fixture-harness.ts).
 
-import { afterAll, describe, expect, it, vi } from 'vitest'
-import { createHash } from 'node:crypto'
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
 import { writeJsonFixture } from '../fixture-files'
 import { REPO_ROOT } from '../fixture-vitest-config'
+import { resolve } from 'node:path'
+import { type CommonStep, type Raw, type Scenario, handler, playAll, rawValue, uuid } from './pack-fixture-harness'
 
-const { handlers, notified, paths, ids, dialogs } = vi.hoisted(() => ({
+const state = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
   notified: [] as string[],
   paths: { userData: '' },
   ids: { next: 1 },
-  /** The paths the next dialog answers, under userData; null cancels it. */
   dialogs: { answer: null as string[] | null, defaultPath: undefined as string | undefined },
 }))
 
-vi.mock('electron', () => {
-  const chosen = (): string[] => (dialogs.answer ?? []).map((path) => `${paths.userData}/${path}`)
-  return {
-    app: { getPath: () => paths.userData },
-    BrowserWindow: { fromWebContents: () => ({}) },
-    dialog: {
-      showSaveDialog: (_win: unknown, options: { defaultPath?: string }) => {
-        dialogs.defaultPath = options.defaultPath
-        const [filePath] = chosen()
-        return Promise.resolve({ canceled: filePath === undefined, filePath })
-      },
-      showOpenDialog: () => {
-        const filePaths = chosen()
-        return Promise.resolve({ canceled: dialogs.answer === null, filePaths })
-      },
-    },
-  }
-})
+vi.mock('electron', async () => (await import('./pack-fixture-harness')).electronMock(state))
 vi.mock('../../src/main/ipc-guard', () => ({
-  secureHandle: (channel: string, handler: (...args: unknown[]) => unknown) => handlers.set(channel, handler),
+  secureHandle: (channel: string, handler: (...args: unknown[]) => unknown) => state.handlers.set(channel, handler),
 }))
-vi.mock('../../src/main/sync/sync-service', () => ({ notifyChange: (unit: string) => notified.push(unit) }))
+vi.mock('../../src/main/sync/sync-service', () => ({ notifyChange: (unit: string) => state.notified.push(unit) }))
 vi.mock('node:crypto', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:crypto')>()
-  /** The ids the crate's tests hand out: `00000000-0000-4000-8000-{n:012}`. */
-  const randomUUID = (): string => `00000000-0000-4000-8000-${String(ids.next++).padStart(12, '0')}`
+  // uuid() of pack-fixture-harness.ts, which imports this module.
+  const randomUUID = (): string => `00000000-0000-4000-8000-${String(state.ids.next++).padStart(12, '0')}`
   return { ...actual, default: { ...actual, randomUUID }, randomUUID }
 })
 
@@ -75,20 +35,8 @@ import { IpcChannels } from '../../src/shared/ipc/channels'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-pack-stores/tests/fixtures/ts_i18n_pack_store_scenarios.json')
 
-/** Content larger than this is recorded by its hash. */
-const INLINE_LIMIT = 4096
-
-/** A userData tree: file path → UTF-8 content (`{ hex }` for bytes that are
- *  not UTF-8, `{ copyOf }` for a file of the repository, `{ sha256, size }`
- *  for a large recorded file), or null for a directory. */
-type Node = string | { hex: string } | { copyOf: string } | { sha256: string; size: number } | null
-type Tree = Record<string, Node>
-
-/** A JSON value given as is, or read from a file under userData when the
- *  step runs (`{ fromFile }`, parsed with JSON.parse). */
-type Raw = { value: unknown } | { fromFile: string } | { absent: true }
-
 type Step =
+  | CommonStep
   | { op: 'list' }
   | { op: 'get'; id: unknown }
   | { op: 'hasName'; name: unknown; excludeId?: unknown }
@@ -98,28 +46,13 @@ type Step =
   | { op: 'reorder'; ids: unknown }
   | { op: 'delete'; id: unknown }
   | { op: 'hubPostId'; id: unknown; hubPostId: unknown; uploaderName?: unknown; hubUpdatedAt?: unknown }
-  /** The dialog answers `dialog` (paths under userData), or is cancelled. */
-  | { op: 'import'; dialog: string[] | null }
   | { op: 'importApply'; raw: Raw; options?: unknown }
-  | { op: 'export'; id: unknown; dialog: string | null }
-  /** The clock moves to this time. */
-  | { op: 'at'; time: string }
-
-interface Scenario {
-  name: string
-  time: string
-  tree: Tree
-  /** Modification times set after the tree is built: path → ISO time. */
-  mtimes?: Record<string, string>
-  steps: Step[]
-}
 
 const T0 = '2026-10-16T12:00:00.000Z'
 const MIN = 60_000
 const DAY = 24 * 60 * MIN
 const t = (ms: number): string => new Date(Date.parse(T0) + ms).toISOString()
 const at = (ms: number): Step => ({ op: 'at', time: t(ms) })
-const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 
 const INDEX = 'sync/i18n/index.json'
 const body = (id: string): string => `sync/i18n/packs/${id}.json`
@@ -154,7 +87,7 @@ const v1 = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
 const SAMPLES = ['Japanese', 'Japanese_-_ギャル', 'Japanese_-_京言葉', 'Japanese_-_紳士']
 const sample = (name: string): string => `sample-packs/i18n/i18n-packs-${name}.json`
 
-const SCENARIOS: Scenario[] = [
+const SCENARIOS: Scenario<Step>[] = [
   {
     name: 'English on the first list, then saves, renames, enabling, coverage, Hub links and deletes',
     time: T0,
@@ -449,153 +382,31 @@ const SCENARIOS: Scenario[] = [
   },
 ]
 
-let root = ''
-afterAll(() => {
-  if (root) rmSync(root, { recursive: true, force: true })
-})
-
-function build(dir: string, tree: Tree): void {
-  for (const [path, content] of Object.entries(tree)) {
-    const target = join(dir, path)
-    if (content === null) {
-      mkdirSync(target, { recursive: true })
-      continue
-    }
-    mkdirSync(dirname(target), { recursive: true })
-    if (typeof content === 'string') writeFileSync(target, content)
-    else if ('hex' in content) writeFileSync(target, Buffer.from(content.hex, 'hex'))
-    else if ('copyOf' in content) writeFileSync(target, readFileSync(resolve(REPO_ROOT, content.copyOf)))
-    else throw new Error(`cannot build ${path}`)
-  }
-}
-
-const sha256 = (bytes: string | Buffer): string => createHash('sha256').update(bytes).digest('hex')
-
-/** Every file and directory (`path/` → null) under `dir`. */
-function record(dir: string, prefix = ''): Tree {
-  const tree: Tree = {}
-  for (const name of readdirSync(dir).sort()) {
-    const path = join(dir, name)
-    if (lstatSync(path).isDirectory()) {
-      tree[`${prefix}${name}/`] = null
-      Object.assign(tree, record(path, `${prefix}${name}/`))
-    } else {
-      const bytes = readFileSync(path)
-      const text = bytes.toString('utf-8')
-      if (bytes.length > INLINE_LIMIT) tree[`${prefix}${name}`] = { sha256: sha256(bytes), size: bytes.length }
-      else tree[`${prefix}${name}`] = Buffer.from(text, 'utf-8').equals(bytes) ? text : { hex: bytes.toString('hex') }
-    }
-  }
-  return tree
-}
-
-function handler(channel: string): (...args: unknown[]) => Promise<unknown> {
-  const found = handlers.get(channel)
-  if (!found) throw new Error(`${channel} is not registered`)
-  return found as (...args: unknown[]) => Promise<unknown>
-}
-
-function rawValue(raw: Raw, dir: string): unknown[] {
-  if ('absent' in raw) return [undefined]
-  if ('value' in raw) return [raw.value]
-  return [JSON.parse(readFileSync(join(dir, raw.fromFile), 'utf-8'))]
-}
-
 async function run(step: Exclude<Step, { op: 'at' }>, dir: string): Promise<unknown> {
   const ev = { sender: {} }
+  const call = (channel: string, ...args: unknown[]): Promise<unknown> => handler(state, channel)(ev, ...args)
   switch (step.op) {
-    case 'list': return handler(IpcChannels.I18N_PACK_STORE_LIST)(ev)
-    case 'get': return handler(IpcChannels.I18N_PACK_STORE_GET)(ev, step.id)
-    case 'hasName': return handler(IpcChannels.I18N_PACK_STORE_HAS_NAME)(ev, step.name, step.excludeId)
-    case 'rename': return handler(IpcChannels.I18N_PACK_STORE_RENAME)(ev, step.id, step.name)
-    case 'setEnabled': return handler(IpcChannels.I18N_PACK_STORE_SET_ENABLED)(ev, step.id, step.enabled)
-    case 'refreshCoverage': return handler(IpcChannels.I18N_PACK_STORE_REFRESH_COVERAGE)(ev, step.id, step.values)
-    case 'reorder': return handler(IpcChannels.I18N_PACK_STORE_REORDER)(ev, step.ids)
-    case 'delete': return handler(IpcChannels.I18N_PACK_STORE_DELETE)(ev, step.id)
+    case 'list': return call(IpcChannels.I18N_PACK_STORE_LIST)
+    case 'get': return call(IpcChannels.I18N_PACK_STORE_GET, step.id)
+    case 'hasName': return call(IpcChannels.I18N_PACK_STORE_HAS_NAME, step.name, step.excludeId)
+    case 'rename': return call(IpcChannels.I18N_PACK_STORE_RENAME, step.id, step.name)
+    case 'setEnabled': return call(IpcChannels.I18N_PACK_STORE_SET_ENABLED, step.id, step.enabled)
+    case 'refreshCoverage': return call(IpcChannels.I18N_PACK_STORE_REFRESH_COVERAGE, step.id, step.values)
+    case 'reorder': return call(IpcChannels.I18N_PACK_STORE_REORDER, step.ids)
+    case 'delete': return call(IpcChannels.I18N_PACK_STORE_DELETE, step.id)
     case 'hubPostId':
-      return handler(IpcChannels.I18N_PACK_STORE_SET_HUB_POST_ID)(ev, step.id, step.hubPostId, step.uploaderName, step.hubUpdatedAt)
-    case 'import': return handler(IpcChannels.I18N_PACK_IMPORT)(ev)
+      return call(IpcChannels.I18N_PACK_STORE_SET_HUB_POST_ID, step.id, step.hubPostId, step.uploaderName, step.hubUpdatedAt)
+    case 'import': return call(IpcChannels.I18N_PACK_IMPORT)
     // The preload passes `options ?? {}`.
-    case 'importApply': return handler(IpcChannels.I18N_PACK_IMPORT_APPLY)(ev, ...rawValue(step.raw, dir), step.options ?? {})
-    case 'export': return handler(IpcChannels.I18N_PACK_EXPORT)(ev, step.id)
-  }
-}
-
-/** The response as recorded (see the module doc). */
-function outcome(response: unknown, dir: string): unknown {
-  const text = JSON.stringify(response, (_key, value: unknown) => {
-    if (typeof value !== 'string') return value
-    if (value.startsWith(`${dir}/`)) return `<userData>/${value.slice(dir.length + 1)}`
-    return value
-  })
-  const r = JSON.parse(text) as { error?: unknown; files?: { parseError?: unknown }[] }
-  if (typeof r.error === 'string' && /^Error: E[A-Z]+:/.test(r.error)) r.error = '<os error>'
-  if (typeof r.error === 'string' && r.error.startsWith('SyntaxError:')) r.error = '<parse error>'
-  for (const file of r.files ?? []) {
-    if (typeof file.parseError === 'string') file.parseError = /^Error: E[A-Z]+:/.test(file.parseError) ? '<os error>' : '<parse error>'
-  }
-  const normalized = JSON.stringify(r)
-  return normalized.length > INLINE_LIMIT ? { sha256: sha256(normalized) } : normalized
-}
-
-interface Played {
-  /** The modification time each file of `mtimes` got, in nanoseconds since
-   *  the epoch. */
-  mtimesNs: Record<string, string>
-  outcomes: unknown[]
-  /** The default file name each export's save dialog offered. */
-  defaultPaths: (string | null)[]
-  notified: string[]
-  after: Tree
-}
-
-async function play(scenario: Scenario, dir: string): Promise<Played> {
-  paths.userData = dir
-  notified.length = 0
-  ids.next = 1
-  build(dir, scenario.tree)
-  const mtimesNs: Record<string, string> = {}
-  for (const [path, time] of Object.entries(scenario.mtimes ?? {})) {
-    const when = new Date(time)
-    utimesSync(join(dir, path), when, when)
-    mtimesNs[path] = statSync(join(dir, path), { bigint: true }).mtimeNs.toString()
-  }
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date(scenario.time))
-  try {
-    const outcomes: unknown[] = []
-    const defaultPaths: (string | null)[] = []
-    for (const step of scenario.steps) {
-      dialogs.defaultPath = undefined
-      if (step.op === 'at') {
-        vi.setSystemTime(new Date(step.time))
-        outcomes.push(null)
-      } else {
-        dialogs.answer = step.op === 'import' ? step.dialog : step.op === 'export' && step.dialog !== null ? [step.dialog] : null
-        try {
-          outcomes.push(outcome(await run(step, dir), dir))
-        } catch (err) {
-          outcomes.push({ rejected: String(err) })
-        }
-      }
-      defaultPaths.push(dialogs.defaultPath ?? null)
-    }
-    return { mtimesNs, outcomes, defaultPaths, notified: [...notified], after: record(dir) }
-  } finally {
-    vi.useRealTimers()
+    case 'importApply': return call(IpcChannels.I18N_PACK_IMPORT_APPLY, ...rawValue(step.raw, dir), step.options ?? {})
+    case 'export': return call(IpcChannels.I18N_PACK_EXPORT, step.id)
   }
 }
 
 describe('i18n pack store fixtures', () => {
   it('records each scenario’s responses, dialogs, notified units and files', async () => {
     setupI18nPackStore()
-    root = mkdtempSync(join(tmpdir(), 'i18n-pack-store-fixtures-'))
-    const results: (Scenario & Played)[] = []
-    for (const [i, scenario] of SCENARIOS.entries()) {
-      const dir = join(root, String(i))
-      mkdirSync(dir)
-      results.push({ ...scenario, ...(await play(scenario, dir)) })
-    }
+    const results = await playAll(state, SCENARIOS, run, 'i18n-pack-store-fixtures-')
     writeJsonFixture(OUT, results)
     const first = results[0]
     expect(first.notified[0]).toBe('i18n/index')

@@ -3,59 +3,16 @@
 //! temp userData directory. The dialog titles and filters are those of
 //! src/main/i18n-pack-ipc.ts and src/main/i18n-pack-store-crud.ts.
 
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-
 use pipette_sync_pending::PendingStore;
 use serde_json::json;
 use tauri::Manager;
 use tauri::async_runtime::block_on;
-use tauri::ipc::{InvokeResponseBody, IpcResponse};
-use tauri::test::MockRuntime;
 use tempfile::TempDir;
 
 use super::*;
-
-struct TestApp {
-    app: tauri::App<MockRuntime>,
-    requests: Arc<Mutex<Vec<DialogRequest>>>,
-}
-
-/// A mock app with the stores on `user_data`, and dialogs that answer
-/// `answer` and record every request.
-fn test_app(user_data: &Path, answer: Vec<PathBuf>) -> TestApp {
-    let app = tauri::test::mock_app();
-    crate::store_commands::sync_pending::manage_without_delayed_writes(app.handle(), user_data);
-    crate::store_commands::keyboard_data::manage(app.handle(), user_data);
-    let requests = Arc::new(Mutex::new(Vec::new()));
-    let record = Arc::clone(&requests);
-    app.manage(Dialogs::new(move |request| {
-        record.lock().unwrap().push(request);
-        answer.clone()
-    }));
-    TestApp { app, requests }
-}
-
-impl TestApp {
-    fn stores(&self) -> State<'_, StoreContext> {
-        self.app.state::<StoreContext>()
-    }
-
-    fn dialogs(&self) -> State<'_, Dialogs> {
-        self.app.state::<Dialogs>()
-    }
-
-    fn requests(&self) -> Vec<DialogRequest> {
-        self.requests.lock().unwrap().clone()
-    }
-}
-
-fn text(response: Result<Response, CommandError>) -> String {
-    match response.unwrap().body().unwrap() {
-        InvokeResponseBody::Json(text) => text,
-        InvokeResponseBody::Raw(_) => panic!("not JSON"),
-    }
-}
+use crate::command_error::CommandError;
+use crate::dialog::{DialogKind, DialogRequest, FileFilter};
+use crate::store_commands::pack_commands::test_app::{TestApp, test_app, text};
 
 fn json_filters() -> Vec<FileFilter> {
     vec![FileFilter::new("JSON", &["json"]), FileFilter::new("All Files", &["*"])]

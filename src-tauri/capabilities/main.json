@@ -18,6 +18,7 @@
     "settings",
     "typing-datasets",
     "i18n-packs",
+    "theme-packs",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

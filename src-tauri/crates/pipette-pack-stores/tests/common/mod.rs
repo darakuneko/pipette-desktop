@@ -5,6 +5,8 @@
 
 #![allow(dead_code, clippy::unwrap_used, clippy::panic)]
 
+pub mod replay;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -26,7 +26,12 @@ const EXPECTED_FAKES = [
   'hubUploadI18nPost',
   'hubUpdateI18nPost',
   'hubDeleteI18nPost',
-  'themePackList',
+  'themePackHubTimestamps',
+  'hubListThemePosts',
+  'hubDownloadThemePost',
+  'hubUploadThemePost',
+  'hubUpdateThemePost',
+  'hubDeleteThemePost',
   'keyLabelHubList',
   'keyLabelHubDownload',
   'keyLabelHubUpload',
@@ -94,7 +99,28 @@ const LANGUAGE_PACK_MEMBERS = [
   'i18nPackOnChanged',
 ]
 
+/** The theme pack members, all real. */
+const THEME_PACK_MEMBERS = [
+  'themePackList',
+  'themePackGet',
+  'themePackRename',
+  'themePackDelete',
+  'themePackSetHubPostId',
+  'themePackHasName',
+  'themePackReorder',
+  'themePackImport',
+  'themePackImportApply',
+  'themePackExport',
+  'themePackOnChanged',
+]
+
 describe('shim coverage', () => {
+  it('backs every theme pack member with backend commands', () => {
+    expect(new Set(THEME_PACK_MEMBERS).size).toBe(11)
+    expect(THEME_PACK_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(THEME_PACK_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
   it('backs every language pack member with backend commands', () => {
     expect(new Set(LANGUAGE_PACK_MEMBERS).size).toBe(13)
     expect(LANGUAGE_PACK_MEMBERS.filter((name) => !(name in real))).toEqual([])
