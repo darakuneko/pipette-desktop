@@ -2,11 +2,17 @@
 // Fixed answers for the VialAPI members the renderer awaits during startup
 // and while connecting a keyboard and opening its editor, for areas the
 // backend does not implement yet: the values of a fresh install (sync
-// signed out, no packs, no saved keyboard data). Writes
-// succeed without storing anything. Each group names the backend area
-// whose commands take its place; coverage.test.ts lists them.
+// signed out, no packs, no saved keyboard data), and failed answers for the
+// Hub requests whose answer the renderer reads. Writes succeed without
+// storing anything. Each group names the backend area whose commands take
+// its place; coverage.test.ts lists them.
 
 import type { VialAPI } from '../shared/types/vial-api'
+
+/** A Hub request that failed. */
+function hubUnavailable(): Promise<{ success: false; error: string }> {
+  return Promise.resolve({ success: false, error: 'Hub is not available' })
+}
 
 export const fakes = {
   // Tray.
@@ -21,8 +27,17 @@ export const fakes = {
   // Startup notification.
   notificationFetch: () => Promise.resolve({ success: false }),
 
-  // Language packs.
-  i18nPackList: () => Promise.resolve({ success: true, data: [] }),
+  // Pipette Hub, for the language packs: the renderer reads `success` of
+  // these answers without a guard, on its own (the freshness check of
+  // Hub-linked packs and the Hub tab's list) or after a local change (the
+  // sync after renaming a Hub-linked pack), so each answers a failed
+  // request.
+  i18nPackHubTimestamps: () => hubUnavailable(),
+  hubListI18nPosts: () => hubUnavailable(),
+  hubDownloadI18nPost: () => hubUnavailable(),
+  hubUploadI18nPost: () => hubUnavailable(),
+  hubUpdateI18nPost: () => hubUnavailable(),
+  hubDeleteI18nPost: () => hubUnavailable(),
 
   // Theme packs.
   themePackList: () => Promise.resolve({ success: true, data: [] }),

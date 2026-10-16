@@ -63,7 +63,16 @@ describe('implemented', () => {
     const api = createVialApi(implemented)
     await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
-    await expect(api.i18nPackList()).resolves.toEqual({ success: true, data: [] })
+    await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
+  })
+
+  it('answers the Hub requests of the language packs as failed', async () => {
+    const api = createVialApi(implemented)
+    const failed = { success: false, error: 'Hub is not available' }
+    await expect(api.i18nPackHubTimestamps(['post-1'])).resolves.toEqual(failed)
+    await expect(api.hubListI18nPosts()).resolves.toEqual(failed)
+    await expect(api.hubDownloadI18nPost('post-1')).resolves.toEqual(failed)
+    await expect(api.hubDeleteI18nPost('post-1')).resolves.toEqual(failed)
   })
 
   it('answers the store calls of connecting a keyboard as a fresh install', async () => {

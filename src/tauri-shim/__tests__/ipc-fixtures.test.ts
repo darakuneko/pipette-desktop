@@ -17,7 +17,9 @@ import { APP_COMMANDS } from '../generated/app-command-names'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
+import type { I18nPackImportApplyOptions } from '../../shared/types/i18n-store'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
+import type { VialAPI } from '../../shared/types/vial-api'
 
 interface Entry {
   member: string
@@ -39,6 +41,7 @@ interface Shim {
   device: typeof import('../api/device')
   favorites: typeof import('../api/favorites')
   files: typeof import('../api/files')
+  i18nPacks: typeof import('../api/i18n-packs')
   keyboardData: typeof import('../api/keyboard-data')
   settings: typeof import('../api/settings')
   shell: typeof import('../api/shell')
@@ -56,6 +59,7 @@ async function load(): Promise<Shim> {
     device: await import('../api/device'),
     favorites: await import('../api/favorites'),
     files: await import('../api/files'),
+    i18nPacks: await import('../api/i18n-packs'),
     keyboardData: await import('../api/keyboard-data'),
     settings: await import('../api/settings'),
     shell: await import('../api/shell'),
@@ -199,6 +203,33 @@ const CALLERS: Record<string, Caller> = {
   },
   'settings.ensureSettingsDir': { run: ({ settings }, [uid]) => settings.ensureSettingsDir(uid as string), void: true },
   'settings.readAllSettingsFiles': { run: ({ settings }) => settings.readAllSettingsFiles() },
+  i18nPackList: { run: ({ i18nPacks }) => i18nPacks.i18nPacksApi.i18nPackList() },
+  i18nPackGet: { run: ({ i18nPacks }, [id]) => i18nPacks.i18nPacksApi.i18nPackGet(id as string) },
+  i18nPackRename: {
+    run: ({ i18nPacks }, [id, name]) => i18nPacks.i18nPacksApi.i18nPackRename(id as string, name as string),
+  },
+  i18nPackSetEnabled: {
+    run: ({ i18nPacks }, [id, enabled]) => i18nPacks.i18nPacksApi.i18nPackSetEnabled(id as string, enabled as boolean),
+  },
+  i18nPackRefreshCoverage: {
+    run: ({ i18nPacks }, [id, values]) =>
+      i18nPacks.i18nPacksApi.i18nPackRefreshCoverage(id as string, values as Parameters<VialAPI['i18nPackRefreshCoverage']>[1]),
+  },
+  i18nPackDelete: { run: ({ i18nPacks }, [id]) => i18nPacks.i18nPacksApi.i18nPackDelete(id as string) },
+  i18nPackSetHubPostId: {
+    run: ({ i18nPacks }, [id, postId, uploader, updatedAt]) =>
+      i18nPacks.i18nPacksApi.i18nPackSetHubPostId(id as string, postId as string | null, uploader as string, updatedAt as string),
+  },
+  i18nPackHasName: {
+    run: ({ i18nPacks }, [name, excludeId]) => i18nPacks.i18nPacksApi.i18nPackHasName(name as string, excludeId as string | undefined),
+  },
+  i18nPackReorder: { run: ({ i18nPacks }, [ids]) => i18nPacks.i18nPacksApi.i18nPackReorder(ids as string[]) },
+  'i18n-packs.openImport': { run: ({ i18nPacks }) => i18nPacks.openImport() },
+  i18nPackImportApply: {
+    run: ({ i18nPacks }, [raw, options]) =>
+      i18nPacks.i18nPacksApi.i18nPackImportApply(raw, options as I18nPackImportApplyOptions),
+  },
+  i18nPackExport: { run: ({ i18nPacks }, [id]) => i18nPacks.i18nPacksApi.i18nPackExport(id as string) },
 }
 
 afterEach(() => {

@@ -9,6 +9,7 @@ import { appConfigApi } from './api/app-config'
 import { deviceApi } from './api/device'
 import { favoritesApi } from './api/favorites'
 import { filesApi } from './api/files'
+import { i18nPacksApi } from './api/i18n-packs'
 import { keyboardDataApi } from './api/keyboard-data'
 import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
@@ -29,6 +30,7 @@ export const real = {
   ...favoritesApi,
   ...snapshotsApi,
   ...settingsApi,
+  ...i18nPacksApi,
 } satisfies Partial<VialAPI>
 
 export const implemented: Partial<VialAPI> = { ...real, ...fakes }
