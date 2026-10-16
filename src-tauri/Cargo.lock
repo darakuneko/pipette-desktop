@@ -2969,6 +2969,7 @@ dependencies = [
  "pipette-fs",
  "pipette-js-json",
  "pipette-sync-format",
+ "pipette-sync-pending",
  "pipette-time",
  "pipette-typing-analytics-db",
  "rusqlite",

@@ -42,6 +42,7 @@
     "generate:pack-store-fixtures": "vitest run --config scripts/pack-store-fixtures/vitest.config.ts record-",
     "verify:keyboard-store-rust-user-data": "vitest run --config scripts/keyboard-store-fixtures/vitest.config.ts verify-rust-stores",
     "verify:typing-dataset-rust-user-data": "vitest run --config scripts/typing-dataset-fixtures/vitest.config.ts verify-rust-stores",
+    "verify:analytics-rust-user-data": "vitest run --config scripts/analytics-db-fixtures/verify-rust-analytics.config.ts",
     "verify:pack-store-rust-user-data": "vitest run --config scripts/pack-store-fixtures/vitest.config.ts verify-rust-stores",
     "generate:hid-fixtures": "vitest run --config scripts/hid-fixtures/vitest.config.ts",
     "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts record- && tsx scripts/analytics-db-fixtures/run-time-zones.ts",

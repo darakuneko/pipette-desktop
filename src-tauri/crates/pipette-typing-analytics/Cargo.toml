@@ -38,6 +38,8 @@ windows-version = "=0.1.7"
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
 # Runs the local-day fixtures once per time zone.
 pipette-time = { path = "../pipette-time", features = ["test-util"] }
+# The pending state the userData tree for the TypeScript code holds.
+pipette-sync-pending = { path = "../pipette-sync-pending" }
 # Sets an old schema version in a test database.
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 # The digests of the compact data-operation fixtures.
