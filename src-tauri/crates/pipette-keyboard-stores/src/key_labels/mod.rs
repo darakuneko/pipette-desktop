@@ -283,20 +283,30 @@ fn qwerty_filename() -> JsString {
     id_body_filename(STORE, &QWERTY_ENTRY_ID.into(), &"builtin.json".into())
 }
 
+/// Whether the index has the QWERTY entry with an author (`uploaderName`
+/// truthy): then a list writes nothing.
+fn qwerty_complete(entries: &[Entry]) -> bool {
+    let qwerty = JsString::from(QWERTY_ENTRY_ID);
+    entries
+        .iter()
+        .find(|entry| has_id(entry, &qwerty))
+        .is_some_and(|entry| entry.get("uploaderName").is_some_and(Value::is_truthy))
+}
+
 /// Creates the QWERTY entry, first in the index, or gives one without an
 /// author the author `pipette` at the epoch hub clock, so every device
 /// writes the same entry. Under the store's lock.
 fn ensure_qwerty_locked(ctx: &StoreContext, dir: &Path) -> Result<(), KeyLabelError> {
     let mut index = read_index_locked(dir)?;
-    let qwerty = JsString::from(QWERTY_ENTRY_ID);
-    if let Some(at) = position_of(&index.entries, &qwerty) {
+    if qwerty_complete(&index.entries) {
+        return Ok(());
+    }
+    if let Some(at) = position_of(&index.entries, &JsString::from(QWERTY_ENTRY_ID)) {
         let entry = &mut index.entries[at];
-        if !entry.get("uploaderName").is_some_and(Value::is_truthy) {
-            entry.set("uploaderName", "pipette");
-            set_clock(entry, EntryGroup::Hub, EPOCH_ISO);
-            write_index(dir, &index)?;
-            ctx.notify(KEY_LABEL_SYNC_UNIT);
-        }
+        entry.set("uploaderName", "pipette");
+        set_clock(entry, EntryGroup::Hub, EPOCH_ISO);
+        write_index(dir, &index)?;
+        ctx.notify(KEY_LABEL_SYNC_UNIT);
         return Ok(());
     }
     let filename = qwerty_filename();
@@ -323,13 +333,8 @@ fn ensure_qwerty_locked(ctx: &StoreContext, dir: &Path) -> Result<(), KeyLabelEr
 /// the QWERTY entry first, taking the lock only when it has to be written.
 pub fn list_key_labels(ctx: &StoreContext, include_deleted: bool) -> Result<Vec<Entry>, KeyLabelError> {
     let dir = store_dir(ctx);
-    let qwerty = JsString::from(QWERTY_ENTRY_ID);
     let mut entries = read_index(&dir)?.entries;
-    let complete = entries
-        .iter()
-        .find(|entry| has_id(entry, &qwerty))
-        .is_some_and(|entry| entry.get("uploaderName").is_some_and(Value::is_truthy));
-    if !complete {
+    if !qwerty_complete(&entries) {
         ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || ensure_qwerty_locked(ctx, &dir))?;
         entries = read_index(&dir)?.entries;
     }
@@ -493,10 +498,10 @@ pub fn rename_key_label(ctx: &StoreContext, id: &JsString, name: &JsString) -> R
         if find_active_by_name(&index.entries, Some(&name), "name", Some(id))?.is_some() {
             return Err(KeyLabelError::duplicate_name());
         }
-        let mut meta = index.entries[at].clone();
+        let meta = &mut index.entries[at];
         meta.set("name", name);
-        touch_clock(&mut meta, EntryGroup::Name, ctx.now_ms())?;
-        index.entries[at] = meta.clone();
+        touch_clock(meta, EntryGroup::Name, ctx.now_ms())?;
+        let meta = meta.clone();
         write_index(&dir, &index)?;
         ctx.notify(KEY_LABEL_SYNC_UNIT);
         Ok(meta)
@@ -547,19 +552,19 @@ pub fn set_key_label_hub_post_id(
         let dir = store_dir(ctx);
         let mut index = read_index_locked(&dir)?;
         let at = position_of(&index.entries, id).ok_or_else(KeyLabelError::not_found)?;
-        let mut meta = index.entries[at].clone();
-        set_trimmed(&mut meta, "hubPostId", hub_post_id);
+        let meta = &mut index.entries[at];
+        set_trimmed(meta, "hubPostId", hub_post_id);
         if meta.get("hubPostId").is_none() {
             meta.remove("hubUpdatedAt");
         }
         if let Some(uploader_name) = uploader_name {
-            set_trimmed(&mut meta, "uploaderName", uploader_name);
+            set_trimmed(meta, "uploaderName", uploader_name);
         }
         if let Some(hub_updated_at) = hub_updated_at {
-            set_trimmed(&mut meta, "hubUpdatedAt", hub_updated_at);
+            set_trimmed(meta, "hubUpdatedAt", hub_updated_at);
         }
-        touch_clock(&mut meta, EntryGroup::Hub, ctx.now_ms())?;
-        index.entries[at] = meta.clone();
+        touch_clock(meta, EntryGroup::Hub, ctx.now_ms())?;
+        let meta = meta.clone();
         write_index(&dir, &index)?;
         ctx.notify(KEY_LABEL_SYNC_UNIT);
         Ok(meta)
