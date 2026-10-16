@@ -221,10 +221,12 @@ fn text(v: &Value) -> Option<String> {
     }
 }
 
-/// A number value, `typeof v === 'number'`.
+/// A finite number value, `typeof v === 'number' && Number.isFinite(v)`.
+/// Every numeric field of the row passes through here: a literal too large
+/// for a double (`1e400`) parses to an infinity, which the parser rejects.
 fn num(v: &Value) -> Option<f64> {
     match v {
-        Value::Number(n) => Some(*n),
+        Value::Number(n) if n.is_finite() => Some(*n),
         _ => None,
     }
 }

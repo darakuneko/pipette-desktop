@@ -5,7 +5,7 @@
 // char-minute rows with non-ASCII text, REAL values in INTEGER columns,
 // out-of-range histogram buckets, n-gram entries given as an array, strings
 // with a lone surrogate, a repeated key (JSON.parse keeps the last), lines
-// the parser rejects, CRLF / lone CR line breaks and a final line without a
+// the parser rejects (numbers that overflow to an infinity among them), CRLF / lone CR line breaks and a final line without a
 // newline (skipped as partial).
 
 const MINUTE_MS = 60_000
@@ -26,6 +26,15 @@ const hist = (...values: number[]): number[] => [...values, ...new Array<number>
 
 function line(row: Record<string, unknown>): string {
   return JSON.stringify(row)
+}
+
+/** JSON.stringify writes an infinity as `null`, so these markers stand in
+ * for `1e400` / `-1e400`, literals JSON.parse reads as an infinity. */
+const POS_INF = '__POS_INF__'
+const NEG_INF = '__NEG_INF__'
+
+function overflowLine(row: Record<string, unknown>): string {
+  return line(row).replaceAll(`"${POS_INF}"`, '1e400').replaceAll(`"${NEG_INF}"`, '-1e400')
 }
 
 /** The edge lines, already joined with their line breaks. The returned text
@@ -127,6 +136,24 @@ export function buildEdgeLines(ctx: EdgeContext): string {
     line({ id: 'x', kind: 'scope', updated_at: 1, payload: { id: 's' } }),
     line({ id: 'x', kind: 'session', updated_at: '1', payload: { id: 's', scopeId, startMs: 1, endMs: 2 } }),
     '[1,2,3]',
+    // Numbers that overflow to an infinity. The tombstone would beat every
+    // finite updated_at of the seeded minute if it were stored.
+    overflowLine({
+      id: `stats|${scopeId}|${t13}|`, kind: 'minute-stats', updated_at: POS_INF, is_deleted: true,
+      payload: { scopeId, minuteTs: t13, keystrokes: 0, activeMs: 0, intervalAvgMs: null, intervalMinMs: null, intervalP25Ms: null, intervalP50Ms: null, intervalP75Ms: null, intervalMaxMs: null },
+    }),
+    overflowLine({ id: 'inf-1', kind: 'char-minute', updated_at: NEG_INF, payload: { scopeId, minuteTs: t13, char: 'i', count: 1 } }),
+    overflowLine({ id: 'inf-2', kind: 'char-minute', updated_at: 1, payload: { scopeId, minuteTs: t13, char: 'j', count: POS_INF } }),
+    overflowLine({ id: 'inf-3', kind: 'minute-stats', updated_at: 1, payload: { scopeId, minuteTs: t13b + MINUTE_MS, keystrokes: 1, activeMs: 1, intervalAvgMs: NEG_INF, intervalMinMs: null, intervalP25Ms: null, intervalP50Ms: null, intervalP75Ms: null, intervalMaxMs: null, pollP50Ms: null, pollP95Ms: POS_INF } }),
+    overflowLine({ id: 'inf-4', kind: 'matrix-minute', updated_at: 1, payload: { scopeId, minuteTs: t13b, row: 5, col: 5, layer: 0, keycode: 1, count: 1, tapCount: 1, holdCount: 0, dh: hist(1, NEG_INF as unknown as number), ds: 1, dq: 1 } }),
+    overflowLine({ id: 'inf-5', kind: 'matrix-minute', updated_at: 1, payload: { scopeId, minuteTs: t13b, row: 5, col: 6, layer: 0, keycode: 1, count: 1, tapCount: 1, holdCount: 0, dh: hist(1), ds: POS_INF, dq: 1 } }),
+    overflowLine({ id: 'inf-6', kind: 'bigram-minute', updated_at: 1, payload: { scopeId, minuteTs: t13b, runId: 'inf', bigrams: { '7_8': { c: 1, h: hist(1), s: 1, sq: POS_INF } } } }),
+    overflowLine({ id: 'inf-7', kind: 'trigram-minute', updated_at: 1, payload: { scopeId, minuteTs: t13b, runId: 'inf', trigrams: { '7_8_9': { c: NEG_INF, h: hist(1) } } } }),
+    overflowLine({ id: 'inf-8', kind: 'session', updated_at: 1, payload: { id: 'inf-session', scopeId, startMs: t13, endMs: POS_INF } }),
+    overflowLine({
+      id: 'scope|inf-scope', kind: 'scope', updated_at: 1,
+      payload: { id: 'inf-scope', machineHash: 'c'.repeat(64), osPlatform: 'linux', osRelease: '1', osArch: 'x64', keyboardUid: uid, keyboardVendorId: POS_INF, keyboardProductId: 1, keyboardProductName: 'x' },
+    }),
     '',
   ]
 
