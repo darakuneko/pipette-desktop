@@ -2658,6 +2658,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-active-window"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-js-json",
+]
+
+[[package]]
 name = "pipette-app"
 version = "0.0.0"
 dependencies = [
