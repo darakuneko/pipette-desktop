@@ -280,6 +280,7 @@ fn main() {
             sync_commands::preflight::manage(app.handle());
             sync_commands::execute::manage(app.handle());
             sync_commands::adopt_pending_at_startup(app.handle());
+            sync_commands::triggers::start(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());

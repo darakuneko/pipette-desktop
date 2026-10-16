@@ -9,12 +9,11 @@
 //! locks serialize them.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use pipette_keyboard_stores::StoreContext;
 use pipette_sync::codec::EnvelopeCrypto;
 use pipette_sync::dispatch::{UnitSync, UnitSyncDeps};
-use pipette_sync::execute::{ExecuteDeps, PassHooks, SyncExecuteResult, SyncExecutor};
+use pipette_sync::execute::{ExecuteDeps, PassAccount, SyncExecuteResult, SyncExecutor};
 use pipette_sync::merge::{MergeEvents, PackKind};
 use pipette_sync::meta_backfill::StoreMetaBackfill;
 use pipette_sync::preflight::{Preflight, PreflightError};
@@ -104,17 +103,8 @@ impl<'a> From<&'a SyncProgress> for ProgressPayload<'a> {
     }
 }
 
-/// The flush and the polling a pass hands work to: none runs yet, so the
-/// pending units wait for the next pass.
-struct NoTriggers;
-
-impl PassHooks for NoTriggers {
-    fn schedule_flush_if_pending(&self, _: Option<Duration>) {}
-
-    fn start_polling_if_auto_sync(&self) {}
-}
-
-/// Manages the unit sync and the passes on the preflight's Drive. Needs the
+/// Manages the unit sync, the passes and their triggers
+/// ([`super::triggers`]) on the preflight's Drive. Needs the
 /// preflight ([`super::preflight::manage`]), the stores, the typing
 /// analytics and the pending units to be managed first. The progress of
 /// every pass, the preflight's blocked reports included, goes to the pages
@@ -133,13 +123,15 @@ pub fn manage<R: Runtime>(app: &AppHandle<R>) {
         codec: Arc::new(EnvelopeCrypto),
     }));
     let backfill = StoreMetaBackfill { ctx, drive: preflight.drive().clone(), events };
+    let account: Arc<dyn PassAccount> = Arc::clone(&app.state::<SyncSecrets>().auth) as _;
+    let triggers = super::triggers::manage(app, &preflight, &units, Arc::clone(&account));
     let executor = SyncExecutor::new(ExecuteDeps {
         preflight,
         units: Arc::clone(&units),
         pending: app.state::<PendingStore>().inner().clone(),
-        account: Arc::clone(&app.state::<SyncSecrets>().auth) as _,
+        account,
         backfill: Arc::new(backfill),
-        hooks: Arc::new(NoTriggers),
+        hooks: triggers,
     });
     let handle = app.clone();
     runtime.progress().set(move |progress: &SyncProgress| {

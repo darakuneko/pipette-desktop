@@ -16,6 +16,7 @@ use ts_rs::TS;
 
 use super::SyncSecrets;
 use super::result::SyncOperationResult;
+use super::triggers::SyncTriggers;
 use crate::command_error::CommandError;
 use crate::shell::AuthBrowser;
 
@@ -69,28 +70,40 @@ pub async fn sync_auth_status(sync: State<'_, SyncSecrets>) -> Result<SyncAuthSt
 /// has not within the wait), and the previous account's caches are
 /// forgotten. Changes kept while signed out, and those this account left
 /// unsent, go to it; another account's changes are held. Refused at once
-/// when the build has no usable Google endpoints.
+/// when the build has no usable Google endpoints. Once signed in, the
+/// pending changes are scheduled and polling starts when auto sync is on.
 #[tauri::command]
 pub async fn sync_auth_start(
     sync: State<'_, SyncSecrets>,
     browser: State<'_, AuthBrowser>,
     runtime: State<'_, SyncRuntime>,
     pending: State<'_, PendingStore>,
+    triggers: State<'_, Arc<SyncTriggers>>,
 ) -> Result<SyncOperationResult, CommandError> {
     let switcher = switcher(&sync, &runtime, &pending);
-    Ok(sync.auth.sign_in(browser.inner(), &switcher).await.into())
+    let result = sync.auth.sign_in(browser.inner(), &switcher).await;
+    if result.is_ok() {
+        triggers.credentials_ready();
+    }
+    Ok(result.into())
 }
 
 /// Signs out. This account's unsent changes are held for its next
-/// sign-in; its caches are forgotten once the tokens are gone. Refused
-/// while the sync password is being changed.
+/// sign-in; its caches are forgotten once the tokens are gone, and polling
+/// stops. Refused while the sync password is being changed; a refused
+/// sign-out keeps the account signed in, so polling keeps running.
 #[tauri::command]
 pub async fn sync_auth_sign_out(
     sync: State<'_, SyncSecrets>,
     runtime: State<'_, SyncRuntime>,
     pending: State<'_, PendingStore>,
+    triggers: State<'_, Arc<SyncTriggers>>,
 ) -> Result<SyncOperationResult, CommandError> {
-    Ok(switcher(&sync, &runtime, &pending).sign_out_keeping_pending().await.into())
+    let result = switcher(&sync, &runtime, &pending).sign_out_keeping_pending().await;
+    if result.is_ok() {
+        triggers.signed_out();
+    }
+    Ok(result.into())
 }
 
 #[cfg(test)]

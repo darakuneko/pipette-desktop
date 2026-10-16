@@ -17,7 +17,6 @@ use std::time::Duration;
 use pipette_active_window::ActiveWindow;
 use pipette_entry_store::RandomUuid;
 use pipette_js_json::{JsString, Value};
-use pipette_sync_pending::PendingStore;
 use pipette_typing_analytics::fingerprint::OsInfo;
 use pipette_typing_analytics::{FlushTimer, Recorder, RecorderDeps};
 use tauri::{AppHandle, Manager, Runtime, State};
@@ -41,20 +40,16 @@ impl FlushTimer for RuntimeTimer {
     }
 }
 
-/// What the recorder of `app` takes from it. The pending units and the app
-/// config are looked up when used, so the recorder can be built before
-/// either is managed.
+/// What the recorder of `app` takes from it. The sync it reports changed
+/// days to (sync_commands/triggers.rs) and the app config are looked up
+/// when used, so the recorder can be built before either is managed.
 pub(super) fn recorder_deps<R: Runtime>(app: &AppHandle<R>) -> RecorderDeps {
-    let pending = app.clone();
+    let sync = app.clone();
     RecorderDeps {
         ids: Arc::new(RandomUuid),
         os: OsInfo::current(),
         timer: Arc::new(RuntimeTimer),
-        notify: Arc::new(move |unit| {
-            if let Some(store) = pending.try_state::<PendingStore>() {
-                store.notify_change(unit);
-            }
-        }),
+        notify: Arc::new(move |unit| crate::sync_commands::triggers::notify_change(&sync, unit)),
         app_name: app_name_source(app.clone()),
     }
 }
@@ -126,6 +121,7 @@ pub async fn typing_analytics_flush(
 
 #[cfg(test)]
 mod tests {
+    use pipette_sync_pending::PendingStore;
     use serde_json::json;
     use tauri::async_runtime::block_on;
     use tempfile::TempDir;

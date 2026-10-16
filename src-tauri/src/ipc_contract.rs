@@ -385,3 +385,27 @@ fn open_external_reports_a_browser_that_fails_to_start() {
         Err(json!("no browser"))
     );
 }
+
+#[test]
+fn a_store_change_arms_the_flush_and_auto_sync_starts_and_stops_polling() {
+    use crate::sync_commands::triggers::{on_auto_sync_changed, triggers};
+    use pipette_sync::flush::DEBOUNCE;
+
+    let user_data = TempDir::new().unwrap();
+    let app = mock_app(ExternalOpener::new(|_| Ok(())), user_data.path());
+    let triggers = triggers(app.handle()).unwrap();
+    assert_eq!(triggers.flusher().due_in(), None);
+
+    let stores = app.state::<pipette_keyboard_stores::StoreContext>();
+    pipette_keyboard_stores::keyboard_meta_name_if_missing(&stores, Some("0xA1"), Some("Board")).unwrap();
+    let due = triggers.flusher().due_in().unwrap();
+    assert!(due <= DEBOUNCE && due > DEBOUNCE - std::time::Duration::from_secs(5), "{due:?}");
+
+    on_auto_sync_changed(app.handle(), true);
+    assert!(triggers.poller().is_polling());
+    on_auto_sync_changed(app.handle(), false);
+    assert!(!triggers.poller().is_polling());
+    // The quit drops the timer, so nothing runs after the test.
+    assert!(triggers.begin_quit());
+    assert_eq!(triggers.flusher().due_in(), None);
+}

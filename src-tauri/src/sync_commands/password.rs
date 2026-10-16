@@ -15,6 +15,7 @@ use zeroize::Zeroizing;
 
 use super::SyncSecrets;
 use super::result::SyncOperationResult;
+use super::triggers::SyncTriggers;
 use crate::command_error::CommandError;
 
 /// `StoredPasswordStatus` of src/shared/types/sync.ts.
@@ -55,29 +56,41 @@ pub async fn sync_password_status(
 
 /// Sets the first sync password (`setPasswordAndValidate`): stored once
 /// it opens the password-check on Drive, which is created (after the
-/// sync-format marker) when Drive has none.
+/// sync-format marker) when Drive has none. Once stored, the pending
+/// changes are scheduled and polling starts when auto sync is on.
 #[tauri::command]
 pub async fn sync_set_password(
     preflight: State<'_, Arc<Preflight>>,
+    triggers: State<'_, Arc<SyncTriggers>>,
     password: String,
 ) -> Result<SyncOperationResult, CommandError> {
     let password = Zeroizing::new(password);
-    Ok(preflight.set_password_and_validate(&password).await.into())
+    let result = preflight.set_password_and_validate(&password).await;
+    if result.is_ok() {
+        triggers.credentials_ready();
+    }
+    Ok(result.into())
 }
 
 /// Replaces the stored password with one changed on another machine
 /// (`replacePasswordAndValidate`): stored only once it opens the
-/// password-check on Drive.
+/// password-check on Drive, then schedules the pending changes and starts
+/// polling as a set does.
 #[tauri::command]
 pub async fn sync_replace_password(
     preflight: State<'_, Arc<Preflight>>,
+    triggers: State<'_, Arc<SyncTriggers>>,
     password: String,
 ) -> Result<SyncOperationResult, CommandError> {
     let password = Zeroizing::new(password);
     if password.is_empty() {
         return Ok(SyncOperationResult::failure("Invalid password".to_owned(), None));
     }
-    Ok(preflight.replace_password_and_validate(&password).await.into())
+    let result = preflight.replace_password_and_validate(&password).await;
+    if result.is_ok() {
+        triggers.credentials_ready();
+    }
+    Ok(result.into())
 }
 
 /// Whether Drive has a password-check (`checkPasswordCheckExists`); a

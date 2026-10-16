@@ -22,6 +22,7 @@ pub mod execute;
 pub mod password;
 pub mod preflight;
 pub mod result;
+pub mod triggers;
 
 /// The secret store and the Google sign-in of the sync.
 pub struct SyncSecrets {

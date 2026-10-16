@@ -25,6 +25,7 @@
 //! SIGKILL cannot be caught, and on Linux this build has no menu, so no
 //! keyboard shortcut quits it.
 
+use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,7 +48,8 @@ use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitOutcome, QuitPhase, record_interruption,
     run_quit_sequence,
 };
-use crate::store_commands::sync_pending::{flush_phase, persist_after_quit};
+use crate::store_commands::sync_pending::persist_after_quit;
+use crate::sync_commands::triggers::{SyncTriggers, triggers};
 
 /// Builds with debug assertions: how many milliseconds the stub of the
 /// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its
@@ -55,19 +57,24 @@ use crate::store_commands::sync_pending::{flush_phase, persist_after_quit};
 #[cfg(debug_assertions)]
 const DEV_QUIT_DELAY_MS_ENV: &str = "PIPETTE_DEV_QUIT_DELAY_MS";
 
+/// The passwordChange phase, which waits for a running password change.
+const PASSWORD_CHANGE_PHASE: usize = 0;
+
 /// The preSyncFinalizers phase, which writes the typing analytics.
 const PRE_SYNC_FINALIZERS_PHASE: usize = 1;
 
-/// The flushPending phase, which writes the pending sync units.
+/// The inFlightSync phase, which waits for the sync pass holding the lock.
+const IN_FLIGHT_SYNC_PHASE: usize = 2;
+
+/// The flushPending phase, which sends the pending sync units.
 const FLUSH_PENDING_PHASE: usize = 3;
 
 /// The phase `PIPETTE_DEV_QUIT_DELAY_MS` delays: flushPending.
 const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 
 /// The phases of the before-quit handler in src/main/sync/sync-flush.ts, in
-/// its order. Each one other than preSyncFinalizers and flushPending is a
-/// stub that waits for its configured time until the subsystem behind it is
-/// ported.
+/// its order. extraFinalizers has nothing to run in this build and only
+/// waits for its configured time.
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
@@ -318,20 +325,48 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let durations = phase_durations();
     let pending = app.state::<PendingStore>().inner().clone();
     let recorder = app.state::<Arc<Recorder>>().inner().clone();
+    let sync = triggers(&app);
+    // Polling stops and the app counts as quitting before anything else.
+    let sync_work = sync.as_ref().is_some_and(|sync| sync.begin_quit());
+    let work = sync_work || recorder.has_pending_work() || dev_quit_delay().is_some();
     tauri::async_runtime::spawn(async move {
-        let mut phases = stub_phases(durations);
-        phases[PRE_SYNC_FINALIZERS_PHASE] = analytics_commands::record::quit_phase(
-            recorder,
-            QUIT_PHASES[PRE_SYNC_FINALIZERS_PHASE],
-            durations[PRE_SYNC_FINALIZERS_PHASE],
-        );
-        phases[FLUSH_PENDING_PHASE] =
-            flush_phase(pending.clone(), QUIT_PHASES[FLUSH_PENDING_PHASE], durations[FLUSH_PENDING_PHASE]);
+        // With nothing to wait for, the phases are skipped and only the
+        // pending units are written.
+        let phases = if work { quit_phases(durations, recorder, sync) } else { Vec::new() };
         let outcome = quit(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit, pending).await;
         log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
         app.exit(0);
     });
+}
+
+/// The phases of the before-quit handler: the typing analytics are written
+/// before the sync, whose passwordChange, inFlightSync and flushPending
+/// phases wait for the running password change, then the running pass,
+/// then flush what is pending (none of them when the sync is not managed).
+/// extraFinalizers has nothing to run. Each phase then waits for its
+/// configured time.
+fn quit_phases(
+    durations: [Duration; QUIT_PHASES.len()],
+    recorder: Arc<Recorder>,
+    sync: Option<Arc<SyncTriggers>>,
+) -> Vec<QuitPhase> {
+    let mut phases = stub_phases(durations);
+    phases[PRE_SYNC_FINALIZERS_PHASE] = analytics_commands::record::quit_phase(
+        recorder,
+        QUIT_PHASES[PRE_SYNC_FINALIZERS_PHASE],
+        durations[PRE_SYNC_FINALIZERS_PHASE],
+    );
+    if let Some(sync) = sync {
+        let (a, b, c) = (Arc::clone(&sync), Arc::clone(&sync), sync);
+        phases[PASSWORD_CHANGE_PHASE] =
+            then_wait(PASSWORD_CHANGE_PHASE, durations, async move { a.password_change_ended().await });
+        phases[IN_FLIGHT_SYNC_PHASE] =
+            then_wait(IN_FLIGHT_SYNC_PHASE, durations, async move { b.in_flight_pass_ended().await });
+        phases[FLUSH_PENDING_PHASE] =
+            then_wait(FLUSH_PENDING_PHASE, durations, async move { c.flush_pending().await });
+    }
+    phases
 }
 
 /// Runs the quit phases within `deadline`, then writes the pending sync
@@ -346,6 +381,19 @@ async fn quit(
     let outcome = run_quit_sequence(phases, deadline, data_dir, guard).await;
     persist_after_quit(pending, MARKER_TIMEOUT).await;
     outcome
+}
+
+/// The phase `index` running `run`, then waiting for its duration.
+fn then_wait(
+    index: usize,
+    durations: [Duration; QUIT_PHASES.len()],
+    run: impl Future<Output = ()> + Send + 'static,
+) -> QuitPhase {
+    let then = durations[index];
+    QuitPhase::new(QUIT_PHASES[index], async move {
+        run.await;
+        tokio::time::sleep(then).await;
+    })
 }
 
 /// The quit phases as stubs that each wait for their duration.
@@ -431,7 +479,7 @@ mod tests {
                 async move { pending.notify_change(unit) }
             }),
             QuitPhase::new("inFlightSync", std::future::pending()),
-            flush_phase(pending.clone(), "flushPending", Duration::ZERO),
+            QuitPhase::new("flushPending", async {}),
         ];
         let outcome = tokio::runtime::Builder::new_current_thread().enable_time().build().unwrap().block_on(
             quit(phases, Duration::from_millis(20), user_data.path(), &QuitGuard::default(), pending),
