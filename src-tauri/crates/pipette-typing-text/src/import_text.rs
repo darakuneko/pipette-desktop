@@ -32,7 +32,8 @@ pub struct NormalizedFileImportText {
 }
 
 /// The lines of `text` split at `\r\n`, `\r` and `\n`, as
-/// `text.replace(/\r\n?/g, '\n').split('\n')` gives them.
+/// `text.replace(/\r\n?/g, '\n').split('\n')` gives them: the rule of
+/// `normalize_newlines` (units.rs), applied here without copying the text.
 fn lines(text: &[u16]) -> Vec<&[u16]> {
     let mut lines = Vec::new();
     let mut start = 0;

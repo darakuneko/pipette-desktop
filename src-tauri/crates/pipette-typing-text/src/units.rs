@@ -51,7 +51,9 @@ pub(crate) fn join_lines(parts: &[&[u16]]) -> Vec<u16> {
     parts.join(&LF)
 }
 
-/// `text.replace(/\r\n?/g, '\n')`.
+/// `text.replace(/\r\n?/g, '\n')`. `lines` in import_text.rs applies the
+/// same rule while splitting, to borrow the lines from the input; the two
+/// must stay in step.
 pub(crate) fn normalize_newlines(text: &[u16]) -> Vec<u16> {
     let mut out = Vec::with_capacity(text.len());
     let mut units = text.iter().copied().peekable();
