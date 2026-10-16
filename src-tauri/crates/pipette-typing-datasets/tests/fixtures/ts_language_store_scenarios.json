@@ -1,0 +1,1970 @@
+[
+  {
+    "name": "the bundled defaults",
+    "tree": {},
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "aozora"
+      },
+      {
+        "op": "get",
+        "name": "english"
+      },
+      {
+        "op": "get",
+        "name": "nonexistent"
+      },
+      {
+        "op": "get",
+        "name": "../etc/passwd"
+      },
+      {
+        "op": "get",
+        "name": "a\\b"
+      },
+      {
+        "op": "get",
+        "name": ""
+      },
+      {
+        "op": "get",
+        "name": "english",
+        "provider": "tatoeba"
+      },
+      {
+        "op": "download",
+        "name": "english",
+        "replies": []
+      },
+      {
+        "op": "download",
+        "name": "../etc/passwd",
+        "replies": []
+      },
+      {
+        "op": "download",
+        "name": "",
+        "replies": []
+      },
+      {
+        "op": "download",
+        "name": "not_in_manifest",
+        "replies": []
+      },
+      {
+        "op": "download",
+        "name": "german",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "
+          }
+        ]
+      },
+      {
+        "op": "get",
+        "name": "german"
+      },
+      {
+        "op": "get",
+        "name": "german",
+        "provider": "no-such-provider"
+      },
+      {
+        "op": "delete",
+        "name": "english"
+      },
+      {
+        "op": "delete",
+        "name": "missing"
+      },
+      {
+        "op": "delete",
+        "name": "x/y"
+      },
+      {
+        "op": "delete",
+        "name": "german",
+        "provider": "../.."
+      },
+      {
+        "op": "get",
+        "name": "german"
+      },
+      {
+        "op": "delete",
+        "name": "german"
+      },
+      {
+        "op": "get",
+        "name": "german"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}}"
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      "[{\"name\":\"afrikaans\",\"wordCount\":180,\"rightToLeft\":false,\"fileSize\":2302,\"status\":\"not-downloaded\"},{\"name\":\"afrikaans_10k\",\"wordCount\":8164,\"rightToLeft\":false,\"fileSize\":127053,\"status\":\"not-downloaded\"},{\"name\":\"afrikaans_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":15625,\"status\":\"not-downloaded\"},{\"name\":\"albanian\",\"wordCount\":195,\"rightToLeft\":false,\"fileSize\":2426,\"status\":\"not-downloaded\"},{\"name\":\"albanian_1k\",\"wordCount\":896,\"rightToLeft\":false,\"fileSize\":12951,\"status\":\"not-downloaded\"},{\"name\":\"amharic\",\"wordCount\":273,\"rightToLeft\":false,\"fileSize\":5276,\"status\":\"not-downloaded\"},{\"name\":\"amharic_1k\",\"wordCount\":1001,\"rightToLeft\":false,\"fileSize\":21417,\"status\":\"not-downloaded\"},{\"name\":\"amharic_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":110743,\"status\":\"not-downloaded\"},{\"name\":\"arabic\",\"wordCount\":199,\"rightToLeft\":true,\"fileSize\":5114,\"status\":\"not-downloaded\"},{\"name\":\"arabic_10k\",\"wordCount\":9281,\"rightToLeft\":true,\"fileSize\":259126,\"status\":\"not-downloaded\"},{\"name\":\"arabic_egypt\",\"wordCount\":210,\"rightToLeft\":true,\"fileSize\":3385,\"status\":\"not-downloaded\"},{\"name\":\"arabic_egypt_1k\",\"wordCount\":1141,\"rightToLeft\":true,\"fileSize\":19630,\"status\":\"not-downloaded\"},{\"name\":\"arabic_morocco\",\"wordCount\":229,\"rightToLeft\":true,\"fileSize\":3840,\"status\":\"not-downloaded\"},{\"name\":\"armenian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4019,\"status\":\"not-downloaded\"},{\"name\":\"armenian_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":20568,\"status\":\"not-downloaded\"},{\"name\":\"armenian_western\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":3828,\"status\":\"not-downloaded\"},{\"name\":\"armenian_western_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":21615,\"status\":\"not-downloaded\"},{\"name\":\"azerbaijani\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2812,\"status\":\"not-downloaded\"},{\"name\":\"azerbaijani_1k\",\"wordCount\":989,\"rightToLeft\":false,\"fileSize\":13856,\"status\":\"not-downloaded\"},{\"name\":\"bangla\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":3960,\"status\":\"not-downloaded\"},{\"name\":\"bangla_10k\",\"wordCount\":9734,\"rightToLeft\":false,\"fileSize\":246015,\"status\":\"not-downloaded\"},{\"name\":\"bangla_letters\",\"wordCount\":62,\"rightToLeft\":false,\"fileSize\":823,\"status\":\"not-downloaded\"},{\"name\":\"bashkir\",\"wordCount\":207,\"rightToLeft\":false,\"fileSize\":3516,\"status\":\"not-downloaded\"},{\"name\":\"belarusian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":3134,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_100k\",\"wordCount\":106381,\"rightToLeft\":false,\"fileSize\":2904588,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_10k\",\"wordCount\":10725,\"rightToLeft\":false,\"fileSize\":213829,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_1k\",\"wordCount\":997,\"rightToLeft\":false,\"fileSize\":19709,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_25k\",\"wordCount\":24133,\"rightToLeft\":false,\"fileSize\":480840,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_50k\",\"wordCount\":52817,\"rightToLeft\":false,\"fileSize\":1199619,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_5k\",\"wordCount\":5044,\"rightToLeft\":false,\"fileSize\":100666,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_lacinka\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2511,\"status\":\"not-downloaded\"},{\"name\":\"belarusian_lacinka_1k\",\"wordCount\":997,\"rightToLeft\":false,\"fileSize\":14610,\"status\":\"not-downloaded\"},{\"name\":\"bosnian\",\"wordCount\":189,\"rightToLeft\":false,\"fileSize\":2781,\"status\":\"not-downloaded\"},{\"name\":\"bosnian_4k\",\"wordCount\":3816,\"rightToLeft\":false,\"fileSize\":58014,\"status\":\"not-downloaded\"},{\"name\":\"bulgarian\",\"wordCount\":214,\"rightToLeft\":false,\"fileSize\":3673,\"status\":\"not-downloaded\"},{\"name\":\"bulgarian_1k\",\"wordCount\":1010,\"rightToLeft\":false,\"fileSize\":19314,\"status\":\"not-downloaded\"},{\"name\":\"bulgarian_latin\",\"wordCount\":213,\"rightToLeft\":false,\"fileSize\":2806,\"status\":\"not-downloaded\"},{\"name\":\"bulgarian_latin_1k\",\"wordCount\":1007,\"rightToLeft\":false,\"fileSize\":14054,\"status\":\"not-downloaded\"},{\"name\":\"catalan\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2600,\"status\":\"not-downloaded\"},{\"name\":\"catalan_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14307,\"status\":\"not-downloaded\"},{\"name\":\"chinese_simplified\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2962,\"status\":\"not-downloaded\"},{\"name\":\"chinese_simplified_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":143886,\"status\":\"not-downloaded\"},{\"name\":\"chinese_simplified_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14216,\"status\":\"not-downloaded\"},{\"name\":\"chinese_simplified_50k\",\"wordCount\":50000,\"rightToLeft\":false,\"fileSize\":753569,\"status\":\"not-downloaded\"},{\"name\":\"chinese_simplified_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":71548,\"status\":\"not-downloaded\"},{\"name\":\"chinese_traditional\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2701,\"status\":\"not-downloaded\"},{\"name\":\"code_abap\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2958,\"status\":\"not-downloaded\"},{\"name\":\"code_abap_1k\",\"wordCount\":1111,\"rightToLeft\":false,\"fileSize\":17432,\"status\":\"not-downloaded\"},{\"name\":\"code_arduino\",\"wordCount\":104,\"rightToLeft\":false,\"fileSize\":1629,\"status\":\"not-downloaded\"},{\"name\":\"code_assembly\",\"wordCount\":81,\"rightToLeft\":false,\"fileSize\":1000,\"status\":\"not-downloaded\"},{\"name\":\"code_bash\",\"wordCount\":276,\"rightToLeft\":false,\"fileSize\":3609,\"status\":\"not-downloaded\"},{\"name\":\"code_brainfck\",\"wordCount\":194,\"rightToLeft\":false,\"fileSize\":4075,\"status\":\"not-downloaded\"},{\"name\":\"code_c++\",\"wordCount\":111,\"rightToLeft\":false,\"fileSize\":1683,\"status\":\"not-downloaded\"},{\"name\":\"code_c\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2997,\"status\":\"not-downloaded\"},{\"name\":\"code_clojure\",\"wordCount\":212,\"rightToLeft\":false,\"fileSize\":3054,\"status\":\"not-downloaded\"},{\"name\":\"code_cobol\",\"wordCount\":105,\"rightToLeft\":false,\"fileSize\":1703,\"status\":\"not-downloaded\"},{\"name\":\"code_common_lisp\",\"wordCount\":204,\"rightToLeft\":false,\"fileSize\":3115,\"status\":\"not-downloaded\"},{\"name\":\"code_csharp\",\"wordCount\":130,\"rightToLeft\":false,\"fileSize\":1811,\"status\":\"not-downloaded\"},{\"name\":\"code_css\",\"wordCount\":72,\"rightToLeft\":false,\"fileSize\":1285,\"status\":\"not-downloaded\"},{\"name\":\"code_cuda\",\"wordCount\":237,\"rightToLeft\":false,\"fileSize\":6838,\"status\":\"not-downloaded\"},{\"name\":\"code_dart\",\"wordCount\":73,\"rightToLeft\":false,\"fileSize\":1029,\"status\":\"not-downloaded\"},{\"name\":\"code_elixir\",\"wordCount\":554,\"rightToLeft\":false,\"fileSize\":10124,\"status\":\"not-downloaded\"},{\"name\":\"code_erlang\",\"wordCount\":245,\"rightToLeft\":false,\"fileSize\":3786,\"status\":\"not-downloaded\"},{\"name\":\"code_fortran\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2919,\"status\":\"not-downloaded\"},{\"name\":\"code_fsharp\",\"wordCount\":102,\"rightToLeft\":false,\"fileSize\":1410,\"status\":\"not-downloaded\"},{\"name\":\"code_gdscript\",\"wordCount\":103,\"rightToLeft\":false,\"fileSize\":1568,\"status\":\"not-downloaded\"},{\"name\":\"code_gdscript_2\",\"wordCount\":102,\"rightToLeft\":false,\"fileSize\":1561,\"status\":\"not-downloaded\"},{\"name\":\"code_gleam\",\"wordCount\":442,\"rightToLeft\":false,\"fileSize\":9120,\"status\":\"not-downloaded\"},{\"name\":\"code_go\",\"wordCount\":63,\"rightToLeft\":false,\"fileSize\":885,\"status\":\"not-downloaded\"},{\"name\":\"code_haskell\",\"wordCount\":208,\"rightToLeft\":false,\"fileSize\":2730,\"status\":\"not-downloaded\"},{\"name\":\"code_html\",\"wordCount\":232,\"rightToLeft\":false,\"fileSize\":3408,\"status\":\"not-downloaded\"},{\"name\":\"code_java\",\"wordCount\":89,\"rightToLeft\":false,\"fileSize\":1283,\"status\":\"not-downloaded\"},{\"name\":\"code_javascript\",\"wordCount\":126,\"rightToLeft\":false,\"fileSize\":2039,\"status\":\"not-downloaded\"},{\"name\":\"code_javascript_1k\",\"wordCount\":1001,\"rightToLeft\":false,\"fileSize\":14420,\"status\":\"not-downloaded\"},{\"name\":\"code_javascript_react\",\"wordCount\":202,\"rightToLeft\":false,\"fileSize\":3697,\"status\":\"not-downloaded\"},{\"name\":\"code_jule\",\"wordCount\":59,\"rightToLeft\":false,\"fileSize\":784,\"status\":\"not-downloaded\"},{\"name\":\"code_julia\",\"wordCount\":103,\"rightToLeft\":false,\"fileSize\":1487,\"status\":\"not-downloaded\"},{\"name\":\"code_kotlin\",\"wordCount\":85,\"rightToLeft\":false,\"fileSize\":1165,\"status\":\"not-downloaded\"},{\"name\":\"code_latex\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4244,\"status\":\"not-downloaded\"},{\"name\":\"code_lua\",\"wordCount\":59,\"rightToLeft\":false,\"fileSize\":867,\"status\":\"not-downloaded\"},{\"name\":\"code_luau\",\"wordCount\":73,\"rightToLeft\":false,\"fileSize\":1082,\"status\":\"not-downloaded\"},{\"name\":\"code_matlab\",\"wordCount\":63,\"rightToLeft\":false,\"fileSize\":904,\"status\":\"not-downloaded\"},{\"name\":\"code_nim\",\"wordCount\":99,\"rightToLeft\":false,\"fileSize\":1212,\"status\":\"not-downloaded\"},{\"name\":\"code_nix\",\"wordCount\":125,\"rightToLeft\":false,\"fileSize\":2132,\"status\":\"not-downloaded\"},{\"name\":\"code_ocaml\",\"wordCount\":495,\"rightToLeft\":false,\"fileSize\":7891,\"status\":\"not-downloaded\"},{\"name\":\"code_odin\",\"wordCount\":129,\"rightToLeft\":false,\"fileSize\":1842,\"status\":\"not-downloaded\"},{\"name\":\"code_ook\",\"wordCount\":9,\"rightToLeft\":false,\"fileSize\":280,\"status\":\"not-downloaded\"},{\"name\":\"code_opencl\",\"wordCount\":221,\"rightToLeft\":false,\"fileSize\":3126,\"status\":\"not-downloaded\"},{\"name\":\"code_pascal\",\"wordCount\":151,\"rightToLeft\":false,\"fileSize\":2028,\"status\":\"not-downloaded\"},{\"name\":\"code_perl\",\"wordCount\":234,\"rightToLeft\":false,\"fileSize\":3280,\"status\":\"not-downloaded\"},{\"name\":\"code_php\",\"wordCount\":296,\"rightToLeft\":false,\"fileSize\":3955,\"status\":\"not-downloaded\"},{\"name\":\"code_powershell\",\"wordCount\":106,\"rightToLeft\":false,\"fileSize\":2277,\"status\":\"not-downloaded\"},{\"name\":\"code_python\",\"wordCount\":174,\"rightToLeft\":false,\"fileSize\":2436,\"status\":\"not-downloaded\"},{\"name\":\"code_python_1k\",\"wordCount\":1096,\"rightToLeft\":false,\"fileSize\":18061,\"status\":\"not-downloaded\"},{\"name\":\"code_python_2k\",\"wordCount\":2060,\"rightToLeft\":false,\"fileSize\":35949,\"status\":\"not-downloaded\"},{\"name\":\"code_python_5k\",\"wordCount\":5235,\"rightToLeft\":false,\"fileSize\":96235,\"status\":\"not-downloaded\"},{\"name\":\"code_r\",\"wordCount\":21,\"rightToLeft\":false,\"fileSize\":342,\"status\":\"not-downloaded\"},{\"name\":\"code_r_2k\",\"wordCount\":2270,\"rightToLeft\":false,\"fileSize\":40977,\"status\":\"not-downloaded\"},{\"name\":\"code_rockstar\",\"wordCount\":103,\"rightToLeft\":false,\"fileSize\":1321,\"status\":\"not-downloaded\"},{\"name\":\"code_ruby\",\"wordCount\":118,\"rightToLeft\":false,\"fileSize\":1992,\"status\":\"not-downloaded\"},{\"name\":\"code_rust\",\"wordCount\":192,\"rightToLeft\":false,\"fileSize\":3036,\"status\":\"not-downloaded\"},{\"name\":\"code_scala\",\"wordCount\":96,\"rightToLeft\":false,\"fileSize\":1301,\"status\":\"not-downloaded\"},{\"name\":\"code_sql\",\"wordCount\":174,\"rightToLeft\":false,\"fileSize\":2554,\"status\":\"not-downloaded\"},{\"name\":\"code_swift\",\"wordCount\":69,\"rightToLeft\":false,\"fileSize\":1024,\"status\":\"not-downloaded\"},{\"name\":\"code_systemverilog\",\"wordCount\":222,\"rightToLeft\":false,\"fileSize\":3295,\"status\":\"not-downloaded\"},{\"name\":\"code_typescript\",\"wordCount\":198,\"rightToLeft\":false,\"fileSize\":2969,\"status\":\"not-downloaded\"},{\"name\":\"code_typst\",\"wordCount\":43,\"rightToLeft\":false,\"fileSize\":615,\"status\":\"not-downloaded\"},{\"name\":\"code_v\",\"wordCount\":64,\"rightToLeft\":false,\"fileSize\":872,\"status\":\"not-downloaded\"},{\"name\":\"code_vim\",\"wordCount\":167,\"rightToLeft\":false,\"fileSize\":1888,\"status\":\"not-downloaded\"},{\"name\":\"code_vimscript\",\"wordCount\":85,\"rightToLeft\":false,\"fileSize\":1260,\"status\":\"not-downloaded\"},{\"name\":\"code_visual_basic\",\"wordCount\":180,\"rightToLeft\":false,\"fileSize\":2564,\"status\":\"not-downloaded\"},{\"name\":\"code_yoptascript\",\"wordCount\":239,\"rightToLeft\":false,\"fileSize\":6125,\"status\":\"not-downloaded\"},{\"name\":\"code_zig\",\"wordCount\":146,\"rightToLeft\":false,\"fileSize\":2338,\"status\":\"not-downloaded\"},{\"name\":\"croatian\",\"wordCount\":212,\"rightToLeft\":false,\"fileSize\":2848,\"status\":\"not-downloaded\"},{\"name\":\"croatian_1k\",\"wordCount\":1108,\"rightToLeft\":false,\"fileSize\":15561,\"status\":\"not-downloaded\"},{\"name\":\"czech\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2629,\"status\":\"not-downloaded\"},{\"name\":\"czech_10k\",\"wordCount\":9629,\"rightToLeft\":false,\"fileSize\":153767,\"status\":\"not-downloaded\"},{\"name\":\"czech_1k\",\"wordCount\":899,\"rightToLeft\":false,\"fileSize\":12435,\"status\":\"not-downloaded\"},{\"name\":\"danish\",\"wordCount\":196,\"rightToLeft\":false,\"fileSize\":2446,\"status\":\"not-downloaded\"},{\"name\":\"danish_10k\",\"wordCount\":9624,\"rightToLeft\":false,\"fileSize\":153004,\"status\":\"not-downloaded\"},{\"name\":\"danish_1k\",\"wordCount\":954,\"rightToLeft\":false,\"fileSize\":13456,\"status\":\"not-downloaded\"},{\"name\":\"docker_file\",\"wordCount\":19,\"rightToLeft\":false,\"fileSize\":325,\"status\":\"not-downloaded\"},{\"name\":\"dutch\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2633,\"status\":\"not-downloaded\"},{\"name\":\"dutch_10k\",\"wordCount\":9998,\"rightToLeft\":false,\"fileSize\":195750,\"status\":\"not-downloaded\"},{\"name\":\"dutch_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13683,\"status\":\"not-downloaded\"},{\"name\":\"english\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2540,\"status\":\"bundled\"},{\"name\":\"english_10k\",\"wordCount\":9945,\"rightToLeft\":false,\"fileSize\":151330,\"status\":\"not-downloaded\"},{\"name\":\"english_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":12943,\"status\":\"not-downloaded\"},{\"name\":\"english_25k\",\"wordCount\":24175,\"rightToLeft\":false,\"fileSize\":382221,\"status\":\"not-downloaded\"},{\"name\":\"english_450k\",\"wordCount\":451435,\"rightToLeft\":false,\"fileSize\":7934575,\"status\":\"not-downloaded\"},{\"name\":\"english_5k\",\"wordCount\":4957,\"rightToLeft\":false,\"fileSize\":73793,\"status\":\"not-downloaded\"},{\"name\":\"english_commonly_misspelled\",\"wordCount\":1729,\"rightToLeft\":false,\"fileSize\":28609,\"status\":\"not-downloaded\"},{\"name\":\"english_contractions\",\"wordCount\":189,\"rightToLeft\":false,\"fileSize\":2897,\"status\":\"not-downloaded\"},{\"name\":\"english_doubleletter\",\"wordCount\":202,\"rightToLeft\":false,\"fileSize\":3229,\"status\":\"not-downloaded\"},{\"name\":\"english_medical\",\"wordCount\":580,\"rightToLeft\":false,\"fileSize\":10311,\"status\":\"not-downloaded\"},{\"name\":\"english_old\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2688,\"status\":\"not-downloaded\"},{\"name\":\"english_shakespearean\",\"wordCount\":193,\"rightToLeft\":false,\"fileSize\":2785,\"status\":\"not-downloaded\"},{\"name\":\"esperanto\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2455,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":148893,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13524,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_25k\",\"wordCount\":24998,\"rightToLeft\":false,\"fileSize\":392244,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_36k\",\"wordCount\":36342,\"rightToLeft\":false,\"fileSize\":578620,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_h_sistemo\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2479,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_h_sistemo_10k\",\"wordCount\":9969,\"rightToLeft\":false,\"fileSize\":148332,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_h_sistemo_1k\",\"wordCount\":999,\"rightToLeft\":false,\"fileSize\":13507,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_h_sistemo_25k\",\"wordCount\":24922,\"rightToLeft\":false,\"fileSize\":390673,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_h_sistemo_36k\",\"wordCount\":36131,\"rightToLeft\":false,\"fileSize\":574694,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_x_sistemo\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2487,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_x_sistemo_10k\",\"wordCount\":9993,\"rightToLeft\":false,\"fileSize\":148842,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_x_sistemo_1k\",\"wordCount\":999,\"rightToLeft\":false,\"fileSize\":13545,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_x_sistemo_25k\",\"wordCount\":24970,\"rightToLeft\":false,\"fileSize\":391883,\"status\":\"not-downloaded\"},{\"name\":\"esperanto_x_sistemo_36k\",\"wordCount\":36296,\"rightToLeft\":false,\"fileSize\":577987,\"status\":\"not-downloaded\"},{\"name\":\"estonian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2564,\"status\":\"not-downloaded\"},{\"name\":\"estonian_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":155889,\"status\":\"not-downloaded\"},{\"name\":\"estonian_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13905,\"status\":\"not-downloaded\"},{\"name\":\"estonian_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":75330,\"status\":\"not-downloaded\"},{\"name\":\"euskera\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2756,\"status\":\"not-downloaded\"},{\"name\":\"filipino\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2609,\"status\":\"not-downloaded\"},{\"name\":\"filipino_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14131,\"status\":\"not-downloaded\"},{\"name\":\"finnish\",\"wordCount\":204,\"rightToLeft\":false,\"fileSize\":2958,\"status\":\"not-downloaded\"},{\"name\":\"finnish_10k\",\"wordCount\":9906,\"rightToLeft\":false,\"fileSize\":180355,\"status\":\"not-downloaded\"},{\"name\":\"finnish_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14789,\"status\":\"not-downloaded\"},{\"name\":\"french\",\"wordCount\":174,\"rightToLeft\":false,\"fileSize\":2341,\"status\":\"not-downloaded\"},{\"name\":\"french_10k\",\"wordCount\":10253,\"rightToLeft\":false,\"fileSize\":163316,\"status\":\"not-downloaded\"},{\"name\":\"french_1k\",\"wordCount\":1394,\"rightToLeft\":false,\"fileSize\":20100,\"status\":\"not-downloaded\"},{\"name\":\"french_2k\",\"wordCount\":2041,\"rightToLeft\":false,\"fileSize\":30991,\"status\":\"not-downloaded\"},{\"name\":\"french_600k\",\"wordCount\":633941,\"rightToLeft\":false,\"fileSize\":12225660,\"status\":\"not-downloaded\"},{\"name\":\"french_bitoduc\",\"wordCount\":138,\"rightToLeft\":false,\"fileSize\":2558,\"status\":\"not-downloaded\"},{\"name\":\"frisian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2653,\"status\":\"not-downloaded\"},{\"name\":\"frisian_1k\",\"wordCount\":909,\"rightToLeft\":false,\"fileSize\":12416,\"status\":\"not-downloaded\"},{\"name\":\"friulian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2712,\"status\":\"not-downloaded\"},{\"name\":\"galician\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2547,\"status\":\"not-downloaded\"},{\"name\":\"georgian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":5735,\"status\":\"not-downloaded\"},{\"name\":\"german\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2669,\"status\":\"not-downloaded\"},{\"name\":\"german_10k\",\"wordCount\":9994,\"rightToLeft\":false,\"fileSize\":163036,\"status\":\"not-downloaded\"},{\"name\":\"german_1k\",\"wordCount\":988,\"rightToLeft\":false,\"fileSize\":14076,\"status\":\"not-downloaded\"},{\"name\":\"german_250k\",\"wordCount\":239243,\"rightToLeft\":false,\"fileSize\":4710520,\"status\":\"not-downloaded\"},{\"name\":\"git\",\"wordCount\":52,\"rightToLeft\":false,\"fileSize\":764,\"status\":\"not-downloaded\"},{\"name\":\"greek\",\"wordCount\":209,\"rightToLeft\":false,\"fileSize\":4263,\"status\":\"not-downloaded\"},{\"name\":\"greek_10k\",\"wordCount\":9936,\"rightToLeft\":false,\"fileSize\":251963,\"status\":\"not-downloaded\"},{\"name\":\"greek_1k\",\"wordCount\":993,\"rightToLeft\":false,\"fileSize\":21850,\"status\":\"not-downloaded\"},{\"name\":\"greek_25k\",\"wordCount\":24836,\"rightToLeft\":false,\"fileSize\":653439,\"status\":\"not-downloaded\"},{\"name\":\"greek_5k\",\"wordCount\":4963,\"rightToLeft\":false,\"fileSize\":121536,\"status\":\"not-downloaded\"},{\"name\":\"greeklish\",\"wordCount\":209,\"rightToLeft\":false,\"fileSize\":3058,\"status\":\"not-downloaded\"},{\"name\":\"greeklish_10k\",\"wordCount\":9808,\"rightToLeft\":false,\"fileSize\":165410,\"status\":\"not-downloaded\"},{\"name\":\"greeklish_1k\",\"wordCount\":990,\"rightToLeft\":false,\"fileSize\":15048,\"status\":\"not-downloaded\"},{\"name\":\"greeklish_25k\",\"wordCount\":24273,\"rightToLeft\":false,\"fileSize\":421424,\"status\":\"not-downloaded\"},{\"name\":\"greeklish_5k\",\"wordCount\":4926,\"rightToLeft\":false,\"fileSize\":80879,\"status\":\"not-downloaded\"},{\"name\":\"gujarati\",\"wordCount\":214,\"rightToLeft\":false,\"fileSize\":5177,\"status\":\"not-downloaded\"},{\"name\":\"gujarati_1k\",\"wordCount\":1004,\"rightToLeft\":false,\"fileSize\":21842,\"status\":\"not-downloaded\"},{\"name\":\"hausa\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2656,\"status\":\"not-downloaded\"},{\"name\":\"hausa_1k\",\"wordCount\":829,\"rightToLeft\":false,\"fileSize\":11528,\"status\":\"not-downloaded\"},{\"name\":\"hawaiian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2599,\"status\":\"not-downloaded\"},{\"name\":\"hawaiian_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13765,\"status\":\"not-downloaded\"},{\"name\":\"hebrew\",\"wordCount\":198,\"rightToLeft\":true,\"fileSize\":3374,\"status\":\"not-downloaded\"},{\"name\":\"hebrew_10k\",\"wordCount\":10000,\"rightToLeft\":true,\"fileSize\":181736,\"status\":\"not-downloaded\"},{\"name\":\"hebrew_1k\",\"wordCount\":1000,\"rightToLeft\":true,\"fileSize\":16653,\"status\":\"not-downloaded\"},{\"name\":\"hebrew_5k\",\"wordCount\":5000,\"rightToLeft\":true,\"fileSize\":88561,\"status\":\"not-downloaded\"},{\"name\":\"hindi\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4108,\"status\":\"not-downloaded\"},{\"name\":\"hindi_1k\",\"wordCount\":999,\"rightToLeft\":false,\"fileSize\":22188,\"status\":\"not-downloaded\"},{\"name\":\"hinglish\",\"wordCount\":212,\"rightToLeft\":false,\"fileSize\":2689,\"status\":\"not-downloaded\"},{\"name\":\"hungarian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2706,\"status\":\"not-downloaded\"},{\"name\":\"hungarian_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14857,\"status\":\"not-downloaded\"},{\"name\":\"hungarian_2k\",\"wordCount\":2452,\"rightToLeft\":false,\"fileSize\":38607,\"status\":\"not-downloaded\"},{\"name\":\"icelandic\",\"wordCount\":214,\"rightToLeft\":false,\"fileSize\":2775,\"status\":\"not-downloaded\"},{\"name\":\"icelandic_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13627,\"status\":\"not-downloaded\"},{\"name\":\"indonesian\",\"wordCount\":310,\"rightToLeft\":false,\"fileSize\":4231,\"status\":\"not-downloaded\"},{\"name\":\"indonesian_10k\",\"wordCount\":13769,\"rightToLeft\":false,\"fileSize\":230601,\"status\":\"not-downloaded\"},{\"name\":\"indonesian_1k\",\"wordCount\":1020,\"rightToLeft\":false,\"fileSize\":14971,\"status\":\"not-downloaded\"},{\"name\":\"irish\",\"wordCount\":183,\"rightToLeft\":false,\"fileSize\":2367,\"status\":\"not-downloaded\"},{\"name\":\"italian\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2878,\"status\":\"not-downloaded\"},{\"name\":\"italian_1k\",\"wordCount\":1159,\"rightToLeft\":false,\"fileSize\":17212,\"status\":\"not-downloaded\"},{\"name\":\"italian_280k\",\"wordCount\":279833,\"rightToLeft\":false,\"fileSize\":5004897,\"status\":\"not-downloaded\"},{\"name\":\"italian_60k\",\"wordCount\":60442,\"rightToLeft\":false,\"fileSize\":984995,\"status\":\"not-downloaded\"},{\"name\":\"italian_7k\",\"wordCount\":7154,\"rightToLeft\":false,\"fileSize\":114063,\"status\":\"not-downloaded\"},{\"name\":\"japanese_hiragana\",\"wordCount\":554,\"rightToLeft\":false,\"fileSize\":9319,\"status\":\"not-downloaded\"},{\"name\":\"japanese_katakana\",\"wordCount\":343,\"rightToLeft\":false,\"fileSize\":6638,\"status\":\"not-downloaded\"},{\"name\":\"japanese_romaji\",\"wordCount\":153,\"rightToLeft\":false,\"fileSize\":2032,\"status\":\"not-downloaded\"},{\"name\":\"japanese_romaji_1k\",\"wordCount\":987,\"rightToLeft\":false,\"fileSize\":13793,\"status\":\"not-downloaded\"},{\"name\":\"jyutping\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2335,\"status\":\"not-downloaded\"},{\"name\":\"kabyle\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2857,\"status\":\"not-downloaded\"},{\"name\":\"kabyle_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":152605,\"status\":\"not-downloaded\"},{\"name\":\"kabyle_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":15259,\"status\":\"not-downloaded\"},{\"name\":\"kabyle_2k\",\"wordCount\":2000,\"rightToLeft\":false,\"fileSize\":30606,\"status\":\"not-downloaded\"},{\"name\":\"kabyle_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":76701,\"status\":\"not-downloaded\"},{\"name\":\"kannada\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4761,\"status\":\"not-downloaded\"},{\"name\":\"kazakh\",\"wordCount\":202,\"rightToLeft\":false,\"fileSize\":3254,\"status\":\"not-downloaded\"},{\"name\":\"kazakh_1k\",\"wordCount\":990,\"rightToLeft\":false,\"fileSize\":19044,\"status\":\"not-downloaded\"},{\"name\":\"khmer\",\"wordCount\":331,\"rightToLeft\":false,\"fileSize\":8078,\"status\":\"not-downloaded\"},{\"name\":\"kinyarwanda\",\"wordCount\":273,\"rightToLeft\":false,\"fileSize\":3983,\"status\":\"not-downloaded\"},{\"name\":\"klingon\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":2892,\"status\":\"not-downloaded\"},{\"name\":\"klingon_1k\",\"wordCount\":1001,\"rightToLeft\":false,\"fileSize\":13499,\"status\":\"not-downloaded\"},{\"name\":\"korean\",\"wordCount\":470,\"rightToLeft\":false,\"fileSize\":6806,\"status\":\"not-downloaded\"},{\"name\":\"korean_1k\",\"wordCount\":975,\"rightToLeft\":false,\"fileSize\":14911,\"status\":\"not-downloaded\"},{\"name\":\"korean_5k\",\"wordCount\":4201,\"rightToLeft\":false,\"fileSize\":67650,\"status\":\"not-downloaded\"},{\"name\":\"kurdish_central\",\"wordCount\":204,\"rightToLeft\":true,\"fileSize\":3497,\"status\":\"not-downloaded\"},{\"name\":\"kurdish_central_2k\",\"wordCount\":1486,\"rightToLeft\":true,\"fileSize\":27564,\"status\":\"not-downloaded\"},{\"name\":\"kurdish_central_4k\",\"wordCount\":4256,\"rightToLeft\":true,\"fileSize\":79563,\"status\":\"not-downloaded\"},{\"name\":\"kyrgyz\",\"wordCount\":234,\"rightToLeft\":false,\"fileSize\":4455,\"status\":\"not-downloaded\"},{\"name\":\"kyrgyz_1k\",\"wordCount\":849,\"rightToLeft\":false,\"fileSize\":16274,\"status\":\"not-downloaded\"},{\"name\":\"latin\",\"wordCount\":362,\"rightToLeft\":false,\"fileSize\":4676,\"status\":\"not-downloaded\"},{\"name\":\"latvian\",\"wordCount\":179,\"rightToLeft\":false,\"fileSize\":2494,\"status\":\"not-downloaded\"},{\"name\":\"latvian_1k\",\"wordCount\":930,\"rightToLeft\":false,\"fileSize\":13856,\"status\":\"not-downloaded\"},{\"name\":\"league_of_legends\",\"wordCount\":442,\"rightToLeft\":false,\"fileSize\":8320,\"status\":\"not-downloaded\"},{\"name\":\"lithuanian\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2789,\"status\":\"not-downloaded\"},{\"name\":\"lithuanian_1k\",\"wordCount\":990,\"rightToLeft\":false,\"fileSize\":15084,\"status\":\"not-downloaded\"},{\"name\":\"lithuanian_3k\",\"wordCount\":2978,\"rightToLeft\":false,\"fileSize\":47828,\"status\":\"not-downloaded\"},{\"name\":\"lojban_cmavo\",\"wordCount\":674,\"rightToLeft\":false,\"fileSize\":7880,\"status\":\"not-downloaded\"},{\"name\":\"lojban_gismu\",\"wordCount\":1392,\"rightToLeft\":false,\"fileSize\":18164,\"status\":\"not-downloaded\"},{\"name\":\"lorem_ipsum\",\"wordCount\":185,\"rightToLeft\":false,\"fileSize\":2846,\"status\":\"not-downloaded\"},{\"name\":\"macedonian\",\"wordCount\":173,\"rightToLeft\":false,\"fileSize\":3084,\"status\":\"not-downloaded\"},{\"name\":\"macedonian_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":215286,\"status\":\"not-downloaded\"},{\"name\":\"macedonian_1k\",\"wordCount\":901,\"rightToLeft\":false,\"fileSize\":18003,\"status\":\"not-downloaded\"},{\"name\":\"macedonian_75k\",\"wordCount\":75000,\"rightToLeft\":false,\"fileSize\":1822852,\"status\":\"not-downloaded\"},{\"name\":\"malagasy\",\"wordCount\":197,\"rightToLeft\":false,\"fileSize\":2444,\"status\":\"not-downloaded\"},{\"name\":\"malagasy_1k\",\"wordCount\":975,\"rightToLeft\":false,\"fileSize\":16596,\"status\":\"not-downloaded\"},{\"name\":\"malay\",\"wordCount\":228,\"rightToLeft\":false,\"fileSize\":3141,\"status\":\"not-downloaded\"},{\"name\":\"malay_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14607,\"status\":\"not-downloaded\"},{\"name\":\"malayalam\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4538,\"status\":\"not-downloaded\"},{\"name\":\"maltese\",\"wordCount\":183,\"rightToLeft\":false,\"fileSize\":2460,\"status\":\"not-downloaded\"},{\"name\":\"maltese_1k\",\"wordCount\":927,\"rightToLeft\":false,\"fileSize\":13213,\"status\":\"not-downloaded\"},{\"name\":\"maori_1k\",\"wordCount\":975,\"rightToLeft\":false,\"fileSize\":13566,\"status\":\"not-downloaded\"},{\"name\":\"marathi\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":4394,\"status\":\"not-downloaded\"},{\"name\":\"mongolian\",\"wordCount\":1085,\"rightToLeft\":false,\"fileSize\":23043,\"status\":\"not-downloaded\"},{\"name\":\"mongolian_10k\",\"wordCount\":9219,\"rightToLeft\":false,\"fileSize\":180063,\"status\":\"not-downloaded\"},{\"name\":\"myanmar_burmese\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":6293,\"status\":\"not-downloaded\"},{\"name\":\"nepali\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4724,\"status\":\"not-downloaded\"},{\"name\":\"nepali_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":22257,\"status\":\"not-downloaded\"},{\"name\":\"nepali_romanized\",\"wordCount\":430,\"rightToLeft\":false,\"fileSize\":6164,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_bokmal\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2505,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_bokmal_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":159268,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_bokmal_150k\",\"wordCount\":142938,\"rightToLeft\":false,\"fileSize\":2677680,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_bokmal_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13994,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_bokmal_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":76684,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_bokmal_600k\",\"wordCount\":614970,\"rightToLeft\":false,\"fileSize\":12321154,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_nynorsk\",\"wordCount\":250,\"rightToLeft\":false,\"fileSize\":3218,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_nynorsk_100k\",\"wordCount\":104745,\"rightToLeft\":false,\"fileSize\":1840523,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_nynorsk_10k\",\"wordCount\":9939,\"rightToLeft\":false,\"fileSize\":162441,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_nynorsk_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13984,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_nynorsk_400k\",\"wordCount\":410719,\"rightToLeft\":false,\"fileSize\":7681215,\"status\":\"not-downloaded\"},{\"name\":\"norwegian_nynorsk_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":78072,\"status\":\"not-downloaded\"},{\"name\":\"occitan\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2470,\"status\":\"not-downloaded\"},{\"name\":\"occitan_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":148964,\"status\":\"not-downloaded\"},{\"name\":\"occitan_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13459,\"status\":\"not-downloaded\"},{\"name\":\"occitan_2k\",\"wordCount\":2000,\"rightToLeft\":false,\"fileSize\":28013,\"status\":\"not-downloaded\"},{\"name\":\"occitan_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":72816,\"status\":\"not-downloaded\"},{\"name\":\"oromo\",\"wordCount\":337,\"rightToLeft\":false,\"fileSize\":5008,\"status\":\"not-downloaded\"},{\"name\":\"oromo_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":16348,\"status\":\"not-downloaded\"},{\"name\":\"oromo_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":86981,\"status\":\"not-downloaded\"},{\"name\":\"pashto\",\"wordCount\":192,\"rightToLeft\":true,\"fileSize\":3381,\"status\":\"not-downloaded\"},{\"name\":\"persian\",\"wordCount\":196,\"rightToLeft\":true,\"fileSize\":3430,\"status\":\"not-downloaded\"},{\"name\":\"persian_1k\",\"wordCount\":1000,\"rightToLeft\":true,\"fileSize\":17051,\"status\":\"not-downloaded\"},{\"name\":\"persian_20k\",\"wordCount\":21715,\"rightToLeft\":true,\"fileSize\":391081,\"status\":\"not-downloaded\"},{\"name\":\"persian_5k\",\"wordCount\":5000,\"rightToLeft\":true,\"fileSize\":89347,\"status\":\"not-downloaded\"},{\"name\":\"persian_romanized\",\"wordCount\":195,\"rightToLeft\":false,\"fileSize\":2992,\"status\":\"not-downloaded\"},{\"name\":\"pig_latin\",\"wordCount\":197,\"rightToLeft\":false,\"fileSize\":2872,\"status\":\"not-downloaded\"},{\"name\":\"pinyin\",\"wordCount\":175,\"rightToLeft\":false,\"fileSize\":2321,\"status\":\"not-downloaded\"},{\"name\":\"pinyin_10k\",\"wordCount\":1293,\"rightToLeft\":false,\"fileSize\":15923,\"status\":\"not-downloaded\"},{\"name\":\"pinyin_1k\",\"wordCount\":612,\"rightToLeft\":false,\"fileSize\":7640,\"status\":\"not-downloaded\"},{\"name\":\"polish\",\"wordCount\":183,\"rightToLeft\":false,\"fileSize\":2558,\"status\":\"not-downloaded\"},{\"name\":\"polish_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":160979,\"status\":\"not-downloaded\"},{\"name\":\"polish_200k\",\"wordCount\":199979,\"rightToLeft\":false,\"fileSize\":3622698,\"status\":\"not-downloaded\"},{\"name\":\"polish_20k\",\"wordCount\":20000,\"rightToLeft\":false,\"fileSize\":330846,\"status\":\"not-downloaded\"},{\"name\":\"polish_2k\",\"wordCount\":2338,\"rightToLeft\":false,\"fileSize\":35311,\"status\":\"not-downloaded\"},{\"name\":\"polish_40k\",\"wordCount\":40000,\"rightToLeft\":false,\"fileSize\":690741,\"status\":\"not-downloaded\"},{\"name\":\"polish_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":78565,\"status\":\"not-downloaded\"},{\"name\":\"portuguese\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":2815,\"status\":\"not-downloaded\"},{\"name\":\"portuguese_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14803,\"status\":\"not-downloaded\"},{\"name\":\"portuguese_320k\",\"wordCount\":318601,\"rightToLeft\":false,\"fileSize\":5998764,\"status\":\"not-downloaded\"},{\"name\":\"portuguese_3k\",\"wordCount\":3043,\"rightToLeft\":false,\"fileSize\":49279,\"status\":\"not-downloaded\"},{\"name\":\"portuguese_550k\",\"wordCount\":558207,\"rightToLeft\":false,\"fileSize\":10399131,\"status\":\"not-downloaded\"},{\"name\":\"portuguese_5k\",\"wordCount\":5665,\"rightToLeft\":false,\"fileSize\":92772,\"status\":\"not-downloaded\"},{\"name\":\"portuguese_acentos_e_cedilha\",\"wordCount\":1999,\"rightToLeft\":false,\"fileSize\":36183,\"status\":\"not-downloaded\"},{\"name\":\"quenya\",\"wordCount\":1883,\"rightToLeft\":false,\"fileSize\":26694,\"status\":\"not-downloaded\"},{\"name\":\"romanian\",\"wordCount\":270,\"rightToLeft\":false,\"fileSize\":3570,\"status\":\"not-downloaded\"},{\"name\":\"romanian_100k\",\"wordCount\":100000,\"rightToLeft\":false,\"fileSize\":1687365,\"status\":\"not-downloaded\"},{\"name\":\"romanian_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":168800,\"status\":\"not-downloaded\"},{\"name\":\"romanian_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":16690,\"status\":\"not-downloaded\"},{\"name\":\"romanian_200k\",\"wordCount\":200000,\"rightToLeft\":false,\"fileSize\":3374931,\"status\":\"not-downloaded\"},{\"name\":\"romanian_25k\",\"wordCount\":25000,\"rightToLeft\":false,\"fileSize\":422202,\"status\":\"not-downloaded\"},{\"name\":\"romanian_50k\",\"wordCount\":50000,\"rightToLeft\":false,\"fileSize\":842909,\"status\":\"not-downloaded\"},{\"name\":\"romanian_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":83912,\"status\":\"not-downloaded\"},{\"name\":\"russian\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":3511,\"status\":\"not-downloaded\"},{\"name\":\"russian_10k\",\"wordCount\":9996,\"rightToLeft\":false,\"fileSize\":238859,\"status\":\"not-downloaded\"},{\"name\":\"russian_1k\",\"wordCount\":996,\"rightToLeft\":false,\"fileSize\":20251,\"status\":\"not-downloaded\"},{\"name\":\"russian_25k\",\"wordCount\":26038,\"rightToLeft\":false,\"fileSize\":680857,\"status\":\"not-downloaded\"},{\"name\":\"russian_375k\",\"wordCount\":376092,\"rightToLeft\":false,\"fileSize\":10065196,\"status\":\"not-downloaded\"},{\"name\":\"russian_50k\",\"wordCount\":51684,\"rightToLeft\":false,\"fileSize\":1354123,\"status\":\"not-downloaded\"},{\"name\":\"russian_5k\",\"wordCount\":4972,\"rightToLeft\":false,\"fileSize\":112748,\"status\":\"not-downloaded\"},{\"name\":\"russian_abbreviations\",\"wordCount\":245,\"rightToLeft\":false,\"fileSize\":3760,\"status\":\"not-downloaded\"},{\"name\":\"russian_contractions\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4081,\"status\":\"not-downloaded\"},{\"name\":\"russian_contractions_1k\",\"wordCount\":880,\"rightToLeft\":false,\"fileSize\":15123,\"status\":\"not-downloaded\"},{\"name\":\"sanskrit\",\"wordCount\":252,\"rightToLeft\":false,\"fileSize\":5745,\"status\":\"not-downloaded\"},{\"name\":\"sanskrit_roman\",\"wordCount\":252,\"rightToLeft\":false,\"fileSize\":3757,\"status\":\"not-downloaded\"},{\"name\":\"santali\",\"wordCount\":260,\"rightToLeft\":false,\"fileSize\":5905,\"status\":\"not-downloaded\"},{\"name\":\"serbian\",\"wordCount\":212,\"rightToLeft\":false,\"fileSize\":3877,\"status\":\"not-downloaded\"},{\"name\":\"serbian_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":207777,\"status\":\"not-downloaded\"},{\"name\":\"serbian_latin\",\"wordCount\":212,\"rightToLeft\":false,\"fileSize\":2934,\"status\":\"not-downloaded\"},{\"name\":\"serbian_latin_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":147472,\"status\":\"not-downloaded\"},{\"name\":\"shona\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2764,\"status\":\"not-downloaded\"},{\"name\":\"shona_1k\",\"wordCount\":816,\"rightToLeft\":false,\"fileSize\":11959,\"status\":\"not-downloaded\"},{\"name\":\"sinhala\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":4211,\"status\":\"not-downloaded\"},{\"name\":\"slovak\",\"wordCount\":177,\"rightToLeft\":false,\"fileSize\":2361,\"status\":\"not-downloaded\"},{\"name\":\"slovak_10k\",\"wordCount\":9944,\"rightToLeft\":false,\"fileSize\":152706,\"status\":\"not-downloaded\"},{\"name\":\"slovak_1k\",\"wordCount\":1001,\"rightToLeft\":false,\"fileSize\":13772,\"status\":\"not-downloaded\"},{\"name\":\"slovenian\",\"wordCount\":309,\"rightToLeft\":false,\"fileSize\":4027,\"status\":\"not-downloaded\"},{\"name\":\"slovenian_1k\",\"wordCount\":1023,\"rightToLeft\":false,\"fileSize\":14182,\"status\":\"not-downloaded\"},{\"name\":\"slovenian_5k\",\"wordCount\":4971,\"rightToLeft\":false,\"fileSize\":73385,\"status\":\"not-downloaded\"},{\"name\":\"spanish\",\"wordCount\":197,\"rightToLeft\":false,\"fileSize\":2627,\"status\":\"not-downloaded\"},{\"name\":\"spanish_10k\",\"wordCount\":9992,\"rightToLeft\":false,\"fileSize\":157797,\"status\":\"not-downloaded\"},{\"name\":\"spanish_1k\",\"wordCount\":999,\"rightToLeft\":false,\"fileSize\":14638,\"status\":\"not-downloaded\"},{\"name\":\"spanish_650k\",\"wordCount\":646584,\"rightToLeft\":false,\"fileSize\":11979182,\"status\":\"not-downloaded\"},{\"name\":\"swahili_1k\",\"wordCount\":820,\"rightToLeft\":false,\"fileSize\":11792,\"status\":\"not-downloaded\"},{\"name\":\"swedish\",\"wordCount\":198,\"rightToLeft\":false,\"fileSize\":2462,\"status\":\"not-downloaded\"},{\"name\":\"swedish_1k\",\"wordCount\":994,\"rightToLeft\":false,\"fileSize\":13414,\"status\":\"not-downloaded\"},{\"name\":\"swedish_diacritics\",\"wordCount\":261,\"rightToLeft\":false,\"fileSize\":4198,\"status\":\"not-downloaded\"},{\"name\":\"swiss_german\",\"wordCount\":204,\"rightToLeft\":false,\"fileSize\":2728,\"status\":\"not-downloaded\"},{\"name\":\"swiss_german_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":14357,\"status\":\"not-downloaded\"},{\"name\":\"swiss_german_2k\",\"wordCount\":2000,\"rightToLeft\":false,\"fileSize\":35880,\"status\":\"not-downloaded\"},{\"name\":\"tamil\",\"wordCount\":366,\"rightToLeft\":false,\"fileSize\":9681,\"status\":\"not-downloaded\"},{\"name\":\"tamil_1k\",\"wordCount\":951,\"rightToLeft\":false,\"fileSize\":26745,\"status\":\"not-downloaded\"},{\"name\":\"tamil_old\",\"wordCount\":460,\"rightToLeft\":false,\"fileSize\":12150,\"status\":\"not-downloaded\"},{\"name\":\"tanglish\",\"wordCount\":272,\"rightToLeft\":false,\"fileSize\":3779,\"status\":\"not-downloaded\"},{\"name\":\"tatar\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":3660,\"status\":\"not-downloaded\"},{\"name\":\"tatar_1k\",\"wordCount\":1001,\"rightToLeft\":false,\"fileSize\":19383,\"status\":\"not-downloaded\"},{\"name\":\"tatar_5k\",\"wordCount\":5004,\"rightToLeft\":false,\"fileSize\":105791,\"status\":\"not-downloaded\"},{\"name\":\"tatar_9k\",\"wordCount\":9034,\"rightToLeft\":false,\"fileSize\":196859,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean\",\"wordCount\":214,\"rightToLeft\":false,\"fileSize\":2912,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":159991,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_15k\",\"wordCount\":15082,\"rightToLeft\":false,\"fileSize\":241963,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":15465,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":79838,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_cyrillic\",\"wordCount\":214,\"rightToLeft\":false,\"fileSize\":3988,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_cyrillic_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":232364,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_cyrillic_15k\",\"wordCount\":15082,\"rightToLeft\":false,\"fileSize\":351718,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_cyrillic_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":22169,\"status\":\"not-downloaded\"},{\"name\":\"tatar_crimean_cyrillic_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":115947,\"status\":\"not-downloaded\"},{\"name\":\"telugu\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":4931,\"status\":\"not-downloaded\"},{\"name\":\"telugu_1k\",\"wordCount\":901,\"rightToLeft\":false,\"fileSize\":23412,\"status\":\"not-downloaded\"},{\"name\":\"thai\",\"wordCount\":972,\"rightToLeft\":false,\"fileSize\":21338,\"status\":\"not-downloaded\"},{\"name\":\"thai_10k\",\"wordCount\":10000,\"rightToLeft\":false,\"fileSize\":314221,\"status\":\"not-downloaded\"},{\"name\":\"thai_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":31213,\"status\":\"not-downloaded\"},{\"name\":\"thai_20k\",\"wordCount\":18737,\"rightToLeft\":false,\"fileSize\":470736,\"status\":\"not-downloaded\"},{\"name\":\"thai_50k\",\"wordCount\":50000,\"rightToLeft\":false,\"fileSize\":1572965,\"status\":\"not-downloaded\"},{\"name\":\"thai_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":156867,\"status\":\"not-downloaded\"},{\"name\":\"thai_60k\",\"wordCount\":60000,\"rightToLeft\":false,\"fileSize\":1888649,\"status\":\"not-downloaded\"},{\"name\":\"tibetan\",\"wordCount\":277,\"rightToLeft\":false,\"fileSize\":8407,\"status\":\"not-downloaded\"},{\"name\":\"tibetan_1k\",\"wordCount\":1080,\"rightToLeft\":false,\"fileSize\":40811,\"status\":\"not-downloaded\"},{\"name\":\"toki_pona\",\"wordCount\":124,\"rightToLeft\":false,\"fileSize\":1537,\"status\":\"not-downloaded\"},{\"name\":\"toki_pona_ku_lili\",\"wordCount\":190,\"rightToLeft\":false,\"fileSize\":2390,\"status\":\"not-downloaded\"},{\"name\":\"toki_pona_ku_suli\",\"wordCount\":138,\"rightToLeft\":false,\"fileSize\":1735,\"status\":\"not-downloaded\"},{\"name\":\"turkish\",\"wordCount\":299,\"rightToLeft\":false,\"fileSize\":4065,\"status\":\"not-downloaded\"},{\"name\":\"turkish_1k\",\"wordCount\":1026,\"rightToLeft\":false,\"fileSize\":14482,\"status\":\"not-downloaded\"},{\"name\":\"turkish_5k\",\"wordCount\":5016,\"rightToLeft\":false,\"fileSize\":77317,\"status\":\"not-downloaded\"},{\"name\":\"twitch_emotes\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":3242,\"status\":\"not-downloaded\"},{\"name\":\"typing_of_the_dead\",\"wordCount\":10098,\"rightToLeft\":false,\"fileSize\":232808,\"status\":\"not-downloaded\"},{\"name\":\"udmurt\",\"wordCount\":212,\"rightToLeft\":false,\"fileSize\":3682,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":3603,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_10k\",\"wordCount\":9998,\"rightToLeft\":false,\"fileSize\":244506,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":21403,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_50k\",\"wordCount\":49991,\"rightToLeft\":false,\"fileSize\":1329620,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_endings\",\"wordCount\":118,\"rightToLeft\":false,\"fileSize\":1623,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_latynka\",\"wordCount\":199,\"rightToLeft\":false,\"fileSize\":2721,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_latynka_10k\",\"wordCount\":9998,\"rightToLeft\":false,\"fileSize\":168690,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_latynka_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":15260,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_latynka_50k\",\"wordCount\":49991,\"rightToLeft\":false,\"fileSize\":901862,\"status\":\"not-downloaded\"},{\"name\":\"ukrainian_latynka_endings\",\"wordCount\":117,\"rightToLeft\":false,\"fileSize\":1367,\"status\":\"not-downloaded\"},{\"name\":\"urdish\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":2764,\"status\":\"not-downloaded\"},{\"name\":\"urdu\",\"wordCount\":200,\"rightToLeft\":true,\"fileSize\":3234,\"status\":\"not-downloaded\"},{\"name\":\"urdu_1k\",\"wordCount\":934,\"rightToLeft\":true,\"fileSize\":16107,\"status\":\"not-downloaded\"},{\"name\":\"urdu_5k\",\"wordCount\":4981,\"rightToLeft\":true,\"fileSize\":86433,\"status\":\"not-downloaded\"},{\"name\":\"uzbek\",\"wordCount\":196,\"rightToLeft\":false,\"fileSize\":2854,\"status\":\"not-downloaded\"},{\"name\":\"uzbek_1k\",\"wordCount\":821,\"rightToLeft\":false,\"fileSize\":11789,\"status\":\"not-downloaded\"},{\"name\":\"uzbek_70k\",\"wordCount\":76595,\"rightToLeft\":false,\"fileSize\":1329022,\"status\":\"not-downloaded\"},{\"name\":\"vietnamese\",\"wordCount\":319,\"rightToLeft\":false,\"fileSize\":4420,\"status\":\"not-downloaded\"},{\"name\":\"vietnamese_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13318,\"status\":\"not-downloaded\"},{\"name\":\"vietnamese_5k\",\"wordCount\":5000,\"rightToLeft\":false,\"fileSize\":64961,\"status\":\"not-downloaded\"},{\"name\":\"viossa\",\"wordCount\":210,\"rightToLeft\":false,\"fileSize\":2598,\"status\":\"not-downloaded\"},{\"name\":\"viossa_njutro\",\"wordCount\":221,\"rightToLeft\":false,\"fileSize\":2950,\"status\":\"not-downloaded\"},{\"name\":\"welsh\",\"wordCount\":200,\"rightToLeft\":false,\"fileSize\":2529,\"status\":\"not-downloaded\"},{\"name\":\"welsh_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13764,\"status\":\"not-downloaded\"},{\"name\":\"wordle\",\"wordCount\":201,\"rightToLeft\":false,\"fileSize\":2733,\"status\":\"not-downloaded\"},{\"name\":\"wordle_1k\",\"wordCount\":1000,\"rightToLeft\":false,\"fileSize\":13065,\"status\":\"not-downloaded\"},{\"name\":\"xhosa\",\"wordCount\":871,\"rightToLeft\":false,\"fileSize\":13224,\"status\":\"not-downloaded\"},{\"name\":\"xhosa_3k\",\"wordCount\":2935,\"rightToLeft\":false,\"fileSize\":47210,\"status\":\"not-downloaded\"},{\"name\":\"yiddish\",\"wordCount\":200,\"rightToLeft\":true,\"fileSize\":4100,\"status\":\"not-downloaded\"},{\"name\":\"yoruba_1k\",\"wordCount\":731,\"rightToLeft\":false,\"fileSize\":9842,\"status\":\"not-downloaded\"},{\"name\":\"zulu\",\"wordCount\":174,\"rightToLeft\":false,\"fileSize\":2856,\"status\":\"not-downloaded\"}]",
+      "[]",
+      "[]",
+      "null",
+      "null",
+      "null",
+      "null",
+      "null",
+      "null",
+      "{\"success\":false,\"error\":\"Language is bundled\"}",
+      "{\"success\":false,\"error\":\"Invalid language name\"}",
+      "{\"success\":false,\"error\":\"Invalid language name\"}",
+      "{\"success\":false,\"error\":\"Unknown language\"}",
+      "{\"success\":true}",
+      "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "{\"success\":false,\"error\":\"Cannot delete bundled language\"}",
+      "{\"success\":false,\"error\":\"<os error>\"}",
+      "{\"success\":false,\"error\":\"Invalid language name\"}",
+      "{\"success\":true}",
+      "null",
+      "{\"success\":false,\"error\":\"<os error>\"}",
+      "null",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}"
+    ],
+    "urls": [
+      "https://github.com/monkeytypegame/monkeytype/raw/629c82e112a2db2122c789dc6abe970b82c3f8c5/frontend/static/languages/german.json",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/monkeytype/": null
+    }
+  },
+  {
+    "name": "download failures and what a download writes",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v-small\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37},{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1},{\"name\":\"missing\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"short\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":100},{\"name\":\"offline\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"badjson\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":8},{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":40},{\"name\":\"invalid-utf8\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":27},{\"name\":\"empty-words\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":23},{\"name\":\"number-word\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":28},{\"name\":\"no-name\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":15},{\"name\":\"array\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2},{\"name\":\"null\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":4},{\"name\":\"half\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2.5},{\"name\":\"huge\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1e+21},{\"name\":\"a b?#c\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37},{\"name\":\"extra\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":54}]}}"
+    },
+    "steps": [
+      {
+        "op": "download",
+        "name": "a",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "missing",
+        "replies": [
+          {
+            "status": 404,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "short",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "offline",
+        "replies": [
+          {
+            "error": "net::ERR_INTERNET_DISCONNECTED"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "badjson",
+        "replies": [
+          {
+            "status": 200,
+            "body": "not json"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "bom",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "efbbbf7b226e616d65223a227061636b222c22776f726473223a5b2261222c2262222c2263225d7d"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "invalid-utf8",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "7b226e616d65223a2278222c22776f726473223a5b2261ff225d7d"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "empty-words",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"x\",\"words\":[]}"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "number-word",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"x\",\"words\":[\"a\",1]}"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "no-name",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"words\":[\"a\"]}"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "array",
+        "replies": [
+          {
+            "status": 200,
+            "body": "[]"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "null",
+        "replies": [
+          {
+            "status": 200,
+            "body": "null"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "half",
+        "replies": [
+          {
+            "status": 200,
+            "body": "xx"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "huge",
+        "replies": [
+          {
+            "status": 200,
+            "body": "xx"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "a b?#c",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}"
+          }
+        ]
+      },
+      {
+        "op": "download",
+        "name": "extra",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"7\":1,\"name\":\"x\",\"words\":[\"w\"],\"name\":\"y\",\"z\":[1e21]}"
+          }
+        ]
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "name": "a"
+      },
+      {
+        "op": "get",
+        "name": "bom"
+      },
+      {
+        "op": "get",
+        "name": "invalid-utf8"
+      },
+      {
+        "op": "get",
+        "name": "a b?#c"
+      },
+      {
+        "op": "get",
+        "name": "extra"
+      },
+      {
+        "op": "delete",
+        "name": "a"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true}",
+      "{\"success\":false,\"error\":\"HTTP 404\"}",
+      "{\"success\":false,\"error\":\"Integrity check failed: size mismatch (expected 100, got 37)\"}",
+      "{\"success\":false,\"error\":\"Error: net::ERR_INTERNET_DISCONNECTED\"}",
+      "{\"success\":false,\"error\":\"<parse error>\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":false,\"error\":\"Invalid language data\"}",
+      "{\"success\":false,\"error\":\"Invalid language data\"}",
+      "{\"success\":false,\"error\":\"Invalid language data\"}",
+      "{\"success\":false,\"error\":\"Invalid language data\"}",
+      "{\"success\":false,\"error\":\"Invalid language data\"}",
+      "{\"success\":false,\"error\":\"Integrity check failed: size mismatch (expected 2.5, got 2)\"}",
+      "{\"success\":false,\"error\":\"Integrity check failed: size mismatch (expected 1e+21, got 2)\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "[{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37,\"status\":\"downloaded\"},{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"},{\"name\":\"missing\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"status\":\"not-downloaded\"},{\"name\":\"short\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":100,\"status\":\"not-downloaded\"},{\"name\":\"offline\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"status\":\"not-downloaded\"},{\"name\":\"badjson\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":8,\"status\":\"not-downloaded\"},{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":40,\"status\":\"downloaded\"},{\"name\":\"invalid-utf8\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":27,\"status\":\"downloaded\"},{\"name\":\"empty-words\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":23,\"status\":\"not-downloaded\"},{\"name\":\"number-word\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":28,\"status\":\"not-downloaded\"},{\"name\":\"no-name\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":15,\"status\":\"not-downloaded\"},{\"name\":\"array\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2,\"status\":\"not-downloaded\"},{\"name\":\"null\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":4,\"status\":\"not-downloaded\"},{\"name\":\"half\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2.5,\"status\":\"not-downloaded\"},{\"name\":\"huge\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1e+21,\"status\":\"not-downloaded\"},{\"name\":\"a b?#c\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37,\"status\":\"downloaded\"},{\"name\":\"extra\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":54,\"status\":\"downloaded\"}]",
+      "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "{\"name\":\"x\",\"words\":[\"a�\"]}",
+      "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "{\"7\":1,\"name\":\"y\",\"words\":[\"w\"],\"z\":[1e+21]}",
+      "{\"success\":true}",
+      "[{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37,\"status\":\"not-downloaded\"},{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"not-downloaded\"},{\"name\":\"missing\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"status\":\"not-downloaded\"},{\"name\":\"short\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":100,\"status\":\"not-downloaded\"},{\"name\":\"offline\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"status\":\"not-downloaded\"},{\"name\":\"badjson\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":8,\"status\":\"not-downloaded\"},{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":40,\"status\":\"downloaded\"},{\"name\":\"invalid-utf8\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":27,\"status\":\"downloaded\"},{\"name\":\"empty-words\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":23,\"status\":\"not-downloaded\"},{\"name\":\"number-word\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":28,\"status\":\"not-downloaded\"},{\"name\":\"no-name\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":15,\"status\":\"not-downloaded\"},{\"name\":\"array\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2,\"status\":\"not-downloaded\"},{\"name\":\"null\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":4,\"status\":\"not-downloaded\"},{\"name\":\"half\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2.5,\"status\":\"not-downloaded\"},{\"name\":\"huge\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1e+21,\"status\":\"not-downloaded\"},{\"name\":\"a b?#c\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37,\"status\":\"downloaded\"},{\"name\":\"extra\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":54,\"status\":\"downloaded\"}]"
+    ],
+    "urls": [
+      "https://hub.example/languages/a.json",
+      "https://hub.example/languages/missing.json",
+      "https://hub.example/languages/short.json",
+      "https://hub.example/languages/offline.json",
+      "https://hub.example/languages/badjson.json",
+      "https://hub.example/languages/bom.json",
+      "https://hub.example/languages/invalid-utf8.json",
+      "https://hub.example/languages/empty-words.json",
+      "https://hub.example/languages/number-word.json",
+      "https://hub.example/languages/no-name.json",
+      "https://hub.example/languages/array.json",
+      "https://hub.example/languages/null.json",
+      "https://hub.example/languages/half.json",
+      "https://hub.example/languages/huge.json",
+      "https://hub.example/languages/a b?#c.json",
+      "https://hub.example/languages/extra.json"
+    ],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/monkeytype/": null,
+      "local/downloads/languages/monkeytype/a b?#c.json": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "local/downloads/languages/monkeytype/bom.json": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "local/downloads/languages/monkeytype/extra.json": "{\"7\":1,\"name\":\"x\",\"words\":[\"w\"],\"name\":\"y\",\"z\":[1e21]}",
+      "local/downloads/languages/monkeytype/invalid-utf8.json": "{\"name\":\"x\",\"words\":[\"a�\"]}",
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v-small\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37},{\"name\":\"a\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1},{\"name\":\"missing\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"short\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":100},{\"name\":\"offline\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"badjson\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":8},{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":40},{\"name\":\"invalid-utf8\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":27},{\"name\":\"empty-words\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":23},{\"name\":\"number-word\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":28},{\"name\":\"no-name\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":15},{\"name\":\"array\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2},{\"name\":\"null\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":4},{\"name\":\"half\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2.5},{\"name\":\"huge\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1e+21},{\"name\":\"a b?#c\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37},{\"name\":\"extra\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":54}]}}"
+    }
+  },
+  {
+    "name": "reading downloaded files",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v-small\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1},{\"name\":\"dir\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1},{\"name\":\"ok\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1}]}}",
+      "local/downloads/languages/monkeytype/bom.json": "﻿{\"name\":\"bom\",\"words\":[\"a\"]}",
+      "local/downloads/languages/monkeytype/dir.json/": null,
+      "local/downloads/languages/monkeytype/ok.json": {
+        "hex": "7b22776f726473223a5b2278c3225d2c226e616d65223a226f6b222c226e223a2d307d"
+      },
+      "local/downloads/languages/monkeytype/nowords.json": "{\"name\":\"nowords\"}",
+      "local/downloads/languages/monkeytype/notjson.json": "not json",
+      "local/downloads/languages/monkeytype/notes.txt": "not a language",
+      "local/downloads/languages/monkeytype/x.json.json": "{}",
+      "local/downloads/languages/tatoeba/ok.json": "{\"name\":\"tatoeba ok\",\"words\":[\"Hello there.\"]}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "name": "bom"
+      },
+      {
+        "op": "get",
+        "name": "dir"
+      },
+      {
+        "op": "get",
+        "name": "ok"
+      },
+      {
+        "op": "get",
+        "name": "nowords"
+      },
+      {
+        "op": "get",
+        "name": "notjson"
+      },
+      {
+        "op": "get",
+        "name": "ok",
+        "provider": "tatoeba"
+      },
+      {
+        "op": "delete",
+        "name": "dir"
+      },
+      {
+        "op": "delete",
+        "name": "notes"
+      },
+      {
+        "op": "delete",
+        "name": "x.json"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "outcomes": [
+      "[{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"},{\"name\":\"dir\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"},{\"name\":\"ok\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"}]",
+      "null",
+      "null",
+      "{\"words\":[\"x�\"],\"name\":\"ok\",\"n\":0}",
+      "null",
+      "null",
+      "{\"name\":\"tatoeba ok\",\"words\":[\"Hello there.\"]}",
+      "{\"success\":false,\"error\":\"<os error>\"}",
+      "{\"success\":false,\"error\":\"<os error>\"}",
+      "{\"success\":true}",
+      "[{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"},{\"name\":\"dir\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"},{\"name\":\"ok\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"downloaded\"}]"
+    ],
+    "urls": [],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/monkeytype/": null,
+      "local/downloads/languages/monkeytype/bom.json": "﻿{\"name\":\"bom\",\"words\":[\"a\"]}",
+      "local/downloads/languages/monkeytype/dir.json/": null,
+      "local/downloads/languages/monkeytype/notes.txt": "not a language",
+      "local/downloads/languages/monkeytype/notjson.json": "not json",
+      "local/downloads/languages/monkeytype/nowords.json": "{\"name\":\"nowords\"}",
+      "local/downloads/languages/monkeytype/ok.json": {
+        "hex": "7b22776f726473223a5b2278c3225d2c226e616d65223a226f6b222c226e223a2d307d"
+      },
+      "local/downloads/languages/tatoeba/": null,
+      "local/downloads/languages/tatoeba/ok.json": "{\"name\":\"tatoeba ok\",\"words\":[\"Hello there.\"]}",
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v-small\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"bom\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1},{\"name\":\"dir\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1},{\"name\":\"ok\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1}]}}"
+    }
+  },
+  {
+    "name": "legacy flat downloads move into the monkeytype directory",
+    "tree": {
+      "local/downloads/languages/german.json": "{\"name\":\"german\",\"words\":[\"hallo\"]}",
+      "local/downloads/languages/french.json": "{\"name\":\"french\",\"words\":[\"bonjour\"]}",
+      "local/downloads/languages/notes.txt": "stays",
+      "local/downloads/languages/folder.json/": null,
+      "local/downloads/languages/monkeytype/french.json": "{\"name\":\"french\",\"words\":[\"old\"]}"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "name": "german"
+      },
+      {
+        "op": "get",
+        "name": "french"
+      },
+      {
+        "op": "restart"
+      },
+      {
+        "op": "get",
+        "name": "german"
+      }
+    ],
+    "outcomes": [
+      "{\"name\":\"german\",\"words\":[\"hallo\"]}",
+      "{\"name\":\"french\",\"words\":[\"bonjour\"]}",
+      null,
+      "{\"name\":\"german\",\"words\":[\"hallo\"]}"
+    ],
+    "urls": [],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/folder.json/": null,
+      "local/downloads/languages/monkeytype/": null,
+      "local/downloads/languages/monkeytype/french.json": "{\"name\":\"french\",\"words\":[\"bonjour\"]}",
+      "local/downloads/languages/monkeytype/german.json": "{\"name\":\"german\",\"words\":[\"hallo\"]}",
+      "local/downloads/languages/notes.txt": "stays"
+    }
+  },
+  {
+    "name": "no legacy move when the monkeytype directory cannot be made",
+    "tree": {
+      "local/downloads/languages/german.json": "{\"name\":\"german\",\"words\":[\"hallo\"]}",
+      "local/downloads/languages/monkeytype": "a file in the way"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "name": "german"
+      },
+      {
+        "op": "download",
+        "name": "german",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      "null",
+      "{\"success\":false,\"error\":\"<os error>\"}"
+    ],
+    "urls": [
+      "https://github.com/monkeytypegame/monkeytype/raw/629c82e112a2db2122c789dc6abe970b82c3f8c5/frontend/static/languages/german.json"
+    ],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/german.json": "{\"name\":\"german\",\"words\":[\"hallo\"]}",
+      "local/downloads/languages/monkeytype": "a file in the way"
+    }
+  },
+  {
+    "name": "check and update a provider",
+    "tree": {
+      "local/downloads/languages/monkeytype/german.json": "{}",
+      "local/downloads/languages/monkeytype/notes.txt": "kept",
+      "local/downloads/languages/monkeytype/dir.json/": null,
+      "local/downloads/languages/tatoeba/english.json": "{}"
+    },
+    "steps": [
+      {
+        "op": "check",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          }
+        ]
+      },
+      {
+        "op": "check",
+        "replies": []
+      },
+      {
+        "op": "check",
+        "replies": [],
+        "provider": ""
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"languages\":[{\"fileSize\":37,\"name\":\"spanish\",\"rightToLeft\":false,\"wordCount\":3,\"extra\":{\"kept\":true}},{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":\"t\",\"author\":\"a\",\"authorKana\":\"k\"}],\"extra\":\"dropped\",\"downloadUrlBase\":\"https://hub.example/languages\",\"version\":\"v2\",\"provider\":\"monkeytype\"}}"
+          }
+        ]
+      },
+      {
+        "op": "check",
+        "replies": []
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "name": "english"
+      },
+      {
+        "op": "download",
+        "name": "spanish",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}"
+          }
+        ]
+      },
+      {
+        "op": "restart"
+      },
+      {
+        "op": "check",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v3\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v3\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[],\"model\":\"pack\"}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37}]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":true}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":true}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":true}",
+      "{\"provider\":\"monkeytype\",\"changed\":true,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\",\"toVersion\":\"v2\"}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":false}",
+      "[{\"fileSize\":37,\"name\":\"spanish\",\"rightToLeft\":false,\"wordCount\":3,\"extra\":{\"kept\":true},\"status\":\"not-downloaded\"},{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":\"t\",\"author\":\"a\",\"authorKana\":\"k\",\"status\":\"bundled\"}]",
+      "null",
+      "{\"success\":true}",
+      null,
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":false}",
+      "{\"provider\":\"monkeytype\",\"changed\":true,\"fromVersion\":\"v2\",\"toVersion\":\"v3\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}",
+      "[{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37,\"status\":\"not-downloaded\"}]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://hub.example/languages/spanish.json",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/monkeytype/": null,
+      "local/downloads/languages/monkeytype/dir.json/": null,
+      "local/downloads/languages/monkeytype/notes.txt": "kept",
+      "local/downloads/languages/tatoeba/": null,
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v3\",\"downloadUrlBase\":\"https://hub.example/languages\",\"model\":\"pack\",\"languages\":[]},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37}]}}"
+    }
+  },
+  {
+    "name": "updates that change nothing",
+    "tree": {},
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "error": "net::ERR_INTERNET_DISCONNECTED"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "not json"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "efbbbf7b226f6b223a747275652c2264617461223a7b2276657273696f6e223a22626f6d227d7d"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "null"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "\"text\""
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":false,\"data\":{\"version\":\"v2\"}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"version\":2}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":null}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 404,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "error": "net::ERR_INTERNET_DISCONNECTED"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"evil\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"http://hub.example/x\",\"languages\":[]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[],\"model\":\"bogus\"}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[],\"model\":null}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":5}]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"authorKana\":null}]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":1,\"rightToLeft\":0,\"fileSize\":1}]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[null]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":{}}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":3,\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":[]}"
+          }
+        ]
+      },
+      {
+        "op": "check",
+        "replies": [
+          {
+            "status": 503,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "check",
+        "replies": [
+          {
+            "error": "net::ERR_INTERNET_DISCONNECTED"
+          }
+        ]
+      },
+      {
+        "op": "check",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          }
+        ]
+      },
+      {
+        "op": "check",
+        "replies": []
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":false}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":false}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":true}",
+      "{\"provider\":\"monkeytype\",\"updateAvailable\":true}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version"
+    ],
+    "after": {}
+  },
+  {
+    "name": "a truthy ok and the key order of what an update writes",
+    "tree": {},
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"data\":{\"version\":\"v2\"},\"ok\":1}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":\"yes\",\"data\":{\"languages\":[{\"1\":\"one\",\"fileSize\":2,\"name\":\"n\",\"wordCount\":0,\"rightToLeft\":true}],\"model\":\"catalog\",\"downloadUrlBase\":\"https://x\",\"version\":\"v2\",\"provider\":\"monkeytype\"}}"
+          }
+        ]
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "download",
+        "name": "n",
+        "replies": []
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"monkeytype\",\"changed\":true,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\",\"toVersion\":\"v2\"}",
+      "[{\"1\":\"one\",\"fileSize\":2,\"name\":\"n\",\"wordCount\":0,\"rightToLeft\":true,\"status\":\"not-downloaded\"}]",
+      "{\"success\":false,\"error\":\"Dataset uses the catalog model; use the catalog import flow instead\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://x\",\"model\":\"catalog\",\"languages\":[{\"1\":\"one\",\"fileSize\":2,\"name\":\"n\",\"wordCount\":0,\"rightToLeft\":true}]}}"
+    }
+  },
+  {
+    "name": "the overrides of other providers are kept",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"7\":\"seven\",\"foo\":{\"anything\":[1,2]},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t0\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1}]},\"monkeytype\":{\"version\":5},\"custom\":{\"provider\":\"custom\",\"version\":\"c1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1}]},\"a b/é\":{\"provider\":\"a b/é\",\"version\":\"e1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}",
+      "local/downloads/languages/custom/x.json": "{\"name\":\"x\",\"words\":[\"w\"]}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"german\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2}]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      },
+      {
+        "op": "download",
+        "name": "x",
+        "replies": [],
+        "provider": "custom"
+      },
+      {
+        "op": "check",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"custom\",\"version\":\"c2\"}}"
+          }
+        ],
+        "provider": "custom"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"custom\",\"version\":\"c2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"custom\",\"version\":\"c2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "custom"
+      },
+      {
+        "op": "check",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"a b/é\",\"version\":\"e2\"}}"
+          }
+        ],
+        "provider": "a b/é"
+      },
+      {
+        "op": "check",
+        "replies": [],
+        "provider": "nope"
+      },
+      {
+        "op": "update",
+        "replies": [],
+        "provider": "nope"
+      },
+      {
+        "op": "update",
+        "replies": [],
+        "provider": "7"
+      },
+      {
+        "op": "restart"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "custom"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "[{\"name\":\"english\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"status\":\"not-downloaded\"}]",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"t0\",\"toVersion\":\"t1\"}",
+      "[{\"name\":\"german\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2,\"status\":\"not-downloaded\"}]",
+      "{\"success\":false,\"error\":\"Unknown language\"}",
+      "{\"provider\":\"custom\",\"updateAvailable\":true}",
+      "{\"provider\":\"custom\",\"changed\":true,\"fromVersion\":\"c1\",\"toVersion\":\"c2\"}",
+      "{\"provider\":\"a b/é\",\"updateAvailable\":true}",
+      "{\"rejected\":\"Unknown typing-test provider: nope\"}",
+      "{\"rejected\":\"Unknown typing-test provider: nope\"}",
+      "{\"rejected\":\"Unknown typing-test provider: 7\"}",
+      null,
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"t1\"}",
+      "{\"provider\":\"custom\",\"changed\":false,\"fromVersion\":\"c2\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/custom/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/custom/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/custom",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/a%20b%2F%C3%A9/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/custom/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/custom/": null,
+      "local/typing-test-dataset.json": "{\"7\":\"seven\",\"foo\":{\"anything\":[1,2]},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"german\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2}]},\"monkeytype\":{\"version\":5},\"custom\":{\"provider\":\"custom\",\"version\":\"c2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]},\"a b/é\":{\"provider\":\"a b/é\",\"version\":\"e1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is an array",
+    "tree": {
+      "local/typing-test-dataset.json": "[{\"a\":1},\"b\"]"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"monkeytype\",\"changed\":true,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\",\"toVersion\":\"v2\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"0\":{\"a\":1},\"1\":\"b\",\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"v2\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is not an object: \"﻿{\\\"tatoeba\\\":{}}\"",
+    "tree": {
+      "local/typing-test-dataset.json": "﻿{\"tatoeba\":{}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is not an object: \"null\"",
+    "tree": {
+      "local/typing-test-dataset.json": "null"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is not an object: \"\\\"text\\\"\"",
+    "tree": {
+      "local/typing-test-dataset.json": "\"text\""
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is not an object: \"5\"",
+    "tree": {
+      "local/typing-test-dataset.json": "5"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is not an object: \"not json\"",
+    "tree": {
+      "local/typing-test-dataset.json": "not json"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an overrides file that is not an object: \"{\\\"tatoeba\\\":1,\"",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":1,"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\"}}"
+          },
+          {
+            "status": 200,
+            "body": "{\"ok\":true,\"data\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+          }
+        ],
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":true,\"fromVersion\":\"\",\"toVersion\":\"t1\"}"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "overrides that are not used",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"m1\",\"downloadUrlBase\":\"http://hub.example/x\",\"languages\":[]},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[],\"model\":\"bogus\"},\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":null}]}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "aozora"
+      },
+      {
+        "op": "list",
+        "provider": "aozora"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"monkeytype\",\"changed\":false,\"fromVersion\":\"629c82e112a2db2122c789dc6abe970b82c3f8c5\"}",
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "{\"provider\":\"aozora\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/monkeytype/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version",
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/aozora/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"m1\",\"downloadUrlBase\":\"http://hub.example/x\",\"languages\":[]},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[],\"model\":\"bogus\"},\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":null}]}}"
+    }
+  },
+  {
+    "name": "an invalid override: {\"version\":1}",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":1,\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":1,\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an invalid override: {\"downloadUrlBase\":5}",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":5,\"languages\":[]}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":5,\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an invalid override: {\"downloadUrlBase\":\"HTTPS://hub.example\"}",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"HTTPS://hub.example\",\"languages\":[]}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"HTTPS://hub.example\",\"languages\":[]}}"
+    }
+  },
+  {
+    "name": "an invalid override: {\"languages\":\"x\"}",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":\"x\"}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":\"x\"}}"
+    }
+  },
+  {
+    "name": "an invalid override: {\"languages\":[{\"name\":\"x\",\"wordCount\":\"1\",\"rightToLeft\":false,\"fileSize\":1}]}",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":\"1\",\"rightToLeft\":false,\"fileSize\":1}]}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":\"1\",\"rightToLeft\":false,\"fileSize\":1}]}}"
+    }
+  },
+  {
+    "name": "an invalid override: {\"languages\":[{\"name\":\"x\",\"wordCount\":1,\"rightToLeft\":false}]}",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":1,\"rightToLeft\":false}]}}"
+    },
+    "steps": [
+      {
+        "op": "update",
+        "replies": [
+          {
+            "status": 500,
+            "body": ""
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "list",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "{\"provider\":\"tatoeba\",\"changed\":false,\"fromVersion\":\"\"}",
+      "[]"
+    ],
+    "urls": [
+      "https://pipette-hub-worker.keymaps.workers.dev/api/typing-test/datasets/tatoeba/version"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"x\",\"wordCount\":1,\"rightToLeft\":false}]}}"
+    }
+  },
+  {
+    "name": "catalog datasets",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"001257/files/x.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"title\":\"タイトル\",\"author\":\"著者\",\"authorKana\":\"ちょしゃ\"},{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10}]},\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"m1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37}],\"model\":\"catalog\"},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37}],\"model\":\"pack\"}}"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "provider": "aozora"
+      },
+      {
+        "op": "get",
+        "name": "work",
+        "provider": "aozora"
+      },
+      {
+        "op": "download",
+        "name": "work",
+        "replies": [],
+        "provider": "aozora"
+      },
+      {
+        "op": "delete",
+        "name": "work",
+        "provider": "aozora"
+      },
+      {
+        "op": "download",
+        "name": "work",
+        "replies": []
+      },
+      {
+        "op": "get",
+        "name": "work"
+      },
+      {
+        "op": "delete",
+        "name": "work"
+      },
+      {
+        "op": "download",
+        "name": "work",
+        "replies": [
+          {
+            "status": 200,
+            "body": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}"
+          }
+        ],
+        "provider": "tatoeba"
+      },
+      {
+        "op": "get",
+        "name": "work",
+        "provider": "tatoeba"
+      }
+    ],
+    "outcomes": [
+      "[{\"name\":\"001257/files/x.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"title\":\"タイトル\",\"author\":\"著者\",\"authorKana\":\"ちょしゃ\",\"status\":\"not-downloaded\"},{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"status\":\"not-downloaded\"}]",
+      "null",
+      "{\"success\":false,\"error\":\"Dataset uses the catalog model; use the catalog import flow instead\"}",
+      "{\"success\":false,\"error\":\"Dataset uses the catalog model; use the catalog import flow instead\"}",
+      "{\"success\":false,\"error\":\"Dataset uses the catalog model; use the catalog import flow instead\"}",
+      "null",
+      "{\"success\":false,\"error\":\"Dataset uses the catalog model; use the catalog import flow instead\"}",
+      "{\"success\":true}",
+      "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}"
+    ],
+    "urls": [
+      "https://hub.example/languages/work.json"
+    ],
+    "after": {
+      "local/": null,
+      "local/downloads/": null,
+      "local/downloads/languages/": null,
+      "local/downloads/languages/tatoeba/": null,
+      "local/downloads/languages/tatoeba/work.json": "{\"name\":\"pack\",\"words\":[\"a\",\"b\",\"c\"]}",
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"001257/files/x.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"title\":\"タイトル\",\"author\":\"著者\",\"authorKana\":\"ちょしゃ\"},{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10}]},\"monkeytype\":{\"provider\":\"monkeytype\",\"version\":\"m1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37}],\"model\":\"catalog\"},\"tatoeba\":{\"provider\":\"tatoeba\",\"version\":\"t1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":37}],\"model\":\"pack\"}}"
+    }
+  },
+  {
+    "name": "an aozora override without a model is a catalog",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10}]}}"
+    },
+    "steps": [
+      {
+        "op": "download",
+        "name": "work",
+        "replies": [],
+        "provider": "aozora"
+      },
+      {
+        "op": "list",
+        "provider": "aozora"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Dataset uses the catalog model; use the catalog import flow instead\"}",
+      "[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10,\"status\":\"not-downloaded\"}]"
+    ],
+    "urls": [],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/languages\",\"languages\":[{\"name\":\"work\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10}]}}"
+    }
+  }
+]

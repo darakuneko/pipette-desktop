@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-typing-datasets"
+description = "The Typing Test word datasets: the bundled provider defaults, the Hub overrides (local/typing-test-dataset.json) and their update from the Hub, and the downloaded word lists (local/downloads/languages)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+log = "=0.4.34"
+pipette-fs = { path = "../pipette-fs" }
+# The JSON files and Hub payloads read and written as JavaScript does (key
+# order, numbers, lone surrogates).
+pipette-js-json = { path = "../pipette-js-json" }
+# Every request (the word lists and the Hub dataset API).
+pipette-net = { path = "../pipette-net" }
+thiserror = "=2.0.21"
+# The file work of each call runs on the blocking pool of the runtime the
+# app (Tauri) already runs; "sync" for the one-time legacy download move
+# the calls wait for.
+tokio = { version = "=1.53.3", features = ["rt", "sync"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+# Two updates side by side in the tests.
+tokio = { version = "=1.53.3", features = ["rt-multi-thread"] }
+
+[lints]
+workspace = true

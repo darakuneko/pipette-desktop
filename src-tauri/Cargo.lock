@@ -2857,6 +2857,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-typing-datasets"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-net",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "pipette-typing-text"
 version = "0.0.0"
 dependencies = [
