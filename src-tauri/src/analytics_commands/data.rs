@@ -51,12 +51,17 @@ fn envelope(outcome: Result<(), Failed>) -> serde_json::Value {
     }
 }
 
-/// The uid argument: a string of word characters and `-`.
-fn uid_arg(uid: &Arg) -> Result<&str, Failed> {
-    uid.as_ref()
+/// A string of word characters and `-` (a uid, a machine hash), or
+/// `Invalid <what>`.
+fn safe_key_arg<'a>(arg: &'a Arg, what: &'static str) -> Result<&'a str, Failed> {
+    arg.as_ref()
         .and_then(serde_json::Value::as_str)
-        .filter(|uid| is_safe_key(uid))
-        .ok_or(Failed("Invalid uid".into()))
+        .filter(|key| is_safe_key(key))
+        .ok_or_else(|| Failed(format!("Invalid {what}")))
+}
+
+fn uid_arg(uid: &Arg) -> Result<&str, Failed> {
+    safe_key_arg(uid, "uid")
 }
 
 /// `validDays`: an array of `YYYY-MM-DD` days of the calendar.
@@ -68,6 +73,10 @@ fn days_arg(dates: &Arg) -> Result<Vec<String>, Failed> {
         _ => None,
     };
     days.ok_or(Failed("Invalid dates".into()))
+}
+
+fn one_keyboard(uid: &str) -> ResetKeyboards {
+    ResetKeyboards::Uids(vec![uid.to_owned()])
 }
 
 /// Runs `work` holding the sync lock as a reset of `keyboards`.
@@ -94,7 +103,7 @@ pub async fn typing_analytics_delete_items(
         if days.is_empty() {
             return Ok(());
         }
-        let keyboards = ResetKeyboards::Uids(vec![uid.to_owned()]);
+        let keyboards = one_keyboard(uid);
         locked(&runtime, keyboards, DELETE_BUSY_MESSAGE, ops.delete_local_days(uid, &days, cutoff)).await?;
         Ok(())
     };
@@ -110,7 +119,7 @@ pub async fn typing_analytics_delete_all(
     let cutoff = ops.analytics().now_ms();
     let outcome = async {
         let uid = uid_arg(&uid)?;
-        let keyboards = ResetKeyboards::Uids(vec![uid.to_owned()]);
+        let keyboards = one_keyboard(uid);
         let delete = ops.delete_all_for_keyboard(uid, cutoff, DeleteScope::Own);
         locked(&runtime, keyboards, DELETE_BUSY_MESSAGE, delete).await?;
         Ok(())
@@ -130,11 +139,7 @@ pub async fn typing_analytics_delete_device_data(
     let cutoff = ops.analytics().now_ms();
     let outcome = async {
         let uid = uid_arg(&uid)?;
-        let hash = machine_hash
-            .as_ref()
-            .and_then(serde_json::Value::as_str)
-            .filter(|hash| is_safe_key(hash))
-            .ok_or(Failed("Invalid device".into()))?;
+        let hash = safe_key_arg(&machine_hash, "device")?;
         let days = match &dates {
             Some(serde_json::Value::String(all)) if all == "all" => DeviceDays::All,
             _ => DeviceDays::Local(days_arg(&dates)?),
@@ -142,7 +147,7 @@ pub async fn typing_analytics_delete_device_data(
         if days == DeviceDays::Local(Vec::new()) {
             return Ok(());
         }
-        let keyboards = ResetKeyboards::Uids(vec![uid.to_owned()]);
+        let keyboards = one_keyboard(uid);
         let delete = ops.delete_device_data(uid, hash, days, cutoff);
         locked(&runtime, keyboards, DELETE_BUSY_MESSAGE, delete).await?;
         Ok(())
