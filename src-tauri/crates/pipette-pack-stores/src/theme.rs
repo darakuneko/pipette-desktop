@@ -4,9 +4,9 @@
 //! ([`crate::PackStore`]).
 //!
 //! A pack body is the pack JSON as the page imported it (`{name, version,
-//! colorScheme, colors}`), opaque here: the page checks it with
-//! `validateThemePack` (src/shared/theme/validate.ts) before saving, and the
-//! store reads only `name` and `version`. A meta's name is the pack's name;
+//! colorScheme, colors}`), checked before saving as `validateThemePack`
+//! (src/shared/theme/validate.ts) checks it ([`crate::theme_validate`]);
+//! the store reads only `name` and `version`. A meta's name is the pack's name;
 //! a rename changes the meta only. Unlike the language packs, there is no
 //! built-in pack and no enabled state.
 
@@ -18,6 +18,7 @@ pub use crate::pack_meta::Cached;
 use crate::pack_meta::{SaveHub, insert_save_tail};
 use crate::pack_store::{Field, PackStore};
 use crate::result::{ErrorCode, PackError, PackResult};
+use crate::theme_validate::{MAX_NAME_LENGTH, validate_theme_pack};
 
 /// The theme pack store.
 pub const THEME_PACKS: PackStore = PackStore {
@@ -26,7 +27,7 @@ pub const THEME_PACKS: PackStore = PackStore {
     local_only_ids: &[],
     not_found: "Theme pack not found",
     duplicate_name: "A theme pack with the same name already exists",
-    max_name_length: 64,
+    max_name_length: MAX_NAME_LENGTH,
 };
 
 /// The live metas, in the index's order (`listMetas`).
@@ -89,16 +90,6 @@ pub fn export_text(ctx: &StoreContext, id: &JsString) -> PackResult<(Option<Valu
     Ok((meta.get("name").cloned(), pipette_js_json::stringify_with_gap(&Value::Object(pack), "  ")))
 }
 
-/// `name` and `version` of a pack JSON, both trimmed and not empty.
-fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
-    let Some(Value::Object(pack)) = pack else { return None };
-    let text = |key: &str| match pack.get(key) {
-        Some(Value::String(s)) => Some(pipette_entry_store::js_trim(s)).filter(|s| !s.is_empty()),
-        _ => None,
-    };
-    Some((text("name")?, text("version")?))
-}
-
 /// A save of a pack (`savePack`'s input).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SaveThemeInput {
@@ -116,11 +107,15 @@ pub struct SaveThemeInput {
 /// of the same name, or as a new pack. Every save is the user's (an import
 /// or a Hub download), so it brings a deleted pack back. Answers its meta.
 ///
-/// The page has checked the pack; a pack without a name and a version
-/// fails here too.
+/// The pack is checked as the page checks it (`validateThemePack`) before
+/// anything is read or written; a pack that fails answers `INVALID_FILE`
+/// with the check's errors.
 pub fn save_pack(ctx: &StoreContext, input: SaveThemeInput) -> PackResult<Entry> {
-    let Some((header_name, version)) = pack_header(input.pack.as_ref()) else {
-        return Err(PackError::new(ErrorCode::InvalidFile, "Pack JSON missing required name/version fields"));
+    let checked = validate_theme_pack(input.pack.as_ref());
+    let Some((header_name, version)) = checked.header.clone() else {
+        // The answer's text is a Rust string, so a lone surrogate in a
+        // pack's value reads as U+FFFD in it.
+        return Err(PackError::new(ErrorCode::InvalidFile, checked.joined_errors().to_string_lossy()));
     };
     THEME_PACKS.with_lock(ctx, || {
         let mut index = THEME_PACKS.read_index(ctx)?;

@@ -34,6 +34,7 @@ mod pack_store;
 mod result;
 pub mod theme;
 pub mod theme_handlers;
+pub mod theme_validate;
 
 pub use import_file::{ImportFileRead, read_import_file};
 pub use pack_meta::Cached;

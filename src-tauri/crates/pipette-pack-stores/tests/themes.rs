@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The theme pack store, from the tests of
 //! src/main/__tests__/theme-pack-store.test.ts that cover what this crate
-//! does (the sync merge and the garbage collection are not here). The
-//! checks of `validateThemePack` run in the page, so the packs here are
-//! only as complete as the store reads them.
+//! does (the sync merge and the garbage collection are not here).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -16,6 +14,7 @@ use pipette_pack_stores::theme::{
     Cached, SaveThemeInput, THEME_PACKS, delete_pack, get_pack, has_active_name, list_all_metas, list_metas,
     rename_pack, reorder_active, save_pack, set_hub_post_id,
 };
+use pipette_pack_stores::theme_validate::THEME_COLOR_KEYS;
 use pipette_pack_stores::{ErrorCode, Field};
 
 fn js(text: &str) -> JsString {
@@ -27,7 +26,8 @@ fn pack(name: &str, version: &str) -> Value {
     pack.insert("name", name.into());
     pack.insert("version", version.into());
     pack.insert("colorScheme", "dark".into());
-    pack.insert("colors", Object::new().into());
+    let colors: Object = THEME_COLOR_KEYS.iter().map(|&key| (key, Value::from("#2e3440"))).collect();
+    pack.insert("colors", colors.into());
     Value::Object(pack)
 }
 
@@ -99,13 +99,23 @@ fn a_save_over_an_explicit_id_keeps_the_live_name() {
 }
 
 #[test]
-fn a_pack_without_a_name_or_a_version_is_refused() {
+fn an_invalid_pack_is_refused_with_the_check_errors_before_anything_is_written() {
     let h = Harness::new();
-    for raw in [None, Some(Value::Null), Some(pack(" ", "1.0.0")), Some(pack("Name", ""))] {
+    let refused = |raw: Option<Value>| {
         let err = save_pack(&h.ctx, SaveThemeInput { pack: raw, ..SaveThemeInput::default() }).unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidFile);
-    }
+        err.message
+    };
+    assert_eq!(refused(None), "Theme pack must be a JSON object");
+    assert_eq!(
+        refused(Some(pack(" ", "1"))),
+        "name must not be empty; version must be a valid semver (e.g. 1.0.0)"
+    );
+    let Value::Object(mut no_colors) = pack("Name", "1.0.0") else { panic!() };
+    no_colors.remove("colors");
+    assert_eq!(refused(Some(Value::Object(no_colors))), "colors must be an object");
     assert!(h.notified().is_empty());
+    assert!(!h.path("sync/themes").exists());
 }
 
 #[test]

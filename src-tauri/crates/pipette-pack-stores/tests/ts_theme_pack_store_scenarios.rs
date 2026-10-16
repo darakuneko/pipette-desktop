@@ -4,9 +4,9 @@
 //! record-theme-pack-store-fixtures.test.ts) through the handlers of this
 //! crate (common/replay.rs).
 //!
-//! A pack that fails the page's check (`validateThemePack`) never reaches
-//! the backend: its step answers what the shim answers, `INVALID_FILE`
-//! with the check's errors, which must be the handler's answer. A step
+//! A pack that fails the page's check (`validateThemePack`) is answered by
+//! the shim without the backend; the backend checks it too and must give
+//! the same answer, `INVALID_FILE` with the check's errors. A step
 //! whose handler broadcasts `theme-pack:changed` is one whose command
 //! sends the event: a successful rename, reorder, delete, Hub link or
 //! import.
@@ -42,20 +42,19 @@ fn the_theme_pack_handlers_answer_and_write_as_the_typescript_ones() {
                 arg("uploaderName"),
                 arg("hubUpdatedAt"),
             ),
-            "importApply" => match arg("pageError") {
-                Some(Value::String(error)) => {
-                    return answer_outcome(
-                        Err(PackError::new(ErrorCode::InvalidFile, error.to_string_lossy())),
-                        &user_data,
-                    );
+            "importApply" => {
+                let raw = raw_of(arg("raw").unwrap().as_object().unwrap(), &user_data);
+                // The preload passes `options ?? {}`.
+                let options = arg("options").cloned().unwrap_or_else(|| Value::Object(Object::new()));
+                let changing = handlers::import_apply(ctx, raw.as_ref(), Some(&options));
+                // The shim answers a pack that fails the page's check itself,
+                // with the same answer.
+                if let Some(Value::String(error)) = arg("pageError") {
+                    let page = PackError::new(ErrorCode::InvalidFile, error.to_string_lossy());
+                    assert_eq!(changing.0, Err(page), "the page's answer");
                 }
-                _ => {
-                    let raw = raw_of(arg("raw").unwrap().as_object().unwrap(), &user_data);
-                    // The preload passes `options ?? {}`.
-                    let options = arg("options").cloned().unwrap_or_else(|| Value::Object(Object::new()));
-                    handlers::import_apply(ctx, raw.as_ref(), Some(&options))
-                }
-            },
+                changing
+            }
             "export" => {
                 let chosen = export_choice(step, &user_data);
                 let exported = handlers::export(ctx, arg("id"), |name| {

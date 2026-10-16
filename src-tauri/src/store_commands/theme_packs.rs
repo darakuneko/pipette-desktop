@@ -7,8 +7,8 @@
 //! Each command answers the handler's `{success, data | errorCode, error}`
 //! object as JSON text (store_commands/pack_commands.rs); the arguments are
 //! checked as the handlers of src/main/theme-pack-ipc.ts check them. The
-//! page checks a pack with `validateThemePack` before it reaches
-//! `theme_pack_import_apply`. A successful rename, reorder, delete, Hub
+//! page checks a pack with `validateThemePack` before it calls
+//! `theme_pack_import_apply`, and the store checks it again. A successful rename, reorder, delete, Hub
 //! link or import sends `theme-pack:changed` to every page, the one that
 //! asked included, as Electron's `broadcastChanged` does.
 
@@ -119,8 +119,8 @@ pub async fn theme_pack_import(dialogs: State<'_, Dialogs>) -> Result<PackImport
     Ok(tauri::async_runtime::spawn_blocking(move || read_chosen_packs(&dialogs, "Import Theme Pack")).await?)
 }
 
-/// `raw` and `options` are the text of `JSON.stringify` of the pack the
-/// page checked and of the options; no `raw` is a pack that is `undefined`.
+/// `raw` and `options` are the text of `JSON.stringify` of the pack and of
+/// the options; no `raw` is a pack that is `undefined`.
 #[tauri::command]
 pub async fn theme_pack_import_apply<R: Runtime>(
     app: AppHandle<R>,

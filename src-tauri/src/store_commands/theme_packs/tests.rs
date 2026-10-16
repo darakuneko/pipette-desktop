@@ -11,6 +11,8 @@ use tauri::async_runtime::block_on;
 use tauri::{Listener, Manager};
 use tempfile::TempDir;
 
+use pipette_pack_stores::theme_validate::THEME_COLOR_KEYS;
+
 use super::*;
 use crate::dialog::{DialogKind, DialogRequest, FileFilter};
 use crate::store_commands::pack_commands::test_app::{TestApp, test_app, text};
@@ -23,7 +25,13 @@ fn json_filters() -> Vec<FileFilter> {
 /// pack file has them.
 fn theme(name: &str) -> String {
     let name = serde_json::to_string(name).unwrap();
-    format!(r#"{{"name":{name},"version":"1.0.0","colorScheme":"dark","colors":{{}}}}"#)
+    format!(r#"{{"name":{name},"version":"1.0.0","colorScheme":"dark","colors":{}}}"#, colors())
+}
+
+/// The JSON text of the colors every pack has.
+fn colors() -> String {
+    let pairs: Vec<String> = THEME_COLOR_KEYS.iter().map(|key| format!(r##""{key}":"#2e3440""##)).collect();
+    format!("{{{}}}", pairs.join(","))
 }
 
 fn handle(t: &TestApp) -> AppHandle<tauri::test::MockRuntime> {
@@ -94,7 +102,10 @@ fn each_successful_change_sends_the_event_and_a_failure_or_a_read_does_not() {
 fn the_import_options_keep_their_key_order_and_a_lone_surrogate() {
     let user_data = TempDir::new().unwrap();
     let t = test_app(user_data.path(), Vec::new());
-    let raw = r#"{"version":"1.0.0","2":"index key","name":"Lone \ud800","colorScheme":"dark","colors":{}}"#;
+    let raw = format!(
+        r#"{{"version":"1.0.0","2":"index key","name":"Lone \ud800","colorScheme":"dark","colors":{}}}"#,
+        colors()
+    );
     let options = r#"{"uploaderName":"\ud800","hubPostId":"post"}"#;
     let saved = text(block_on(theme_pack_import_apply(
         handle(&t),
@@ -107,10 +118,12 @@ fn the_import_options_keep_their_key_order_and_a_lone_surrogate() {
     let packs = user_data.path().join("sync/themes/packs");
     let body =
         std::fs::read_to_string(std::fs::read_dir(packs).unwrap().next().unwrap().unwrap().path()).unwrap();
-    assert_eq!(
-        body,
-        "{\n  \"2\": \"index key\",\n  \"version\": \"1.0.0\",\n  \"name\": \"Lone \\ud800\",\n  \
-         \"colorScheme\": \"dark\",\n  \"colors\": {}\n}"
+    assert!(
+        body.starts_with(
+            "{\n  \"2\": \"index key\",\n  \"version\": \"1.0.0\",\n  \"name\": \"Lone \\ud800\",\n  \
+             \"colorScheme\": \"dark\",\n  \"colors\": {\n    \"surface\": \"#2e3440\","
+        ),
+        "{body}"
     );
 }
 
@@ -160,9 +173,12 @@ fn an_export_writes_the_pack_where_the_user_chooses() {
     let exported = text(block_on(theme_pack_export(t.stores(), t.dialogs(), Some(json!(id)))));
     let path = serde_json::to_string(&target.to_string_lossy()).unwrap();
     assert_eq!(exported, format!(r#"{{"success":true,"data":{{"filePath":{path}}}}}"#));
-    assert_eq!(
-        std::fs::read_to_string(&target).unwrap(),
-        "{\n  \"name\": \"テーマ / テスト\",\n  \"version\": \"1.0.0\",\n  \"colorScheme\": \"dark\",\n  \"colors\": {}\n}"
+    let written = std::fs::read_to_string(&target).unwrap();
+    assert!(
+        written.starts_with(
+            "{\n  \"name\": \"テーマ / テスト\",\n  \"version\": \"1.0.0\",\n  \"colorScheme\": \"dark\",\n"
+        ),
+        "{written}"
     );
     assert_eq!(
         t.requests(),

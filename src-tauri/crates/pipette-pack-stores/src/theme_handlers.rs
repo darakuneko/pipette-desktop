@@ -78,7 +78,7 @@ pub fn set_hub_post_id(
     Changing(linked.map(|meta| Some(meta.into())))
 }
 
-/// `THEME_PACK_IMPORT_APPLY`: saves the pack `raw` the page checked, with
+/// `THEME_PACK_IMPORT_APPLY`: checks and saves the pack `raw`, with
 /// the string options of `options` (anything else in it is ignored).
 pub fn import_apply(ctx: &StoreContext, raw: Arg<'_>, options: Arg<'_>) -> Changing {
     let opts = options_arg(options);

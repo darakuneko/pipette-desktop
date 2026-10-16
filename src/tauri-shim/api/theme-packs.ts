@@ -8,8 +8,8 @@
 //
 // An imported pack is checked here with validateThemePack before it is
 // queued, as the Electron store checks it before taking its lock; a pack
-// that fails answers INVALID_FILE with the check's errors and never
-// reaches the backend. The pack JSON and the import options cross as JSON
+// that fails answers INVALID_FILE with the check's errors without a call
+// to the backend, which checks every pack again and answers the same. The pack JSON and the import options cross as JSON
 // text, and the import dialog's file texts are parsed here
 // (api/pack-import.ts). The backend sends theme-pack:changed after each
 // successful change, to the page that made it too.
