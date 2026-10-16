@@ -86,6 +86,11 @@ impl ChangeStateFile {
         self.cache.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    fn unreadable(err: &dyn std::fmt::Display) -> ChangeStateRead {
+        log::warn!("sync password change state: cannot read {CHANGE_STATE_FILE}: {err}");
+        ChangeStateRead::Invalid
+    }
+
     /// `readChangeState`: `None` when no change is in progress, `Invalid`
     /// (with a warning) when the file is there but does not read as a
     /// state.
@@ -95,14 +100,8 @@ impl ChangeStateFile {
         let bytes = match read {
             Ok(Ok(bytes)) => bytes,
             Ok(Err(err)) if err.kind() == ErrorKind::NotFound => return ChangeStateRead::None,
-            Ok(Err(err)) => {
-                log::warn!("sync password change state: cannot read {CHANGE_STATE_FILE}: {err}");
-                return ChangeStateRead::Invalid;
-            }
-            Err(err) => {
-                log::warn!("sync password change state: cannot read {CHANGE_STATE_FILE}: {err}");
-                return ChangeStateRead::Invalid;
-            }
+            Ok(Err(err)) => return Self::unreadable(&err),
+            Err(err) => return Self::unreadable(&err),
         };
         let Ok(value) = serde_json::from_str::<Value>(&String::from_utf8_lossy(&bytes)) else {
             log::warn!("sync password change state: {CHANGE_STATE_FILE} is not valid JSON");
