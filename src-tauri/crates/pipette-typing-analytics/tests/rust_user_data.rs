@@ -546,7 +546,6 @@ async fn write_tree() {
     let mut answers = Object::new();
     answers.insert("machineId", MACHINE_ID.into());
     answers.insert("machineHash", own_hash.as_str().into());
-    answers.insert("remoteHash", remote_hash.as_str().into());
     answers.insert(
         "os",
         Value::Object(
