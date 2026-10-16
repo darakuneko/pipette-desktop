@@ -12,6 +12,11 @@
 //! waits, while one of them runs for one of its keyboards, and neither
 //! starts for a keyboard a running reset holds.
 //!
+//! A password change holds the sync lock for its whole run and a sign-in
+//! or sign-out marks the switch of tokens; while either runs, no lock-free
+//! writer starts ([`SyncRuntime::lock_free_writer_blocked`]). Once the app
+//! starts quitting ([`SyncRuntime::set_quitting`]) it stays quitting.
+//!
 //! Every check and the claim that follows it happen under one mutex, so
 //! two callers can never both pass a check and claim.
 
@@ -22,6 +27,10 @@ use std::time::Duration;
 
 use tokio::sync::watch;
 use tokio::time::Instant;
+
+use crate::memory::CredentialMemory;
+use crate::progress::ProgressSink;
+use crate::remote_state::RemoteMemory;
 
 /// The busy errors; each is an i18n key the renderer shows
 /// (`t(error, error)`).
@@ -80,6 +89,11 @@ struct State {
     reset_keyboards: Option<HeldKeyboards>,
     analytics_syncing_uids: HashSet<String>,
     remote_day_fetches: HashMap<String, usize>,
+    /// The running password change (`passwordChangeRun`): the channel
+    /// that tells waiters it ended.
+    password_change: Option<watch::Receiver<bool>>,
+    /// A sign-in or sign-out switches tokens (`accountSwitching`).
+    account_switching: bool,
 }
 
 struct Pass {
@@ -108,6 +122,14 @@ impl State {
         }
     }
 
+    fn lock_free_writer_blocked(&self, uid: &str) -> bool {
+        self.password_change.is_some() || self.reset_holds_keyboard(uid) || self.account_switching
+    }
+
+    fn sync_work_running(&self) -> bool {
+        self.pass.is_some() || self.lock_free_writer_running(&ResetKeyboards::All)
+    }
+
     /// Takes the lock for a new holder; the caller has checked it is free.
     fn claim(&mut self, runtime: &SyncRuntime, waitable: bool) -> SyncLockGuard {
         let (release, released) = watch::channel(false);
@@ -116,11 +138,30 @@ impl State {
     }
 }
 
-/// The sync lock, the keyboards a running reset holds, and the lock-free
-/// writers. Cheap to clone; the clones share the state.
-#[derive(Clone, Default)]
+/// The sync lock, the keyboards a running reset holds, the lock-free
+/// writers, the password change, the token switch and the quit, and the
+/// rest of the sync's memory ([`RemoteMemory`], [`CredentialMemory`],
+/// [`ProgressSink`]). Cheap to clone; the clones share the state. Nothing
+/// here is written to disk.
+#[derive(Clone)]
 pub struct SyncRuntime {
     state: Arc<Mutex<State>>,
+    quitting: Arc<watch::Sender<bool>>,
+    remote: Arc<RemoteMemory>,
+    credentials: Arc<CredentialMemory>,
+    progress: Arc<ProgressSink>,
+}
+
+impl Default for SyncRuntime {
+    fn default() -> Self {
+        Self {
+            state: Arc::default(),
+            quitting: Arc::new(watch::Sender::new(false)),
+            remote: Arc::default(),
+            credentials: Arc::default(),
+            progress: Arc::default(),
+        }
+    }
 }
 
 /// The sync lock while held; dropping it releases the lock and wakes the
@@ -252,21 +293,34 @@ impl SyncRuntime {
         self.lock().reset_holds_keyboard(uid)
     }
 
-    /// Starts the analytics sync of `uid`, unless one runs for it or a
-    /// reset holds it.
+    /// `lockFreeWriterBlocked`: whether a lock-free writer of `uid` must
+    /// not start: a password change runs, a reset removes `uid`'s data, or
+    /// a sign-in or sign-out switches tokens.
+    pub fn lock_free_writer_blocked(&self, uid: &str) -> bool {
+        self.lock().lock_free_writer_blocked(uid)
+    }
+
+    /// `syncWorkRunning`: whether the sync lock is held or any lock-free
+    /// writer runs.
+    pub fn sync_work_running(&self) -> bool {
+        self.lock().sync_work_running()
+    }
+
+    /// Starts the analytics sync of `uid`, unless one runs for it or
+    /// [`Self::lock_free_writer_blocked`].
     pub fn try_start_analytics_sync(&self, uid: &str) -> Option<LockFreeWriter> {
         let mut state = self.lock();
-        if state.reset_holds_keyboard(uid) || !state.analytics_syncing_uids.insert(uid.to_owned()) {
+        if state.lock_free_writer_blocked(uid) || !state.analytics_syncing_uids.insert(uid.to_owned()) {
             return None;
         }
         Some(LockFreeWriter { runtime: self.clone(), uid: uid.to_owned(), kind: WriterKind::AnalyticsSync })
     }
 
     /// Starts a remote day fetch of `uid` (several may run at once), unless
-    /// a reset holds it.
+    /// [`Self::lock_free_writer_blocked`].
     pub fn try_start_remote_day_fetch(&self, uid: &str) -> Option<LockFreeWriter> {
         let mut state = self.lock();
-        if state.reset_holds_keyboard(uid) {
+        if state.lock_free_writer_blocked(uid) {
             return None;
         }
         *state.remote_day_fetches.entry(uid.to_owned()).or_default() += 1;
@@ -314,16 +368,178 @@ impl SyncRuntime {
             .await
             .ok_or(Busy(busy))?;
         let hold = ResetHold { lock: Some(lock) };
-        while self.lock_free_writer_running(keyboards) {
-            if Instant::now() >= deadline {
-                drop(hold);
-                return Err(Busy(busy));
-            }
-            tokio::time::sleep_until((Instant::now() + WRITER_CHECK_INTERVAL).min(deadline)).await;
+        if !self.lock_free_writers_end_by(keyboards, deadline).await {
+            drop(hold);
+            return Err(Busy(busy));
         }
         let answer = work.await;
         drop(hold);
         Ok(answer)
+    }
+
+    /// `waitForLockFreeWritersBy`: waits until no lock-free writer of
+    /// `keyboards` runs; false when one still runs at `deadline`.
+    async fn lock_free_writers_end_by(&self, keyboards: &ResetKeyboards, deadline: Instant) -> bool {
+        while self.lock_free_writer_running(keyboards) {
+            if Instant::now() >= deadline {
+                return false;
+            }
+            tokio::time::sleep_until((Instant::now() + WRITER_CHECK_INTERVAL).min(deadline)).await;
+        }
+        true
+    }
+
+    /// `claimSyncLockWhenIdleBy`: the sync lock as a waitable holder by
+    /// `deadline`, then a wait within the same deadline for every lock-free
+    /// writer to end. The lock is `None` when it was still held at the
+    /// deadline; `idle` is whether the writers ended in time.
+    pub async fn claim_sync_lock_when_idle_by(&self, deadline: Instant) -> IdleClaim {
+        let Some(lock) = self.claim_sync_lock_by(deadline, |_| ()).await else {
+            return IdleClaim { lock: None, idle: false };
+        };
+        let idle = self.lock_free_writers_end_by(&ResetKeyboards::All, deadline).await;
+        IdleClaim { lock: Some(lock), idle }
+    }
+
+    /// `inFlightPass`: the holder of the sync lock, to wait for; `None`
+    /// while nothing holds it.
+    pub fn in_flight_pass(&self) -> Option<InFlightPass> {
+        let state = self.lock();
+        let pass = state.pass.as_ref()?;
+        Some(InFlightPass { waitable: pass.waitable, released: pass.released.clone() })
+    }
+
+    /// Starts a password change: takes the sync lock (not waitable) and
+    /// marks the run (`passwordChangeRun`) in one step, unless sync work
+    /// runs ([`Self::sync_work_running`]) or tokens are being switched.
+    /// Both end when the returned run is dropped.
+    pub fn try_start_password_change(&self) -> Option<PasswordChangeRun> {
+        let mut state = self.lock();
+        if state.sync_work_running() || state.account_switching {
+            return None;
+        }
+        let lock = state.claim(self, false);
+        let (ended, receiver) = watch::channel(false);
+        state.password_change = Some(receiver);
+        Some(PasswordChangeRun { runtime: self.clone(), lock: Some(lock), ended })
+    }
+
+    /// Whether a password change runs.
+    pub fn password_change_running(&self) -> bool {
+        self.lock().password_change.is_some()
+    }
+
+    /// Waits for the running password change to end; at once when none
+    /// runs.
+    pub async fn password_change_ended(&self) {
+        let running = self.lock().password_change.clone();
+        if let Some(mut ended) = running {
+            // A closed channel means the run is gone too.
+            let _ = ended.wait_for(|ended| *ended).await;
+        }
+    }
+
+    /// Marks a sign-in or sign-out switching tokens (`accountSwitching`),
+    /// unless one already does; the mark is cleared when the returned guard
+    /// is dropped.
+    pub fn try_begin_account_switch(&self) -> Option<AccountSwitch> {
+        let mut state = self.lock();
+        if state.account_switching {
+            return None;
+        }
+        state.account_switching = true;
+        Some(AccountSwitch { runtime: self.clone() })
+    }
+
+    /// Whether a sign-in or sign-out switches tokens.
+    pub fn account_switching(&self) -> bool {
+        self.lock().account_switching
+    }
+
+    /// Marks the app as quitting (`isQuitting`), for good.
+    pub fn set_quitting(&self) {
+        self.quitting.send_replace(true);
+    }
+
+    pub fn is_quitting(&self) -> bool {
+        *self.quitting.borrow()
+    }
+
+    /// Resolves once the app quits, so a wait can end early.
+    pub async fn quitting(&self) {
+        let mut quitting = self.quitting.subscribe();
+        // The sender lives as long as this runtime, so the channel is open.
+        let _ = quitting.wait_for(|quitting| *quitting).await;
+    }
+
+    /// The Drive revisions this machine handled and the files it created.
+    pub fn remote(&self) -> &RemoteMemory {
+        &self.remote
+    }
+
+    /// The password-check last opened and the sync-format marker.
+    pub fn credentials(&self) -> &CredentialMemory {
+        &self.credentials
+    }
+
+    /// Where the sync passes report their progress.
+    pub fn progress(&self) -> &ProgressSink {
+        &self.progress
+    }
+}
+
+/// What [`SyncRuntime::claim_sync_lock_when_idle_by`] got.
+#[must_use = "the lock is released when it is dropped"]
+pub struct IdleClaim {
+    pub lock: Option<SyncLockGuard>,
+    pub idle: bool,
+}
+
+/// The holder of the sync lock, as [`SyncRuntime::in_flight_pass`] saw it.
+pub struct InFlightPass {
+    waitable: bool,
+    released: watch::Receiver<bool>,
+}
+
+impl InFlightPass {
+    /// Whether the holder settles on its own (`inFlightPassWaitable`).
+    pub fn waitable(&self) -> bool {
+        self.waitable
+    }
+
+    /// Waits for the holder to release the lock.
+    pub async fn released(mut self) {
+        // A closed channel means the holder is gone too.
+        let _ = self.released.wait_for(|released| *released).await;
+    }
+}
+
+/// A running password change; dropping it releases the sync lock, then
+/// ends the run and wakes the callers waiting for it.
+#[must_use = "the password change ends when the run is dropped"]
+pub struct PasswordChangeRun {
+    runtime: SyncRuntime,
+    lock: Option<SyncLockGuard>,
+    ended: watch::Sender<bool>,
+}
+
+impl Drop for PasswordChangeRun {
+    fn drop(&mut self) {
+        drop(self.lock.take());
+        self.runtime.lock().password_change = None;
+        self.ended.send_replace(true);
+    }
+}
+
+/// A sign-in or sign-out switching tokens; dropping it clears the mark.
+#[must_use = "the switch ends when the guard is dropped"]
+pub struct AccountSwitch {
+    runtime: SyncRuntime,
+}
+
+impl Drop for AccountSwitch {
+    fn drop(&mut self) {
+        self.runtime.lock().account_switching = false;
     }
 }
 
