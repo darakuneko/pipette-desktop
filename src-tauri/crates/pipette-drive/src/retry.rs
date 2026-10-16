@@ -193,9 +193,12 @@ where
                 }
                 None
             }
-            // An error before the request (the token) or after a success (a
-            // body that does not parse) is not retried.
-            DriveError::Auth(_) | DriveError::BadResponse(_) => return Err(fail(error)),
+            // An error before the request (the token), one that sending again
+            // repeats (too large, refused) or one after a success (a body that
+            // does not parse) is not retried.
+            DriveError::Auth(_) | DriveError::Rejected(_) | DriveError::BadResponse(_) => {
+                return Err(fail(error));
+            }
         };
         let wait_ms = wait.unwrap_or_else(|| backoff_ms(env, number));
         env.sleep(Duration::from_secs_f64(wait_ms / 1000.0)).await;

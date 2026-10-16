@@ -98,8 +98,13 @@ impl<R: HttpRequester, T: AccessTokenSource> HttpDrive<R, T> {
     }
 }
 
+/// A timeout or a failed connection may pass on the next attempt; an
+/// answer over the size limit or a refused destination will not.
 fn network(err: HttpError) -> DriveError {
-    DriveError::Network(err.to_string())
+    match err {
+        HttpError::TooLarge { .. } | HttpError::Refused(_) => DriveError::Rejected(err.to_string()),
+        HttpError::Timeout | HttpError::Network(_) => DriveError::Network(err.to_string()),
+    }
 }
 
 fn into_body(reply: HttpReply) -> Result<Vec<u8>, DriveError> {

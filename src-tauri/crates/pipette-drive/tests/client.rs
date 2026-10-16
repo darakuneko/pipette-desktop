@@ -150,6 +150,19 @@ async fn retries_a_body_that_fails_to_parse_never() {
 }
 
 #[tokio::test]
+async fn sends_a_request_that_fails_the_same_way_each_time_once() {
+    let too_large: Answer = Box::new(|| Err(HttpError::TooLarge { limit: 256 }));
+    let refused: Answer = Box::new(|| Err(HttpError::Refused("drive.example".to_owned())));
+    for answer in [too_large, refused] {
+        let s = setup(vec![answer]);
+        let err = s.client.download("x").await.unwrap_err();
+        assert!(matches!(err.error, DriveError::Rejected(_)), "{err:?}");
+        assert_eq!(s.script.count(), 1);
+        assert!(s.env.sleeps().is_empty());
+    }
+}
+
+#[tokio::test]
 async fn does_not_retry_a_network_error_or_a_rate_limit_while_quitting() {
     for answer in [network("fetch failed"), reply(429, "slow down"), reply(503, "boom")] {
         let s = setup(vec![answer]);

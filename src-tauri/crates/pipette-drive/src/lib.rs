@@ -83,6 +83,11 @@ pub enum DriveError {
     /// No answer: the connection, a timeout, a refused destination.
     #[error("{0}")]
     Network(String),
+    /// A request that fails the same way each time it is sent: the answer
+    /// is larger than the client accepts, or the client refused the
+    /// destination. Never retried.
+    #[error("{0}")]
+    Rejected(String),
     /// A 2xx answer whose body is not what the operation returns.
     #[error("unexpected Drive response: {0}")]
     BadResponse(String),
