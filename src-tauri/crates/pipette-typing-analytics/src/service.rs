@@ -104,12 +104,29 @@ impl TypingAnalytics {
         let machine_hash = self.identity.machine_hash()?;
         let db = DbActor::open(&db_path(&self.user_data))?;
         let force = db.call_blocking(|db| db.cache_needs_rebuild())?;
+        // A migration that dropped tables is committed with the rebuild
+        // that refills them and rolled back on any failure, so the drop
+        // never reaches the file without the rebuild and stays due.
         let freshness =
             ensure_cache_is_fresh(&self.user_data, &machine_hash, force, self.clock.as_ref(), || {
                 let (rebuild, user_data, hash) =
                     (self.rebuild.clone(), self.user_data.clone(), machine_hash.clone());
-                db.call_blocking(move |db| rebuild(db, &user_data, &hash))?
-            })?;
+                db.call_blocking(move |db| {
+                    rebuild(db, &user_data, &hash)?;
+                    Ok(db.commit_migration()?)
+                })?
+            });
+        let freshness = match freshness {
+            Ok(freshness) => freshness,
+            Err(err) => {
+                // Rolled back here, before a retry opens the file again;
+                // the database thread closing the connection after `db` is
+                // dropped would roll it back too, but later. A failed
+                // rollback is left to that close.
+                let _ = db.call_blocking(|db| db.rollback_migration());
+                return Err(err);
+            }
+        };
         Ok(Ready { machine_hash, db, sync_state: Mutex::new(freshness.state) })
     }
 }
@@ -120,6 +137,7 @@ mod tests {
 
     use pipette_entry_store::{FixedClock, SequenceIds};
     use pipette_sync_format::{MachineIdError, machine_hash};
+    use pipette_typing_analytics_db::SCHEMA_VERSION;
 
     use super::*;
     use crate::sync_state::{load_sync_state, save_sync_state};
@@ -167,6 +185,63 @@ mod tests {
         let ready = analytics(dir.path(), || Ok("m".into()), rebuilds.clone()).ready().await.unwrap();
         assert_eq!(rebuilds.load(Ordering::SeqCst), 0);
         assert_eq!(*ready.sync_state.lock().unwrap(), saved);
+    }
+
+    #[tokio::test]
+    async fn a_migration_that_dropped_tables_stays_due_after_failed_rebuilds() {
+        let dir = tempfile::tempdir().unwrap();
+        let hash = machine_hash("m", ID);
+        std::fs::create_dir_all(dir.path().join("local")).unwrap();
+        std::fs::write(dir.path().join("local").join("installation-id"), format!("{ID}\n")).unwrap();
+        let saved = TypingSyncState { last_synced_at: 5.0, ..TypingSyncState::empty(&hash) };
+        save_sync_state(dir.path(), &saved).unwrap();
+        // A database from before the v6 migration, which drops the rollups.
+        drop(TypingAnalyticsDb::open(&db_path(dir.path())).unwrap());
+        rusqlite::Connection::open(db_path(dir.path()))
+            .unwrap()
+            .execute("UPDATE typing_analytics_meta SET value = '5' WHERE key = 'schema_version'", [])
+            .unwrap();
+        let version = || -> String {
+            rusqlite::Connection::open(db_path(dir.path()))
+                .unwrap()
+                .query_row("SELECT value FROM typing_analytics_meta WHERE key = 'schema_version'", [], |r| {
+                    r.get(0)
+                })
+                .unwrap()
+        };
+
+        let rebuilds = Arc::new(AtomicUsize::new(0));
+        let launch = |fail: bool| {
+            let identity = MachineIdentity::new(
+                dir.path(),
+                Arc::new(SequenceIds::new([ID])),
+                Box::new(|| Ok("m".into())),
+            );
+            let rebuilds = rebuilds.clone();
+            let rebuild: RebuildCache = Arc::new(move |_, _, _| {
+                rebuilds.fetch_add(1, Ordering::SeqCst);
+                if fail { Err(Error::CacheRebuild("no".into())) } else { Ok(()) }
+            });
+            Arc::new(TypingAnalytics::new(dir.path(), identity, Arc::new(FixedClock::new(9)), rebuild))
+        };
+
+        // A failed rebuild is retried in the same run and at the next launch.
+        let ta = launch(true);
+        assert!(matches!(ta.ready().await.err().as_deref(), Some(Error::CacheRebuild(_))));
+        assert!(matches!(ta.ready().await.err().as_deref(), Some(Error::CacheRebuild(_))));
+        assert_eq!(rebuilds.load(Ordering::SeqCst), 2);
+        drop(ta);
+        assert_eq!(version(), "5");
+        assert_eq!(load_sync_state(dir.path()).unwrap(), saved);
+
+        let ready = launch(false).ready().await.unwrap();
+        assert_eq!(rebuilds.load(Ordering::SeqCst), 3);
+        assert_eq!(*ready.sync_state.lock().unwrap(), TypingSyncState { last_synced_at: 9.0, ..saved });
+        drop(ready);
+        assert_eq!(version(), SCHEMA_VERSION.to_string());
+
+        launch(false).ready().await.unwrap();
+        assert_eq!(rebuilds.load(Ordering::SeqCst), 3);
     }
 
     #[tokio::test]

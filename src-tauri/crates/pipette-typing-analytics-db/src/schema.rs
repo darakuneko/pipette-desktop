@@ -4,6 +4,14 @@
 //! schema version can be read, the additive migrations run next, and the
 //! full schema (every table and index) last, so indexes that name a column
 //! a migration adds see that column.
+//!
+//! Unlike the TypeScript constructor, everything after the meta table runs
+//! in one transaction, and a migration that dropped tables leaves it open
+//! for the caller to commit once the cache is rebuilt
+//! ([`crate::TypingAnalyticsDb::commit_migration`]). The stored version is
+//! then never ahead of the rebuild: a failed or interrupted rebuild leaves
+//! the old version, and the next open (here or in the Electron build) drops
+//! the tables again and asks for the rebuild again.
 
 use rusqlite::{Connection, OptionalExtension, named_params, params};
 
@@ -48,7 +56,24 @@ fn js_number(text: &str) -> Option<f64> {
 }
 
 pub(crate) fn prepare_schema(conn: &Connection) -> Result<SchemaOutcome, Error> {
+    // CREATE_META sets journal_mode, which SQLite refuses inside a
+    // transaction.
     conn.execute_batch(CREATE_META)?;
+    conn.execute_batch("BEGIN IMMEDIATE")?;
+    let outcome = match migrate_and_create(conn) {
+        Ok(outcome) => outcome,
+        Err(err) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            return Err(err);
+        }
+    };
+    if !outcome.cache_needs_rebuild {
+        conn.execute_batch("COMMIT")?;
+    }
+    Ok(outcome)
+}
+
+fn migrate_and_create(conn: &Connection) -> Result<SchemaOutcome, Error> {
     let stored: Option<String> =
         conn.query_row(GET_META, params!["schema_version"], |r| r.get(0)).optional()?;
     let stored_version = stored.as_deref().map(js_number);

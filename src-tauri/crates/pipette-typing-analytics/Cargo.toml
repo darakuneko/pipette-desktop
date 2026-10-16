@@ -31,6 +31,8 @@ windows-version = "=0.1.7"
 
 [dev-dependencies]
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+# Sets an old schema version in a test database.
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 tempfile = { workspace = true }
 tokio = { version = "=1.53.3", features = ["sync", "time", "rt", "macros", "test-util"] }
 
