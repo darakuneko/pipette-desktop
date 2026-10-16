@@ -48,6 +48,10 @@ use crate::sync_units::typing_analytics_device_day_sync_unit;
 /// `FLUSH_DEBOUNCE_MS`: how long after an event the flush runs.
 pub const FLUSH_DEBOUNCE: Duration = Duration::from_millis(1_000);
 
+/// How long after a failed initialization a debounced flush waits before
+/// it tries again.
+const INIT_RETRY_INTERVAL_MS: f64 = 30_000.0;
+
 /// Runs a task once, after a delay. Never runs it before returning.
 pub trait FlushTimer: Send + Sync {
     fn schedule(&self, delay: Duration, task: Box<dyn FnOnce() + Send>);
@@ -90,8 +94,9 @@ struct State {
     timer_generation: u64,
     /// The `updated_at` of the last rows this device wrote.
     last_flush_updated_at: f64,
-    /// Whether the current run of failed initializations was logged.
-    init_failure_logged: bool,
+    /// When the last initialization a flush waited for failed, while no
+    /// later one has succeeded.
+    init_failed_at: Option<f64>,
 }
 
 /// What one flush drained.
@@ -128,7 +133,7 @@ impl Recorder {
             timer: None,
             timer_generation: 0,
             last_flush_updated_at: 0.0,
-            init_failure_logged: false,
+            init_failed_at: None,
         };
         let recorder = Arc::new_cyclic(|this| Self {
             analytics,
@@ -147,6 +152,16 @@ impl Recorder {
 
     fn now(&self) -> f64 {
         self.analytics.now_ms() as f64
+    }
+
+    /// The analytics the recorder writes to.
+    pub fn analytics(&self) -> &Arc<TypingAnalytics> {
+        &self.analytics
+    }
+
+    /// Records a changed sync unit (`notifySyncUnits`).
+    pub fn notify(&self, unit: &str) {
+        (self.deps.notify)(unit);
     }
 
     /// The `typingAnalyticsEvent` handler: takes `payload` if it is a valid
@@ -336,15 +351,24 @@ impl Recorder {
             }
             state.timer = None;
         }
+        // A debounced flush right after a failed initialization keeps the
+        // events buffered without trying again, so a lasting failure is not
+        // retried (the database opened, the rebuild run) every second. A
+        // final flush always tries.
+        let failed_at = self.state().init_failed_at;
+        if !all && failed_at.is_some_and(|at| self.now() - at < INIT_RETRY_INTERVAL_MS) {
+            return;
+        }
         // The cache must be usable before anything is drained, or a failure
         // would throw the drained counts away.
         let ready = match self.analytics.ready().await {
             Ok(ready) => {
-                self.state().init_failure_logged = false;
+                self.state().init_failed_at = None;
                 ready
             }
             Err(err) => {
-                if !std::mem::replace(&mut self.state().init_failure_logged, true) {
+                let now = self.now();
+                if self.state().init_failed_at.replace(now).is_none() {
                     log::error!("typing-analytics DB open failed: {err}");
                 }
                 return;

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The deleted ranges of a device's typing data: the file's model
-//! ([`model`]) and its store ([`store`]).
+//! ([`model`]), its store ([`store`]) and this device applying its own
+//! ranges to its own data ([`apply`]).
 
+pub mod apply;
 pub mod model;
 pub mod store;
 

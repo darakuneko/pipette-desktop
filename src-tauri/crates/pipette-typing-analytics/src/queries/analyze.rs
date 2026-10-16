@@ -6,6 +6,7 @@
 
 use std::path::Path;
 
+use indexmap::IndexMap;
 use pipette_js_json::{Object, Value};
 use pipette_typing_analytics_db::{PeakRecords, ToJs};
 
@@ -80,17 +81,25 @@ pub(super) fn family(
 }
 
 /// `GetMatrixHeatmap(uid, layer, sinceMs)`: this device's counts per
-/// `"row,col"` of one layer from the minute of `sinceMs` on.
-///
-/// The Electron handler also adds the minute still being recorded; this
-/// build answers the flushed minutes only.
+/// `"row,col"` of one layer from the minute of `sinceMs` on, the cache's
+/// cells first, then what the recorder holds of the minutes not written
+/// yet added in (a new cell after the cache's).
 pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
     let (uid, layer, since) = match heatmap_args(args) {
         Ok(checked) => checked,
         Err(rejected) => return Ok(rejected),
     };
     let cells = cx.db.matrix_counts_since(uid, cx.own_hash, layer, floor_minute(since))?;
-    Ok(heatmap(&cells))
+    let mut totals: IndexMap<String, [f64; 3]> = heatmap_cells(&cells).collect();
+    if let Some(recorder) = cx.recorder {
+        for (key, live) in recorder.peek_matrix_counts_for_uid(uid, cx.own_hash, layer) {
+            let sum = totals.entry(key).or_default();
+            sum[0] += live.total as f64;
+            sum[1] += live.tap as f64;
+            sum[2] += live.hold as f64;
+        }
+    }
+    Ok(heatmap(totals))
 }
 
 /// The `(uid, layer, sinceMs)` of `GetMatrixHeatmap`; an empty heatmap
@@ -100,18 +109,24 @@ pub(super) fn heatmap_args(args: Args<'_>) -> Result<(&str, f64, f64), Value> {
     checked.ok_or_else(|| Value::Object(Object::new()))
 }
 
+/// The cells of the cache as `("row,col", [total, tap, hold])`.
+pub(super) fn heatmap_cells(
+    cells: &[pipette_typing_analytics_db::MatrixCounts],
+) -> impl Iterator<Item = (String, [f64; 3])> + '_ {
+    cells.iter().map(|cell| {
+        (format!("{},{}", js_number(cell.row), js_number(cell.col)), [cell.total, cell.tap, cell.hold])
+    })
+}
+
 /// `TypingHeatmapByCell`: `{ total, tap, hold }` per `"row,col"`.
-pub(super) fn heatmap(cells: &[pipette_typing_analytics_db::MatrixCounts]) -> Value {
+pub(super) fn heatmap(cells: impl IntoIterator<Item = (String, [f64; 3])>) -> Value {
     let mut out = Object::new();
-    for cell in cells {
-        let counts: Object = [
-            ("total", Value::Number(cell.total)),
-            ("tap", Value::Number(cell.tap)),
-            ("hold", Value::Number(cell.hold)),
-        ]
-        .into_iter()
-        .collect();
-        out.insert(format!("{},{}", js_number(cell.row), js_number(cell.col)), counts.into());
+    for (key, [total, tap, hold]) in cells {
+        let counts: Object =
+            [("total", Value::Number(total)), ("tap", Value::Number(tap)), ("hold", Value::Number(hold))]
+                .into_iter()
+                .collect();
+        out.insert(key, counts.into());
     }
     out.into()
 }

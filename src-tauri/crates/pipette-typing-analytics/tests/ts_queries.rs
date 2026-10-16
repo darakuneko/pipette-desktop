@@ -52,6 +52,7 @@ fn assert_calls(calls: &[Value], user_data: &Path, label: &str) {
         own_hash: text(&queries, "ownHash"),
         os_platform: text(os, "platform"),
         os_release: text(os, "release"),
+        recorder: None,
     };
     assert!(!calls.is_empty());
     for (i, call) in calls.iter().enumerate() {
