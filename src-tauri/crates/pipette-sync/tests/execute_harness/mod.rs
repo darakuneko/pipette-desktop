@@ -4,8 +4,9 @@
 //! preflight tests (requests logged, faults and gates), a stored password
 //! and a password-check on Drive, the pending units, and the account, the
 //! keyboard-name backfill and the flush and polling triggers as fakes that
-//! record what the pass asked of them. The envelope is the bundle's text
-//! itself unless a test asks for the real encryption.
+//! record what the pass asked of them; the real triggers on demand. The
+//! envelope is the bundle's text itself unless a test asks for the real
+//! encryption.
 
 #![allow(clippy::unwrap_used, clippy::panic, dead_code)]
 
@@ -29,6 +30,7 @@ use pipette_sync::merge::{MergeEvents, PackKind};
 use pipette_sync::meta_backfill::StoreMetaBackfill;
 use pipette_sync::preflight::{BoxFuture, Preflight, PreflightDeps, PreflightError};
 use pipette_sync::scope::SyncScope;
+use pipette_sync::triggers::{SyncTriggers, TriggerDeps};
 use pipette_sync_format::Envelope;
 use pipette_sync_format::crypto::{
     IV_LENGTH, KEY_LENGTH, SALT_LENGTH, decrypt_with_key, encrypt_with_key, key_for,
@@ -356,6 +358,21 @@ impl World {
 
     pub fn runtime(&self) -> &SyncRuntime {
         self.preflight.runtime()
+    }
+
+    /// The flush and the polling on this world, one unit at a time, with
+    /// auto sync `auto_sync` and the trash names dated [`NOW`].
+    pub fn triggers(&self, auto_sync: bool) -> SyncTriggers {
+        SyncTriggers::new(TriggerDeps {
+            preflight: self.preflight.clone(),
+            units: self.units.clone(),
+            pending: self.pending.clone(),
+            account: self.account.clone(),
+            auto_sync,
+            now_ms: Arc::new(|| NOW as u64),
+            handle: tokio::runtime::Handle::current(),
+            concurrency: 1,
+        })
     }
 
     pub fn own_hash(&self) -> String {
