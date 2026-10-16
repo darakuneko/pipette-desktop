@@ -10,6 +10,8 @@
 // - FAVORITE_STORE_LIST / FAVORITE_STORE_LOAD of every type;
 // - KEY_LABEL_STORE_LIST / KEY_LABEL_STORE_LIST_ALL / KEY_LABEL_STORE_GET of
 //   every live key label;
+// - TYPING_TEST_TEXT_LIST / TYPING_TEST_TEXT_GET of every live typing test
+//   text;
 // - LIST_STORED_KEYBOARDS, and the keyboard names as keyboard-meta.ts reads
 //   them;
 // - PIPETTE_SETTINGS_GET and PIPETTE_SETTINGS_LIST_ALL_TYPING_RESULTS,
@@ -87,6 +89,7 @@ vi.mock('../../src/tauri-shim/ipc', () => ({
 import { setupSnapshotStore } from '../../src/main/snapshot-store'
 import { setupFavoriteStore } from '../../src/main/favorite-store'
 import { setupKeyLabelStore } from '../../src/main/key-label-ipc'
+import { setupTypingTestTextStore } from '../../src/main/typing-test-text-ipc'
 import { setupPipetteSettingsStore } from '../../src/main/pipette-settings-store'
 import { setupSyncIpc } from '../../src/main/sync/sync-ipc'
 import { getActiveKeyboardMetaMap, readKeyboardMetaIndex } from '../../src/main/sync/keyboard-meta'
@@ -109,6 +112,8 @@ interface Answers {
   favorites: Record<string, Loaded>
   /** The key label answers as JSON text: the lists, and each live label's get by id. */
   keyLabels: { list: string; listAll: string; gets: Record<string, string> }
+  /** The typing test text answers as JSON text: the list, and each live text's get by id. */
+  typingTexts: { list: string; gets: Record<string, string> }
   settings: Record<string, { content: string | null; etag: string }>
   /** The `pipette_settings_read_all` answer, as JSON text. */
   settingsReadAll: string
@@ -146,6 +151,7 @@ describe('the userData tree the Rust stores write', () => {
   setupSnapshotStore()
   setupFavoriteStore()
   setupKeyLabelStore()
+  setupTypingTestTextStore()
   setupPipetteSettingsStore()
   setupSyncIpc()
 
@@ -184,6 +190,17 @@ describe('the userData tree the Rust stores write', () => {
       expect(JSON.stringify(await handler(IpcChannels.KEY_LABEL_STORE_GET)({}, id))).toBe(get)
     }
     // QWERTY already has its author, so the lists wrote nothing.
+    expect(notified).toEqual([])
+  })
+
+  it('lists and reads the typing test texts as the crate does', async () => {
+    notified.length = 0
+    const rust = answers.typingTexts
+    expect(JSON.stringify(await handler(IpcChannels.TYPING_TEST_TEXT_LIST)({}))).toBe(rust.list)
+    expect(Object.keys(rust.gets)).toHaveLength(2)
+    for (const [id, get] of Object.entries(rust.gets)) {
+      expect(JSON.stringify(await handler(IpcChannels.TYPING_TEST_TEXT_GET)({}, id))).toBe(get)
+    }
     expect(notified).toEqual([])
   })
 

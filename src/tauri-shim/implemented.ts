@@ -18,6 +18,7 @@ import { snapshotsApi } from './api/snapshots'
 import { syncPendingApi } from './api/sync-pending'
 import { themePacksApi } from './api/theme-packs'
 import { typingDatasetsApi } from './api/typing-datasets'
+import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
 import { fakes } from './fakes'
 
@@ -32,6 +33,7 @@ export const real = {
   ...keyboardDataApi,
   ...favoritesApi,
   ...keyLabelsApi,
+  ...typingTextsApi,
   ...snapshotsApi,
   ...settingsApi,
   ...typingDatasetsApi,

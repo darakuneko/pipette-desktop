@@ -70,6 +70,13 @@ pub const APP_COMMANDS: &[&str] = &[
     "key_label_store_reorder",
     "key_label_store_set_hub_post_id",
     "key_label_store_has_name",
+    // src/store_commands/typing_texts.rs
+    "typing_test_text_store_list",
+    "typing_test_text_store_get",
+    "typing_test_text_store_rename",
+    "typing_test_text_store_delete",
+    "typing_test_text_store_import",
+    "typing_test_text_store_import_confirm",
     // src/store_commands/snapshots.rs
     "snapshot_store_list",
     "snapshot_store_save",

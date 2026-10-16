@@ -4,6 +4,9 @@
 //!
 //! - the key labels (`sync/key-labels`, the sync unit of the same name) of
 //!   src/main/key-label-store.ts, kept across keyboards;
+//! - the typing test texts (`sync/typing-test-texts`, the sync unit of the
+//!   same name) of src/main/typing-test-text-store.ts, kept across
+//!   keyboards;
 //! - the favorites of each type (`sync/favorites/{type}`, the sync unit of
 //!   the same name) of src/main/favorite-store.ts;
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
@@ -25,7 +28,9 @@
 //! reported to. The stores of other crates (the pack stores) work through
 //! the same context.
 
+mod coded_error;
 mod entry_files;
+mod entry_index;
 mod favorites;
 mod key_labels;
 mod keyboard_meta;
@@ -34,22 +39,25 @@ mod settings;
 mod snapshot_filename;
 mod snapshots;
 mod stored_keyboards;
+mod typing_texts;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use pipette_entry_store::{Clock, IdGen, RandomUuid, WriteLocks};
 
+pub use coded_error::{CodedStoreError, ErrorCode, coded_store_response};
+pub use entry_index::MAX_NAME_LENGTH;
 pub use favorites::{
     FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, import_favorites,
     list_favorites, load_favorite, read_favorites_for_export, rename_favorite, save_favorite,
     set_favorite_hub_post_id, set_favorite_hub_private,
 };
 pub use key_labels::{
-    KEY_LABEL_SYNC_UNIT, KeyLabelError, KeyLabelErrorCode, KeyLabelExport, KeyLabelSave, MAX_NAME_LENGTH,
-    QWERTY_ENTRY_ID, delete_key_label, export_key_label, get_key_label, has_key_label_name,
-    import_key_label_files, key_label_response, list_key_labels, rename_key_label, reorder_key_labels,
-    save_key_label, set_key_label_hub_post_id,
+    KEY_LABEL_SYNC_UNIT, KeyLabelError, KeyLabelErrorCode, KeyLabelExport, KeyLabelSave, QWERTY_ENTRY_ID,
+    delete_key_label, export_key_label, get_key_label, has_key_label_name, import_key_label_files,
+    key_label_response, list_key_labels, rename_key_label, reorder_key_labels, save_key_label,
+    set_key_label_hub_post_id,
 };
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
@@ -70,6 +78,10 @@ pub use snapshots::{
     update_snapshot,
 };
 pub use stored_keyboards::{StoredKeyboard, list_stored_keyboards, stored_keyboards_json};
+pub use typing_texts::{
+    TYPING_TEXT_MAX_FILE_BYTES, TYPING_TEXT_SYNC_UNIT, TypingTextError, TypingTextErrorCode, TypingTextSave,
+    TypingTextSource, TypingTextStore, typing_text_response,
+};
 
 /// Told the sync unit of each change a store makes (`notifyChange` of
 /// src/main/sync/sync-flush.ts).

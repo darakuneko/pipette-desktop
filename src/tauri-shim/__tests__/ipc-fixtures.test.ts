@@ -48,6 +48,7 @@ interface Shim {
   settings: typeof import('../api/settings')
   shell: typeof import('../api/shell')
   snapshots: typeof import('../api/snapshots')
+  typingTexts: typeof import('../api/typing-texts')
   syncPending: typeof import('../api/sync-pending')
   themePacks: typeof import('../api/theme-packs')
   typingDatasets: typeof import('../api/typing-datasets')
@@ -69,6 +70,7 @@ async function load(): Promise<Shim> {
     settings: await import('../api/settings'),
     shell: await import('../api/shell'),
     snapshots: await import('../api/snapshots'),
+    typingTexts: await import('../api/typing-texts'),
     syncPending: await import('../api/sync-pending'),
     themePacks: await import('../api/theme-packs'),
     typingDatasets: await import('../api/typing-datasets'),
@@ -197,6 +199,20 @@ const CALLERS: Record<string, Caller> = {
   keyLabelStoreHasName: {
     run: ({ keyLabels }, [name, excludeId]) =>
       keyLabels.keyLabelsApi.keyLabelStoreHasName(name as string, excludeId as string | undefined),
+  },
+  typingTestTextStoreList: { run: ({ typingTexts }) => typingTexts.typingTextsApi.typingTestTextStoreList() },
+  typingTestTextStoreGet: {
+    run: ({ typingTexts }, [id]) => typingTexts.typingTextsApi.typingTestTextStoreGet(id as string),
+  },
+  typingTestTextStoreRename: {
+    run: ({ typingTexts }, [id, name]) => typingTexts.typingTextsApi.typingTestTextStoreRename(id as string, name as string),
+  },
+  typingTestTextStoreDelete: {
+    run: ({ typingTexts }, [id]) => typingTexts.typingTextsApi.typingTestTextStoreDelete(id as string),
+  },
+  typingTestTextStoreImport: { run: ({ typingTexts }) => typingTexts.typingTextsApi.typingTestTextStoreImport() },
+  typingTestTextStoreImportConfirm: {
+    run: ({ typingTexts }) => typingTexts.typingTextsApi.typingTestTextStoreImportConfirm(),
   },
   snapshotStoreList: { run: ({ snapshots }, [uid]) => snapshots.snapshotsApi.snapshotStoreList(uid as string) },
   snapshotStoreSave: {

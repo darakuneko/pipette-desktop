@@ -2778,6 +2778,7 @@ dependencies = [
  "pipette-js-json",
  "pipette-sync-pending",
  "pipette-time",
+ "pipette-typing-text",
  "sha2",
  "tempfile",
  "thiserror 2.0.21",

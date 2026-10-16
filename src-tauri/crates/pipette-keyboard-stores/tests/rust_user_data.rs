@@ -22,13 +22,14 @@ use std::time::Duration;
 use pipette_entry_store::{SystemClock, WriteLocks};
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::{
-    FavoriteImport, FavoriteType, KeyLabelSave, SETTINGS_ETAG_ABSENT, StoreContext, delete_favorite,
-    delete_key_label, delete_snapshot, field, get_key_label, import_favorites, import_key_label_files,
-    key_label_response, keyboard_meta_name_if_missing, keyboard_settings_files_json, list_favorites,
-    list_key_labels, list_snapshots, list_stored_keyboards, load_favorite, load_snapshot,
-    read_all_pipette_settings, read_pipette_settings, rename_favorite, rename_key_label, rename_snapshot,
-    reorder_key_labels, response_json, save_favorite, save_key_label, save_snapshot,
-    set_favorite_hub_post_id, set_key_label_hub_post_id, set_snapshot_hub_private, stored_keyboards_json,
+    FavoriteImport, FavoriteType, KeyLabelSave, SETTINGS_ETAG_ABSENT, StoreContext, TypingTextSave,
+    TypingTextSource, TypingTextStore, delete_favorite, delete_key_label, delete_snapshot, field,
+    get_key_label, import_favorites, import_key_label_files, key_label_response,
+    keyboard_meta_name_if_missing, keyboard_settings_files_json, list_favorites, list_key_labels,
+    list_snapshots, list_stored_keyboards, load_favorite, load_snapshot, read_all_pipette_settings,
+    read_pipette_settings, rename_favorite, rename_key_label, rename_snapshot, reorder_key_labels,
+    response_json, save_favorite, save_key_label, save_snapshot, set_favorite_hub_post_id,
+    set_key_label_hub_post_id, set_snapshot_hub_private, stored_keyboards_json, typing_text_response,
     update_snapshot, write_pipette_settings,
 };
 use pipette_sync_pending::{PendingStore, Scheduler};
@@ -221,6 +222,30 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     .unwrap();
     delete_key_label(&ctx, &gone.id().unwrap().clone()).unwrap();
 
+    // Typing test texts: a kana file, a file named like it held and
+    // confirmed over it, a catalog save with its source, a rename and a
+    // delete.
+    let texts = TypingTextStore::default();
+    let text_files = out.join("typing-text-files");
+    let kana = text_files.join("かな.txt");
+    write(&kana, "\u{feff}こんにちは せかい\r\nありがとう");
+    let kana_id = texts.import_file(&ctx, &kana).unwrap().id().unwrap().clone();
+    write(&kana, "  indented   words\n\nnext line");
+    assert!(texts.import_file(&ctx, &kana).is_err());
+    texts.confirm_import(&ctx).unwrap();
+    let aozora = TypingTextSave {
+        source: Some(TypingTextSource {
+            provider: JsString::from("aozora"),
+            work_id: JsString::from("001257/files/59898_ruby_70679.zip"),
+        }),
+        ..TypingTextSave::new("作品（作者）", "ひらがな カタカナ")
+    };
+    let aozora_id = texts.save(&ctx, &aozora).unwrap().id().unwrap().clone();
+    texts.rename(&ctx, &aozora_id, &JsString::from("作品 😀")).unwrap();
+    let gone = texts.save(&ctx, &TypingTextSave::new("Gone", "bye")).unwrap();
+    texts.delete(&ctx, gone.id().unwrap()).unwrap();
+    assert_ne!(kana_id, aozora_id);
+
     // What the stores answer on the finished tree. The stored-keyboard list
     // goes last: it may record names.
     let mut answers = Object::new();
@@ -276,6 +301,24 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     );
     key_labels.insert("gets", Value::Object(gets));
     answers.insert("keyLabels", Value::Object(key_labels));
+
+    // A new store, as the TypeScript handlers start with no cached
+    // romajiCapable.
+    let texts = TypingTextStore::default();
+    let live = texts.list(&ctx, false).unwrap();
+    let mut gets = Object::new();
+    for entry in &live {
+        let id = id_of(&Value::from(entry.clone()));
+        let record = texts.get(&ctx, &JsString::from(id.as_str())).map(|record| Some(Value::Object(record)));
+        gets.insert(id, typing_text_response(record).into());
+    }
+    let mut typing_texts = Object::new();
+    typing_texts.insert(
+        "list",
+        typing_text_response(Ok(Some(Value::Array(live.into_iter().map(Value::from).collect())))).into(),
+    );
+    typing_texts.insert("gets", Value::Object(gets));
+    answers.insert("typingTexts", Value::Object(typing_texts));
 
     let mut settings_files = Object::new();
     for (uid, _) in &settings {

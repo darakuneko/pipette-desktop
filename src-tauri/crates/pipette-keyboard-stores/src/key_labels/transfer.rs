@@ -9,11 +9,9 @@ use pipette_entry_store::safe_filename;
 use pipette_js_json::{JsString, Object, Value};
 
 use super::label_file::{method_type_error, normalize_file};
-use super::{
-    KeyLabelError, KeyLabelSave, find_active_by_name, get_key_label, read_index, read_json, save_key_label,
-    store_dir,
-};
+use super::{INDEX, KeyLabelError, KeyLabelSave, get_key_label, save_key_label, store_dir};
 use crate::StoreContext;
+use crate::entry_index::{find_active_by_name, read_index, read_json};
 
 /// Imports one file: a label with the name of a live one (ignoring case)
 /// is saved over it, keeping its id, author and Hub link.
@@ -24,8 +22,8 @@ fn import_file(ctx: &StoreContext, path: &Path) -> Result<Value, KeyLabelError> 
         return Err(KeyLabelError::invalid_file("Invalid key label file"));
     };
 
-    let index = read_index(&store_dir(ctx))?;
-    let existing = find_active_by_name(&index.entries, Some(&Value::String(name.clone())), "name", None)?;
+    let index = read_index(&INDEX, &store_dir(ctx))?;
+    let existing = find_active_by_name(&index.entries, &Value::String(name.clone()), None)?;
     let carried =
         |key: &str| existing.and_then(|entry| entry.get(key)).filter(|value| value.is_truthy()).cloned();
     let save = KeyLabelSave {

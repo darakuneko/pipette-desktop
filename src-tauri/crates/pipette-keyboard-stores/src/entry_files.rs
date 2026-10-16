@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What the index-based stores of this crate share: the body file an entry
-//! names, read as the Electron build reads it, and the text of a clock
-//! error.
+//! names, read as the Electron build reads it, the text of a clock error,
+//! and the name comparison of `findActiveByName`.
 
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
-use pipette_entry_store::{Entry, EntryError, is_safe_path_segment};
+use pipette_entry_store::{Entry, EntryError, is_safe_path_segment, js_to_lower_case, trim_js_whitespace};
 use pipette_js_json::Value;
 
 /// Why an entry names no body file this store may open.
@@ -56,6 +56,26 @@ pub(crate) fn entry_error_text(err: &EntryError) -> String {
     }
 }
 
+/// The text of the TypeError JavaScript throws when it calls the string
+/// method `method` on `value` (missing for undefined) read as `receiver`.
+pub(crate) fn method_type_error_text(value: Option<&Value>, receiver: &str, method: &str) -> String {
+    match value {
+        None => format!("Cannot read properties of undefined (reading '{method}')"),
+        Some(Value::Null) => format!("Cannot read properties of null (reading '{method}')"),
+        Some(_) => format!("{receiver}.{method} is not a function"),
+    }
+}
+
+/// `value.trim().toLowerCase()` for the name `value` read as `receiver`:
+/// the key two names are the same by, or the text of the TypeError of a
+/// name that is not a string.
+pub(crate) fn name_key(value: Option<&Value>, receiver: &str) -> Result<Vec<u16>, String> {
+    match value {
+        Some(Value::String(name)) => Ok(js_to_lower_case(trim_js_whitespace(&name.utf16_units()))),
+        other => Err(method_type_error_text(other, receiver, "trim")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use pipette_js_json::Object;
@@ -81,5 +101,23 @@ mod tests {
         assert_eq!(body_path(dir, &entry(Some(Value::Null))), Err(BodyPathError::Invalid));
         assert_eq!(body_path(dir, &entry(Some(Value::Number(0.0)))), Err(BodyPathError::Invalid));
         assert_eq!(body_path(dir, &entry(Some(Value::Number(5.0)))), Err(BodyPathError::NotString));
+    }
+
+    #[test]
+    fn names_compare_trimmed_and_lowercased_as_javascript_does() {
+        let key = |text: &str| name_key(Some(&Value::from(text)), "e.name").unwrap();
+        assert_eq!(key(" QWERTY "), key("qwerty"));
+        assert_eq!(key("ΣΑΣ"), "σας".encode_utf16().collect::<Vec<_>>());
+        assert_eq!(key("İ"), "i\u{307}".encode_utf16().collect::<Vec<_>>());
+        let lone = Value::String(pipette_js_json::JsString::from_utf16(vec![0x41, 0xd800, 0x42]));
+        assert_eq!(name_key(Some(&lone), "e.name").unwrap(), vec![0x61, 0xd800, 0x62]);
+    }
+
+    #[test]
+    fn a_name_that_is_not_a_string_fails_as_javascript_does() {
+        let text = |value: Option<&Value>| name_key(value, "e.name").unwrap_err();
+        assert_eq!(text(None), "Cannot read properties of undefined (reading 'trim')");
+        assert_eq!(text(Some(&Value::Null)), "Cannot read properties of null (reading 'trim')");
+        assert_eq!(text(Some(&Value::Number(5.0))), "e.name.trim is not a function");
     }
 }
