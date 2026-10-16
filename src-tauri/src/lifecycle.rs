@@ -358,13 +358,17 @@ fn quit_phases(
         durations[PRE_SYNC_FINALIZERS_PHASE],
     );
     if let Some(sync) = sync {
-        let (a, b, c) = (Arc::clone(&sync), Arc::clone(&sync), sync);
+        let (for_password, for_pass) = (Arc::clone(&sync), Arc::clone(&sync));
         phases[PASSWORD_CHANGE_PHASE] =
-            then_wait(PASSWORD_CHANGE_PHASE, durations, async move { a.password_change_ended().await });
+            then_wait(
+                PASSWORD_CHANGE_PHASE,
+                durations,
+                async move { for_password.password_change_ended().await },
+            );
         phases[IN_FLIGHT_SYNC_PHASE] =
-            then_wait(IN_FLIGHT_SYNC_PHASE, durations, async move { b.in_flight_pass_ended().await });
+            then_wait(IN_FLIGHT_SYNC_PHASE, durations, async move { for_pass.in_flight_pass_ended().await });
         phases[FLUSH_PENDING_PHASE] =
-            then_wait(FLUSH_PENDING_PHASE, durations, async move { c.flush_pending().await });
+            then_wait(FLUSH_PENDING_PHASE, durations, async move { sync.flush_pending().await });
     }
     phases
 }
