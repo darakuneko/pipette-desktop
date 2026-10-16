@@ -7,6 +7,8 @@
 //! their order, its number forms, its lone surrogates and the fields this
 //! build does not know, as the TypeScript code writes the object it read.
 
+use std::fmt::Write;
+
 use pipette_js_json::{JsString, Object, Value};
 
 /// `BIGRAM_HIST_BUCKETS`: the buckets of an n-gram's IKI histogram (`h`)
@@ -153,7 +155,7 @@ fn enc(text: &str) -> String {
         if byte.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&byte) {
             out.push(char::from(byte));
         } else {
-            out.push_str(&format!("%{byte:02X}"));
+            let _ = write!(out, "%{byte:02X}");
         }
     }
     out
