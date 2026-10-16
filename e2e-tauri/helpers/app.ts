@@ -265,22 +265,19 @@ export const openToolsOverlay = (): Promise<void> => openOverlayTab('tools')
  *  of the development tools), clicks `selector`, and waits until a file
  *  dialog has taken the answer, so a click that opened no dialog fails here
  *  rather than as a missing result later. */
-export async function clickIntoFileDialog(selector: string, path: string): Promise<void> {
-  const queued = () => invokeCommand<number>('dev_dialog_queued')
-  if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
-  await invokeCommand('dev_dialog_respond', { path })
-  await $(selector).click()
-  await browser.waitUntil(async () => (await queued()) === 0, {
-    timeoutMsg: `clicking ${selector} opened no file dialog`,
-  })
+export function clickIntoFileDialog(selector: string, path: string): Promise<void> {
+  return clickIntoDialog(selector, { path })
 }
 
-/** Queues `paths` as the answer of the next file dialog that picks several
- *  files, and otherwise does what {@link clickIntoFileDialog} does. */
-export async function clickIntoFilesDialog(selector: string, paths: string[]): Promise<void> {
+/** Like {@link clickIntoFileDialog}, for a dialog that picks several files. */
+export function clickIntoFilesDialog(selector: string, paths: string[]): Promise<void> {
+  return clickIntoDialog(selector, { paths })
+}
+
+async function clickIntoDialog(selector: string, answer: { path: string } | { paths: string[] }): Promise<void> {
   const queued = () => invokeCommand<number>('dev_dialog_queued')
   if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
-  await invokeCommand('dev_dialog_respond', { paths })
+  await invokeCommand('dev_dialog_respond', answer)
   await $(selector).click()
   await browser.waitUntil(async () => (await queued()) === 0, {
     timeoutMsg: `clicking ${selector} opened no file dialog`,

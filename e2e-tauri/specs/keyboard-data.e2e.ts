@@ -27,7 +27,7 @@ import {
   virtualDevice,
   waitForGone,
 } from '../helpers/app'
-import { userDataPath } from '../helpers/driver'
+import { readPendingUnits, userDataPath } from '../helpers/driver'
 
 const KC_X = '001B'
 const KC_Z = '001D'
@@ -59,11 +59,6 @@ function readSnapshotBody(uid: string, filename: string): string {
 function readSettingsFile(uid: string): Record<string, unknown> | null {
   const path = userDataPath('sync', 'keyboards', uid, 'pipette_settings.json')
   return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : null
-}
-
-function readPendingUnits(): string[] {
-  const path = userDataPath('local', 'sync-pending.json')
-  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { units: string[] }).units : []
 }
 
 /** The labels of the snapshots the Import / Save tab shows. */

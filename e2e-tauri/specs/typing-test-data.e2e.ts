@@ -11,7 +11,7 @@
 // request reaches the network. The tests share one app session and run in
 // order.
 
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -29,7 +29,7 @@ import {
   waitForGone,
   waitForHttpResponsesTaken,
 } from '../helpers/app'
-import { E2E_HUB_URL, userDataPath } from '../helpers/driver'
+import { E2E_HUB_URL, readPendingUnits, userDataPath } from '../helpers/driver'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const DOWNLOADS = 'https://e2e.invalid/downloads'
@@ -38,11 +38,6 @@ interface TextMeta {
   id: string
   name: string
   source?: { provider: string; workId: string }
-}
-
-function readPendingUnits(): string[] {
-  const path = userDataPath('local', 'sync-pending.json')
-  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { units: string[] }).units : []
 }
 
 async function listedTexts(): Promise<TextMeta[]> {

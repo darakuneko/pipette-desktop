@@ -73,6 +73,13 @@ export function readAppConfig(): Record<string, unknown> {
   return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : {}
 }
 
+/** The sync units local/sync-pending.json lists of the running session;
+ *  empty before the app first writes it. */
+export function readPendingUnits(): string[] {
+  const path = userDataPath('local', 'sync-pending.json')
+  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { units: string[] }).units : []
+}
+
 const QUIT_POLL_MS = 100
 
 /** The pids of the processes of the app binary that run with the running

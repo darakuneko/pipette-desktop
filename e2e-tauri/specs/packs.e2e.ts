@@ -22,7 +22,7 @@ import {
   vialApi,
   waitForGone,
 } from '../helpers/app'
-import { readAppConfig, userDataPath } from '../helpers/driver'
+import { readAppConfig, readPendingUnits } from '../helpers/driver'
 
 const SAMPLE_PACKS = resolve(dirname(fileURLToPath(import.meta.url)), '../../sample-packs')
 /** WebDriver's code of the Enter key. */
@@ -31,11 +31,6 @@ const KEY_ENTER = ''
 interface Meta {
   id: string
   name: string
-}
-
-function readPendingUnits(): string[] {
-  const path = userDataPath('local', 'sync-pending.json')
-  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { units: string[] }).units : []
 }
 
 /** Opens the device selector's settings on the Tools tab and clicks
@@ -256,5 +251,4 @@ describe('Tauri build packs and labels', () => {
   it('logged no page errors', async () => {
     expect([...earlierErrors, ...(await recordedPageErrors())]).toEqual([])
   })
-
 })
