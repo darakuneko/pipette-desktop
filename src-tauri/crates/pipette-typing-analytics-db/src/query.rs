@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze minute-stats range query (`listMinuteStatsInRangeForUid`,
-//! typing-analytics-db-reads.ts): one row per minute, scopes that share a
-//! minute merged, for the WPM and Interval charts.
+//! What the read statements share: the app / typing-test / run filters,
+//! the device a query is narrowed to, and running a prepared statement
+//! with named parameters.
+//!
+//! Every number is bound as a double, as better-sqlite3 binds a JavaScript
+//! number, so a window bound or layer with a fraction compares the same.
 
-use rusqlite::{Connection, named_params};
-use serde::Serialize;
+use rusqlite::types::{FromSql, ToSql};
+use rusqlite::{Connection, OptionalExtension, Row};
 
 use crate::Error;
-use crate::sql;
 
 /// The app / typing-test / run filters of the Analyze view. An empty list
 /// means no filter on that dimension.
@@ -18,54 +20,78 @@ pub struct ScopeFilters {
     pub run_ids: Vec<String>,
 }
 
-/// `TypingMinuteStatsRow`. Every value is a double, as the renderer gets it
-/// from the TypeScript side: SQLite's SUM / MIN / MAX of an INTEGER column
-/// can still be REAL when a JSONL row carried a fractional number.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MinuteStatsRow {
-    pub minute_ms: f64,
-    pub keystrokes: f64,
-    pub active_ms: f64,
-    pub interval_min_ms: Option<f64>,
-    pub interval_p25_ms: Option<f64>,
-    pub interval_p50_ms: Option<f64>,
-    pub interval_p75_ms: Option<f64>,
-    pub interval_max_ms: Option<f64>,
-    pub poll_p50_ms: Option<f64>,
-    pub poll_p95_ms: Option<f64>,
+/// The filters as the JSON arrays the statements read with `json_each`.
+pub(crate) struct FilterJson {
+    app_names: String,
+    typing_tests: String,
+    run_ids: String,
 }
 
-pub(crate) fn minute_stats_in_range(
+impl ScopeFilters {
+    pub(crate) fn json(&self) -> Result<FilterJson, Error> {
+        Ok(FilterJson {
+            app_names: serde_json::to_string(&self.app_names)?,
+            typing_tests: serde_json::to_string(&self.typing_tests)?,
+            run_ids: serde_json::to_string(&self.run_ids)?,
+        })
+    }
+}
+
+/// The named parameters of one statement run.
+pub(crate) type Params<'a> = Vec<(&'static str, &'a dyn ToSql)>;
+
+impl FilterJson {
+    pub(crate) fn add<'a>(&'a self, params: &mut Params<'a>) {
+        params.push(("@appNamesJson", &self.app_names));
+        params.push(("@typingTestsJson", &self.typing_tests));
+        params.push(("@runIdsJson", &self.run_ids));
+    }
+}
+
+/// The statement of a query that has one form for every device of the
+/// keyboard and one for a single `machine_hash`, with `@machineHash`
+/// added to `params` for the second.
+pub(crate) fn for_device<'a>(
+    machine_hash: Option<&'a &'a str>,
+    every_device: &'static str,
+    one_device: &'static str,
+    params: &mut Params<'a>,
+) -> &'static str {
+    match machine_hash {
+        Some(hash) => {
+            params.push(("@machineHash", hash));
+            one_device
+        }
+        None => every_device,
+    }
+}
+
+/// Every row of a prepared statement, mapped.
+pub(crate) fn all<T>(
     conn: &Connection,
-    uid: &str,
-    since_ms: i64,
-    until_ms: i64,
-    filters: &ScopeFilters,
-) -> Result<Vec<MinuteStatsRow>, Error> {
-    let app_names = serde_json::to_string(&filters.app_names)?;
-    let typing_tests = serde_json::to_string(&filters.typing_tests)?;
-    let run_ids = serde_json::to_string(&filters.run_ids)?;
-    let mut stmt = conn.prepare_cached(sql::SELECT_MINUTE_STATS_IN_RANGE_FOR_UID)?;
-    let rows = stmt.query_map(
-        named_params! {
-            "@uid": uid, "@sinceMs": since_ms, "@untilMs": until_ms,
-            "@appNamesJson": app_names, "@typingTestsJson": typing_tests, "@runIdsJson": run_ids,
-        },
-        |r| {
-            Ok(MinuteStatsRow {
-                minute_ms: r.get("minuteMs")?,
-                keystrokes: r.get("keystrokes")?,
-                active_ms: r.get("activeMs")?,
-                interval_min_ms: r.get("intervalMinMs")?,
-                interval_p25_ms: r.get("intervalP25Ms")?,
-                interval_p50_ms: r.get("intervalP50Ms")?,
-                interval_p75_ms: r.get("intervalP75Ms")?,
-                interval_max_ms: r.get("intervalMaxMs")?,
-                poll_p50_ms: r.get("pollP50Ms")?,
-                poll_p95_ms: r.get("pollP95Ms")?,
-            })
-        },
-    )?;
-    Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    sql: &str,
+    params: &[(&str, &dyn ToSql)],
+    map: impl FnMut(&Row<'_>) -> rusqlite::Result<T>,
+) -> Result<Vec<T>, Error> {
+    let mut stmt = conn.prepare_cached(sql)?;
+    let rows = stmt.query_map(params, map)?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The first row of a prepared statement, mapped, if there is one.
+pub(crate) fn first<T>(
+    conn: &Connection,
+    sql: &str,
+    params: &[(&str, &dyn ToSql)],
+    map: impl FnOnce(&Row<'_>) -> rusqlite::Result<T>,
+) -> Result<Option<T>, Error> {
+    Ok(conn.prepare_cached(sql)?.query_row(params, map).optional()?)
+}
+
+/// Column `index` of `row`, which the statement names `name`. Reading by
+/// index skips the search by name, which costs more than the value itself
+/// on a long result; debug builds check the name.
+pub(crate) fn column<T: FromSql>(row: &Row<'_>, index: usize, name: &str) -> rusqlite::Result<T> {
+    debug_assert_eq!(row.as_ref().column_name(index)?, name, "column {index}");
+    row.get(index)
 }

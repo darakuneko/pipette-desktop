@@ -1,25 +1,39 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The typing-analytics SQLite cache (src/main/typing-analytics/db/ on the
-//! TypeScript side): a rebuildable index over the per-day JSONL masters.
+//! TypeScript side): a rebuildable index over the per-day JSONL masters,
+//! with every read the Analyze view and the Data modal make of it.
 //!
-//! The API is coarse on purpose: each call is one unit of work and owns its
-//! transaction, so a caller can never leave half a day applied. The
-//! transactions are savepoints, so the calls also run inside the migration
-//! that [`TypingAnalyticsDb::open`] leaves open for the cache rebuild.
+//! Each call that writes is one unit of work and owns its transaction, so a
+//! caller can never leave half of it applied. Where the TypeScript side
+//! nests one write inside another's transaction (the replay that hides a
+//! device's deleted ranges), the inner write here is a function that takes
+//! the outer transaction. The transactions are savepoints, so the calls
+//! also run inside the migration that [`TypingAnalyticsDb::open`] leaves
+//! open for the cache rebuild.
 //!
-//! - [`TypingAnalyticsDb::apply_day_jsonl`] — one day file, one transaction
+//! - [`TypingAnalyticsDb::apply_day_jsonl`] — one day file
 //!   (`applyRowsToCache`).
 //! - [`TypingAnalyticsDb::apply_day_jsonl_hiding_ranges`] — one day file of
-//!   another device plus the tombstones of that device's deleted ranges, one
-//!   transaction (`replayDayRowsHidingDeletedRanges`).
-//! - [`TypingAnalyticsDb::minute_stats_in_range`] — the Analyze WPM /
-//!   Interval query.
+//!   another device plus the tombstones of that device's deleted ranges
+//!   (`replayDayRowsHidingDeletedRanges`).
+//! - tombstone.rs, ingest.rs — the other writes; summary.rs, range.rs,
+//!   ngram.rs, scopes.rs — the reads, whose rows (rows.rs) give the objects
+//!   the TypeScript side returns ([`ToJs`]).
 
 mod apply;
+mod ingest;
+mod js;
 mod jsonl;
+mod ngram;
 mod query;
+mod range;
+mod row_codec;
+mod rows;
 mod schema;
+mod scopes;
 mod sql;
+mod summary;
+mod tombstone;
 
 use std::path::Path;
 
@@ -27,13 +41,24 @@ use rusqlite::Connection;
 use rusqlite::config::DbConfig;
 use schema::SchemaOutcome;
 
-pub use apply::{ApplyRowsResult, DeleteRange};
-pub use query::{MinuteStatsRow, ScopeFilters};
+pub use apply::ApplyRowsResult;
+pub use ingest::{CharMinuteInput, MatrixMinuteInput, MinuteStatsInput, ScopeInput, SessionInput};
+pub use js::ToJs;
+pub use ngram::Gram;
+pub use query::ScopeFilters;
+pub use range::AppAggregate;
+pub use rows::{
+    ActivityCell, BksMinuteRow, DailySummary, IntervalDailySummary, KeyboardSummary, LayerUsageRow,
+    LongestSession, MatrixCellDailyRow, MatrixCellRow, MatrixCounts, MatrixDurationCellRow, MinuteStatsRow,
+    NamedTotals, NgramMinuteCellRow, Overlap, PeakAt, PeakDay, PeakRecords, RemoteDeviceInfo,
+    RolloverMinuteRow, SessionRow, TypingTestRun,
+};
 pub use schema::{DATA_TABLE_NAMES, SCHEMA_VERSION};
+pub use tombstone::{DeleteRange, TombstoneResult};
 
-/// Statements kept prepared per connection; above the number this crate
-/// uses, so none is ever re-prepared.
-const STATEMENT_CACHE_CAPACITY: usize = 32;
+/// Statements kept prepared per connection; above the number of statements
+/// in sql.rs, so none is ever re-prepared.
+const STATEMENT_CACHE_CAPACITY: usize = 128;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -138,7 +163,8 @@ impl TypingAnalyticsDb {
     /// Apply one day file of `machine_hash` and tombstone its rows inside
     /// `ranges` (that device's deleted ranges, clipped to the file's UTC
     /// day) in the same transaction, so a reader never sees an in-range row
-    /// live. With no ranges this is [`Self::apply_day_jsonl`].
+    /// live. A failure of either leaves nothing of the file applied. With
+    /// no ranges this is [`Self::apply_day_jsonl`].
     pub fn apply_day_jsonl_hiding_ranges(
         &mut self,
         text: &str,
@@ -154,19 +180,20 @@ impl TypingAnalyticsDb {
         let tx = self.conn.savepoint()?;
         let result =
             if rows.is_empty() { ApplyRowsResult::default() } else { apply::apply_rows(&tx, &rows)? };
-        apply::tombstone_ranges(&tx, uid, machine_hash, ranges, updated_at)?;
+        tombstone::tombstone_ranges(&tx, uid, machine_hash, ranges, updated_at)?;
         tx.commit()?;
         Ok(result)
     }
 
-    pub fn minute_stats_in_range(
-        &self,
-        uid: &str,
-        since_ms: i64,
-        until_ms: i64,
-        filters: &ScopeFilters,
-    ) -> Result<Vec<MinuteStatsRow>, Error> {
-        query::minute_stats_in_range(&self.conn, uid, since_ms, until_ms, filters)
+    /// Delete every row of the data tables, keeping the schema and the meta
+    /// table (`truncateCache`, cache-rebuild.ts), in one transaction.
+    pub fn truncate_cache(&mut self) -> Result<(), Error> {
+        let tx = self.conn.savepoint()?;
+        for table in DATA_TABLE_NAMES {
+            tx.execute_batch(&format!("DELETE FROM {table}"))?;
+        }
+        tx.commit()?;
+        Ok(())
     }
 
     /// The bundled SQLite version and this connection's journal mode and

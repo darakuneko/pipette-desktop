@@ -2979,6 +2979,8 @@ dependencies = [
 name = "pipette-typing-analytics-db"
 version = "0.0.0"
 dependencies = [
+ "pipette-js-json",
+ "pipette-time",
  "rusqlite",
  "serde",
  "serde_json",

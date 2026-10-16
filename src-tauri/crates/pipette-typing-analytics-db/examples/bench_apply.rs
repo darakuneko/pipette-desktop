@@ -44,8 +44,9 @@ fn run_queries(db: &TypingAnalyticsDb, queries: &Value) -> Vec<Value> {
             let rows = db
                 .minute_stats_in_range(
                     q["uid"].as_str().unwrap(),
-                    q["sinceMs"].as_i64().unwrap(),
-                    q["untilMs"].as_i64().unwrap(),
+                    None,
+                    q["sinceMs"].as_f64().unwrap(),
+                    q["untilMs"].as_f64().unwrap(),
                     &filters,
                 )
                 .unwrap();

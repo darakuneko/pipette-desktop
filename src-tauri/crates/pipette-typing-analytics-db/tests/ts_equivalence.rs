@@ -71,8 +71,9 @@ pub fn assert_queries(db: &TypingAnalyticsDb, queries: &Value, label: &str) {
         let rows = db
             .minute_stats_in_range(
                 q["uid"].as_str().unwrap(),
-                i64_of(q, "sinceMs"),
-                i64_of(q, "untilMs"),
+                None,
+                q["sinceMs"].as_f64().unwrap(),
+                q["untilMs"].as_f64().unwrap(),
                 &filters,
             )
             .unwrap();
