@@ -249,7 +249,7 @@ impl Harness {
                 ];
                 let (recorder, user_data) = (recorder.clone(), user_data.clone());
                 let hash = ready.machine_hash.clone();
-                let value = ready
+                let json = ready
                     .db
                     .call(move |db| {
                         let cx = Context {
@@ -265,7 +265,7 @@ impl Harness {
                     .await
                     .unwrap()
                     .map_err(error)?;
-                return Ok(Some(value));
+                return Ok(Some(pipette_js_json::parse(&json).unwrap()));
             }
             "failUnlink" => {
                 self.unlink_failures.lock().unwrap().insert(user_data.join(text(step, "path")));

@@ -328,16 +328,18 @@ async fn answer_calls(device: &Device, calls: &[Value]) -> Value {
                     let arg = |i: usize| args.get(i).cloned().unwrap_or(Value::Null);
                     let answer = match member {
                         "typingAnalyticsListLocalDeviceDays" => {
-                            Ok(local_device_days(&user_data, &arg(0), &arg(1)))
+                            Ok(pipette_js_json::stringify(&local_device_days(&user_data, &arg(0), &arg(1))))
                         }
                         "typingAnalyticsListKeymapSnapshots" => {
                             snapshot_summaries_request(&user_data, &arg(0), || Ok(hash.clone()))
+                                .map(|value| pipette_js_json::stringify(&value))
                                 .map_err(|err| err.to_string())
                         }
                         "typingAnalyticsGetKeymapSnapshotForRange" => {
                             snapshot_for_range_request(&user_data, &arg(0), &arg(1), &arg(2), || {
                                 Ok(hash.clone())
                             })
+                            .map(|value| pipette_js_json::stringify(&value))
                             .map_err(|err| err.to_string())
                         }
                         _ => Query::from_member(member)
@@ -346,10 +348,7 @@ async fn answer_calls(device: &Device, calls: &[Value]) -> Value {
                             .map_err(|err| err.to_string()),
                     };
                     let mut out = call.as_object().unwrap().clone();
-                    out.insert(
-                        "response",
-                        answer.map_or(Value::Null, |value| Value::from(pipette_js_json::stringify(&value))),
-                    );
+                    out.insert("response", answer.map_or(Value::Null, Value::from));
                     Value::Object(out)
                 })
                 .collect::<Vec<_>>()

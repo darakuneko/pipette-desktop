@@ -63,7 +63,7 @@ async fn answer_with(
     let ready = analytics.ready().await?;
     let user_data = analytics.user_data().to_path_buf();
     let own_hash = ready.machine_hash.clone();
-    let value = ready
+    let text = ready
         .db
         .call(move |db| {
             let release = os_release();
@@ -78,7 +78,7 @@ async fn answer_with(
             query.answer(&args, &cx)
         })
         .await??;
-    Ok(Response::new(pipette_js_json::stringify(&value)))
+    Ok(Response::new(text))
 }
 
 /// A command per member of a [`Family`]: the plain and `…Local` forms take

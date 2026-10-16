@@ -42,10 +42,10 @@ pub(super) fn app_range_args(args: Args<'_>) -> Result<Range<'_>, Value> {
 /// `GetWpmByAppForRange` `(uid, sinceMs, untilMs, scope)` and
 /// `ListTypingTestRunsForRange` with `typingTestScopes` after them
 /// (`parseAppRangeArgs`): the window widened to whole minutes.
-pub(super) fn app_range(query: Query, args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
+pub(super) fn app_range(query: Query, args: Args<'_>, cx: &Context<'_>) -> Result<String, crate::Error> {
     let r = match app_range_args(args) {
         Ok(r) => r,
-        Err(rejected) => return Ok(rejected),
+        Err(rejected) => return Ok(pipette_js_json::stringify(&rejected)),
     };
     let hash = r.scope.machine_hash(cx.own_hash);
     let (since, until) = (floor_minute(r.since), ceil_minute(r.until));
@@ -185,10 +185,10 @@ pub(super) fn bigram_aggregate(args: Args<'_>, cx: &Context<'_>) -> Result<Value
 }
 
 /// `ListRolloverMinutes(uid, scope, sinceMs, untilMs, …filters)`.
-pub(super) fn rollover_minutes(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
+pub(super) fn rollover_minutes(args: Args<'_>, cx: &Context<'_>) -> Result<String, crate::Error> {
     let s = match scoped_range_args(args) {
         Ok(r) => scoped(r, args.filters(4), cx),
-        Err(rejected) => return Ok(rejected),
+        Err(rejected) => return Ok(pipette_js_json::stringify(&rejected)),
     };
     Ok(js(cx.db.rollover_minutes(s.uid, s.hash.as_deref(), s.since, s.until, &s.filters)?))
 }

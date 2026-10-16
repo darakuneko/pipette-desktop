@@ -217,6 +217,22 @@ impl Args<'_> {
     }
 }
 
+/// [`ToJs::to_js`], checking that [`ToJs::write_json`] writes the same text
+/// as stringifying it.
+trait CheckedJs {
+    fn checked_js(&self) -> JsValue;
+}
+
+impl<T: ToJs + ?Sized> CheckedJs for T {
+    fn checked_js(&self) -> JsValue {
+        let value = self.to_js();
+        let mut text = String::new();
+        self.write_json(&mut text);
+        assert_eq!(text, pipette_js_json::stringify(&value));
+        value
+    }
+}
+
 /// Runs a call recorded by the method fixtures on `db`, by its TypeScript
 /// method name and arguments, and returns its answer in canonical form.
 pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Value {
@@ -227,9 +243,9 @@ pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Val
     let hash = hash.as_deref();
     let base = method.trim_end_matches("AndHash");
     let js = match base {
-        "listLocalKeyboardUids" => db.local_keyboard_uids(a.str(0)).unwrap().to_js(),
-        "listKeyboardsWithTypingData" => db.keyboards_with_typing_data().unwrap().to_js(),
-        "listRemoteDeviceInfosForUid" => db.remote_device_infos(a.str(0), a.str(1)).unwrap().to_js(),
+        "listLocalKeyboardUids" => db.local_keyboard_uids(a.str(0)).unwrap().checked_js(),
+        "listKeyboardsWithTypingData" => db.keyboards_with_typing_data().unwrap().checked_js(),
+        "listRemoteDeviceInfosForUid" => db.remote_device_infos(a.str(0), a.str(1)).unwrap().checked_js(),
         "aggregateMatrixCountsForUid" => {
             return matrix_counts(&db.matrix_counts_since(a.str(0), a.str(1), a.num(2), a.num(3)).unwrap());
         }
@@ -239,43 +255,45 @@ pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Val
                 .unwrap();
             return matrix_counts(&cells);
         }
-        "listDailySummariesForUid" => db.daily_summaries(a.str(0), hash, &a.filters(rest)).unwrap().to_js(),
-        "listIntervalSummariesForUid" => db.interval_summaries(a.str(0), hash).unwrap().to_js(),
+        "listDailySummariesForUid" => {
+            db.daily_summaries(a.str(0), hash, &a.filters(rest)).unwrap().checked_js()
+        }
+        "listIntervalSummariesForUid" => db.interval_summaries(a.str(0), hash).unwrap().checked_js(),
         "listActivityGridForUid" => db
             .activity_grid(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listLayerUsageForUid" => db
             .layer_usage(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listMatrixCellsForUid" => db
             .matrix_cells(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listMatrixDurationCellsForUid" => db
             .matrix_duration_cells(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listMatrixCellsByDayForUid" => db
             .matrix_cells_by_day(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listMinuteStatsInRangeForUid" => db
             .minute_stats_in_range(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listSessionsInRangeForUid" => {
-            db.sessions_in_range(a.str(0), hash, a.num(rest), a.num(rest + 1)).unwrap().to_js()
+            db.sessions_in_range(a.str(0), hash, a.num(rest), a.num(rest + 1)).unwrap().checked_js()
         }
         "listBksMinuteInRangeForUid" => db
             .backspace_minutes(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "getPeakRecordsInRangeForUid" => db
             .peak_records(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
             .unwrap()
-            .to_js(),
+            .checked_js(),
         "listNgramMinutesInRangeForUid" => {
             // The gram comes first, so the uid and hash move one along.
             let gram = if a.num(0) == 2.0 { Gram::Bigram } else { Gram::Trigram };
@@ -289,11 +307,12 @@ pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Val
                 &a.filters(rest + 2),
             )
             .unwrap()
-            .to_js()
+            .checked_js()
         }
-        "listRolloverMinutesInRange" => {
-            db.rollover_minutes(a.str(0), a.opt_str(1), a.num(2), a.num(3), &a.filters(4)).unwrap().to_js()
-        }
+        "listRolloverMinutesInRange" => db
+            .rollover_minutes(a.str(0), a.opt_str(1), a.num(2), a.num(3), &a.filters(4))
+            .unwrap()
+            .checked_js(),
         "listAppsForUidInRange"
         | "listTypingTestsForUidInRange"
         | "getAppUsageForUidInRange"
@@ -304,11 +323,12 @@ pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Val
                 "getAppUsageForUidInRange" => AppAggregate::AppUsage,
                 _ => AppAggregate::WpmByApp,
             };
-            db.app_aggregate(aggregate, a.str(0), a.opt_str(1), a.num(2), a.num(3)).unwrap().to_js()
+            db.app_aggregate(aggregate, a.str(0), a.opt_str(1), a.num(2), a.num(3)).unwrap().checked_js()
         }
-        "listTypingTestRunsForUidInRange" => {
-            db.typing_test_runs(a.str(0), a.opt_str(1), a.num(2), a.num(3), &a.strings(4)).unwrap().to_js()
-        }
+        "listTypingTestRunsForUidInRange" => db
+            .typing_test_runs(a.str(0), a.opt_str(1), a.num(2), a.num(3), &a.strings(4))
+            .unwrap()
+            .checked_js(),
         "upsertScope" => {
             db.upsert_scope(&a.parse::<ScopeInput>(0)).unwrap();
             JsValue::Null
@@ -339,12 +359,12 @@ pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Val
                     cutoff_ms: r["cutoffMs"].as_i64().unwrap(),
                 })
                 .collect();
-            db.tombstone_ranges_for_uid_hash(a.str(0), a.str(1), &ranges, a.int(3)).unwrap().to_js()
+            db.tombstone_ranges_for_uid_hash(a.str(0), a.str(1), &ranges, a.int(3)).unwrap().checked_js()
         }
         "tombstoneAllRowsForUidHash" => {
-            db.tombstone_all_for_uid_hash(a.str(0), a.str(1), a.int(2)).unwrap().to_js()
+            db.tombstone_all_for_uid_hash(a.str(0), a.str(1), a.int(2)).unwrap().checked_js()
         }
-        "tombstoneAllRowsForUid" => db.tombstone_all_for_uid(a.str(0), a.int(1)).unwrap().to_js(),
+        "tombstoneAllRowsForUid" => db.tombstone_all_for_uid(a.str(0), a.int(1)).unwrap().checked_js(),
         "truncateCache" => {
             db.truncate_cache().unwrap();
             JsValue::Null
