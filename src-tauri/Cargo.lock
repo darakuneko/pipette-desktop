@@ -2759,6 +2759,7 @@ dependencies = [
  "hex",
  "log",
  "lzma-rs",
+ "pipette-active-window",
  "pipette-app-config",
  "pipette-entry-store",
  "pipette-fs",
@@ -2962,6 +2963,7 @@ dependencies = [
 name = "pipette-typing-analytics"
 version = "0.0.0"
 dependencies = [
+ "indexmap 2.14.2",
  "log",
  "pipette-entry-store",
  "pipette-fs",

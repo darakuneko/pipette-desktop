@@ -14,7 +14,7 @@ pub use paths::{
     list_all_device_day_jsonl_files, list_deleted_ranges_hashes, list_device_days, utc_day_boundary_ms,
     utc_day_from_ms,
 };
-pub use reader_writer::{ReadResult, append_rows_to_file, read_rows};
+pub use reader_writer::{ReadResult, append_lines_to_file, append_rows_to_file, read_rows};
 pub use row::{
     HIST_BUCKETS, JsonlRow, RowKind, bigram_minute_row_id, char_minute_row_id, matrix_minute_row_id,
     minute_stats_row_id, scope_row_id, serialize_row, session_row_id, trigram_minute_row_id,

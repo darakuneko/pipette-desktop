@@ -1,0 +1,1031 @@
+{
+  "machineId": "golden-machine",
+  "installationId": "0f1e2d3c-4b5a-4697-8877-665544332211",
+  "ownHash": "65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527",
+  "os": {
+    "platform": "linux",
+    "release": "6.8.0-golden",
+    "arch": "x64"
+  },
+  "sessionIds": [
+    "00000000-0000-4000-8000-000000000000",
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+    "00000000-0000-4000-8000-000000000003",
+    "00000000-0000-4000-8000-000000000004",
+    "00000000-0000-4000-8000-000000000005",
+    "00000000-0000-4000-8000-000000000006",
+    "00000000-0000-4000-8000-000000000007",
+    "00000000-0000-4000-8000-000000000008",
+    "00000000-0000-4000-8000-000000000009",
+    "00000000-0000-4000-8000-000000000010",
+    "00000000-0000-4000-8000-000000000011",
+    "00000000-0000-4000-8000-000000000012",
+    "00000000-0000-4000-8000-000000000013",
+    "00000000-0000-4000-8000-000000000014",
+    "00000000-0000-4000-8000-000000000015"
+  ],
+  "freshSyncState": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\n  \"uploaded\": {},\n  \"reconciled_at\": {},\n  \"last_synced_at\": 0\n}",
+  "scenarios": [
+    {
+      "name": "recording",
+      "start": 1792108690000,
+      "appNames": [
+        "Code",
+        "Code",
+        "Firefox",
+        null,
+        "Terminal \u0007 ",
+        "Code"
+      ],
+      "steps": [
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "a",
+            "ts": 1792108690100,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108690200,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "action": "tap",
+            "overlap": false,
+            "pollGapMs": 8
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 2,
+            "layer": 0,
+            "keycode": 5,
+            "ts": 1792108690350,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "overlap": true,
+            "pollGapMs": 12
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 3,
+            "layer": 0,
+            "keycode": 6,
+            "ts": 1792108690350,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "overlap": true
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 1,
+            "col": 0,
+            "layer": 0,
+            "keycode": 28672,
+            "ts": 1792108690500,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "action": "hold",
+            "pollGapMs": 15
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108690700,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 2,
+            "layer": 0,
+            "keycode": 5,
+            "ts": 1792108690900,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "overlap": false,
+            "pollGapMs": 9
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 3,
+            "layer": 0,
+            "keycode": 6,
+            "ts": 1792108691100,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix-release",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108691150,
+            "durationMs": 120,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix-release",
+            "row": 0,
+            "col": 2,
+            "layer": 0,
+            "keycode": 5,
+            "ts": 1792108691160,
+            "durationMs": 45.5,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "",
+            "ts": 1792108691170,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": -1,
+            "col": 0,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108691170,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix-release",
+            "row": 0,
+            "col": 0,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108691170,
+            "durationMs": 0,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "z",
+            "ts": 1792108691170,
+            "keyboard": {
+              "uid": "",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "x",
+            "ts": 1792108691200,
+            "keyboard": {
+              "uid": "0xCCDD",
+              "vendorId": 4660,
+              "productId": 1,
+              "productName": "Other \"60\" 日本"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 2,
+            "col": 2,
+            "layer": 0,
+            "keycode": 30,
+            "ts": 1792108691300,
+            "keyboard": {
+              "uid": "0xCCDD",
+              "vendorId": 4660,
+              "productId": 1,
+              "productName": "Other \"60\" 日本"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108691400,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "runId": "run-1",
+            "typingTest": "words (english)"
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 2,
+            "layer": 0,
+            "keycode": 5,
+            "ts": 1792108691500,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            },
+            "runId": "run-1",
+            "typingTest": "words (english)"
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 3,
+            "col": 3,
+            "layer": 0,
+            "keycode": 1e+21,
+            "ts": 1792108691600,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 3,
+            "col": 4,
+            "layer": 0,
+            "keycode": 4.5,
+            "ts": 1792108691700,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 3,
+            "col": 5,
+            "layer": 0,
+            "keycode": 0,
+            "ts": 1792108691750,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "日",
+            "ts": 1792108691800,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "|",
+            "ts": 1792108691900,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "ms": 1000
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "a",
+            "ts": 1792108692000,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "ms": 60000
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108695000,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "ms": 1000
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "b",
+            "ts": 1792108798000,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108801000,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix-release",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792108801500,
+            "durationMs": 300,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "flush",
+          "uid": "0xAABB"
+        },
+        {
+          "op": "flush",
+          "uid": ""
+        },
+        {
+          "op": "flush",
+          "uid": 7
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "c",
+            "ts": 1792108805000,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "ms": 360000
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "q",
+            "ts": 1792108690200,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "y",
+            "ts": 1792109120000,
+            "keyboard": {
+              "uid": "0xCCDD",
+              "vendorId": 4660,
+              "productId": 1,
+              "productName": "Other \"60\" 日本"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "ms": 1000
+        },
+        {
+          "op": "quit"
+        },
+        {
+          "op": "quit"
+        }
+      ],
+      "expected": {
+        "pendingWork": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          false
+        ],
+        "unitCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          2,
+          3,
+          3,
+          3,
+          3,
+          5,
+          5,
+          5,
+          5,
+          6,
+          6,
+          6,
+          7,
+          9,
+          9
+        ],
+        "units": [
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-15",
+          "keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-15",
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-15",
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-15",
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-15",
+          "keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-15"
+        ],
+        "files": {
+          "sync/keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-15.jsonl": "{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|\",\"kind\":\"minute-stats\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"keystrokes\":14,\"activeMs\":1900,\"intervalAvgMs\":146,\"intervalMinMs\":0,\"intervalP25Ms\":100,\"intervalP50Ms\":100,\"intervalP75Ms\":200,\"intervalMaxMs\":500,\"pollP50Ms\":9,\"pollP95Ms\":12,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||a\",\"kind\":\"char-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"char\":\"a\",\"count\":2,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||%E6%97%A5\",\"kind\":\"char-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"char\":\"日\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||%7C\",\"kind\":\"char-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"char\":\"|\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":2,\"tapCount\":1,\"holdCount\":0,\"dh\":[0,0,0,1,0,0,0,0],\"ds\":120,\"dq\":14400,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||0|2|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":2,\"layer\":0,\"keycode\":5,\"count\":2,\"tapCount\":0,\"holdCount\":0,\"dh\":[1,0,0,0,0,0,0,0],\"ds\":45.5,\"dq\":2070.25,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||0|3|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":3,\"layer\":0,\"keycode\":6,\"count\":2,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||1|0|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":1,\"col\":0,\"layer\":0,\"keycode\":28672,\"count\":1,\"tapCount\":0,\"holdCount\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||3|3|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":3,\"col\":3,\"layer\":0,\"keycode\":1e+21,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||3|4|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":3,\"col\":4,\"layer\":0,\"keycode\":4.5,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||3|5|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":3,\"col\":5,\"layer\":0,\"keycode\":0,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"bigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|\",\"kind\":\"bigram-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"bigrams\":{\"4_5\":{\"c\":2,\"h\":[0,0,0,1,1,0,0,0],\"s\":350,\"sq\":62500,\"oc\":1,\"on\":2},\"5_6\":{\"c\":1,\"h\":[0,0,0,0,1,0,0,0],\"s\":200,\"sq\":40000,\"oc\":1,\"on\":1},\"1e+21_4.5\":{\"c\":1,\"h\":[0,0,1,0,0,0,0,0],\"s\":100,\"sq\":10000},\"4.5_0\":{\"c\":1,\"h\":[1,0,0,0,0,0,0,0],\"s\":50,\"sq\":2500}},\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"trigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|\",\"kind\":\"trigram-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"trigrams\":{\"4_5_6\":{\"c\":1,\"h\":[0,0,0,0,1,0,0,0],\"s\":200,\"sq\":40000},\"1e+21_4.5_0\":{\"c\":1,\"h\":[0,1,0,0,0,0,0,0],\"s\":75,\"sq\":5625}},\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|run-1\",\"kind\":\"minute-stats\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"keystrokes\":2,\"activeMs\":100,\"intervalAvgMs\":100,\"intervalMinMs\":100,\"intervalP25Ms\":100,\"intervalP50Ms\":100,\"intervalP75Ms\":100,\"intervalMaxMs\":100,\"appName\":\"Code\",\"typingTest\":\"words (english)\",\"runId\":\"run-1\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|run-1|0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":\"words (english)\",\"runId\":\"run-1\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|run-1|0|2|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":2,\"layer\":0,\"keycode\":5,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":\"words (english)\",\"runId\":\"run-1\"}}\n{\"id\":\"bigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|run-1\",\"kind\":\"bigram-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"bigrams\":{\"4_5\":{\"c\":1,\"h\":[0,0,1,0,0,0,0,0],\"s\":100,\"sq\":10000}},\"appName\":\"Code\",\"typingTest\":\"words (english)\",\"runId\":\"run-1\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792108751000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|\",\"kind\":\"minute-stats\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"keystrokes\":15,\"activeMs\":4900,\"intervalAvgMs\":350,\"intervalMinMs\":0,\"intervalP25Ms\":100,\"intervalP50Ms\":100,\"intervalP75Ms\":200,\"intervalMaxMs\":3000,\"pollP50Ms\":9,\"pollP95Ms\":12,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||a\",\"kind\":\"char-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"char\":\"a\",\"count\":2,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||%E6%97%A5\",\"kind\":\"char-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"char\":\"日\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||%7C\",\"kind\":\"char-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"char\":\"|\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":3,\"tapCount\":1,\"holdCount\":0,\"dh\":[0,0,0,1,0,0,0,0],\"ds\":120,\"dq\":14400,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||0|2|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":2,\"layer\":0,\"keycode\":5,\"count\":2,\"tapCount\":0,\"holdCount\":0,\"dh\":[1,0,0,0,0,0,0,0],\"ds\":45.5,\"dq\":2070.25,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||0|3|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":0,\"col\":3,\"layer\":0,\"keycode\":6,\"count\":2,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||1|0|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":1,\"col\":0,\"layer\":0,\"keycode\":28672,\"count\":1,\"tapCount\":0,\"holdCount\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||3|3|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":3,\"col\":3,\"layer\":0,\"keycode\":1e+21,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||3|4|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":3,\"col\":4,\"layer\":0,\"keycode\":4.5,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000||3|5|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"row\":3,\"col\":5,\"layer\":0,\"keycode\":0,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"bigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|\",\"kind\":\"bigram-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"bigrams\":{\"4_5\":{\"c\":2,\"h\":[0,0,0,1,1,0,0,0],\"s\":350,\"sq\":62500,\"oc\":1,\"on\":2},\"5_6\":{\"c\":1,\"h\":[0,0,0,0,1,0,0,0],\"s\":200,\"sq\":40000,\"oc\":1,\"on\":1},\"1e+21_4.5\":{\"c\":1,\"h\":[0,0,1,0,0,0,0,0],\"s\":100,\"sq\":10000},\"4.5_0\":{\"c\":1,\"h\":[1,0,0,0,0,0,0,0],\"s\":50,\"sq\":2500}},\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"trigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108680000|\",\"kind\":\"trigram-minute\",\"updated_at\":1792108752000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108680000,\"trigrams\":{\"4_5_6\":{\"c\":1,\"h\":[0,0,0,0,1,0,0,0],\"s\":200,\"sq\":40000},\"1e+21_4.5_0\":{\"c\":1,\"h\":[0,1,0,0,0,0,0,0],\"s\":75,\"sq\":5625}},\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792108752000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108740000|\",\"kind\":\"minute-stats\",\"updated_at\":1792108752001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108740000,\"keystrokes\":1,\"activeMs\":0,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108740000||b\",\"kind\":\"char-minute\",\"updated_at\":1792108752001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108740000,\"char\":\"b\",\"count\":1,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000000\",\"kind\":\"session\",\"updated_at\":1792108752001,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000000\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"startMs\":1792108690100,\"endMs\":1792108801000}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792108752001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000002\",\"kind\":\"session\",\"updated_at\":1792109113001,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"startMs\":1792108690200,\"endMs\":1792108805000}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792109113001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n",
+          "sync/keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-16.jsonl": "{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108800000|\",\"kind\":\"minute-stats\",\"updated_at\":1792108752001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108800000,\"keystrokes\":1,\"activeMs\":0,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108800000||0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108752001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108800000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,0,0,0,0,0,1,0],\"ds\":300,\"dq\":90000,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792108752001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108800000|\",\"kind\":\"minute-stats\",\"updated_at\":1792109112000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108800000,\"keystrokes\":2,\"activeMs\":4000,\"intervalAvgMs\":4000,\"intervalMinMs\":4000,\"intervalP25Ms\":4000,\"intervalP50Ms\":4000,\"intervalP75Ms\":4000,\"intervalMaxMs\":4000,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108800000||c\",\"kind\":\"char-minute\",\"updated_at\":1792109112000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108800000,\"char\":\"c\",\"count\":1,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792108800000||0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792109112000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792108800000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,0,0,0,0,0,1,0],\"ds\":300,\"dq\":90000,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792109112000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n",
+          "sync/keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-15.jsonl": "{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792108680000|\",\"kind\":\"minute-stats\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792108680000,\"keystrokes\":2,\"activeMs\":100,\"intervalAvgMs\":100,\"intervalMinMs\":100,\"intervalP25Ms\":100,\"intervalP50Ms\":100,\"intervalP75Ms\":100,\"intervalMaxMs\":100,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792108680000||x\",\"kind\":\"char-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792108680000,\"char\":\"x\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792108680000||2|2|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792108751000,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792108680000,\"row\":2,\"col\":2,\"layer\":0,\"keycode\":30,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792108751000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000001\",\"kind\":\"session\",\"updated_at\":1792109113000,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"startMs\":1792108691200,\"endMs\":1792108691300}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792109113000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n",
+          "sync/keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-16.jsonl": "{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792109100000|\",\"kind\":\"minute-stats\",\"updated_at\":1792109113001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792109100000,\"keystrokes\":1,\"activeMs\":0,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792109100000||y\",\"kind\":\"char-minute\",\"updated_at\":1792109113001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792109100000,\"char\":\"y\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000003\",\"kind\":\"session\",\"updated_at\":1792109113001,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"startMs\":1792109120000,\"endMs\":1792109120000}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792109113001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n",
+          "local/typing-analytics/sync_state.json": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\n  \"uploaded\": {},\n  \"reconciled_at\": {},\n  \"last_synced_at\": 1792109113001\n}"
+        },
+        "tables": {
+          "typing_char_minute": {
+            "count": 7,
+            "sha256": "1fcc5f2be6079d22b795c76e5875fa70c1acc43f196f73c4789d8debc71501ba",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:61|i:2|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:7c|i:1|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:e697a5|i:1|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108740000|t:62|i:1|n|n|t:|i:1792108752001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108800000|t:63|i:1|n|n|t:|i:1792109112000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792108680000|t:78|i:1|t:436f6465|n|t:|i:1792108751000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792109100000|t:79|i:1|t:436f6465|n|t:|i:1792109113001|i:0"
+            ]
+          },
+          "typing_matrix_minute": {
+            "count": 11,
+            "sha256": "f0e1b5d83d7896c35c014fc1924f858a08f3bd0cb15d9cad8b68ac35dd03c69c",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:0|i:1|i:0|i:4|i:3|i:1|i:0|b:0000000000000000000000000100000000000000000000000000000000000000|r:405e000000000000|r:40cc200000000000|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:0|i:2|i:0|i:5|i:2|i:0|i:0|b:0100000000000000000000000000000000000000000000000000000000000000|r:4046c00000000000|r:40a02c8000000000|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:0|i:3|i:0|i:6|i:2|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:1|i:0|i:0|i:28672|i:1|i:0|i:1|n|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:3|i:3|i:0|r:444b1ae4d6e2ef50|i:1|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:3|i:4|i:0|r:4012000000000000|i:1|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:3|i:5|i:0|i:0|i:1|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:0|i:1|i:0|i:4|i:1|i:0|i:0|n|n|n|t:436f6465|t:776f7264732028656e676c69736829|t:72756e2d31|i:1792108751000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:0|i:2|i:0|i:5|i:1|i:0|i:0|n|n|n|t:436f6465|t:776f7264732028656e676c69736829|t:72756e2d31|i:1792108751000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108800000|i:0|i:1|i:0|i:4|i:1|i:0|i:0|b:0000000000000000000000000000000000000000000000000100000000000000|r:4072c00000000000|r:40f5f90000000000|n|n|t:|i:1792109112000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792108680000|i:2|i:2|i:0|i:30|i:1|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792108751000|i:0"
+            ]
+          },
+          "typing_minute_stats": {
+            "count": 6,
+            "sha256": "ac9172e990c2c227756dcc5792785c3c8a6e472fa38d0eb98848ef2968965351",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:15|i:4900|i:350|i:0|i:100|i:100|i:200|i:3000|t:436f6465|n|t:|r:4022000000000000|r:4028000000000000|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|i:2|i:100|i:100|i:100|i:100|i:100|i:100|i:100|t:436f6465|t:776f7264732028656e676c69736829|t:72756e2d31|n|n|i:1792108751000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108740000|i:1|i:0|n|n|n|n|n|n|n|n|t:|n|n|i:1792108752001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108800000|i:2|i:4000|i:4000|i:4000|i:4000|i:4000|i:4000|i:4000|n|n|t:|n|n|i:1792109112000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792108680000|i:2|i:100|i:100|i:100|i:100|i:100|i:100|i:100|t:436f6465|n|t:|n|n|i:1792108751000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792109100000|i:1|i:0|n|n|n|n|n|n|t:436f6465|n|t:|n|n|i:1792109113001|i:0"
+            ]
+          },
+          "typing_bigram_minute": {
+            "count": 5,
+            "sha256": "fc6395506a06572ab1dbdb510f2d527896770367020e91e4760977386d85360c",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:31652b32315f342e35|i:1|b:0000000000000000010000000000000000000000000000000000000000000000|r:4059000000000000|r:40c3880000000000|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:342e355f30|i:1|b:0100000000000000000000000000000000000000000000000000000000000000|r:4049000000000000|r:40a3880000000000|n|n|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:345f35|i:2|b:0000000000000000000000000100000001000000000000000000000000000000|r:4075e00000000000|r:40ee848000000000|i:1|i:2|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:355f36|i:1|b:0000000000000000000000000000000001000000000000000000000000000000|r:4069000000000000|r:40e3880000000000|i:1|i:1|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:345f35|i:1|b:0000000000000000010000000000000000000000000000000000000000000000|r:4059000000000000|r:40c3880000000000|n|n|t:436f6465|t:776f7264732028656e676c69736829|t:72756e2d31|i:1792108751000|i:0"
+            ]
+          },
+          "typing_trigram_minute": {
+            "count": 2,
+            "sha256": "d424fc81ca25c82852c066db694d11c12897a40d0df9325db9c52325c83546d0",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:31652b32315f342e355f30|i:1|b:0000000001000000000000000000000000000000000000000000000000000000|r:4052c00000000000|r:40b5f90000000000|t:436f6465|n|t:|i:1792108752000|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108680000|t:345f355f36|i:1|b:0000000000000000000000000000000001000000000000000000000000000000|r:4069000000000000|r:40e3880000000000|t:436f6465|n|t:|i:1792108752000|i:0"
+            ]
+          },
+          "typing_sessions": {
+            "count": 4,
+            "sha256": "ab73f48fd4b8d6041dcfc64e2ed31726413f1e8b2187de4b9baccb23606f1e64",
+            "rows": [
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303030|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108690100|i:1792108801000|i:1792108752001|i:0",
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303031|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792108691200|i:1792108691300|i:1792109113000|i:0",
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303032|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792108690200|i:1792108805000|i:1792109113001|i:0",
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303033|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792109120000|i:1792109120000|i:1792109113001|i:0"
+            ]
+          },
+          "typing_scopes": {
+            "count": 2,
+            "sha256": "41155fcd664a755adb9579348ebe1c5449a568deb30259a27389a2732cbaaa1f",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|t:36353232376162336435336233633335326465333361303935393166656661663031356530323434613531323239346335303838376137366465303636353237|t:6c696e7578|t:362e382e302d676f6c64656e|t:783634|t:307841414242|i:65261|i:0|t:50697065747465204b6579626f617264|i:1792109113001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|t:36353232376162336435336233633335326465333361303935393166656661663031356530323434613531323239346335303838376137366465303636353237|t:6c696e7578|t:362e382e302d676f6c64656e|t:783634|t:307843434444|i:4660|i:1|t:4f74686572202236302220e697a5e69cac|i:1792109113001|i:0"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "failed flushes",
+      "start": 1792152030000,
+      "appNames": [
+        "Code",
+        "Firefox",
+        "Code"
+      ],
+      "steps": [
+        {
+          "op": "block",
+          "path": "sync/keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-16.jsonl"
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "a",
+            "ts": 1792152030100,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 1,
+            "layer": 0,
+            "keycode": 4,
+            "ts": 1792152030200,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "matrix",
+            "row": 0,
+            "col": 2,
+            "layer": 0,
+            "keycode": 5,
+            "ts": 1792152030300,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "flush",
+          "uid": "0xAABB"
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "b",
+            "ts": 1792152030400,
+            "keyboard": {
+              "uid": "0xAABB",
+              "vendorId": 65261,
+              "productId": 0,
+              "productName": "Pipette Keyboard"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "ms": 1000
+        },
+        {
+          "op": "unblock",
+          "path": "sync/keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-16.jsonl"
+        },
+        {
+          "op": "advance",
+          "ms": 1000
+        },
+        {
+          "op": "block",
+          "path": "sync/keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-17.jsonl"
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "x",
+            "ts": 1792195190000,
+            "keyboard": {
+              "uid": "0xCCDD",
+              "vendorId": 4660,
+              "productId": 1,
+              "productName": "Other \"60\" 日本"
+            }
+          }
+        },
+        {
+          "op": "event",
+          "payload": {
+            "kind": "char",
+            "key": "y",
+            "ts": 1792195205000,
+            "keyboard": {
+              "uid": "0xCCDD",
+              "vendorId": 4660,
+              "productId": 1,
+              "productName": "Other \"60\" 日本"
+            }
+          }
+        },
+        {
+          "op": "flush",
+          "uid": "0xCCDD"
+        },
+        {
+          "op": "unblock",
+          "path": "sync/keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-17.jsonl"
+        },
+        {
+          "op": "advance",
+          "ms": 1000
+        },
+        {
+          "op": "quit"
+        }
+      ],
+      "expected": {
+        "pendingWork": [
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false
+        ],
+        "unitCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          5
+        ],
+        "units": [
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-16",
+          "keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/days/2026-10-17"
+        ],
+        "files": {
+          "sync/keyboards/0xAABB/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-16.jsonl": "{\"id\":\"session|00000000-0000-4000-8000-000000000000\",\"kind\":\"session\",\"updated_at\":1792152032000,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000000\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"startMs\":1792152030100,\"endMs\":1792152030300}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792152032000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000|\",\"kind\":\"minute-stats\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"keystrokes\":4,\"activeMs\":300,\"intervalAvgMs\":100,\"intervalMinMs\":100,\"intervalP25Ms\":100,\"intervalP50Ms\":100,\"intervalP75Ms\":100,\"intervalMaxMs\":100,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||a\",\"kind\":\"char-minute\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"char\":\"a\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||b\",\"kind\":\"char-minute\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"char\":\"b\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||0|2|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"row\":0,\"col\":2,\"layer\":0,\"keycode\":5,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"bigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000|\",\"kind\":\"bigram-minute\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"bigrams\":{\"4_5\":{\"c\":1,\"h\":[0,0,1,0,0,0,0,0],\"s\":100,\"sq\":10000}},\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792152032001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000|\",\"kind\":\"minute-stats\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"keystrokes\":4,\"activeMs\":300,\"intervalAvgMs\":100,\"intervalMinMs\":100,\"intervalP25Ms\":100,\"intervalP50Ms\":100,\"intervalP75Ms\":100,\"intervalMaxMs\":100,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||a\",\"kind\":\"char-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"char\":\"a\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||b\",\"kind\":\"char-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"char\":\"b\",\"count\":1,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||0|1|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"row\":0,\"col\":1,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"matrix|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000||0|2|0\",\"kind\":\"matrix-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"row\":0,\"col\":2,\"layer\":0,\"keycode\":5,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"bigram|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0|1792152000000|\",\"kind\":\"bigram-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"minuteTs\":1792152000000,\"bigrams\":{\"4_5\":{\"c\":1,\"h\":[0,0,1,0,0,0,0,0],\"s\":100,\"sq\":10000}},\"appName\":\"Code\",\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000001\",\"kind\":\"session\",\"updated_at\":1792152033001,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"startMs\":1792152030400,\"endMs\":1792152030400}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xAABB%7C65261%7C0\",\"kind\":\"scope\",\"updated_at\":1792152033001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xAABB|65261|0\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":0,\"keyboardProductName\":\"Pipette Keyboard\"}}\n",
+          "sync/keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-16.jsonl": "{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792195140000|\",\"kind\":\"minute-stats\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792195140000,\"keystrokes\":1,\"activeMs\":0,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792195140000||x\",\"kind\":\"char-minute\",\"updated_at\":1792152032001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792195140000,\"char\":\"x\",\"count\":1,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000002\",\"kind\":\"session\",\"updated_at\":1792152032001,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"startMs\":1792195190000,\"endMs\":1792195205000}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792152032001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n{\"id\":\"session|00000000-0000-4000-8000-000000000002\",\"kind\":\"session\",\"updated_at\":1792152033000,\"payload\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"startMs\":1792195190000,\"endMs\":1792195205000}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792152033000,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792195140000|\",\"kind\":\"minute-stats\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792195140000,\"keystrokes\":1,\"activeMs\":0,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792195140000||x\",\"kind\":\"char-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792195140000,\"char\":\"x\",\"count\":1,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792152033001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n",
+          "sync/keyboards/0xCCDD/devices/65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527/2026-10-17.jsonl": "{\"id\":\"stats|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792195200000|\",\"kind\":\"minute-stats\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792195200000,\"keystrokes\":1,\"activeMs\":0,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"char|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1|1792195200000||y\",\"kind\":\"char-minute\",\"updated_at\":1792152033001,\"payload\":{\"scopeId\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"minuteTs\":1792195200000,\"char\":\"y\",\"count\":1,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n{\"id\":\"scope|65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527%7Clinux%7C6.8.0-golden%7C0xCCDD%7C4660%7C1\",\"kind\":\"scope\",\"updated_at\":1792152033001,\"payload\":{\"id\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527|linux|6.8.0-golden|0xCCDD|4660|1\",\"machineHash\":\"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0-golden\",\"osArch\":\"x64\",\"keyboardUid\":\"0xCCDD\",\"keyboardVendorId\":4660,\"keyboardProductId\":1,\"keyboardProductName\":\"Other \\\"60\\\" 日本\"}}\n",
+          "local/typing-analytics/sync_state.json": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"65227ab3d53b3c352de33a09591fefaf015e0244a512294c50887a76de066527\",\n  \"uploaded\": {},\n  \"reconciled_at\": {},\n  \"last_synced_at\": 1792152033001\n}"
+        },
+        "tables": {
+          "typing_char_minute": {
+            "count": 4,
+            "sha256": "97bb53b3080d76913a0ebb9666596d5fcf1ac2ab2fcc3b526ba33b7cc65a0ae9",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152000000|t:61|i:1|t:436f6465|n|t:|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152000000|t:62|i:1|t:436f6465|n|t:|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792195140000|t:78|i:1|n|n|t:|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792195200000|t:79|i:1|n|n|t:|i:1792152033001|i:0"
+            ]
+          },
+          "typing_matrix_minute": {
+            "count": 2,
+            "sha256": "71b5d4419842a0fcb8e7597c3e7b876bf3f384a4b8ce2e58d644402898ef2bb1",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152000000|i:0|i:1|i:0|i:4|i:1|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152000000|i:0|i:2|i:0|i:5|i:1|i:0|i:0|n|n|n|t:436f6465|n|t:|i:1792152033001|i:0"
+            ]
+          },
+          "typing_minute_stats": {
+            "count": 3,
+            "sha256": "79bf7ed2c97ec3cfadd799440c8ce2d83095f8405470819640d717c72b04b220",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152000000|i:4|i:300|i:100|i:100|i:100|i:100|i:100|i:100|t:436f6465|n|t:|n|n|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792195140000|i:1|i:0|n|n|n|n|n|n|n|n|t:|n|n|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792195200000|i:1|i:0|n|n|n|n|n|n|n|n|t:|n|n|i:1792152033001|i:0"
+            ]
+          },
+          "typing_bigram_minute": {
+            "count": 1,
+            "sha256": "1d7a690f8c6d69d237601ed55232945fc81fd1655fb2505638e343f552c61686",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152000000|t:345f35|i:1|b:0000000000000000010000000000000000000000000000000000000000000000|r:4059000000000000|r:40c3880000000000|n|n|t:436f6465|n|t:|i:1792152033001|i:0"
+            ]
+          },
+          "typing_trigram_minute": {
+            "count": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "rows": []
+          },
+          "typing_sessions": {
+            "count": 3,
+            "sha256": "a89d1ba42ddb286f2be04b3b14ffd6db2050d898fec1db6157aa0170b226d723",
+            "rows": [
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303030|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152030100|i:1792152030300|i:1792152032000|i:0",
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303031|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|i:1792152030400|i:1792152030400|i:1792152033001|i:0",
+              "t:30303030303030302d303030302d343030302d383030302d303030303030303030303032|t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|i:1792195190000|i:1792195205000|i:1792152033000|i:0"
+            ]
+          },
+          "typing_scopes": {
+            "count": 2,
+            "sha256": "34b3e192ac66ab76f62095e7bacb2561e2cddc604c46818d50c13c52589668f3",
+            "rows": [
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078414142427c36353236317c30|t:36353232376162336435336233633335326465333361303935393166656661663031356530323434613531323239346335303838376137366465303636353237|t:6c696e7578|t:362e382e302d676f6c64656e|t:783634|t:307841414242|i:65261|i:0|t:50697065747465204b6579626f617264|i:1792152033001|i:0",
+              "t:363532323761623364353362336333353264653333613039353931666566616630313565303234346135313232393463353038383761373664653036363532377c6c696e75787c362e382e302d676f6c64656e7c3078434344447c343636307c31|t:36353232376162336435336233633335326465333361303935393166656661663031356530323434613531323239346335303838376137366465303636353237|t:6c696e7578|t:362e382e302d676f6c64656e|t:783634|t:307843434444|i:4660|i:1|t:4f74686572202236302220e697a5e69cac|i:1792152033001|i:0"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

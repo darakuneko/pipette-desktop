@@ -66,6 +66,22 @@ pub fn flush_phase(store: PendingStore, name: &'static str, then: Duration) -> Q
     })
 }
 
+/// Writes the pending state once the quit sequence has ended, however it
+/// ended, as the before-quit handler of src/main/sync/sync-flush.ts does
+/// after its phases and after its deadline alike: a deadline that cut the
+/// sequence short skips the flushPending phase, and the units the phases
+/// before it recorded would otherwise wait for a delayed write the exit
+/// never runs. A file system that stalls the write is given up on after
+/// `timeout`, so the exit is held up by at most that.
+pub async fn persist_after_quit(store: PendingStore, timeout: Duration) {
+    let write = tokio::task::spawn_blocking(move || store.persist_now());
+    match tokio::time::timeout(timeout, write).await {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => log::error!("[sync-pending] the pending write did not finish: {err}"),
+        Err(_) => log::error!("[sync-pending] gave up on the pending write after {}ms", timeout.as_millis()),
+    }
+}
+
 /// Drops every task: the delayed writes never run, so nothing is written
 /// after a test's userData directory is gone.
 #[cfg(test)]
@@ -74,6 +90,12 @@ struct NoWrites;
 #[cfg(test)]
 impl Scheduler for NoWrites {
     fn schedule(&self, _: Duration, _: Box<dyn FnOnce() + Send>) {}
+}
+
+/// A store of `user_data` whose delayed writes never run, for the tests.
+#[cfg(test)]
+pub(crate) fn store_without_delayed_writes(user_data: &Path) -> PendingStore {
+    PendingStore::restore(user_data, Arc::new(NoWrites), Box::new(|_| {}))
 }
 
 /// [`manage`] for the tests: the delayed writes never run.

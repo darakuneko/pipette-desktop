@@ -296,9 +296,12 @@ mod tests {
         assert_eq!(text(block_on(typing_analytics_list_device_infos(state(), None))), "null");
     }
 
-    /// The analytics of a cache that needs a rebuild, which this build
-    /// cannot do, so every wait for them fails.
+    /// The analytics of a cache that needs a rebuild with a day file to
+    /// replay, which this build cannot do, so every wait for them fails.
     fn app_without_a_cache(user_data: &TempDir) -> tauri::App<tauri::test::MockRuntime> {
+        let day = user_data.path().join("sync/keyboards/0xA1/devices/h/2026-04-14.jsonl");
+        std::fs::create_dir_all(day.parent().unwrap()).unwrap();
+        std::fs::write(&day, "").unwrap();
         let app = tauri::test::mock_app();
         manage_with_machine_id(app.handle(), user_data.path(), "machine");
         app

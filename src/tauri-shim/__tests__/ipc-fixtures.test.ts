@@ -22,7 +22,7 @@ import type { HubPrivateLink } from '../../shared/types/hub-private'
 import type { I18nPackImportApplyOptions } from '../../shared/types/i18n-store'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store'
-import type { TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
+import type { TypingAnalyticsEvent, TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { VialAPI } from '../../shared/types/vial-api'
 
@@ -55,6 +55,7 @@ interface Shim {
   shell: typeof import('../api/shell')
   snapshots: typeof import('../api/snapshots')
   typingAnalyticsKeymaps: typeof import('../api/typing-analytics-keymaps')
+  typingAnalyticsRecord: typeof import('../api/typing-analytics-record')
   typingTexts: typeof import('../api/typing-texts')
   syncPending: typeof import('../api/sync-pending')
   themePacks: typeof import('../api/theme-packs')
@@ -82,6 +83,7 @@ async function load(): Promise<Shim> {
     shell: await import('../api/shell'),
     snapshots: await import('../api/snapshots'),
     typingAnalyticsKeymaps: await import('../api/typing-analytics-keymaps'),
+    typingAnalyticsRecord: await import('../api/typing-analytics-record'),
     typingTexts: await import('../api/typing-texts'),
     syncPending: await import('../api/sync-pending'),
     themePacks: await import('../api/theme-packs'),
@@ -326,6 +328,15 @@ const CALLERS: Record<string, Caller> = {
   typingAnalyticsListKeymapSnapshots: {
     run: ({ typingAnalyticsKeymaps }, [uid]) =>
       typingAnalyticsKeymaps.typingAnalyticsKeymapsApi.typingAnalyticsListKeymapSnapshots(uid as string),
+  },
+  typingAnalyticsEvent: {
+    run: ({ typingAnalyticsRecord }, [event]) =>
+      typingAnalyticsRecord.typingAnalyticsRecordApi.typingAnalyticsEvent(event as TypingAnalyticsEvent),
+    void: true,
+  },
+  typingAnalyticsFlush: {
+    run: ({ typingAnalyticsRecord }, [uid]) => typingAnalyticsRecord.typingAnalyticsRecordApi.typingAnalyticsFlush(uid as string),
+    void: true,
   },
   'settings.readSettingsFile': { run: ({ settings }, [uid]) => settings.readSettingsFile(uid as string) },
   'settings.writeSettingsFile': {

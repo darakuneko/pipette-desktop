@@ -21,13 +21,18 @@ use super::row::{JsonlRow, serialize_row};
 /// first so the first new row does not join the fragment. No rows is a
 /// no-op that creates nothing.
 pub fn append_rows_to_file(path: &Path, rows: &[Value]) -> io::Result<()> {
-    if rows.is_empty() {
+    append_lines_to_file(path, rows.iter().map(serialize_row).collect())
+}
+
+/// [`append_rows_to_file`] for rows already serialized: `lines` is the
+/// text of whole lines, each ending with a newline.
+pub fn append_lines_to_file(path: &Path, mut lines: String) -> io::Result<()> {
+    if lines.is_empty() {
         return Ok(());
     }
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let mut payload: String = rows.iter().map(serialize_row).collect();
     let mut file = OpenOptions::new().read(true).append(true).create(true).open(path)?;
     let size = file.metadata()?.len();
     if size > 0 {
@@ -35,10 +40,10 @@ pub fn append_rows_to_file(path: &Path, rows: &[Value]) -> io::Result<()> {
         file.seek(SeekFrom::Start(size - 1))?;
         file.read_exact(&mut last)?;
         if last[0] != b'\n' {
-            payload.insert(0, '\n');
+            lines.insert(0, '\n');
         }
     }
-    file.write_all(payload.as_bytes())
+    file.write_all(lines.as_bytes())
 }
 
 /// What [`read_rows`] read.

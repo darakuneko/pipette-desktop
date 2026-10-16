@@ -130,6 +130,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         analytics_commands::keymaps::typing_analytics_save_keymap_snapshot,
         analytics_commands::keymaps::typing_analytics_get_keymap_snapshot_for_range,
         analytics_commands::keymaps::typing_analytics_list_keymap_snapshots,
+        analytics_commands::record::typing_analytics_event,
+        analytics_commands::record::typing_analytics_flush,
         store_commands::settings::pipette_settings_read,
         store_commands::settings::pipette_settings_write,
         store_commands::settings::pipette_settings_ensure_dir,
