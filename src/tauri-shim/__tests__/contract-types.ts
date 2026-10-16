@@ -32,6 +32,8 @@ import type { DeviceInfo as GeneratedDeviceInfo } from '../generated/DeviceInfo'
 import type { DeviceType as GeneratedDeviceType } from '../generated/DeviceType'
 import type { FileOpenResult } from '../generated/FileOpenResult'
 import type { FileSaveResult } from '../generated/FileSaveResult'
+import type { LanguageActionResult } from '../generated/LanguageActionResult'
+import type { TypingDatasetCheckResult } from '../generated/TypingDatasetCheckResult'
 import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
 /** `true` when each type is assignable to the other. The tuples stop the
@@ -53,6 +55,10 @@ export type ContractChecks = [
   Assert<MutuallyAssignable<FileSaveResult, Awaited<ReturnType<VialAPI['exportPdf']>>>>,
   Assert<MutuallyAssignable<FileOpenResult, Awaited<ReturnType<VialAPI['loadLayout']>>>>,
   Assert<MutuallyAssignable<CsvBundleResult, Awaited<ReturnType<VialAPI['exportCsvBundle']>>>>,
+  // src-tauri/src/typing_dataset_commands.rs
+  Assert<MutuallyAssignable<LanguageActionResult, Awaited<ReturnType<VialAPI['langDownload']>>>>,
+  Assert<MutuallyAssignable<LanguageActionResult, Awaited<ReturnType<VialAPI['langDelete']>>>>,
+  Assert<MutuallyAssignable<TypingDatasetCheckResult, Awaited<ReturnType<VialAPI['checkTypingDatasetUpdate']>>>>,
   // src-tauri/src/dev_commands/tools.rs
   Assert<MutuallyAssignable<GeneratedControllerState, VirtualDeviceControllerState>>,
 ]
