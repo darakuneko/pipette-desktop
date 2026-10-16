@@ -7,6 +7,11 @@
 //!
 //! Same rules as src/shared/utils/utf8-truncate.ts: a lone surrogate counts
 //! 3 bytes, the bytes of the U+FFFD it is written as.
+//!
+//! Also the string methods the stores compare and clean names with
+//! (`trim`, `toLowerCase`, `length`), with JavaScript's meaning.
+
+use pipette_js_json::JsString;
 
 /// Each code point of `units` with the number of units it takes; a lone
 /// surrogate is a code point of its own.
@@ -77,6 +82,36 @@ pub fn is_js_whitespace(unit: u16) -> bool {
     )
 }
 
+/// `s.trim()`.
+pub fn js_trim(s: &JsString) -> JsString {
+    JsString::from_utf16(trim_js_whitespace(&s.utf16_units()).to_vec())
+}
+
+/// `s.length`: the number of UTF-16 code units.
+pub fn utf16_len(s: &JsString) -> usize {
+    s.as_str().map_or_else(|| s.utf16_units().len(), |text| text.encode_utf16().count())
+}
+
+/// `String.prototype.toLowerCase` on UTF-16 code units: the full Unicode
+/// lowercase mapping of each run of well-formed text, lowercased as a whole
+/// so a final sigma reads its context; a lone surrogate stays as it is.
+pub fn js_to_lower_case(units: &[u16]) -> Vec<u16> {
+    let mut out = Vec::with_capacity(units.len());
+    let mut run = String::new();
+    for decoded in char::decode_utf16(units.iter().copied()) {
+        match decoded {
+            Ok(c) => run.push(c),
+            Err(lone) => {
+                out.extend(run.to_lowercase().encode_utf16());
+                run.clear();
+                out.push(lone.unpaired_surrogate());
+            }
+        }
+    }
+    out.extend(run.to_lowercase().encode_utf16());
+    out
+}
+
 /// [`is_js_whitespace`] for a `char`: every JavaScript whitespace code point
 /// is in the BMP.
 pub(crate) fn is_js_whitespace_char(c: char) -> bool {
@@ -115,6 +150,21 @@ mod tests {
         assert_eq!(trim_js_whitespace(&units("\u{85}a\u{200b}")), &units("\u{85}a\u{200b}")[..]);
         assert_eq!(trim_js_whitespace(&units(" \u{a0} ")), &[] as &[u16]);
         assert_eq!(trim_js_whitespace(&[0x20, 0xd800, 0x20]), &[0xd800]);
+    }
+
+    #[test]
+    fn lowercases_as_javascript_does() {
+        assert_eq!(js_to_lower_case(&units("ENGLISH")), units("english"));
+        assert_eq!(js_to_lower_case(&units("ΣΑΣ")), units("σας"));
+        assert_eq!(js_to_lower_case(&units("İ")), units("i\u{307}"));
+        assert_eq!(js_to_lower_case(&[0x41, 0xd800, 0x42]), [0x61, 0xd800, 0x62]);
+    }
+
+    #[test]
+    fn trims_and_measures_strings() {
+        assert_eq!(js_trim(&JsString::from("\u{feff} a \u{3000}")), JsString::from("a"));
+        assert_eq!(utf16_len(&JsString::from("😀a")), 3);
+        assert_eq!(utf16_len(&JsString::from_utf16(vec![0xd800, 0x61])), 2);
     }
 
     #[test]

@@ -4,7 +4,7 @@
 //! (`normalizeFile`), and the name checks and comparisons, on JavaScript
 //! strings (UTF-16, lone surrogates included).
 
-use pipette_entry_store::trim_js_whitespace;
+use pipette_entry_store::{js_to_lower_case, js_trim, trim_js_whitespace, utf16_len};
 use pipette_js_json::{JsString, Object, Value};
 
 use super::KeyLabelError;
@@ -67,44 +67,19 @@ pub(crate) fn normalize_file(parsed: &Value) -> Option<Object> {
     Some(out)
 }
 
-/// `name` trimmed of JavaScript whitespace (`String.prototype.trim`).
-pub(crate) fn trimmed(name: &JsString) -> JsString {
-    JsString::from_utf16(trim_js_whitespace(&name.utf16_units()).to_vec())
-}
-
 /// `validateName`: the name trimmed, refused when empty or longer than
 /// [`MAX_NAME_LENGTH`] code units.
 pub(crate) fn validate_name(name: &JsString) -> Result<JsString, KeyLabelError> {
-    let name = trimmed(name);
+    let name = js_trim(name);
     if name.is_empty() {
         return Err(KeyLabelError::invalid_name("name must not be empty"));
     }
-    if name.utf16_units().len() > MAX_NAME_LENGTH {
+    if utf16_len(&name) > MAX_NAME_LENGTH {
         return Err(KeyLabelError::invalid_name(&format!(
             "name must be at most {MAX_NAME_LENGTH} characters"
         )));
     }
     Ok(name)
-}
-
-/// `String.prototype.toLowerCase` on UTF-16 code units: each run of
-/// characters lowercased as a whole (so a final sigma reads its context),
-/// a lone surrogate kept as it is.
-fn js_lowercase(units: &[u16]) -> Vec<u16> {
-    let mut out = Vec::with_capacity(units.len());
-    let mut run = String::new();
-    for decoded in char::decode_utf16(units.iter().copied()) {
-        match decoded {
-            Ok(ch) => run.push(ch),
-            Err(err) => {
-                out.extend(run.to_lowercase().encode_utf16());
-                run.clear();
-                out.push(err.unpaired_surrogate());
-            }
-        }
-    }
-    out.extend(run.to_lowercase().encode_utf16());
-    out
 }
 
 /// The TypeError JavaScript throws when it calls the string method `method`
@@ -122,7 +97,7 @@ pub(crate) fn method_type_error(value: Option<&Value>, receiver: &str, method: &
 /// not a string.
 pub(crate) fn name_key(value: Option<&Value>, receiver: &str) -> Result<Vec<u16>, KeyLabelError> {
     match value {
-        Some(Value::String(name)) => Ok(js_lowercase(trim_js_whitespace(&name.utf16_units()))),
+        Some(Value::String(name)) => Ok(js_to_lower_case(trim_js_whitespace(&name.utf16_units()))),
         other => Err(method_type_error(other, receiver, "trim")),
     }
 }

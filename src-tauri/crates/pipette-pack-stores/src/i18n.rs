@@ -15,14 +15,13 @@
 //! syncs. It can be renamed and reordered but not deleted or overwritten.
 
 use pipette_entry_store::{
-    EPOCH_ISO, Entry, EntryGroup, EntryStore, OverwriteOptions, builtin_entry, clock_ms, mark_deleted,
-    overwrite_entry, touch_clock,
+    EPOCH_ISO, Entry, EntryGroup, EntryStore, OverwriteOptions, builtin_entry, clock_ms, js_trim,
+    mark_deleted, overwrite_entry, touch_clock, utf16_len,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
 use pipette_time::iso_8601_millis;
 
-use crate::js_text::{trim, utf16_len};
 use crate::pack_store::{Field, PackIndex, PackStore, find_active_by_name};
 use crate::result::{ErrorCode, PackError, PackResult};
 
@@ -169,7 +168,7 @@ pub struct SavePackInput {
 fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
     let Some(Value::Object(pack)) = pack else { return None };
     let text = |key: &str| match pack.get(key) {
-        Some(Value::String(s)) => Some(trim(s)).filter(|s| !s.is_empty()),
+        Some(Value::String(s)) => Some(js_trim(s)).filter(|s| !s.is_empty()),
         _ => None,
     };
     Some((text("name")?, text("version")?))
@@ -180,7 +179,7 @@ fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
 fn blank_clears(field: Field<JsString>) -> Field<JsString> {
     match field {
         Field::Set(s) => {
-            let trimmed = trim(&s);
+            let trimmed = js_trim(&s);
             if trimmed.is_empty() { Field::Clear } else { Field::Set(trimmed) }
         }
         other => other,
@@ -356,7 +355,7 @@ fn change_live_meta(
 /// Gives the live pack `id` the name `new_name`, trimmed (`renamePack`).
 /// Only the meta changes: the body and its sync unit stay as they are.
 pub fn rename_pack(ctx: &StoreContext, id: &JsString, new_name: &JsString) -> PackResult<Entry> {
-    let name = trim(new_name);
+    let name = js_trim(new_name);
     if name.is_empty() {
         return Err(PackError::new(ErrorCode::InvalidName, "Name must not be empty"));
     }
@@ -467,20 +466,13 @@ pub fn set_hub_post_id(
         let mut index = I18N_PACKS.read_index(ctx)?;
         let at = index.position(id).ok_or_else(|| PackError::not_found(NOT_FOUND))?;
         let meta = &mut index.metas[at];
-        match hub_post_id.map(trim).filter(|post| !post.is_empty()) {
-            None => {
-                meta.remove("hubPostId");
-                meta.remove("hubUpdatedAt");
-            }
-            Some(post) => meta.set("hubPostId", Value::String(post)),
+        meta.set_trimmed("hubPostId", hub_post_id);
+        if meta.get("hubPostId").is_none() {
+            meta.remove("hubUpdatedAt");
         }
         for (key, cached) in [("uploaderName", uploader_name), ("hubUpdatedAt", hub_updated_at)] {
-            let Cached::Set(value) = cached else { continue };
-            match value.as_ref().map(trim).filter(|v| !v.is_empty()) {
-                Some(value) => meta.set(key, Value::String(value)),
-                None => {
-                    meta.remove(key);
-                }
+            if let Cached::Set(value) = cached {
+                meta.set_trimmed(key, value.as_ref());
             }
         }
         touch_clock(meta, EntryGroup::Hub, ctx.now_ms())?;
