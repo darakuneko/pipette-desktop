@@ -1,0 +1,62 @@
+[
+  {
+    "member": "analyzeFilterStoreList",
+    "args": ["0xA1B2"],
+    "command": "analyze_filter_store_list",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": { "success": true, "entries": [] }
+  },
+  {
+    "member": "analyzeFilterStoreSave",
+    "args": ["../x", "{\"version\":1}", "My filter", "WPM · 7 days"],
+    "command": "analyze_filter_store_save",
+    "invokeArgs": { "uid": "../x", "json": "{\"version\":1}", "label": "My filter", "summary": "WPM · 7 days" },
+    "response": { "success": false, "error": "Error: Invalid uid" }
+  },
+  {
+    "member": "analyzeFilterStoreLoad",
+    "args": ["0xA1B2", "entry-1"],
+    "command": "analyze_filter_store_load",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "analyzeFilterStoreUpdate",
+    "args": ["0xA1B2", "entry-1", "{\"version\":2}"],
+    "command": "analyze_filter_store_update",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1", "json": "{\"version\":2}" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "analyzeFilterStoreRename",
+    "args": ["0xA1B2", "entry-1", "New name"],
+    "command": "analyze_filter_store_rename",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1", "newLabel": "New name" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "analyzeFilterStoreDelete",
+    "args": ["0xA1B2", "entry-1"],
+    "command": "analyze_filter_store_delete",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "analyzeFilterStoreSetHubPostId",
+    "args": ["0xA1B2", "entry-1", null],
+    "command": "analyze_filter_store_set_hub_post_id",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1", "hubPostId": null },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "analyzeFilterStoreSetHubPrivate",
+    "args": ["0xA1B2", "entry-1", { "id": "p1", "url": "/files/p1?token=t", "expiresAt": null }],
+    "command": "analyze_filter_store_set_hub_private",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "entryId": "entry-1",
+      "link": "{\"id\":\"p1\",\"url\":\"/files/p1?token=t\",\"expiresAt\":null}"
+    },
+    "response": { "success": false, "error": "Entry not found" }
+  }
+]

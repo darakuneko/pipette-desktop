@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/analyze_filters.rs: the saved Analyze
+# filters of each keyboard.
+
+[[set]]
+identifier = "analyze-filters"
+description = "Lists, saves, loads, updates, renames and deletes the saved Analyze filters of a keyboard, and records their Hub links."
+permissions = [
+  "allow-analyze-filter-store-list",
+  "allow-analyze-filter-store-save",
+  "allow-analyze-filter-store-load",
+  "allow-analyze-filter-store-update",
+  "allow-analyze-filter-store-rename",
+  "allow-analyze-filter-store-delete",
+  "allow-analyze-filter-store-set-hub-post-id",
+  "allow-analyze-filter-store-set-hub-private",
+]

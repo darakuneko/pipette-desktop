@@ -22,14 +22,16 @@ use std::time::Duration;
 use pipette_entry_store::{SystemClock, WriteLocks};
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::{
-    FavoriteImport, FavoriteType, KeyLabelSave, SETTINGS_ETAG_ABSENT, StoreContext, TypingTextSave,
-    TypingTextSource, TypingTextStore, delete_favorite, delete_key_label, delete_snapshot, field,
-    get_key_label, import_favorites, import_key_label_files, key_label_response,
-    keyboard_meta_name_if_missing, keyboard_settings_files_json, list_favorites, list_key_labels,
-    list_snapshots, list_stored_keyboards, load_favorite, load_snapshot, read_all_pipette_settings,
-    read_pipette_settings, rename_favorite, rename_key_label, rename_snapshot, reorder_key_labels,
-    response_json, save_favorite, save_key_label, save_snapshot, set_favorite_hub_post_id,
-    set_key_label_hub_post_id, set_snapshot_hub_private, stored_keyboards_json, typing_text_response,
+    FavoriteImport, FavoriteType, KeyLabelSave, MAX_RUN_LOGS_PER_KEYBOARD, SETTINGS_ETAG_ABSENT,
+    StoreContext, TypingTextSave, TypingTextSource, TypingTextStore, delete_analyze_filter, delete_favorite,
+    delete_key_label, delete_snapshot, field, get_key_label, get_run_log, import_favorites,
+    import_key_label_files, key_label_response, keyboard_meta_name_if_missing, keyboard_settings_files_json,
+    list_analyze_filters, list_favorites, list_key_labels, list_run_logs, list_snapshots,
+    list_stored_keyboards, load_analyze_filter, load_favorite, load_snapshot, read_all_pipette_settings,
+    read_pipette_settings, rename_analyze_filter, rename_favorite, rename_key_label, rename_snapshot,
+    reorder_key_labels, response_json, save_analyze_filter, save_favorite, save_key_label, save_run_log,
+    save_snapshot, set_analyze_filter_hub_post_id, set_favorite_hub_post_id, set_key_label_hub_post_id,
+    set_snapshot_hub_private, stored_keyboards_json, typing_text_response, update_analyze_filter,
     update_snapshot, write_pipette_settings,
 };
 use pipette_sync_pending::{PendingStore, Scheduler};
@@ -132,6 +134,27 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     set_snapshot_hub_private(&ctx, KEYBOARD, &first_id, Some(Value::Object(link))).unwrap();
     delete_snapshot(&ctx, KEYBOARD, &id_of(&Value::from(third))).unwrap();
     save_snapshot(&ctx, SECOND_KEYBOARD, "{\"second\":true}", "Ctrl\u{1}/Name:é", "Other", None).unwrap();
+
+    // Analyze filters: saved, updated, renamed, linked, deleted.
+    let filter =
+        save_analyze_filter(&ctx, KEYBOARD, r#"{"version":1,"analysisTab":"wpm"}"#, "WPM", Some("7 days"))
+            .unwrap();
+    let filter_id = id_of(&Value::from(filter));
+    let other = save_analyze_filter(&ctx, KEYBOARD, "{\"version\":1}", "Other 名前", None).unwrap();
+    let gone = save_analyze_filter(&ctx, KEYBOARD, "{}", "Gone", Some("")).unwrap();
+    update_analyze_filter(&ctx, KEYBOARD, &filter_id, r#"{"version":1,"analysisTab":"heatmap"}"#).unwrap();
+    rename_analyze_filter(&ctx, KEYBOARD, &id_of(&Value::from(other)), "Renamed 😀").unwrap();
+    set_analyze_filter_hub_post_id(&ctx, KEYBOARD, &filter_id, Some(" post-7 ")).unwrap();
+    delete_analyze_filter(&ctx, KEYBOARD, &id_of(&Value::from(gone))).unwrap();
+
+    // Run logs: more runs than a keyboard keeps, and one saved again.
+    for i in (0..=MAX_RUN_LOGS_PER_KEYBOARD).chain([MAX_RUN_LOGS_PER_KEYBOARD]) {
+        let log = pipette_js_json::parse(&format!(
+            r#"{{"runId":"run-{i:02}","uid":"{KEYBOARD}","startedAt":"2026-10-16T10:{i:02}:00.000Z","durationMs":1000.5,"mode":"words","language":"english","note":"é 😀","words":[{{"index":0,"display":"a","typed":"a","correct":true,"keystrokes":[{{"pressMs":0.25,"releaseMs":80,"keycode":4,"row":0,"col":1}}]}}],"lineBreaks":[]}}"#
+        ))
+        .unwrap();
+        save_run_log(&ctx, KEYBOARD, Some(&log), true).unwrap();
+    }
 
     // Keyboard names, settings.
     keyboard_meta_name_if_missing(&ctx, Some(NAMED_ONLY), Some("Named 鍵盤")).unwrap();
@@ -264,6 +287,38 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
         snapshots.insert(uid, Value::Object(answer));
     }
     answers.insert("snapshots", Value::Object(snapshots));
+
+    let mut filters = Object::new();
+    {
+        let entries = list_analyze_filters(&ctx, KEYBOARD).unwrap();
+        let mut loads = Object::new();
+        for entry in &entries {
+            let id = id_of(&Value::from(entry.clone()));
+            let data = load_analyze_filter(&ctx, KEYBOARD, &id).map(|data| field("data", data));
+            loads.insert(id, response_json(data).into());
+        }
+        let mut answer = Object::new();
+        answer.insert("list", entries_answer(entries).into());
+        answer.insert("loads", Value::Object(loads));
+        filters.insert(KEYBOARD, Value::Object(answer));
+    }
+    answers.insert("analyzeFilters", Value::Object(filters));
+
+    let mut runs = Object::new();
+    {
+        let entries = list_run_logs(&ctx, KEYBOARD).unwrap();
+        let mut gets = Object::new();
+        for entry in &entries {
+            let id = id_of(&Value::from(entry.clone()));
+            let data = get_run_log(&ctx, KEYBOARD, &id).map(|data| field("data", data));
+            gets.insert(id, response_json(data).into());
+        }
+        let mut answer = Object::new();
+        answer.insert("list", entries_answer(entries).into());
+        answer.insert("gets", Value::Object(gets));
+        runs.insert(KEYBOARD, Value::Object(answer));
+    }
+    answers.insert("runLogs", Value::Object(runs));
 
     let mut favorites = Object::new();
     for ty in FavoriteType::ALL {

@@ -28,6 +28,13 @@ export function readAppConfigAfterSets(): Promise<AppConfig> {
   return enqueue(SET_QUEUE_KEY, () => call<AppConfig>('app_config_get_all'))
 }
 
+/** Settles once every set made before this call has finished, for a
+ *  command whose backend reads the config (as the Electron main process
+ *  runs a handler after applying the sets that came before it). */
+export function afterAppConfigSets(): Promise<void> {
+  return enqueue(SET_QUEUE_KEY, async () => {})
+}
+
 export const appConfigApi = {
   appConfigGetAll: () => call<AppConfig>('app_config_get_all'),
   appConfigSet: (key, value) =>

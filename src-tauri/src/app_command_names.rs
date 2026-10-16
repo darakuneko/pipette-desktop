@@ -86,6 +86,19 @@ pub const APP_COMMANDS: &[&str] = &[
     "snapshot_store_delete",
     "snapshot_store_set_hub_post_id",
     "snapshot_store_set_hub_private",
+    // src/store_commands/analyze_filters.rs
+    "analyze_filter_store_list",
+    "analyze_filter_store_save",
+    "analyze_filter_store_load",
+    "analyze_filter_store_update",
+    "analyze_filter_store_rename",
+    "analyze_filter_store_delete",
+    "analyze_filter_store_set_hub_post_id",
+    "analyze_filter_store_set_hub_private",
+    // src/store_commands/run_logs.rs
+    "typing_run_log_save",
+    "typing_run_log_list",
+    "typing_run_log_get",
     // src/store_commands/settings.rs
     "pipette_settings_read",
     "pipette_settings_write",

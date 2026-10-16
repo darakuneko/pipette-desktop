@@ -1,18 +1,27 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useRunLogAvailability } from '../useRunLogAvailability'
+import { runLogBackends } from './run-log-backends'
 
 const listSpy = vi.fn()
 
 beforeEach(() => {
   listSpy.mockReset()
-  window.vialAPI = { typingRunLogList: listSpy } as unknown as typeof window.vialAPI
 })
 
-describe('useRunLogAvailability', () => {
+afterEach(() => {
+  clearMocks()
+})
+
+describe.each(runLogBackends({ typingRunLogList: listSpy }))('useRunLogAvailability ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   it('skips the fetch entirely when uid is null', () => {
     const { result } = renderHook(() => useRunLogAvailability(null, 0))
     expect(listSpy).not.toHaveBeenCalled()
