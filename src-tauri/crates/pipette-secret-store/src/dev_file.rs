@@ -41,7 +41,8 @@ fn pick(value: Option<std::ffi::OsString>, user_data: &Path, service: &str) -> A
     }
 }
 
-/// Secrets in a JSON file of account name → hex, written atomically.
+/// Secrets in a JSON file of account name → hex, written atomically and,
+/// on Unix, readable by its owner only (mode 0600).
 pub struct FileKeystore {
     path: PathBuf,
     lock: Mutex<()>,
@@ -65,7 +66,7 @@ impl FileKeystore {
         if let Some(dir) = self.path.parent() {
             std::fs::create_dir_all(dir).map_err(|err| failed(&self.path, err))?;
         }
-        pipette_fs::write_file_atomic(&self.path, &text).map_err(|err| failed(&self.path, err))
+        pipette_fs::write_file_atomic_private(&self.path, &text).map_err(|err| failed(&self.path, err))
     }
 
     fn update(&self, change: impl FnOnce(&mut BTreeMap<String, String>)) -> Result<(), KeystoreError> {
@@ -122,6 +123,16 @@ mod tests {
         again.delete("missing").unwrap();
         assert_eq!(store.read("a").unwrap(), None);
         assert_eq!(store.read("b").unwrap().as_deref().map(Vec::as_slice), Some([4u8].as_slice()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_key_file_is_readable_by_its_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(DEV_KEYSTORE_FILE);
+        FileKeystore::new(path.clone()).write("a", &[1]).unwrap();
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
     }
 
     #[test]
