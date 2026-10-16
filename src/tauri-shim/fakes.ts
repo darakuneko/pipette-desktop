@@ -8,8 +8,11 @@
 
 import type { VialAPI } from '../shared/types/vial-api'
 
-/** The answer of a Hub member before the backend reaches the Hub. */
-const HUB_UNAVAILABLE = { success: false, error: 'Hub is not available' } as const
+/** The answer of a Hub member before the backend reaches the Hub. It has
+ *  no `error`: without one the renderer shows its own localized failure
+ *  message (the search's `keyLabels.errorSearchFailed`, the row actions'
+ *  `keyLabels.errorGeneric` through `translateError`). */
+const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
   // Tray.
@@ -34,13 +37,13 @@ export const fakes = {
   // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers
   // a failure rather than nothing. The Hub detail is read in a try block and
   // stays a stub.
-  keyLabelHubList: () => Promise.resolve(HUB_UNAVAILABLE),
-  keyLabelHubDownload: () => Promise.resolve(HUB_UNAVAILABLE),
-  keyLabelHubUpload: () => Promise.resolve(HUB_UNAVAILABLE),
-  keyLabelHubUpdate: () => Promise.resolve(HUB_UNAVAILABLE),
-  keyLabelHubSync: () => Promise.resolve(HUB_UNAVAILABLE),
-  keyLabelHubTimestamps: () => Promise.resolve(HUB_UNAVAILABLE),
-  keyLabelHubDelete: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubList: hubUnavailable,
+  keyLabelHubDownload: hubUnavailable,
+  keyLabelHubUpload: hubUnavailable,
+  keyLabelHubUpdate: hubUnavailable,
+  keyLabelHubSync: hubUnavailable,
+  keyLabelHubTimestamps: hubUnavailable,
+  keyLabelHubDelete: hubUnavailable,
 
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),

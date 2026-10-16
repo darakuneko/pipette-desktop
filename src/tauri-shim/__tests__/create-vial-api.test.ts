@@ -84,7 +84,7 @@ describe('implemented', () => {
     const api = createVialApi(implemented)
     await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
     expect(invoke).toHaveBeenCalledWith('key_label_store_list', undefined)
-    await expect(api.keyLabelHubTimestamps([])).resolves.toEqual({ success: false, error: 'Hub is not available' })
+    await expect(api.keyLabelHubTimestamps([])).resolves.toEqual({ success: false })
   })
 
   it('asks the backend for the snapshots of a keyboard', async () => {
