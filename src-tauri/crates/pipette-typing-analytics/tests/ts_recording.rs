@@ -128,7 +128,8 @@ fn harness(user_data: &Path, golden: &Value, scenario: &Value) -> Harness {
         Arc::new(SequenceIds::new([text(golden, "installationId")])),
         Box::new(move || Ok(machine_id.clone())),
     );
-    let rebuild: RebuildCache = Arc::new(|_, _, _| Err(Error::CacheRebuild("the cache is up to date".into())));
+    let rebuild: RebuildCache =
+        Arc::new(|_, _, _| Err(Error::CacheRebuild("the cache is up to date".into())));
     let analytics = Arc::new(TypingAnalytics::new(user_data, identity, clock.clone(), rebuild));
     let timer = Arc::new(ManualTimer { clock, tasks: Mutex::new(Vec::new()) });
     let units = Arc::new(Mutex::new(Vec::new()));
@@ -145,7 +146,11 @@ fn harness(user_data: &Path, golden: &Value, scenario: &Value) -> Harness {
     let recorded = units.clone();
     let deps = RecorderDeps {
         ids: Arc::new(SequenceIds::new(strings(array(golden, "sessionIds")))),
-        os: OsInfo { platform: text(os, "platform").into(), release: text(os, "release").into(), arch: text(os, "arch").into() },
+        os: OsInfo {
+            platform: text(os, "platform").into(),
+            release: text(os, "release").into(),
+            arch: text(os, "arch").into(),
+        },
         timer: timer.clone(),
         notify: Arc::new(move |unit| recorded.lock().unwrap().push(unit.to_owned())),
         app_name: Arc::new(move || app_names.lock().unwrap().pop_front().flatten()),
