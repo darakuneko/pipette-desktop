@@ -5,7 +5,8 @@
 //!
 //! The revision a unit sync handled is recorded here and only on success
 //! (`lastKnownRemoteState`, SYNC-PROCESS §4): the merged Drive file when
-//! Drive needs nothing, or the revision the upload answered. A failure
+//! Drive needs nothing, or the revision the upload answered once its
+//! bookkeeping (a day's entry in `sync_state.json`) is written. A failure
 //! records nothing, so the next poll still sees the file as changed; an
 //! upload that Drive took but whose answer never arrived is a failure too.
 //!
@@ -198,13 +199,14 @@ impl UnitSync {
         if listed_id.as_deref() != Some(uploaded.id.as_str()) {
             self.runtime.remote().remember_created_file(&name, &uploaded.id);
         }
-        self.runtime
-            .remote()
-            .record(&name, RemoteRevision { id: uploaded.id, modified_time: uploaded.modified_time });
-
+        // Recorded after the bookkeeping: an upload whose bookkeeping
+        // failed stays unknown, so the next pass uploads it again.
         if let Some(day) = parse_device_day_unit(unit) {
             self.record_day_uploaded(day).await?;
         }
+        self.runtime
+            .remote()
+            .record(&name, RemoteRevision { id: uploaded.id, modified_time: uploaded.modified_time });
         Ok(())
     }
 

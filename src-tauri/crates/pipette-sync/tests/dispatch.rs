@@ -321,3 +321,31 @@ async fn uploads_of_two_days_at_once_both_reach_the_upload_bookkeeping() {
     let state: serde_json::Value = serde_json::from_str(&sync_state_text(&world)).unwrap();
     assert_eq!(state["uploaded"][format!("{UID}|{}", world.own_hash())], serde_json::json!([DAY, OTHER_DAY]));
 }
+
+#[tokio::test]
+async fn an_upload_whose_bookkeeping_failed_is_not_recorded_and_is_sent_again() {
+    let world = World::new().await;
+    write_own_day(&world, "{\"id\":\"x\"}\n");
+    let unit = own_day_unit(&world);
+    let name = drive_file_name(&unit);
+    // A directory where `sync_state.json` goes: it cannot be written.
+    let blocked = pipette_typing_analytics::sync_state::sync_state_path(&world.root);
+    std::fs::create_dir_all(blocked.join("in-the-way")).unwrap();
+    world.requests();
+
+    assert!(world.units.sync_or_upload(&unit, PASSWORD, &Listing::new(Vec::new())).await.is_err());
+
+    assert_eq!(world.requests(), [format!("create:{name}")]);
+    assert!(!world.is_known(&unit), "the next pass sees the file as changed");
+    let created = world.runtime().remote().created_file_id(&name).unwrap();
+
+    std::fs::remove_dir_all(&blocked).unwrap();
+    let listing = listing(&world).await;
+    world.requests();
+    world.units.sync_or_upload(&unit, PASSWORD, &listing).await.unwrap();
+
+    assert_eq!(world.requests(), [format!("update:{created}")]);
+    assert!(world.is_known(&unit));
+    let state: serde_json::Value = serde_json::from_str(&sync_state_text(&world)).unwrap();
+    assert_eq!(state["uploaded"][format!("{UID}|{}", world.own_hash())], serde_json::json!([DAY]));
+}
