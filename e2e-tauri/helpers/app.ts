@@ -303,8 +303,11 @@ export async function waitForHttpResponsesTaken(timeoutMsg: string): Promise<voi
 }
 
 /** Quits the app and starts it again in a new WebDriver session, with the
- *  same userData directory. Linux only, as {@link quitApp}. */
-export async function restartApp(): Promise<void> {
+ *  same userData directory. `whileStopped` runs between the two, when no
+ *  app process has the userData directory open. Linux only, as
+ *  {@link quitApp}. */
+export async function restartApp(whileStopped?: () => void | Promise<void>): Promise<void> {
   await quitApp(QUIT_TIMEOUT_MS)
+  await whileStopped?.()
   await browser.reloadSession()
 }
