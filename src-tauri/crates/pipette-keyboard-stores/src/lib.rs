@@ -22,6 +22,7 @@
 //! by all stores, and the [`ChangeNotifier`] each change of a sync unit is
 //! reported to.
 
+mod entry_files;
 mod favorites;
 mod keyboard_meta;
 mod response;
