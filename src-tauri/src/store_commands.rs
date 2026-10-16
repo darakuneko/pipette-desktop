@@ -13,7 +13,9 @@ use tauri::ipc::Response;
 use crate::command_error::CommandError;
 
 pub mod favorites;
+pub mod i18n_packs;
 pub mod keyboard_data;
+mod pack_import;
 pub mod settings;
 pub mod snapshots;
 pub mod sync_pending;

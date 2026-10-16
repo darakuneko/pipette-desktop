@@ -20,7 +20,8 @@
 //! Every store works through a [`StoreContext`]: the userData directory,
 //! the clock, the ids of new entries, the process-wide write locks shared
 //! by all stores, and the [`ChangeNotifier`] each change of a sync unit is
-//! reported to.
+//! reported to. The stores of other crates (the pack stores) work through
+//! the same context.
 
 mod favorites;
 mod keyboard_meta;

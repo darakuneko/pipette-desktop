@@ -102,6 +102,18 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::settings::pipette_settings_write,
         store_commands::settings::pipette_settings_ensure_dir,
         store_commands::settings::pipette_settings_read_all,
+        store_commands::i18n_packs::i18n_pack_store_list,
+        store_commands::i18n_packs::i18n_pack_store_get,
+        store_commands::i18n_packs::i18n_pack_store_rename,
+        store_commands::i18n_packs::i18n_pack_store_set_enabled,
+        store_commands::i18n_packs::i18n_pack_store_refresh_coverage,
+        store_commands::i18n_packs::i18n_pack_store_delete,
+        store_commands::i18n_packs::i18n_pack_store_set_hub_post_id,
+        store_commands::i18n_packs::i18n_pack_store_has_name,
+        store_commands::i18n_packs::i18n_pack_store_reorder,
+        store_commands::i18n_packs::i18n_pack_import,
+        store_commands::i18n_packs::i18n_pack_import_apply,
+        store_commands::i18n_packs::i18n_pack_export,
     ]
 }
 

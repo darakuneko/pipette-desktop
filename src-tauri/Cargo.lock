@@ -2665,6 +2665,7 @@ dependencies = [
  "pipette-keyboard-stores",
  "pipette-logger",
  "pipette-net",
+ "pipette-pack-stores",
  "pipette-sync-pending",
  "rfd",
  "serde",

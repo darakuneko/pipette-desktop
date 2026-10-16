@@ -106,10 +106,6 @@ impl Dialogs {
 
     /// The paths chosen in a [`DialogKind::OpenMany`] dialog, none when
     /// cancelled.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "for the key label and pack imports, not in the app yet")
-    )]
     pub fn show_many(&self, request: DialogRequest) -> Vec<PathBuf> {
         debug_assert!(request.kind == DialogKind::OpenMany, "show_many shows OpenMany dialogs only");
         self.0.show(request)

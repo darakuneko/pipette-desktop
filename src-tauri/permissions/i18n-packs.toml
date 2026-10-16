@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/i18n_packs.rs: the language packs.
+
+[[set]]
+identifier = "i18n-packs"
+description = "Lists, reads, renames, enables, deletes and reorders the language packs, stores their coverage and Hub links, and imports and exports them through file dialogs."
+permissions = [
+  "allow-i18n-pack-store-list",
+  "allow-i18n-pack-store-get",
+  "allow-i18n-pack-store-rename",
+  "allow-i18n-pack-store-set-enabled",
+  "allow-i18n-pack-store-refresh-coverage",
+  "allow-i18n-pack-store-delete",
+  "allow-i18n-pack-store-set-hub-post-id",
+  "allow-i18n-pack-store-has-name",
+  "allow-i18n-pack-store-reorder",
+  "allow-i18n-pack-import",
+  "allow-i18n-pack-import-apply",
+  "allow-i18n-pack-export",
+]
