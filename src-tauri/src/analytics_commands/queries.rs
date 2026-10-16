@@ -62,7 +62,8 @@ pub(super) async fn answer(
 }
 
 /// A command per member of a [`Family`]: the plain and `…Local` forms take
-/// `$args`, the `…ForHash` form `machine_hash` after the uid.
+/// `$args`, the `…ForHash` form `machine_hash` after the uid. Each takes the
+/// handler's arguments one by one, as the shim names them.
 macro_rules! family_commands {
     ($family:ident: $all:ident, $local:ident, $for_hash:ident ($($arg:ident),*)) => {
         #[tauri::command]
@@ -76,6 +77,7 @@ macro_rules! family_commands {
         }
 
         #[tauri::command]
+        #[allow(clippy::too_many_arguments)]
         pub async fn $for_hash(
             analytics: State<'_, Arc<TypingAnalytics>>,
             uid: Arg,
