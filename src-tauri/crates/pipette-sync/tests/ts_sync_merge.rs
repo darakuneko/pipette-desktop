@@ -19,7 +19,8 @@ use pipette_js_json::{Object, Value, parse, stringify};
 use pipette_keyboard_stores::StoreContext;
 use pipette_pack_stores::sync::run_pack_gc_after_pass;
 use pipette_sync::bundle::{
-    bundle_plaintext, bundle_sync_unit, collect_all_sync_units, collect_analytics_sync_units_for_uid,
+    BundleError, bundle_plaintext, bundle_sync_unit, collect_all_sync_units,
+    collect_analytics_sync_units_for_uid,
 };
 use pipette_sync::merge::{MergeEnv, MergeError, MergeEvents, PackKind, PackRosters, merge_sync_unit};
 use pipette_sync_format::drive_names::drive_file_name;
@@ -132,6 +133,17 @@ fn error_name(err: &MergeError) -> &'static str {
         MergeError::Type(_) => "TypeError",
         _ => "Error",
     }
+}
+
+/// The `errorName` the generator records for a failed bundle: a bundle
+/// fails only on a file or store read, a plain `Error` in TypeScript.
+fn bundle_error_name(_: &BundleError) -> &'static str {
+    "Error"
+}
+
+/// `{ "error": kind }`, how a bundle step's failure is compared.
+fn error_value(kind: &str) -> Value {
+    Value::Object([("error", Value::from(kind))].into_iter().collect())
 }
 
 /// The Drive names of the pack bodies a roster merge could forget: every
@@ -273,11 +285,15 @@ fn scenarios_match() {
             } else if let Some(Value::Array(units)) = opt(step, "bundle") {
                 let Value::Array(bundles) = get(want, "bundles") else { panic!() };
                 for (unit, want) in units.iter().map(text).zip(bundles) {
+                    // The plaintext, or the error's kind as `{ "error": kind }`.
                     let got = match bundle_sync_unit(&ctx, &unit) {
                         Ok(b) => b.map(|b| bundle_plaintext(&b)).map_or(Value::Null, Value::from),
-                        Err(_) => Value::from("<error>"),
+                        Err(err) => error_value(bundle_error_name(&err)),
                     };
-                    let want = opt(want, "plaintext").cloned().unwrap_or_else(|| Value::from("<error>"));
+                    let want = match opt(want, "error") {
+                        Some(kind) => error_value(&text(kind)),
+                        None => get(want, "plaintext").clone(),
+                    };
                     run.check(format!("step {i} bundle {unit}"), got, want);
                 }
                 run.check(format!("step {i} bundle: tree"), read_tree(root), tree_of(get(want, "tree")));
