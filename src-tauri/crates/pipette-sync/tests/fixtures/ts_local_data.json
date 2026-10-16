@@ -182,7 +182,7 @@
         "success": false,
         "error": {
           "kind": "os",
-          "message": "EACCES: permission denied, open '<userData>/sync/keyboards/uid2/pipette_settings.json.1157576.fe4ab87b812d.tmp'"
+          "message": "EACCES: permission denied"
         }
       },
       "dialog": {

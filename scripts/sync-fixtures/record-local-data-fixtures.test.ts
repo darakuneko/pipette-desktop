@@ -369,7 +369,9 @@ function errorOf(message: string, userData: string): { kind: string; message: st
           : text.startsWith('Import failed: ') ? 'rollback'
             : /^E[A-Z]+: /.test(text) ? 'os'
               : 'syntax'
-  return { kind, message: text }
+  // A system error names the temp file of an atomic write, whose name
+  // carries the process id: only its code and description are kept.
+  return { kind, message: kind === 'os' ? text.split(',')[0] : text }
 }
 
 function handler(channel: string): (...args: unknown[]) => Promise<Record<string, unknown>> {
