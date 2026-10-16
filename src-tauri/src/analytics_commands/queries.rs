@@ -3,7 +3,8 @@
 //! for the Analyze view and the Data modal (src/tauri-shim/api/
 //! typing-analytics.ts): the keyboards with data, and the reads that come
 //! for every device, this device (`…Local`) or one device (`…ForHash`),
-//! the typing-view heatmap, the device list and the local day files.
+//! the typing-view heatmap (with the minutes being recorded), the device
+//! list and the local day files.
 //!
 //! Each command takes its handler's arguments as the JSON values the
 //! renderer sent and answers the handler's value as JSON text written by
@@ -16,9 +17,9 @@
 use std::sync::Arc;
 
 use pipette_js_json::Value;
-use pipette_typing_analytics::TypingAnalytics;
 use pipette_typing_analytics::identity::{os_platform, os_release};
 use pipette_typing_analytics::queries::{Context, Devices, Family, Query, local_device_days};
+use pipette_typing_analytics::{Recorder, TypingAnalytics};
 use tauri::State;
 use tauri::ipc::Response;
 
@@ -45,6 +46,17 @@ pub(super) async fn answer(
     query: Query,
     args: Vec<Value>,
 ) -> Result<Response, CommandError> {
+    answer_with(analytics, query, args, None).await
+}
+
+/// [`answer`] adding what `recorder` holds of the minutes not written yet,
+/// read in the same database job as the cache.
+async fn answer_with(
+    analytics: &Arc<TypingAnalytics>,
+    query: Query,
+    args: Vec<Value>,
+    recorder: Option<Arc<Recorder>>,
+) -> Result<Response, CommandError> {
     if let Some(rejected) = query.rejection(&args) {
         return Ok(Response::new(pipette_js_json::stringify(&rejected)));
     }
@@ -61,6 +73,7 @@ pub(super) async fn answer(
                 own_hash: &own_hash,
                 os_platform: os_platform(),
                 os_release: &release,
+                recorder: recorder.as_deref(),
             };
             query.answer(&args, &cx)
         })
@@ -124,14 +137,17 @@ pub async fn typing_analytics_list_keyboards(
     answer(&analytics, Query::ListKeyboards, Vec::new()).await
 }
 
+/// The cache's counts and the recorder's of the minutes not written yet.
 #[tauri::command]
 pub async fn typing_analytics_get_matrix_heatmap(
     analytics: State<'_, Arc<TypingAnalytics>>,
+    recorder: State<'_, Arc<Recorder>>,
     uid: Arg,
     layer: Arg,
     since_ms: Arg,
 ) -> Result<Response, CommandError> {
-    answer(&analytics, Query::GetMatrixHeatmap, js_args([uid, layer, since_ms])).await
+    let args = js_args([uid, layer, since_ms]);
+    answer_with(&analytics, Query::GetMatrixHeatmap, args, Some(recorder.inner().clone())).await
 }
 
 #[tauri::command]
@@ -290,18 +306,22 @@ mod tests {
             r#"{"peakWpm":null,"lowestWpm":null,"peakKeystrokesPerMin":null,"peakKeystrokesPerDay":null,"longestSession":null}"#
         );
         assert_eq!(
-            text(block_on(typing_analytics_get_matrix_heatmap(state(), Some(json!("0xA1")), None, None))),
+            text(block_on(typing_analytics_get_matrix_heatmap(
+                state(),
+                app.state(),
+                Some(json!("0xA1")),
+                None,
+                None
+            ))),
             "{}"
         );
         assert_eq!(text(block_on(typing_analytics_list_device_infos(state(), None))), "null");
     }
 
-    /// The analytics of a cache that needs a rebuild with a day file to
-    /// replay, which this build cannot do, so every wait for them fails.
+    /// The analytics of a cache that cannot be opened (a directory where
+    /// the database would be), so every wait for them fails.
     fn app_without_a_cache(user_data: &TempDir) -> tauri::App<tauri::test::MockRuntime> {
-        let day = user_data.path().join("sync/keyboards/0xA1/devices/h/2026-04-14.jsonl");
-        std::fs::create_dir_all(day.parent().unwrap()).unwrap();
-        std::fs::write(&day, "").unwrap();
+        std::fs::create_dir_all(user_data.path().join("local/typing-analytics.db")).unwrap();
         let app = tauri::test::mock_app();
         manage_with_machine_id(app.handle(), user_data.path(), "machine");
         app
@@ -323,15 +343,26 @@ mod tests {
         let peaks =
             block_on(typing_analytics_get_peak_records_local(state(), None, None, None, None, None, None));
         assert!(text(peaks).starts_with(r#"{"peakWpm":null"#));
-        let heatmap =
-            block_on(typing_analytics_get_matrix_heatmap(state(), uid(), Some(json!(-1)), Some(json!(0))));
+        let heatmap = block_on(typing_analytics_get_matrix_heatmap(
+            state(),
+            app.state(),
+            uid(),
+            Some(json!(-1)),
+            Some(json!(0)),
+        ));
         assert_eq!(text(heatmap), "{}");
         assert_eq!(text(block_on(typing_analytics_list_device_infos(state(), Some(json!(1))))), "null");
 
         assert!(block_on(typing_analytics_list_items(state(), uid(), None, None, None)).is_err());
         assert!(
-            block_on(typing_analytics_get_matrix_heatmap(state(), uid(), Some(json!(0)), Some(json!(0))))
-                .is_err()
+            block_on(typing_analytics_get_matrix_heatmap(
+                state(),
+                app.state(),
+                uid(),
+                Some(json!(0)),
+                Some(json!(0))
+            ))
+            .is_err()
         );
         assert!(block_on(typing_analytics_list_device_infos(state(), uid())).is_err());
         assert!(block_on(typing_analytics_list_keyboards(state())).is_err());
