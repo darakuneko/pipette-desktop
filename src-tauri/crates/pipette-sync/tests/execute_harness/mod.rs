@@ -35,6 +35,7 @@ use pipette_sync_format::crypto::{
 use pipette_sync_format::drive_names::{drive_file_name, sync_format_file_name};
 use pipette_sync_pending::{PendingStore, Scheduler};
 use pipette_sync_runtime::{SyncDirection, SyncProgress, SyncRuntime};
+use pipette_typing_analytics::deleted_ranges::apply::ResetHolds;
 use pipette_typing_analytics::fingerprint::OsInfo;
 use pipette_typing_analytics::pipeline::FlushTimer;
 use pipette_typing_analytics::{
@@ -160,9 +161,10 @@ impl KeyboardMetaBackfill for FakeBackfill {
     }
 }
 
-/// The flushes and pollings the passes asked for.
+/// The flushes and pollings the passes asked for, and how many applies of
+/// the own deleted ranges they queued (each still queued).
 #[derive(Default)]
-pub struct RecordingHooks(pub Mutex<Vec<String>>);
+pub struct RecordingHooks(pub Mutex<Vec<String>>, pub AtomicUsize);
 
 impl PassHooks for RecordingHooks {
     fn schedule_flush_if_pending(&self, delay: Option<Duration>) {
@@ -171,6 +173,11 @@ impl PassHooks for RecordingHooks {
 
     fn start_polling_if_auto_sync(&self) {
         self.0.lock().unwrap().push("poll".into());
+    }
+
+    fn queue_own_deleted_ranges_apply(&self, ops: Arc<DataOps>, holds: ResetHolds) {
+        self.1.fetch_add(1, Ordering::SeqCst);
+        drop(pipette_sync::merge::queue_own_deleted_ranges_apply(ops, holds));
     }
 }
 

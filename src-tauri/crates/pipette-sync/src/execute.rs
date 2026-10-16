@@ -22,13 +22,13 @@
 //!   for the account the pass ran as.
 //!
 //! Every pass that gets to its units ends by queueing the apply of this
-//! device's own deleted ranges without waiting for it, so the apply can
-//! still run while the next pass does. It reads each keyboard's ranges
-//! file outside the flush chain, then applies that keyboard's ranges as
-//! one flush chain task (the applied record is read and written in the
-//! same task), so an apply never runs between the writes of a flush or of
-//! another apply. A range a merge adds after the read is left to the apply
-//! that merge queues, or to the next pass's.
+//! device's own deleted ranges ([`PassHooks`]) without waiting for it, so
+//! the apply can still run while the next pass does. It reads each
+//! keyboard's ranges file outside the flush chain, then applies that
+//! keyboard's ranges as one flush chain task (the applied record is read
+//! and written in the same task), so an apply never runs between the
+//! writes of a flush or of another apply. A range a merge adds after the
+//! read is left to the apply that merge queues, or to the next pass's.
 //!
 //! The progress goes out in the shape of `SyncProgress`.
 
@@ -46,6 +46,8 @@ use pipette_pack_stores::sync::run_pack_gc_after_pass;
 use pipette_sync_format::drive_names::sync_unit_from_file_name;
 use pipette_sync_pending::PendingStore;
 use pipette_sync_runtime::{SyncCredentialFailureReason, SyncDirection, SyncProgress, SyncStatus};
+use pipette_typing_analytics::DataOps;
+use pipette_typing_analytics::deleted_ranges::apply::ResetHolds;
 
 use crate::bundle::collect_all_sync_units;
 use crate::dispatch::{UnitError, UnitSync};
@@ -115,11 +117,16 @@ pub trait KeyboardMetaBackfill: Send + Sync {
 
 /// The triggers a pass hands work to: the flush of the pending units
 /// (`scheduleFlushIfPending`, after `delay`, or the flush's own delay for
-/// `None`) and the polling.
+/// `None`), the polling and the apply of this device's own deleted ranges.
 pub trait PassHooks: Send + Sync {
     fn schedule_flush_if_pending(&self, delay: Option<Duration>);
     /// `startPollingIfAutoSync`, after a download.
     fn start_polling_if_auto_sync(&self);
+    /// `queueOwnDeletedRangesApply`, at the end of every pass that ran its
+    /// units; the pass does not wait for it.
+    fn queue_own_deleted_ranges_apply(&self, ops: Arc<DataOps>, holds: ResetHolds) {
+        drop(queue_own_deleted_ranges_apply(ops, holds));
+    }
 }
 
 /// What a [`SyncExecutor`] is built from.
@@ -311,7 +318,7 @@ impl SyncExecutor {
             }
         };
 
-        drop(queue_own_deleted_ranges_apply(self.units.ops().clone(), self.units.holds()));
+        self.hooks.queue_own_deleted_ranges_apply(self.units.ops().clone(), self.units.holds());
 
         if failed.is_empty() {
             self.emit(SyncProgress {

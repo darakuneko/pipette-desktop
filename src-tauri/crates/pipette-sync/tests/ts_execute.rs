@@ -10,7 +10,8 @@
 //!   compared on its result,
 //!   its progress reports, its Drive requests, the pending units, the
 //!   revisions recorded as handled, the files remembered as created, the
-//!   units reported as applied, the flushes asked for and the backfills;
+//!   units reported as applied, the flushes asked for, the backfills and
+//!   the applies of the own deleted ranges queued;
 //!   then the userData tree (byte for byte; the cache file aside) and the
 //!   Drive files, each data file by its decrypted plaintext.
 //!
@@ -280,6 +281,7 @@ async fn run_step(world: &World, codec: &Arc<KeyCachedCodec>, step: &Value) -> V
     world.requests();
     world.progress.lock().unwrap().clear();
     world.hooks.0.lock().unwrap().clear();
+    world.hooks.1.store(0, Ordering::SeqCst);
     world.applied.0.lock().unwrap().clear();
     world.backfill.calls.store(0, Ordering::SeqCst);
 
@@ -302,6 +304,7 @@ async fn run_step(world: &World, codec: &Arc<KeyCachedCodec>, step: &Value) -> V
         "applied": world.applied.0.lock().unwrap().clone(),
         "flushes": flushes,
         "backfills": world.backfill.calls.load(Ordering::SeqCst),
+        "queuedApplies": world.hooks.1.load(Ordering::SeqCst),
     })
 }
 
@@ -325,6 +328,7 @@ fn recorded_step(want: &Value) -> Value {
         "applied": want["applied"],
         "flushes": flushes,
         "backfills": want["backfills"],
+        "queuedApplies": want["queuedApplies"],
     })
 }
 
@@ -385,6 +389,7 @@ async fn passes_match_typescript() {
                 "applied",
                 "flushes",
                 "backfills",
+                "queuedApplies",
             ] {
                 failures.check(format!("{name} / step {i} / {key}"), &got[key], &want[key]);
             }
