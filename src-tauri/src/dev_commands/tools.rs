@@ -259,8 +259,6 @@ pub fn dev_http_queued(queue: State<'_, Arc<ResponseQueue>>) -> usize {
     queue.len()
 }
 
-/// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
-/// letters, digits and dashes so it cannot leave the directory.
 /// The machine hash the typing analytics record this device's data under,
 /// once their initialization has finished: the e2e tests seed day files
 /// under it.
@@ -273,6 +271,8 @@ pub async fn dev_typing_analytics_machine_hash(
     Ok(ready.machine_hash.clone())
 }
 
+/// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
+/// letters, digits and dashes so it cannot leave the directory.
 #[cfg(target_os = "linux")]
 fn shot_path(name: &str) -> Result<std::path::PathBuf, CommandError> {
     let valid = !name.is_empty()
