@@ -6,7 +6,6 @@
 //! `updated_at` it was tombstoned with, and leaves the scopes as they are.
 
 use rusqlite::{Savepoint, named_params};
-use serde::Serialize;
 
 use crate::js::{ToJs, object};
 use crate::{Error, TypingAnalyticsDb, sql};
@@ -22,8 +21,7 @@ pub struct DeleteRange {
 }
 
 /// Rows tombstoned per table (`TypingTombstoneResult`).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TombstoneResult {
     pub char_minutes: u64,
     pub matrix_minutes: u64,
