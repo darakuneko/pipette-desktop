@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-typing-analytics"
-description = "The typing analytics above the SQLite cache: the installation id and machine hash, the sync state file, the cache freshness check, the database thread, startup, the reset lock, the JSONL masters and the deleted ranges"
+description = "The typing analytics above the SQLite cache: the installation id and machine hash, the sync state file, the cache freshness check, the database thread, startup, the reset lock, the JSONL masters, the deleted ranges and the keymap snapshots"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,8 +9,8 @@ publish.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-# The clock and new ids the stores take, JavaScript's whitespace and the write
-# locks.
+# The clock and new ids the stores take, JavaScript's whitespace, the write
+# locks and the path segment check.
 pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-fs = { path = "../pipette-fs" }
 pipette-js-json = { path = "../pipette-js-json" }
@@ -18,7 +18,7 @@ pipette-js-json = { path = "../pipette-js-json" }
 pipette-sync-format = { path = "../pipette-sync-format" }
 pipette-time = { path = "../pipette-time" }
 pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
-# The warnings of the deleted-ranges store.
+# The warnings of the deleted-ranges store and of a failed keymap snapshot save.
 log = "=0.4.34"
 thiserror = "=2.0.21"
 # The answers of the database thread, and the waits of the reset lock.
