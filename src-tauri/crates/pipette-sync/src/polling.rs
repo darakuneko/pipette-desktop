@@ -27,7 +27,7 @@ use pipette_drive::DriveFile;
 use pipette_drive::canonical::Listing;
 use pipette_pack_stores::sync::run_pack_gc_after_pass;
 use pipette_sync_format::drive_names::sync_unit_from_file_name;
-use pipette_sync_runtime::{RemoteRevision, SyncDirection, SyncProgress, SyncStatus};
+use pipette_sync_runtime::{RemoteMemory, RemoteRevision, SyncDirection, SyncProgress, SyncStatus};
 use tokio::runtime::Handle;
 use tokio::task::AbortHandle;
 use tokio::time::{Instant, MissedTickBehavior};
@@ -285,14 +285,14 @@ impl Poller {
             let ctx = TidyContext {
                 local_keyboard_uids: &local,
                 own_hash: &own_hash,
-                now_ms: (deps.now_ms)() as i64,
+                now_ms: i64::try_from((deps.now_ms)()).unwrap_or(i64::MAX),
             };
             Tidy { drive: preflight.drive(), runtime }.tidy_duplicate_copies(&listing, &ctx).await;
         }
     }
 }
 
-fn record(remote: &pipette_sync_runtime::RemoteMemory, file: &DriveFile) {
+fn record(remote: &RemoteMemory, file: &DriveFile) {
     remote.record(
         &file.name,
         RemoteRevision { id: file.id.clone(), modified_time: file.modified_time.clone() },
