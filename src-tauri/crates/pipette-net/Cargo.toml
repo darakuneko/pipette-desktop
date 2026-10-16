@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-net"
-description = "The app's one way out to the network: an HTTP GET client with timeouts and a body size limit, the client trait the stores take, and the Hub API base URL"
+description = "The app's one way out to the network: an HTTP client with timeouts and a body size limit for GETs and for requests with a method, headers and a body, a client limited to the loopback interface, the client traits the stores and the sync take, and the Hub API base URL"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ rust-version.workspace = true
 [dependencies]
 log = "=0.4.34"
 # The HTTP client. The version Tauri already pulls in, without its default
-# features (HTTP/2, charset decoding): HTTP/1.1 GETs of plain bytes only.
+# features (HTTP/2, charset decoding): HTTP/1.1 requests of plain bytes only.
 # "rustls-no-provider": TLS with rustls and the OS's certificate
 # verification (rustls-platform-verifier); the crypto provider is ring,
 # installed by src/client.rs, rather than reqwest's default aws-lc-rs, which
