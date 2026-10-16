@@ -156,9 +156,9 @@ impl PendingStore {
     }
 
     /// Tells the listener whether anything is pending now
-    /// (`broadcastPendingStatus`). The changes that end a pass, a cancel and
-    /// an ownership change call it themselves; a pass calls it after its
-    /// settles.
+    /// (`broadcastPendingStatus`). A change, a cancel, putting units back
+    /// and a change of owner call it themselves; a settle does not, so a
+    /// pass calls it once after its settles.
     pub fn broadcast_status(&self) {
         let _telling = lock(&self.shared.status);
         (self.shared.listener)(self.has_pending_changes());
