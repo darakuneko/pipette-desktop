@@ -25,32 +25,38 @@
 //! SIGKILL cannot be caught, and on Linux this build has no menu, so no
 //! keyboard shortcut quits it.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use pipette_hid::HidService;
 use pipette_sync_pending::PendingStore;
+use pipette_typing_analytics::Recorder;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime, State, Webview, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
+use crate::analytics_commands;
 use crate::app_config::AppConfig;
 use crate::hid_commands::Hid;
 use crate::main_window::{self, MAIN_WINDOW};
 use crate::shutdown::{
-    ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
+    ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitOutcome, QuitPhase, record_interruption,
+    run_quit_sequence,
 };
-use crate::store_commands::sync_pending::flush_phase;
+use crate::store_commands::sync_pending::{flush_phase, persist_after_quit};
 
 /// Builds with debug assertions: how many milliseconds the stub of the
 /// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its
 /// deadline. The other phases take no time.
 #[cfg(debug_assertions)]
 const DEV_QUIT_DELAY_MS_ENV: &str = "PIPETTE_DEV_QUIT_DELAY_MS";
+
+/// The preSyncFinalizers phase, which writes the typing analytics.
+const PRE_SYNC_FINALIZERS_PHASE: usize = 1;
 
 /// The flushPending phase, which writes the pending sync units.
 const FLUSH_PENDING_PHASE: usize = 3;
@@ -59,8 +65,9 @@ const FLUSH_PENDING_PHASE: usize = 3;
 const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 
 /// The phases of the before-quit handler in src/main/sync/sync-flush.ts, in
-/// its order. Each one other than flushPending is a stub that waits for its
-/// configured time until the subsystem behind it is ported.
+/// its order. Each one other than preSyncFinalizers and flushPending is a
+/// stub that waits for its configured time until the subsystem behind it is
+/// ported.
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
@@ -310,15 +317,35 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let data_dir = user_data_dir(&app);
     let durations = phase_durations();
     let pending = app.state::<PendingStore>().inner().clone();
+    let recorder = app.state::<Arc<Recorder>>().inner().clone();
     tauri::async_runtime::spawn(async move {
         let mut phases = stub_phases(durations);
+        phases[PRE_SYNC_FINALIZERS_PHASE] = analytics_commands::record::quit_phase(
+            recorder,
+            QUIT_PHASES[PRE_SYNC_FINALIZERS_PHASE],
+            durations[PRE_SYNC_FINALIZERS_PHASE],
+        );
         phases[FLUSH_PENDING_PHASE] =
-            flush_phase(pending, QUIT_PHASES[FLUSH_PENDING_PHASE], durations[FLUSH_PENDING_PHASE]);
-        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit).await;
+            flush_phase(pending.clone(), QUIT_PHASES[FLUSH_PENDING_PHASE], durations[FLUSH_PENDING_PHASE]);
+        let outcome = quit(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit, pending).await;
         log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
         app.exit(0);
     });
+}
+
+/// Runs the quit phases within `deadline`, then writes the pending sync
+/// units whether the phases completed or not.
+async fn quit(
+    phases: Vec<QuitPhase>,
+    deadline: Duration,
+    data_dir: &Path,
+    guard: &QuitGuard,
+    pending: PendingStore,
+) -> QuitOutcome {
+    let outcome = run_quit_sequence(phases, deadline, data_dir, guard).await;
+    persist_after_quit(pending, MARKER_TIMEOUT).await;
+    outcome
 }
 
 /// The quit phases as stubs that each wait for their duration.
@@ -394,6 +421,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_pending_units_are_written_when_the_deadline_cuts_the_sequence_short() {
+        let user_data = tempfile::TempDir::new().unwrap();
+        let pending = crate::store_commands::sync_pending::store_without_delayed_writes(user_data.path());
+        let unit = "keyboards/0xA1/devices/h/days/2026-04-14";
+        let phases = vec![
+            QuitPhase::new("preSyncFinalizers", {
+                let pending = pending.clone();
+                async move { pending.notify_change(unit) }
+            }),
+            QuitPhase::new("inFlightSync", std::future::pending()),
+            flush_phase(pending.clone(), "flushPending", Duration::ZERO),
+        ];
+        let outcome = tokio::runtime::Builder::new_current_thread().enable_time().build().unwrap().block_on(
+            quit(phases, Duration::from_millis(20), user_data.path(), &QuitGuard::default(), pending),
+        );
+        assert_eq!(outcome, QuitOutcome::DeadlineReached { unfinished: Some("inFlightSync") });
+        let written =
+            std::fs::read_to_string(user_data.path().join("local").join("sync-pending.json")).unwrap();
+        assert!(written.contains(unit), "{written}");
+    }
+
+    #[test]
     fn the_stub_phases_wait_one_after_another() {
         let durations = [100, 200, 300, 400, 500].map(Duration::from_millis);
         // A completed sequence only removes the marker, so the directory
@@ -405,7 +454,7 @@ mod tests {
             .build()
             .unwrap()
             .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, &dir, &QuitGuard::default()));
-        assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
+        assert_eq!(outcome, QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
         assert!(!dir.exists());
     }
 
