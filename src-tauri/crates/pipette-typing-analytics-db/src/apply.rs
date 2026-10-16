@@ -5,7 +5,7 @@
 //! (`tombstoneRowsForUidHashInRanges`). Every function here runs inside a
 //! transaction its caller in lib.rs owns.
 
-use rusqlite::{Transaction, named_params};
+use rusqlite::{Connection, named_params};
 use serde::Serialize;
 
 use crate::Error;
@@ -56,7 +56,7 @@ fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<[u8; HIST_BUCKETS * 4], Err
 
 /// Scopes first so the per-minute rows' foreign keys resolve, then every
 /// other row in file order.
-pub(crate) fn apply_rows(tx: &Transaction<'_>, rows: &[JsonlRow]) -> Result<ApplyRowsResult, Error> {
+pub(crate) fn apply_rows(tx: &Connection, rows: &[JsonlRow]) -> Result<ApplyRowsResult, Error> {
     let mut result = ApplyRowsResult::default();
     for row in rows {
         if let RowPayload::Scope(p) = &row.payload {
@@ -134,7 +134,7 @@ fn deleted(common: &RowCommon) -> i64 {
 /// One upsert per id of the minute (`mergeBigramMinute` /
 /// `mergeTrigramMinute`). Only the bigram table has the overlap columns.
 fn merge_ngrams(
-    tx: &Transaction<'_>,
+    tx: &Connection,
     sql_text: &str,
     with_overlap: bool,
     p: &NgramMinutePayload,
@@ -169,7 +169,7 @@ fn merge_ngrams(
 /// Tombstone every live row of `machine_hash` for `uid` inside any of
 /// `ranges`, bumping `updated_at`. Returns the rows changed.
 pub(crate) fn tombstone_ranges(
-    tx: &Transaction<'_>,
+    tx: &Connection,
     uid: &str,
     machine_hash: &str,
     ranges: &[DeleteRange],

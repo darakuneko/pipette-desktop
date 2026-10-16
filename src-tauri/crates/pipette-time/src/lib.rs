@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! `Date.prototype.toISOString` and `Date.parse` of JavaScript, for the
 //! timestamps the Electron build writes and reads (log lines, sync
-//! envelopes, the clocks of the entry stores), and `new Date(value)` of a
-//! JSON value read from a file ([`date_value_ms`]).
+//! envelopes, the clocks of the entry stores), `new Date(value)` of a
+//! JSON value read from a file ([`date_value_ms`]), and local calendar
+//! days in the system time zone ([`local_date_ms`], [`local_day_range_ms`]).
 
 mod js_value;
+mod local;
+#[cfg(feature = "test-util")]
+pub mod test_util;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use js_value::{date_string_ms, date_value_ms};
+pub use local::{is_utc_day, local_date_ms, local_day_range_ms};
 
 /// `Date.now()`: milliseconds since the Unix epoch by the system clock,
 /// negative before the epoch, saturating at the ends of `i64`.

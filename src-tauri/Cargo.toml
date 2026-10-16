@@ -38,6 +38,8 @@ pipette-pack-stores = { path = "crates/pipette-pack-stores" }
 pipette-net = { path = "crates/pipette-net" }
 # The Typing Test word lists and datasets (src/typing_dataset_commands.rs).
 pipette-typing-datasets = { path = "crates/pipette-typing-datasets" }
+# The typing analytics and the sync lock (src/analytics_commands.rs).
+pipette-typing-analytics = { path = "crates/pipette-typing-analytics" }
 log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).

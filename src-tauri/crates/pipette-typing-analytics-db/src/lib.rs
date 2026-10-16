@@ -3,7 +3,9 @@
 //! TypeScript side): a rebuildable index over the per-day JSONL masters.
 //!
 //! The API is coarse on purpose: each call is one unit of work and owns its
-//! transaction, so a caller can never leave half a day applied.
+//! transaction, so a caller can never leave half a day applied. The
+//! transactions are savepoints, so the calls also run inside the migration
+//! that [`TypingAnalyticsDb::open`] leaves open for the cache rebuild.
 //!
 //! - [`TypingAnalyticsDb::apply_day_jsonl`] — one day file, one transaction
 //!   (`applyRowsToCache`).
@@ -48,11 +50,22 @@ pub enum Error {
 pub struct TypingAnalyticsDb {
     conn: Connection,
     outcome: SchemaOutcome,
+    /// The schema transaction of a migration that dropped tables is still
+    /// open (see [`Self::commit_migration`]).
+    migration_open: bool,
 }
 
 impl TypingAnalyticsDb {
     /// Open (creating when missing) the database at `path` and bring its
     /// schema up to [`SCHEMA_VERSION`]. The parent directory must exist.
+    ///
+    /// The schema changes run in one transaction. When a migration dropped
+    /// tables ([`Self::cache_needs_rebuild`]), that transaction stays open:
+    /// the drop and the new schema version reach the file only with
+    /// [`Self::commit_migration`], after the rebuild refilled the tables.
+    /// Closing the database without it (or [`Self::rollback_migration`])
+    /// leaves the file at its old version, so the next open migrates and
+    /// asks for the rebuild again, in this build and in the Electron build.
     pub fn open(path: &Path) -> Result<Self, Error> {
         Self::with_connection(Connection::open(path)?)
     }
@@ -78,13 +91,35 @@ impl TypingAnalyticsDb {
         conn.set_db_config(DbConfig::SQLITE_DBCONFIG_DQS_DML, false)?;
         conn.set_db_config(DbConfig::SQLITE_DBCONFIG_DQS_DDL, false)?;
         let outcome = schema::prepare_schema(&conn)?;
-        Ok(Self { conn, outcome })
+        Ok(Self { conn, outcome, migration_open: outcome.cache_needs_rebuild })
     }
 
     /// True when opening dropped tables, so the cache must be rebuilt from
     /// the JSONL masters before it serves queries.
     pub fn cache_needs_rebuild(&self) -> bool {
         self.outcome.cache_needs_rebuild
+    }
+
+    /// Commit the migration left open by [`Self::open`], with whatever the
+    /// rebuild applied. Does nothing when none is open.
+    pub fn commit_migration(&mut self) -> Result<(), Error> {
+        if self.migration_open {
+            self.conn.execute_batch("COMMIT")?;
+            self.migration_open = false;
+        }
+        Ok(())
+    }
+
+    /// Roll back the migration left open by [`Self::open`] and everything
+    /// applied since, leaving the file as it was before the open. The
+    /// connection then still has the old schema, so it is only to be
+    /// dropped. Does nothing when none is open.
+    pub fn rollback_migration(&mut self) -> Result<(), Error> {
+        if self.migration_open {
+            self.conn.execute_batch("ROLLBACK")?;
+            self.migration_open = false;
+        }
+        Ok(())
     }
 
     /// Apply one day file's text. On any error nothing of the file stays
@@ -94,7 +129,7 @@ impl TypingAnalyticsDb {
         if rows.is_empty() {
             return Ok(ApplyRowsResult::default());
         }
-        let tx = self.conn.transaction()?;
+        let tx = self.conn.savepoint()?;
         let result = apply::apply_rows(&tx, &rows)?;
         tx.commit()?;
         Ok(result)
@@ -116,7 +151,7 @@ impl TypingAnalyticsDb {
             return self.apply_day_jsonl(text);
         }
         let rows = jsonl::read_rows(text);
-        let tx = self.conn.transaction()?;
+        let tx = self.conn.savepoint()?;
         let result =
             if rows.is_empty() { ApplyRowsResult::default() } else { apply::apply_rows(&tx, &rows)? };
         apply::tombstone_ranges(&tx, uid, machine_hash, ranges, updated_at)?;
@@ -152,4 +187,85 @@ pub struct PragmaReport {
     pub sqlite_version: String,
     pub journal_mode: String,
     pub synchronous: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DAY: &str = include_str!("../tests/fixtures/day.jsonl");
+
+    /// A database at `path` holding the fixture day, its schema version set
+    /// back to 5 (the drop of the v6 migration is the only step from 5).
+    fn v5_database(path: &Path) {
+        let mut db = TypingAnalyticsDb::open(path).unwrap();
+        db.apply_day_jsonl(DAY).unwrap();
+        db.conn
+            .execute("UPDATE typing_analytics_meta SET value = '5' WHERE key = 'schema_version'", [])
+            .unwrap();
+    }
+
+    /// The stored schema version and the matrix rollup rows, read without
+    /// migrating.
+    fn on_disk(path: &Path) -> (String, i64) {
+        let conn = Connection::open(path).unwrap();
+        let version = conn
+            .query_row("SELECT value FROM typing_analytics_meta WHERE key = 'schema_version'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        let rows = conn.query_row("SELECT COUNT(*) FROM typing_matrix_minute", [], |r| r.get(0)).unwrap();
+        (version, rows)
+    }
+
+    #[test]
+    fn a_dropping_migration_stays_due_until_committed() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("typing-analytics.db");
+        v5_database(&path);
+        let before = on_disk(&path);
+        assert_eq!(before.0, "5");
+        assert!(before.1 > 0);
+
+        // A rebuild that fails rolls back; one that never finishes (the
+        // connection closes) does the same.
+        let mut db = TypingAnalyticsDb::open(&path).unwrap();
+        assert!(db.cache_needs_rebuild());
+        db.rollback_migration().unwrap();
+        drop(db);
+        assert_eq!(on_disk(&path), before);
+        let db = TypingAnalyticsDb::open(&path).unwrap();
+        assert!(db.cache_needs_rebuild());
+        drop(db);
+        assert_eq!(on_disk(&path), before);
+
+        // The rebuild applies inside the open migration and commits with it.
+        let mut db = TypingAnalyticsDb::open(&path).unwrap();
+        assert!(db.cache_needs_rebuild());
+        assert_eq!(
+            db.conn
+                .query_row("SELECT COUNT(*) FROM typing_matrix_minute", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        db.apply_day_jsonl(DAY).unwrap();
+        db.commit_migration().unwrap();
+        drop(db);
+        assert_eq!(on_disk(&path), (SCHEMA_VERSION.to_string(), before.1));
+        assert!(!TypingAnalyticsDb::open(&path).unwrap().cache_needs_rebuild());
+    }
+
+    #[test]
+    fn an_open_without_a_dropping_migration_commits_at_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("typing-analytics.db");
+        let mut db = TypingAnalyticsDb::open(&path).unwrap();
+        assert!(!db.cache_needs_rebuild());
+        db.rollback_migration().unwrap();
+        db.apply_day_jsonl(DAY).unwrap();
+        drop(db);
+        let (version, rows) = on_disk(&path);
+        assert_eq!(version, SCHEMA_VERSION.to_string());
+        assert!(rows > 0);
+    }
 }

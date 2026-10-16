@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Tauri entry point: one window that loads the renderer build, the HID,
-// definition, app config and window commands its vialAPI shim calls, and the tray
-// and quit handling of lifecycle.rs. Before any of that it settles the
-// userData directory and refuses to start while the Electron build holds it;
-// once no other instance of this build runs, it starts the log in the
-// directory and loads the app config.
+// definition, app config and window commands its vialAPI shim calls, the
+// typing analytics, and the tray and quit handling of lifecycle.rs. Before
+// any of that it settles the userData directory and refuses to start while
+// the Electron build holds it; once no other instance of this build runs, it
+// starts the log in the directory and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from
@@ -12,6 +12,7 @@
 // every build with the development tools keeps its console.
 #![cfg_attr(release_profile, windows_subsystem = "windows")]
 
+mod analytics_commands;
 mod app_config;
 #[cfg(test)]
 mod capability_files;
@@ -207,6 +208,7 @@ fn main() {
             dev_commands::manage_http(app.handle());
             typing_dataset_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
+            analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);

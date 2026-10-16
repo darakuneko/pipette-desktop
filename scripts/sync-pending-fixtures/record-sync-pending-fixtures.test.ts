@@ -50,6 +50,16 @@ const KB = (uid: string): Tree => ({ [`sync/keyboards/${uid}/`]: null })
 const notify = (...units: string[]): Step[] => units.map((unit) => ({ op: 'notify', unit }))
 const ADVANCE: Step = { op: 'advance' }
 
+const OWN_HASH = 'a'.repeat(64)
+const OTHER_HASH = 'b'.repeat(64)
+const ANALYTICS_UNITS = [
+  `keyboards/0xA1B2/devices/${OWN_HASH}/days/2026-10-16`,
+  `keyboards/0xA1B2/devices/${OWN_HASH}/deleted-ranges`,
+  `keyboards/0xA1B2/devices/${OTHER_HASH}/deleted-ranges`,
+  'keyboards/0xA1B2/runs',
+  'keyboards/0xA1B2/analyze_filters',
+]
+
 const SCENARIOS: Scenario[] = [
   {
     name: 'a new file',
@@ -94,6 +104,16 @@ const SCENARIOS: Scenario[] = [
     name: 'an owner and held that are not what they should be',
     tree: { [PENDING]: '{"version":1.0,"owner":"","units":["favorites/macro"],"held":["favorites/x"]}' },
     steps: [],
+  },
+  {
+    // The units the typing analytics, the run logs and the Analyze filters
+    // mark: kept from the file, and marked again.
+    name: 'the typing analytics units',
+    tree: {
+      ...KB('0xA1B2'),
+      [PENDING]: JSON.stringify({ version: 1, owner: 'account-a', units: ANALYTICS_UNITS, held: { 'account-b': ANALYTICS_UNITS } }),
+    },
+    steps: [...notify(...ANALYTICS_UNITS), ...notify('keyboards/0xA1B2/devices/' + 'c'.repeat(64) + '/days/2026-10-17'), ADVANCE],
   },
   {
     name: 'the write at quit takes the place of the delayed one',

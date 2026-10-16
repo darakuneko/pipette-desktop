@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-typing-analytics"
+description = "The typing analytics above the SQLite cache: the installation id and machine hash, the sync state file, the cache freshness check, the database thread, startup, and the reset lock"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# The clock and new ids the stores take, and JavaScript's whitespace.
+pipette-entry-store = { path = "../pipette-entry-store" }
+pipette-fs = { path = "../pipette-fs" }
+pipette-js-json = { path = "../pipette-js-json" }
+# The machine id and hash (node-machine-id's machineId(true)).
+pipette-sync-format = { path = "../pipette-sync-format" }
+pipette-time = { path = "../pipette-time" }
+pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
+thiserror = "=2.0.21"
+# The answers of the database thread, and the waits of the reset lock.
+tokio = { version = "=1.53.3", features = ["sync", "time", "rt"] }
+
+# os.release(): uname(2) without unsafe code.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "=1.1.2", features = ["system"] }
+
+# os.release(): RtlGetVersion, as libuv reads it.
+[target.'cfg(windows)'.dependencies]
+windows-version = "=0.1.7"
+
+[dev-dependencies]
+pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+# Sets an old schema version in a test database.
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
+tempfile = { workspace = true }
+tokio = { version = "=1.53.3", features = ["sync", "time", "rt", "macros", "test-util"] }
+
+[lints]
+workspace = true

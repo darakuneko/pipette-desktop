@@ -41,6 +41,11 @@ const EXPECTED_FAKES = [
   'keyLabelHubSync',
   'keyLabelHubTimestamps',
   'keyLabelHubDelete',
+  'typingAnalyticsHasRemote',
+  'typingAnalyticsListRemoteCloudHashes',
+  'typingAnalyticsListRemoteCloudDays',
+  'typingAnalyticsFetchRemoteDay',
+  'syncAnalyticsNow',
 ]
 
 /** The members the keyboard editor needs from the backend, all real. */
