@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/key_labels.rs: the key labels shown in
+# place of the keycodes.
+
+[[set]]
+identifier = "key-labels"
+description = "Lists, reads, renames, deletes and reorders the key labels, links them to Hub posts, checks their names, and imports and exports them through file dialogs."
+permissions = [
+  "allow-key-label-store-list",
+  "allow-key-label-store-list-all",
+  "allow-key-label-store-get",
+  "allow-key-label-store-rename",
+  "allow-key-label-store-delete",
+  "allow-key-label-store-import",
+  "allow-key-label-store-export",
+  "allow-key-label-store-reorder",
+  "allow-key-label-store-set-hub-post-id",
+  "allow-key-label-store-has-name",
+]

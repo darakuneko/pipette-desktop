@@ -8,6 +8,12 @@
 
 import type { VialAPI } from '../shared/types/vial-api'
 
+/** The answer of a Hub member before the backend reaches the Hub. It has
+ *  no `error`: without one the renderer shows its own localized failure
+ *  message (the search's `keyLabels.errorSearchFailed`, the row actions'
+ *  `keyLabels.errorGeneric` through `translateError`). */
+const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
+
 export const fakes = {
   // Tray.
   trayStatusUpdate: () => Promise.resolve(),
@@ -27,8 +33,17 @@ export const fakes = {
   // Theme packs.
   themePackList: () => Promise.resolve({ success: true, data: [] }),
 
-  // Key label store.
-  keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
+  // Key label Hub. The renderer reads the result of each without a guard
+  // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers
+  // a failure rather than nothing. The Hub detail is read in a try block and
+  // stays a stub.
+  keyLabelHubList: hubUnavailable,
+  keyLabelHubDownload: hubUnavailable,
+  keyLabelHubUpload: hubUnavailable,
+  keyLabelHubUpdate: hubUnavailable,
+  keyLabelHubSync: hubUnavailable,
+  keyLabelHubTimestamps: hubUnavailable,
+  keyLabelHubDelete: hubUnavailable,
 
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),

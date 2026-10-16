@@ -59,6 +59,17 @@ pub const APP_COMMANDS: &[&str] = &[
     "favorite_store_save_export",
     "favorite_store_open_import",
     "favorite_store_import_batch",
+    // src/store_commands/key_labels.rs
+    "key_label_store_list",
+    "key_label_store_list_all",
+    "key_label_store_get",
+    "key_label_store_rename",
+    "key_label_store_delete",
+    "key_label_store_import",
+    "key_label_store_export",
+    "key_label_store_reorder",
+    "key_label_store_set_hub_post_id",
+    "key_label_store_has_name",
     // src/store_commands/snapshots.rs
     "snapshot_store_list",
     "snapshot_store_save",

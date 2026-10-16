@@ -2,6 +2,8 @@
 //! The per-keyboard stores under the userData directory, writing the same
 //! files as the Electron build:
 //!
+//! - the key labels (`sync/key-labels`, the sync unit of the same name) of
+//!   src/main/key-label-store.ts, kept across keyboards;
 //! - the favorites of each type (`sync/favorites/{type}`, the sync unit of
 //!   the same name) of src/main/favorite-store.ts;
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
@@ -22,7 +24,9 @@
 //! by all stores, and the [`ChangeNotifier`] each change of a sync unit is
 //! reported to.
 
+mod entry_files;
 mod favorites;
+mod key_labels;
 mod keyboard_meta;
 mod response;
 mod settings;
@@ -39,6 +43,12 @@ pub use favorites::{
     FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, import_favorites,
     list_favorites, load_favorite, read_favorites_for_export, rename_favorite, save_favorite,
     set_favorite_hub_post_id, set_favorite_hub_private,
+};
+pub use key_labels::{
+    KEY_LABEL_SYNC_UNIT, KeyLabelError, KeyLabelErrorCode, KeyLabelExport, KeyLabelSave, MAX_NAME_LENGTH,
+    QWERTY_ENTRY_ID, delete_key_label, export_key_label, get_key_label, has_key_label_name,
+    import_key_label_files, key_label_response, list_key_labels, rename_key_label, reorder_key_labels,
+    save_key_label, set_key_label_hub_post_id,
 };
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
