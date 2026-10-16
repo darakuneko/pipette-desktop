@@ -60,15 +60,14 @@ pub fn snapshot_index_device_name(index: Option<&Value>) -> Option<JsString> {
     let Some(Value::Object(index)) = index else { return None };
     let Some(Value::Array(entries)) = index.get("entries") else { return None };
     for entry in entries {
-        let active = match entry {
-            Value::Null => return None,
-            Value::Object(entry) => !entry.get("deletedAt").is_some_and(Value::is_truthy),
-            _ => true,
-        };
-        if active {
-            let Value::Object(entry) = entry else { return None };
-            let Some(Value::String(filename)) = entry.get("filename") else { return None };
-            return extract_device_name_from_filename(filename);
+        match entry {
+            Value::Object(entry) if entry.get("deletedAt").is_some_and(Value::is_truthy) => continue,
+            Value::Object(entry) => {
+                let Some(Value::String(filename)) = entry.get("filename") else { return None };
+                return extract_device_name_from_filename(filename);
+            }
+            // `null` throws; any other value has no filename.
+            _ => return None,
         }
     }
     None

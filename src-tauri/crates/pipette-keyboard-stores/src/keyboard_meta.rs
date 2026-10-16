@@ -182,6 +182,12 @@ fn trimmed(device_name: &JsString) -> JsString {
     JsString::from_utf16(trim_js_whitespace(&device_name.utf16_units()).to_vec())
 }
 
+/// The trimmed `device_name`, `None` when it or `uid` is empty.
+fn usable_name(uid: &str, device_name: &JsString) -> Option<JsString> {
+    let name = trimmed(device_name);
+    (!uid.is_empty() && !name.is_empty()).then_some(name)
+}
+
 /// Gives `uid` the name `name` in `entries` under `rule`: a new entry, a
 /// new name for an entry, or a tombstone revived with it. Answers whether
 /// the entries changed.
@@ -247,10 +253,7 @@ fn write_name(
     device_name: &JsString,
     rule: Rule,
 ) -> Result<MetaOutcome, StoreError> {
-    let name = trimmed(device_name);
-    if uid.is_empty() || name.is_empty() {
-        return Ok(MetaOutcome::Unchanged);
-    }
+    let Some(name) = usable_name(uid, device_name) else { return Ok(MetaOutcome::Unchanged) };
     let changed =
         rewrite_index(ctx, |entries, now| set_name(entries, uid, Value::String(name), now, rule), |c| *c)?;
     Ok(if changed { MetaOutcome::Upserted } else { MetaOutcome::Unchanged })
@@ -272,10 +275,7 @@ pub fn batch_upsert_keyboard_meta(
         |entries, now| {
             let mut count = 0;
             for (uid, device_name) in names {
-                let name = trimmed(device_name);
-                if uid.is_empty() || name.is_empty() {
-                    continue;
-                }
+                let Some(name) = usable_name(uid, device_name) else { continue };
                 if set_name(entries, uid, Value::String(name), now, Rule::SameName)? {
                     count += 1;
                 }

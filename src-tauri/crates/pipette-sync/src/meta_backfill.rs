@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The keyboard-name backfill of a full download (`backfillKeyboardMeta` of
 //! src/main/sync/keyboard-meta.ts, called by `executeSync` after a
-//! download of scope `'all'`): each keyboard Drive has a snapshots file of
-//! and the names index has no entry for (a tombstone counts as an entry)
+//! download of scope `'all'`): each keyboard that Drive has a snapshots file
+//! of and the names index has no entry for (a tombstone counts as an entry)
 //! is named after its first live snapshot, read from the local snapshots
 //! or else from the snapshots bundle on Drive.
 
