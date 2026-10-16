@@ -63,10 +63,6 @@ impl TypingAnalytics {
         Self { user_data: user_data.to_path_buf(), identity, clock, rebuild, init: Mutex::new(Init::Idle) }
     }
 
-    pub fn user_data(&self) -> &Path {
-        &self.user_data
-    }
-
     fn lock(&self) -> MutexGuard<'_, Init> {
         self.init.lock().unwrap_or_else(PoisonError::into_inner)
     }
