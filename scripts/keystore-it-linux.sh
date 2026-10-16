@@ -29,15 +29,17 @@ esac
 root="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Built outside the isolated session (cargo needs the real home); only the
-# test binary runs inside it.
-build_log="$(cd "$root/src-tauri" && cargo test -p pipette-secret-store --test os_keystore --no-run 2>&1)"
-echo "$build_log"
-binary="$(sed -n 's/^ *Executable .*(\(.*\))$/\1/p' <<< "$build_log" | tail -n 1)"
-if [ -z "$binary" ]; then
+# test binary runs inside it. The binary's path comes from the `executable`
+# field of cargo's JSON messages on stdout: it is absolute and holds whatever
+# CARGO_TARGET_DIR or CARGO_TERM_COLOR say, unlike the human-readable
+# "Executable" line on stderr. Build progress and errors still go to stderr.
+messages="$(cd "$root/src-tauri" && cargo test -p pipette-secret-store --test os_keystore --no-run --message-format=json)"
+binary="$(sed -n 's/.*"executable":"\([^"]*\)".*/\1/p' <<< "$messages" | tail -n 1)"
+if [ -z "$binary" ] || [ ! -x "$binary" ]; then
   echo "could not find the os_keystore test binary" >&2
   exit 1
 fi
-binary="$root/src-tauri/$binary"
+echo "os_keystore test binary: $binary"
 
 # Short paths: the bus and keyring sockets live under them.
 work="$(mktemp -d /tmp/pks.XXXXXX)"
