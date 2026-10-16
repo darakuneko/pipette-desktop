@@ -191,8 +191,18 @@ fn ranked_entry(entry: &PairTotal, view_fields: Vec<(&str, Value)>) -> Value {
     out.into()
 }
 
-/// `(b - a) || tie`: a difference that is zero or NaN falls to the tie.
+/// `(b - a) || tie`: a difference that is zero falls to the tie. A NaN
+/// value goes after every number and to the tie with another NaN, so the
+/// order stays total (Rust's sort may panic on one that is not); V8 takes
+/// the NaN difference as equal instead. Two equal infinities differ by NaN
+/// and fall to the tie, as in V8.
 fn descending(a: f64, b: f64, tie: impl FnOnce() -> Ordering) -> Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => return tie(),
+        (true, false) => return Ordering::Greater,
+        (false, true) => return Ordering::Less,
+        (false, false) => {}
+    }
     let difference = b - a;
     if difference > 0.0 {
         Ordering::Greater
@@ -513,6 +523,32 @@ mod tests {
         assert_eq!(field(tail, "sd"), &Value::Null);
         assert_eq!(field(tail, "overlapCount"), &Value::Number(0.0));
         assert!(rank_by_slow(&[total("x", 1.0, &[1.0], None, (0.0, 0.0))], 5.0, 5.0).is_empty());
+    }
+
+    #[test]
+    fn ranks_nan_and_infinite_values_without_panicking() {
+        let odd = [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, 3.0, -0.0, 1.0];
+        let totals: Vec<PairTotal> = (0..48)
+            .map(|i| {
+                let value = odd[i % odd.len()];
+                total(&format!("{i:02}"), value, &[value, odd[(i / 6) % odd.len()]], None, (0.0, 0.0))
+            })
+            .collect();
+        let by_count = rank_by_count(&totals, 100.0);
+        assert_eq!(by_count.len(), totals.len());
+        let counts: Vec<f64> = by_count
+            .iter()
+            .map(|entry| match field(entry, "count") {
+                Value::Number(n) => *n,
+                _ => panic!("count"),
+            })
+            .collect();
+        let numbers = counts.iter().take_while(|n| !n.is_nan()).count();
+        assert_eq!(numbers, 40);
+        assert!(counts[..numbers].is_sorted_by(|a, b| a >= b));
+        assert!(counts[numbers..].iter().all(|n| n.is_nan()));
+        assert_eq!(ids(&by_count[numbers..]), ["00", "06", "12", "18", "24", "30", "36", "42"]);
+        assert!(rank_by_slow(&totals, f64::NEG_INFINITY, 100.0).len() <= totals.len());
     }
 
     #[test]

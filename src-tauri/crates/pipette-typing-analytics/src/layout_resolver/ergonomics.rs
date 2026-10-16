@@ -113,9 +113,11 @@ const ROW_CLUSTER_Y_THRESHOLD: f64 = 0.5;
 const SPLIT_GAP_MIN_UNITS: f64 = 1.5;
 const SPLIT_GAP_RATIO: f64 = 1.5;
 
-/// `a - b` as a sort comparator: NaN compares equal.
+/// `a - b` as a sort comparator for numbers, with NaN after every number
+/// and equal to NaN: `a - b` is NaN there, which V8 takes as equal, but
+/// that is no total order and Rust's sort may panic on one.
 fn by(a: f64, b: f64) -> Ordering {
-    a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+    a.partial_cmp(&b).unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
 }
 
 /// `clusterRowsByY`: rows top to bottom, each left to right.
@@ -313,6 +315,21 @@ mod tests {
         let half = [units(6), vec![(3.0, 1.0)], units(5)].concat();
         let thumbs = [(3.0, 1.0), (0.0, 1.0), (5.0, 1.0), (0.0, 1.0)];
         kle(&[&half, &half, &thumbs])
+    }
+
+    #[test]
+    fn sorts_keys_at_nan_and_infinite_positions_without_panicking() {
+        let odd = [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, 0.0, -0.0, 1.0, f64::NAN];
+        let mut keys = ansi60();
+        for (i, key) in keys.iter_mut().enumerate() {
+            key.x = odd[i % odd.len()];
+            key.y = odd[(i / 3) % odd.len()];
+        }
+        assert_eq!(ergonomics_by_pos(&keys).len(), keys.len());
+        let mut xs = odd.to_vec();
+        xs.sort_by(|a, b| by(*a, *b));
+        assert_eq!(&xs[..5], [f64::NEG_INFINITY, 0.0, -0.0, 1.0, f64::INFINITY]);
+        assert!(xs[5].is_nan() && xs[6].is_nan());
     }
 
     #[test]
