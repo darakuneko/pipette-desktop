@@ -16,6 +16,7 @@ pub mod favorites;
 pub mod i18n_packs;
 pub mod key_labels;
 pub mod keyboard_data;
+mod pack_commands;
 mod pack_import;
 pub mod settings;
 pub mod snapshots;
