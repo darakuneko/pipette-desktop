@@ -143,6 +143,13 @@ fn body_text(parsed: &Value) -> Option<&JsString> {
     }
 }
 
+/// The text of the body of `entry`, `None` when it cannot be read or is
+/// malformed.
+fn stored_text(dir: &Path, entry: &Entry) -> Option<JsString> {
+    let parsed = read_json::<TypingTextErrorCode>(&body_path(dir, entry).ok()?).ok()?;
+    body_text(&parsed).cloned()
+}
+
 fn is_kana_only(text: &JsString) -> bool {
     is_kana_only_text(&text.utf16_units())
 }
@@ -162,16 +169,16 @@ impl TypingTextStore {
         cache.insert(id.clone(), (entry.get("filename").cloned(), capable));
     }
 
-    /// Whether the text of `entry` is pure kana (`withRomajiCapable`): from
-    /// the cache, or read from its body. A body that cannot be read or is
-    /// malformed (also one nested too deeply to parse here) is not.
-    fn romaji_capable(&self, dir: &Path, entry: &Entry) -> bool {
-        if let Some(capable) = self.cached_romaji(entry) {
+    /// Whether the text of `meta` is pure kana (`romajiCapable`): the
+    /// answer cached for its body filename, or `text()` checked and cached.
+    /// No text (a body that cannot be read or is malformed, also one nested
+    /// too deeply to parse here) is not.
+    fn romaji_capable_of(&self, meta: &Entry, text: impl FnOnce() -> Option<JsString>) -> bool {
+        if let Some(capable) = self.cached_romaji(meta) {
             return capable;
         }
-        let parsed = body_path(dir, entry).ok().and_then(|path| read_json::<TypingTextErrorCode>(&path).ok());
-        let capable = parsed.as_ref().and_then(body_text).is_some_and(is_kana_only);
-        self.cache_romaji(entry, capable);
+        let capable = text().is_some_and(|text| is_kana_only(&text));
+        self.cache_romaji(meta, capable);
         capable
     }
 
@@ -186,7 +193,7 @@ impl TypingTextStore {
             .filter(|entry| include_deleted || !entry.is_deleted());
         Ok(entries
             .map(|mut entry| {
-                let capable = self.romaji_capable(&dir, &entry);
+                let capable = self.romaji_capable_of(&entry, || stored_text(&dir, &entry));
                 entry.set("romajiCapable", capable);
                 entry
             })
@@ -204,11 +211,7 @@ impl TypingTextStore {
         let text = body_text(&parsed)
             .ok_or_else(|| TypingTextError::invalid_file("Stored file is malformed"))?
             .clone();
-        let capable = self.cached_romaji(&meta).unwrap_or_else(|| {
-            let capable = is_kana_only(&text);
-            self.cache_romaji(&meta, capable);
-            capable
-        });
+        let capable = self.romaji_capable_of(&meta, || Some(text.clone()));
         let mut data = Object::new();
         // `{...parsed, name: meta.name}`: an undefined name is left out.
         if let Some(name) = meta.get("name") {
