@@ -175,3 +175,65 @@ fn record(dir: &Path, prefix: &str, tree: &mut BTreeMap<String, Node>) {
         }
     }
 }
+
+/// A string field of a recorded step.
+pub fn step_text(step: &pipette_js_json::Object, key: &str) -> String {
+    step.get(key).unwrap().as_str().unwrap().to_owned()
+}
+
+/// `got` with an error text the crate does not copy replaced as the
+/// recorders of scripts/keyboard-store-fixtures record it: a file-system
+/// error's as `<os error>` (every `Error: …` but the store's own `known`
+/// ones), a body that is not JSON as `<syntax error>`.
+pub fn as_recorded(got: String, known: &[&str]) -> String {
+    let parsed = pipette_js_json::parse(&got).unwrap();
+    let error = parsed.as_object().unwrap().get("error").and_then(Value::as_str).unwrap_or_default();
+    if error.starts_with("Error: ") && !known.contains(&error) {
+        return r#"{"success":false,"error":"<os error>"}"#.to_owned();
+    }
+    if error.starts_with("SyntaxError: ") {
+        return r#"{"success":false,"error":"<syntax error>"}"#.to_owned();
+    }
+    got
+}
+
+/// Replays the scenarios of the fixture `name` (under tests/fixtures)
+/// recorded by a store's recorder in scripts/keyboard-store-fixtures: the
+/// same userData files and clock, each step run by `run_step` (`None` for
+/// a clock move, which it makes) and its answer compared as
+/// [`as_recorded`] with `known`, then the notified units and every file
+/// left behind. `harness` makes each scenario's harness.
+pub fn replay_scenarios(
+    name: &str,
+    harness: impl Fn(&pipette_js_json::Object) -> Harness,
+    known: &[&str],
+    run_step: impl Fn(&Harness, &pipette_js_json::Object) -> Option<String>,
+) {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name);
+    let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
+    let Value::Array(scenarios) = fixture else { panic!("not a list") };
+    assert!(!scenarios.is_empty());
+    for scenario in &scenarios {
+        let scenario = scenario.as_object().unwrap();
+        let name = step_text(scenario, "name");
+        let h = harness(scenario);
+        h.clock.set(ms(&step_text(scenario, "time")));
+        build(h.user_data(), &tree_of(scenario.get("tree").unwrap()));
+
+        let Some(Value::Array(steps)) = scenario.get("steps") else { panic!("{name}: no steps") };
+        let Some(Value::Array(outcomes)) = scenario.get("outcomes") else { panic!("{name}: no outcomes") };
+        assert_eq!(steps.len(), outcomes.len(), "{name}");
+        for (at, (step, want)) in steps.iter().zip(outcomes).enumerate() {
+            let got = run_step(&h, step.as_object().unwrap()).map(|got| as_recorded(got, known));
+            assert_eq!(got.as_deref(), want.as_str(), "{name}: step {at}");
+        }
+
+        let notified: Vec<String> = match scenario.get("notified") {
+            Some(Value::Array(units)) => units.iter().map(|unit| unit.as_str().unwrap().to_owned()).collect(),
+            other => panic!("{name}: notified {other:?}"),
+        };
+        assert_eq!(h.notified(), notified, "{name}: notified units");
+        let want: BTreeMap<_, _> = tree_of(scenario.get("after").unwrap()).into_iter().collect();
+        assert_eq!(recorded(h.user_data()), want, "{name}: files");
+    }
+}

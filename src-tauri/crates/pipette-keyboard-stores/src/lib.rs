@@ -17,6 +17,9 @@
 //!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts;
 //! - the snapshots of a keyboard (`sync/keyboards/{uid}/snapshots`, the
 //!   sync unit of the same name) of src/main/snapshot-store.ts;
+//! - the saved Analyze filters of a keyboard
+//!   (`sync/keyboards/{uid}/analyze_filters`, the sync unit of the same
+//!   name) of src/main/analyze-filter-store.ts;
 //! - the pipette settings of a keyboard
 //!   (`sync/keyboards/{uid}/pipette_settings.json`, the sync unit
 //!   `keyboards/{uid}/settings`) of src/main/pipette-settings-store.ts,
@@ -28,6 +31,7 @@
 //! reported to. The stores of other crates (the pack stores) work through
 //! the same context.
 
+mod analyze_filters;
 mod coded_error;
 mod entry_files;
 mod entry_index;
@@ -47,6 +51,11 @@ use std::sync::Arc;
 
 use pipette_entry_store::{Clock, IdGen, RandomUuid, WriteLocks};
 
+pub use analyze_filters::{
+    AnalyzeFilterError, MAX_ANALYZE_FILTERS_PER_KEYBOARD, analyze_filters_sync_unit, delete_analyze_filter,
+    list_analyze_filters, load_analyze_filter, rename_analyze_filter, save_analyze_filter,
+    set_analyze_filter_hub_post_id, set_analyze_filter_hub_private, update_analyze_filter,
+};
 pub use coded_error::{CodedStoreError, ErrorCode, coded_store_response};
 pub use entry_index::MAX_NAME_LENGTH;
 pub use favorites::{
