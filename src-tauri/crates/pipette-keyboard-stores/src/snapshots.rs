@@ -103,7 +103,7 @@ impl From<BodyPathError> for SnapshotError {
 
 fn meta_error_text(err: &StoreError) -> String {
     match err {
-        StoreError::NullEntry(_) => format!("TypeError: {err}"),
+        StoreError::NullEntry(_) | StoreError::PrimitiveEntry(..) => format!("TypeError: {err}"),
         StoreError::Io(_) | StoreError::TooDeep(_) => format!("Error: {err}"),
     }
 }

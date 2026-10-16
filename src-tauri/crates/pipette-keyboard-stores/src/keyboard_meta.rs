@@ -175,6 +175,78 @@ enum Rule {
     SameName,
     /// Any active entry.
     AnyActive,
+    /// Any entry, active or deleted.
+    AnyEntry,
+}
+
+/// `device_name` trimmed of JavaScript whitespace.
+fn trimmed(device_name: &JsString) -> JsString {
+    JsString::from_utf16(trim_js_whitespace(&device_name.utf16_units()).to_vec())
+}
+
+/// The trimmed `device_name`, `None` when it or `uid` is empty.
+fn usable_name(uid: &str, device_name: &JsString) -> Option<JsString> {
+    let name = trimmed(device_name);
+    (!uid.is_empty() && !name.is_empty()).then_some(name)
+}
+
+/// Gives `uid` the name `name` in `entries` under `rule`: a new entry, or,
+/// unless `rule` leaves the entry, a new name for it or a tombstone revived
+/// with it. Answers whether the entries changed.
+fn set_name(
+    entries: &mut Vec<Value>,
+    uid: &str,
+    name: Value,
+    now: &str,
+    rule: Rule,
+) -> Result<bool, StoreError> {
+    match find_entry(entries, uid)? {
+        Some(at) => {
+            let Value::Object(entry) = &mut entries[at] else { unreachable!("found by its uid field") };
+            let active = !is_truthy(entry.get("deletedAt"));
+            let unchanged = match rule {
+                Rule::SameName => active && entry.get("deviceName") == Some(&name),
+                Rule::AnyActive => active,
+                Rule::AnyEntry => true,
+            };
+            if unchanged {
+                return Ok(false);
+            }
+            entry.insert("deviceName", name);
+            entry.insert("updatedAt", now.into());
+            entry.remove("deletedAt");
+        }
+        None => {
+            let mut entry = Object::new();
+            entry.insert("uid", uid.into());
+            entry.insert("deviceName", name);
+            entry.insert("updatedAt", now.into());
+            entries.push(Value::Object(entry));
+        }
+    }
+    Ok(true)
+}
+
+/// Rewrites the index under the store's lock: `change` edits the entries
+/// at the time `now` and answers what it did; when `changed` says the
+/// entries changed, the expired tombstones are dropped and the file is
+/// written.
+fn rewrite_index<T>(
+    ctx: &StoreContext,
+    change: impl FnOnce(&mut Vec<Value>, &str) -> Result<T, StoreError>,
+    changed: impl FnOnce(&T) -> bool,
+) -> Result<T, StoreError> {
+    ctx.locks.with_write_lock(META_LOCK_KEY, || {
+        let path = meta_file_path(ctx);
+        let mut index = read_index(&path)?;
+        let now = iso_8601_millis(ctx.now_ms());
+        let outcome = change(&mut index.entries, &now)?;
+        if changed(&outcome) {
+            index.entries = drop_expired_tombstones(std::mem::take(&mut index.entries), ctx.now_ms())?;
+            write_index(&path, index)?;
+        }
+        Ok(outcome)
+    })
 }
 
 fn write_name(
@@ -183,45 +255,111 @@ fn write_name(
     device_name: &JsString,
     rule: Rule,
 ) -> Result<MetaOutcome, StoreError> {
-    let normalized = JsString::from_utf16(trim_js_whitespace(&device_name.utf16_units()).to_vec());
-    if uid.is_empty() || normalized.is_empty() {
-        return Ok(MetaOutcome::Unchanged);
+    let Some(name) = usable_name(uid, device_name) else { return Ok(MetaOutcome::Unchanged) };
+    let changed =
+        rewrite_index(ctx, |entries, now| set_name(entries, uid, Value::String(name), now, rule), |c| *c)?;
+    Ok(if changed { MetaOutcome::Upserted } else { MetaOutcome::Unchanged })
+}
+
+/// Records each `(uid, device_name)` (trimmed) for a uid the index has no
+/// entry for, in one write (`batchUpsertKeyboardMeta` as the backfill uses
+/// it); pairs with an empty uid or name are skipped. A uid that has gained
+/// an entry by the time of the write (a name, or a tombstone of a delete
+/// made while the names were being looked up) keeps it, so the backfill
+/// never revives a deleted name. Answers how many entries were added;
+/// nothing is written when none were.
+pub fn name_unnamed_keyboards(ctx: &StoreContext, names: &[(String, JsString)]) -> Result<usize, StoreError> {
+    if names.is_empty() {
+        return Ok(0);
     }
-    ctx.locks.with_write_lock(META_LOCK_KEY, || {
-        let path = meta_file_path(ctx);
-        let mut index = read_index(&path)?;
-        let now = iso_8601_millis(ctx.now_ms());
-        let name = Value::String(normalized);
-        match find_entry(&index.entries, uid)? {
-            Some(at) => {
-                let Value::Object(entry) = &mut index.entries[at] else {
-                    unreachable!("found by its uid field")
-                };
-                if !is_truthy(entry.get("deletedAt")) {
-                    let unchanged = match rule {
-                        Rule::SameName => entry.get("deviceName") == Some(&name),
-                        Rule::AnyActive => true,
-                    };
-                    if unchanged {
-                        return Ok(MetaOutcome::Unchanged);
-                    }
+    rewrite_index(
+        ctx,
+        |entries, now| {
+            let mut count = 0;
+            for (uid, device_name) in names {
+                let Some(name) = usable_name(uid, device_name) else { continue };
+                if set_name(entries, uid, Value::String(name), now, Rule::AnyEntry)? {
+                    count += 1;
                 }
-                entry.insert("deviceName", name);
-                entry.insert("updatedAt", now.into());
-                entry.remove("deletedAt");
             }
-            None => {
-                let mut entry = Object::new();
-                entry.insert("uid", uid.into());
-                entry.insert("deviceName", name);
-                entry.insert("updatedAt", now.into());
-                index.entries.push(Value::Object(entry));
-            }
+            Ok(count)
+        },
+        |count| *count > 0,
+    )
+}
+
+/// What a tombstone write did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TombstoneOutcome {
+    Unchanged,
+    Tombstoned,
+}
+
+/// Marks `entry` deleted at `now`. Assigning a property of a primitive
+/// throws in JavaScript's strict mode; an array takes the properties, but
+/// `JSON.stringify` writes only its items, so it stays as it is and counts
+/// again in the next delete of every name.
+fn mark_entry_deleted(entry: &mut Value, now: &str) -> Result<(), StoreError> {
+    match entry {
+        Value::Object(entry) => {
+            entry.insert("updatedAt", now.into());
+            entry.insert("deletedAt", now.into());
+            Ok(())
         }
-        index.entries = drop_expired_tombstones(std::mem::take(&mut index.entries), ctx.now_ms())?;
-        write_index(&path, index)?;
-        Ok(MetaOutcome::Upserted)
-    })
+        Value::Array(_) => Ok(()),
+        other => Err(StoreError::PrimitiveEntry("updatedAt", pipette_js_json::stringify(other))),
+    }
+}
+
+/// Deletes the name of `uid` (`tombstoneKeyboardMeta`): an active entry
+/// becomes a tombstone, and a uid with no entry gets one, so the other
+/// devices learn of the delete. Unchanged for an empty uid or an entry
+/// already deleted.
+pub fn tombstone_keyboard_meta(ctx: &StoreContext, uid: &str) -> Result<TombstoneOutcome, StoreError> {
+    if uid.is_empty() {
+        return Ok(TombstoneOutcome::Unchanged);
+    }
+    rewrite_index(
+        ctx,
+        |entries, now| {
+            match find_entry(entries, uid)? {
+                None => {
+                    let mut entry = Object::new();
+                    entry.insert("uid", uid.into());
+                    entry.insert("deviceName", "".into());
+                    entry.insert("updatedAt", now.into());
+                    entry.insert("deletedAt", now.into());
+                    entries.push(Value::Object(entry));
+                }
+                Some(at) if is_truthy(field(&entries[at], "deletedAt")?) => {
+                    return Ok(TombstoneOutcome::Unchanged);
+                }
+                Some(at) => mark_entry_deleted(&mut entries[at], now)?,
+            }
+            Ok(TombstoneOutcome::Tombstoned)
+        },
+        |outcome| *outcome == TombstoneOutcome::Tombstoned,
+    )
+}
+
+/// Deletes every active name (`tombstoneAllKeyboardMeta`) and answers how
+/// many there were; nothing is written when there were none.
+pub fn tombstone_all_keyboard_meta(ctx: &StoreContext) -> Result<usize, StoreError> {
+    rewrite_index(
+        ctx,
+        |entries, now| {
+            let mut count = 0;
+            for entry in entries.iter_mut() {
+                if is_truthy(field(entry, "deletedAt")?) {
+                    continue;
+                }
+                mark_entry_deleted(entry, now)?;
+                count += 1;
+            }
+            Ok(count)
+        },
+        |count| *count > 0,
+    )
 }
 
 /// Records `device_name` (trimmed) for `uid` (`upsertKeyboardMeta`): a new

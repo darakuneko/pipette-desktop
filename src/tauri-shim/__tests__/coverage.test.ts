@@ -13,7 +13,8 @@
 // real; the members named after the Hub are fakes or stubs, and so are
 // the Cloud Sync members (each listed with the module that holds it) but
 // the sign-in status, the password members, the sync of a scope with its
-// progress and applied-unit events, and the sync format status.
+// progress and applied-unit events, the sync format status and the export
+// and import of the local data.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -304,8 +305,9 @@ const SYNC_MEMBERS = [
 /** The Cloud Sync members that are real: the sign-in, the sign-out, the
  *  sign-in and password statuses, setting and re-entering the password,
  *  whether Drive has a password-check, the sync of a scope with its progress
- *  and applied-unit events, the sync format status and its event (backend
- *  commands) and the password strength check (in the shim). */
+ *  and applied-unit events, the sync format status and its event, the export
+ *  and import of the local data (backend commands) and the password strength
+ *  check (in the shim). */
 const SYNC_REAL = [
   'syncAuthStart',
   'syncAuthStatus',
@@ -320,6 +322,8 @@ const SYNC_REAL = [
   'syncExecute',
   'syncOnProgress',
   'syncOnUnitApplied',
+  'exportLocalData',
+  'importLocalData',
 ]
 
 /** The fakes the Cloud Sync members replace: the signed-out answers. */

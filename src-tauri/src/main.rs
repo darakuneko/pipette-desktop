@@ -223,6 +223,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::password::sync_replace_password,
         sync_commands::password::sync_check_password_exists,
         sync_commands::preflight::sync_format_status,
+        sync_commands::data::export_local_data,
+        sync_commands::data::import_local_data,
         sync_commands::execute::sync_execute,
     ]
 }
