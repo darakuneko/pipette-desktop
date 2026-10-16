@@ -11,8 +11,10 @@ import type { VialAPI } from '../shared/types/vial-api'
 
 /** The answer of a Hub member before the backend reaches the Hub. It has
  *  no `error`: without one the renderer shows its own localized failure
- *  message (the search's `keyLabels.errorSearchFailed`, the row actions'
- *  `keyLabels.errorGeneric` through `translateError`). */
+ *  message (for the key labels, the search's `keyLabels.errorSearchFailed`
+ *  and the row actions' `keyLabels.errorGeneric` through `translateError`;
+ *  for the language packs, `i18n.errorGeneric` and the `hub.*Failed`
+ *  messages through `localizeHubError`). */
 const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
@@ -28,11 +30,12 @@ export const fakes = {
   // Startup notification.
   notificationFetch: () => Promise.resolve({ success: false }),
 
-  // Pipette Hub, for the language packs: the renderer reads `success` of
-  // these answers without a guard, on its own (the freshness check of
-  // Hub-linked packs and the Hub tab's list) or after a local change (the
-  // sync after renaming a Hub-linked pack), so each answers a failed
-  // request.
+  // Language pack Hub. The renderer reads `success` of these answers
+  // without a guard, on its own (the freshness check of Hub-linked packs
+  // and the Hub tab's list) or after a local change (the sync after
+  // renaming a Hub-linked pack), so each answers a failure rather than
+  // nothing. Every caller falls back to its own message when `error` is
+  // absent; the freshness check reads no message.
   i18nPackHubTimestamps: hubUnavailable,
   hubListI18nPosts: hubUnavailable,
   hubDownloadI18nPost: hubUnavailable,
