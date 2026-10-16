@@ -42,6 +42,7 @@ mod favorites;
 mod key_labels;
 mod keyboard_index;
 mod keyboard_meta;
+mod keyboard_meta_sync;
 mod response;
 mod run_logs;
 mod settings;
@@ -76,6 +77,9 @@ pub use key_labels::{
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
+};
+pub use keyboard_meta_sync::{
+    KeyboardMetaMerge, KeyboardMetaMergeError, apply_remote_keyboard_meta_index, read_keyboard_meta_index,
 };
 pub use response::{CodedError, coded_response, coded_response_json, done, field, response_json};
 pub use run_logs::{

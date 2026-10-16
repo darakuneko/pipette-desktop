@@ -13,7 +13,10 @@
 //!   as a write: real Drive may or may not move `modifiedTime` on a
 //!   rename, and the sync must work either way;
 //! - an unknown id is 404; [`InMemoryDrive::inject`] makes the next
-//!   requests fail with a status of the test's choosing.
+//!   requests fail with a status of the test's choosing, and
+//!   [`InMemoryDrive::lose_answers`] makes the next requests of an
+//!   operation take effect and then fail as a request without an answer
+//!   (a timeout after Drive did the work).
 //!
 //! It answers the typed results of [`DriveApi`], so it has no `fields`
 //! parameter to model; the Node fake checks the `fields` of each request
@@ -28,6 +31,10 @@ use crate::{DriveApi, DriveError, DriveFile, DriveFuture, FileList, ListQuery, U
 const CLOCK_START_MS: i64 = 1_767_225_600_000;
 const CLOCK_STEP_MS: i64 = 1000;
 const MAX_PAGE_SIZE: u32 = 1000;
+
+/// The error of a request whose answer [`InMemoryDrive::lose_answers`]
+/// lost.
+pub const LOST_ANSWER: &str = "the request timed out";
 
 /// The operations, for [`Fault::only`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,6 +105,8 @@ struct State {
     next_id: u64,
     clock_ms: i64,
     faults: VecDeque<Fault>,
+    /// Per operation, how many of its next requests lose their answer.
+    lost_answers: Vec<(DriveOp, u32)>,
 }
 
 impl State {
@@ -120,6 +129,18 @@ impl State {
             self.faults.remove(index);
         }
         Some(error)
+    }
+
+    /// Whether the answer to this request of `op` is lost.
+    fn take_lost_answer(&mut self, op: DriveOp) -> bool {
+        let Some(index) = self.lost_answers.iter().position(|(lost, _)| *lost == op) else {
+            return false;
+        };
+        self.lost_answers[index].1 -= 1;
+        if self.lost_answers[index].1 == 0 {
+            self.lost_answers.remove(index);
+        }
+        true
     }
 
     fn file_mut(&mut self, id: &str) -> Result<&mut StoredFile, DriveError> {
@@ -198,6 +219,15 @@ impl InMemoryDrive {
         }
     }
 
+    /// Makes the next `count` requests of `op` take effect and then fail
+    /// with [`LOST_ANSWER`], as a request does whose answer times out
+    /// after Drive did the work. An injected failure comes first.
+    pub fn lose_answers(&self, op: DriveOp, count: u32) {
+        if count > 0 {
+            self.lock().lost_answers.push((op, count));
+        }
+    }
+
     /// Every file with its content, in the order they were created.
     pub fn files(&self) -> Vec<StoredFile> {
         self.lock().files.clone()
@@ -212,6 +242,11 @@ impl InMemoryDrive {
         let mut state = self.lock();
         let result = match state.take_fault(op) {
             Some(fault) => Err(fault),
+            None if state.take_lost_answer(op) => {
+                // The work is done; only the answer is lost.
+                let _ = run(&mut state);
+                Err(DriveError::Network(LOST_ANSWER.to_owned()))
+            }
             None => run(&mut state),
         };
         Box::pin(std::future::ready(result))
