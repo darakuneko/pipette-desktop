@@ -21,8 +21,16 @@
 //!   it changed again meanwhile; a unit that failed becomes pending again
 //!   for the account the pass ran as.
 //!
-//! Every pass ends by queueing the apply of this device's own deleted
-//! ranges. The progress goes out in the shape of `SyncProgress`.
+//! Every pass that gets to its units ends by queueing the apply of this
+//! device's own deleted ranges without waiting for it, so the apply can
+//! still run while the next pass does. It reads each keyboard's ranges
+//! file outside the flush chain, then applies that keyboard's ranges as
+//! one flush chain task (the applied record is read and written in the
+//! same task), so an apply never runs between the writes of a flush or of
+//! another apply. A range a merge adds after the read is left to the apply
+//! that merge queues, or to the next pass's.
+//!
+//! The progress goes out in the shape of `SyncProgress`.
 
 use std::collections::HashMap;
 use std::sync::Arc;
