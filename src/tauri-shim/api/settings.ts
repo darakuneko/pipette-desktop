@@ -18,6 +18,7 @@
 
 import type { AppConfig } from '../../shared/types/app-config'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../../shared/types/pipette-settings'
+import type { TypingKeyboardSummary } from '../../shared/types/typing-analytics'
 import type { VialAPI } from '../../shared/types/vial-api'
 import {
   mergeDefined,
@@ -53,6 +54,18 @@ export const readSettingsFile = (uid: string): Promise<SettingsFile> => call<Set
 
 export const writeSettingsFile = (uid: string, content: string, etag: string): Promise<'written' | 'conflict'> =>
   call<'written' | 'conflict'>('pipette_settings_write', { uid, content, etag })
+
+/** Uid → product name of the keyboards with typing data; none when the
+ *  analytics cannot answer, as the Electron handler skips a cache it
+ *  cannot open. */
+async function readAnalyticsNames(): Promise<Map<string, string>> {
+  try {
+    const keyboards = await call<TypingKeyboardSummary[]>('typing_analytics_list_keyboards')
+    return new Map(keyboards.map((k) => [k.uid, k.productName]))
+  } catch {
+    return new Map()
+  }
+}
 
 export async function ensureSettingsDir(uid: string): Promise<void> {
   await call<null>('pipette_settings_ensure_dir', { uid })
@@ -114,10 +127,20 @@ export const settingsApi = {
   },
   pipetteSettingsListAllTypingResults: async () => {
     const all: PooledTypingTestResult[] = []
+    let analyticsNames: Promise<Map<string, string>> | undefined
     for (const file of await readAllSettingsFiles()) {
       const prefs = parsePipetteSettings(file.content)
       if (!prefs?.typingTestResults?.length) continue
-      for (const r of prefs.typingTestResults) all.push({ ...r, keyboardName: file.name })
+      // The backend names a keyboard by its meta name, else its snapshots,
+      // else its uid; for the uid, the Electron handler takes the product
+      // name the typing analytics recorded, when there is one
+      // (resolveKeyboardDisplayName, keyboard-meta.ts).
+      let keyboardName = file.name
+      if (keyboardName === file.uid) {
+        analyticsNames ??= readAnalyticsNames()
+        keyboardName = (await analyticsNames).get(file.uid) || file.uid
+      }
+      for (const r of prefs.typingTestResults) all.push({ ...r, keyboardName })
     }
     return all
   },

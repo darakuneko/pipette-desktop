@@ -290,4 +290,44 @@ describe('pipetteSettingsListAllTypingResults', () => {
     const pooled = await settingsApi.pipetteSettingsListAllTypingResults()
     expect(pooled.map((r) => [r.wpm, r.keyboardName])).toEqual([[1, 'Board A'], [2, 'Board A'], [4, 'Board D']])
   })
+
+  it('names a keyboard known only by its uid after the product the typing analytics recorded', async () => {
+    const result = { date: '2026-01-01T00:00:00.000Z', wpm: 7, accuracy: 90, wordCount: 10, correctChars: 50, incorrectChars: 1, durationSeconds: 15 }
+    const content = JSON.stringify({ keyboardLayout: 'q', autoAdvance: true, typingTestResults: [result] })
+    const commands: string[] = []
+    mockIPC((cmd) => {
+      commands.push(cmd)
+      if (cmd === 'pipette_settings_read_all') {
+        return [
+          { uid: 'a', name: 'Board A', content },
+          { uid: 'b', name: 'b', content },
+          { uid: 'c', name: 'c', content },
+          { uid: 'd', name: 'd', content },
+        ]
+      }
+      if (cmd === 'typing_analytics_list_keyboards') {
+        return [
+          { uid: 'a', productName: 'Recorded A', vendorId: 1, productId: 2 },
+          { uid: 'b', productName: 'Recorded B', vendorId: 1, productId: 2 },
+          { uid: 'c', productName: '', vendorId: 1, productId: 2 },
+        ]
+      }
+      throw new Error(cmd)
+    })
+    const pooled = await settingsApi.pipetteSettingsListAllTypingResults()
+    expect(pooled.map((r) => r.keyboardName)).toEqual(['Board A', 'Recorded B', 'c', 'd'])
+    expect(commands).toEqual(['pipette_settings_read_all', 'typing_analytics_list_keyboards'])
+  })
+
+  it('keeps the uid when the typing analytics cannot answer', async () => {
+    const result = { date: '2026-01-01T00:00:00.000Z', wpm: 7, accuracy: 90, wordCount: 10, correctChars: 50, incorrectChars: 1, durationSeconds: 15 }
+    mockIPC((cmd) => {
+      if (cmd === 'pipette_settings_read_all') {
+        return [{ uid: 'b', name: 'b', content: JSON.stringify({ keyboardLayout: 'q', autoAdvance: true, typingTestResults: [result] }) }]
+      }
+      throw new Error(cmd)
+    })
+    const pooled = await settingsApi.pipetteSettingsListAllTypingResults()
+    expect(pooled.map((r) => r.keyboardName)).toEqual(['b'])
+  })
 })
