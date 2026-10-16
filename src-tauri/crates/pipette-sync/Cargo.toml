@@ -9,6 +9,8 @@ publish.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# The Drive client and the lookups by name of a listing (the reconcile).
+pipette-drive = { path = "../pipette-drive" }
 # The entry merge, the body filename rules and the store write locks.
 pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-fs = { path = "../pipette-fs" }
@@ -22,12 +24,23 @@ pipette-sync-runtime = { path = "../pipette-sync-runtime" }
 pipette-time = { path = "../pipette-time" }
 # The day files and deleted-ranges files of the typing analytics.
 pipette-typing-analytics = { path = "../pipette-typing-analytics" }
+# The rows of a day file and the ranges the cache hides.
+pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
+# The JavaScript Map order of the own-hash days on Drive.
+indexmap = "=2.14.2"
 log = "=0.4.34"
 thiserror = "=2.0.21"
+# The analytics merges wait for the database thread and the flush chain,
+# and the `sync:` locks are held across awaits.
+tokio = { version = "=1.53.3", features = ["rt", "sync"] }
 
 [dev-dependencies]
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+pipette-drive = { path = "../pipette-drive", features = ["test-util"] }
+# Reads the cache tables the analytics merges wrote.
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 tempfile = { workspace = true }
+tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time"] }
 
 [lints]
 workspace = true

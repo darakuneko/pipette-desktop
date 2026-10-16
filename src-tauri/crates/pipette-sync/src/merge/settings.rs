@@ -29,7 +29,7 @@ fn local_time(text: Option<String>) -> f64 {
 /// temporary file is removed, so nothing is written). Node writes the bytes
 /// of an array item or of an object item with a `length`; those fail here
 /// instead, which only text no device writes can reach.
-fn written_bytes(value: &Value) -> Result<Vec<u8>, MergeError> {
+pub(super) fn written_bytes(value: &Value) -> Result<Vec<u8>, MergeError> {
     let refuse =
         || MergeError::Type("The \"data\" argument must be of type string or an instance of Buffer".into());
     let Value::Array(items) = value else { return Err(refuse()) };

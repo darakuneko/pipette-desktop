@@ -3,22 +3,33 @@
 //! of src/main/sync/sync-merge-dispatch.ts), by the shape of its unit:
 //! the keyboard names, a keyboard's settings, a pack roster or body, or an
 //! index-based store. The typing-analytics day and deleted-ranges units
-//! have merges of their own.
+//! have merges of their own ([`merge_analytics_unit`]), which wait for the
+//! cache's database thread.
 //!
 //! Each merge runs under the store lock its unit's writes take, writes
 //! atomically, and reports `sync:unit-applied` (or the pack list change)
 //! only after it wrote. It answers whether Drive needs this device's copy.
 
+mod analytics_day;
+mod deleted_ranges;
 mod index_store;
 mod packs;
 mod settings;
+
+use std::sync::Arc;
 
 use pipette_entry_store::is_safe_path_segment;
 use pipette_js_json::Value;
 use pipette_keyboard_stores::{KeyboardMetaMergeError, StoreContext, apply_remote_keyboard_meta_index};
 use pipette_sync_runtime::RemoteMemory;
 
+pub use analytics_day::merge_device_day_bundle;
+pub use deleted_ranges::{
+    AnalyticsMerge, merge_typing_deleted_ranges_bundle, queue_own_deleted_ranges_apply,
+};
 pub use packs::PackRosters;
+use pipette_typing_analytics::DataOps;
+use pipette_typing_analytics::deleted_ranges::apply::ResetHolds;
 
 use crate::units::{
     is_keyboard_meta_unit, pack_index_store, parse_deleted_ranges_unit, parse_device_day_unit,
@@ -48,6 +59,18 @@ pub struct MergeEnv<'a> {
     /// it found missing, so the next pass downloads them.
     pub remote: &'a RemoteMemory,
     pub rosters: &'a PackRosters,
+}
+
+/// What the typing-analytics merges work with.
+pub struct AnalyticsEnv<'a> {
+    /// The write locks of the process: a deleted-ranges file is written
+    /// under the lock of its unit, which its local writers take too.
+    pub ctx: &'a StoreContext,
+    /// The cache, the clock and this device's flush chain.
+    pub ops: &'a Arc<DataOps>,
+    /// Whether a reset holds a keyboard (`resetHoldsKeyboard`): nothing of
+    /// this device's own ranges is applied to a keyboard a reset removes.
+    pub holds: ResetHolds,
 }
 
 /// Why a merge failed. Nothing is recorded for a failed unit, so the next
@@ -86,6 +109,19 @@ impl From<pipette_pack_stores::sync::PackSyncError> for MergeError {
             PackSyncError::Pack(err) => MergeError::Other(err.to_string()),
         }
     }
+}
+
+/// `MergeError::Other` carrying `err`'s text.
+fn other(err: impl std::fmt::Display) -> MergeError {
+    MergeError::Other(err.to_string())
+}
+
+/// Runs `work` on a blocking-task thread: the analytics merges read and
+/// write files from async tasks.
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, MergeError> + Send + 'static,
+) -> Result<T, MergeError> {
+    tokio::task::spawn_blocking(work).await.map_err(other)?
 }
 
 /// `bundle[key]`: reading a property of `null` throws; a value that is not
@@ -151,4 +187,27 @@ pub fn merge_sync_unit(
         return packs::merge_pack_body(env, store, id, bundle, remote_modified_time);
     }
     index_store::merge_index_store(env, unit, &parts, bundle)
+}
+
+/// Merges the remote `bundle` of a typing-analytics day or deleted-ranges
+/// `unit` (what [`merge_sync_unit`] answers [`MergeError::NotHandled`]
+/// for). A day answers that Drive needs nothing; a deleted-ranges unit
+/// answers [`AnalyticsMerge`]. Any other unit is [`MergeError::NotHandled`].
+pub async fn merge_analytics_unit(
+    env: &AnalyticsEnv<'_>,
+    unit: &str,
+    bundle: &Value,
+    own_hash: &str,
+) -> Result<AnalyticsMerge, MergeError> {
+    if let Some(day) = parse_device_day_unit(unit) {
+        merge_device_day_bundle(env, bundle, day, own_hash).await?;
+        return Ok(AnalyticsMerge { remote_needs_update: false, own_apply: None });
+    }
+    if let Some(ranges) = parse_deleted_ranges_unit(unit) {
+        if !is_safe_path_segment(ranges.uid) || !is_safe_path_segment(ranges.machine_hash) {
+            return Err(MergeError::Malformed(unit.to_owned()));
+        }
+        return merge_typing_deleted_ranges_bundle(env, unit, bundle, ranges, own_hash).await;
+    }
+    Err(MergeError::NotHandled(unit.to_owned()))
 }
