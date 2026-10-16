@@ -3142,6 +3142,7 @@ name = "pipette-sync"
 version = "0.0.0"
 dependencies = [
  "base64 0.22.1",
+ "futures-util",
  "indexmap 2.14.2",
  "log",
  "pipette-drive",

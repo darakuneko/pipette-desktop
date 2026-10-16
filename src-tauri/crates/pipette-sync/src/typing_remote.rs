@@ -69,14 +69,14 @@ pub struct Reconciled {
 }
 
 /// `{uid}|{hash}`, the key of a device's lists in `sync_state.json`.
-fn pointer_key(uid: &str, hash: &str) -> String {
+pub(crate) fn pointer_key(uid: &str, hash: &str) -> String {
     format!("{uid}|{hash}")
 }
 
 /// The days `uploaded` lists under `key`. The record may be an array,
 /// which the Electron build reads too: none of its keys holds a `|`, so it
 /// lists nothing.
-fn uploaded_days(uploaded: &Value, key: &str) -> IndexSet<String> {
+pub(crate) fn uploaded_days(uploaded: &Value, key: &str) -> IndexSet<String> {
     match uploaded.as_object().and_then(|record| record.get(key)) {
         Some(Value::Array(days)) => days.iter().filter_map(|day| day.as_str().map(str::to_owned)).collect(),
         _ => IndexSet::new(),
@@ -85,7 +85,7 @@ fn uploaded_days(uploaded: &Value, key: &str) -> IndexSet<String> {
 
 /// `record[key] = value`. Set on an array, the value is a property that
 /// `JSON.stringify` leaves out, so the array is kept as it is.
-fn set(record: &mut Value, key: &str, value: Value) {
+pub(crate) fn set(record: &mut Value, key: &str, value: Value) {
     if let Value::Object(record) = record {
         record.insert(key, value);
     }

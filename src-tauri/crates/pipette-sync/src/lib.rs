@@ -12,6 +12,8 @@
 //! - [`typing_remote`]: this device's typing days on Drive and their
 //!   reconcile with the local files before an upload pass;
 //! - [`unit_locks`]: the locks a whole sync of one unit holds;
+//! - [`dispatch`]: the sync of one unit (its merge or upload) and the
+//!   Drive revisions it records, with the envelope of [`codec`];
 //! - [`preflight`]: what every entry point runs before it touches data,
 //!   with its parts in [`format`] and [`format_status`] (the sync-format
 //!   marker and the status of the update banner) and [`password`] (the
@@ -19,7 +21,9 @@
 
 pub mod account;
 pub mod bundle;
+pub mod codec;
 pub mod crypto;
+pub mod dispatch;
 pub mod format;
 pub mod format_status;
 pub mod merge;

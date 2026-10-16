@@ -31,6 +31,8 @@ pipette-time = { path = "../pipette-time" }
 pipette-typing-analytics = { path = "../pipette-typing-analytics" }
 # The rows of a day file and the ranges the cache hides.
 pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
+# The units of a pass run 10 at a time.
+futures-util = { version = "=0.3.34", default-features = false, features = ["alloc"] }
 # The JavaScript Map order of the own-hash days on Drive.
 indexmap = "=2.14.2"
 log = "=0.4.34"
