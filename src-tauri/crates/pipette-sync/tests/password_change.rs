@@ -315,7 +315,7 @@ async fn files_that_keep_changing_stop_the_commit_and_keep_the_change() {
     assert_recoverable(&world, &machine, "not converged").await;
 }
 
-/// A userData the Electron build shares (M8): its state file is read as
+/// A userData the Electron build also uses: its state file is read as
 /// it is, its keys file is not, so the change waits as one whose keys
 /// cannot be read and can only be abandoned here; the Electron keys file
 /// is left alone.
