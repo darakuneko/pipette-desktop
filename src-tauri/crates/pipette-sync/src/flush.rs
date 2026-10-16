@@ -127,10 +127,18 @@ impl Flusher {
 
     /// `notifyChange`: records a change of `unit` and pushes the flush out
     /// by the full [`DEBOUNCE`].
+    ///
+    /// Unlike Electron's `notifyChange`, no timer is armed once the app
+    /// quits: a timer firing then would start a second flush racing the
+    /// quit's own flush and exit. The unit stays pending; the quit's flush
+    /// picks it up, and what is still pending is kept for the next launch.
+    /// The quit is checked holding the timer, as in `schedule_flush`.
     pub fn notify_change(&self, unit: &str) {
         self.inner.pending.notify_change(unit);
         let mut timer = self.timer();
-        self.arm(&mut timer, DEBOUNCE);
+        if !self.inner.preflight.runtime().is_quitting() {
+            self.arm(&mut timer, DEBOUNCE);
+        }
     }
 
     /// `scheduleFlushIfPending`: a flush after `delay` when units are

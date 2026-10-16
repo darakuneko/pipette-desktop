@@ -257,9 +257,12 @@ impl Poller {
         }
 
         let user_data = deps.units.ctx().user_data().to_path_buf();
-        let local = tokio::task::spawn_blocking(move || list_local_keyboard_uids(&user_data))
-            .await
-            .unwrap_or_default();
+        // Without the local keyboards every keyboard's files would be
+        // recorded as left alone and never polled again, so a listing that
+        // does not finish ends the pass before anything is recorded.
+        let Some(local) = join_listing(move || list_local_keyboard_uids(&user_data)).await else {
+            return;
+        };
         // One copy per name: the handled revisions are kept by name, so a
         // second copy would overwrite the chosen one's and look changed on
         // every pass.
@@ -339,4 +342,33 @@ fn record(remote: &RemoteMemory, file: &DriveFile) {
         &file.name,
         RemoteRevision { id: file.id.clone(), modified_time: file.modified_time.clone() },
     );
+}
+
+/// Runs the blocking `list` and returns its result; `None` when the task
+/// panicked or was cancelled.
+async fn join_listing<F>(list: F) -> Option<HashSet<String>>
+where
+    F: FnOnce() -> HashSet<String> + Send + 'static,
+{
+    match tokio::task::spawn_blocking(list).await {
+        Ok(uids) => Some(uids),
+        Err(err) => {
+            log::warn!("sync: listing the local keyboards did not finish: {err}");
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_listing_that_panics_gives_nothing() {
+        let listed = join_listing(|| HashSet::from(["uid".to_owned()])).await;
+        assert_eq!(listed, Some(HashSet::from(["uid".to_owned()])));
+        #[allow(clippy::panic)]
+        let panicked = join_listing(|| panic!("listing")).await;
+        assert_eq!(panicked, None);
+    }
 }

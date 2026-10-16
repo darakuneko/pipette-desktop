@@ -148,7 +148,8 @@ async fn flush_and_poll_passes_match_typescript() {
         for (i, want) in scenario["steps"].as_array().unwrap().iter().enumerate() {
             let got = run_step(&world, &triggers, &codec, &want["step"], &password).await;
             for key in ["progress", "requests", "pending", "remote", "created", "applied", "timer"] {
-                failures.check(format!("{name} / step {i} / {key}"), &got[key], &want[key]);
+                let want = want.get(key).unwrap_or_else(|| panic!("{name} / step {i} has no {key}"));
+                failures.check(format!("{name} / step {i} / {key}"), &got[key], want);
             }
         }
         tokio::time::resume();

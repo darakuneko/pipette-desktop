@@ -218,6 +218,16 @@ async fn no_retry_is_scheduled_while_quitting() {
 }
 
 #[tokio::test]
+async fn a_change_while_quitting_stays_pending_without_a_timer() {
+    let world = world().await;
+    let triggers = world.triggers(true);
+    world.runtime().set_quitting();
+    notify(&triggers, MACRO);
+    assert_eq!(triggers.flusher().due_in(), None, "the quit's flush sends it");
+    assert!(world.pending.has_pending_changes());
+}
+
+#[tokio::test]
 async fn failures_before_the_units_are_tried_again_after_the_polling_interval() {
     for fail in ["list", "marker", "password-check"] {
         let world = world_with(Options { marker: fail != "marker", ..Options::default() }).await;
