@@ -92,6 +92,15 @@ pub struct TypingTextSave {
     pub keep_current_name: bool,
 }
 
+impl TypingTextSave {
+    /// A new text named `name`: no id, no catalog source, the name given
+    /// kept. Set the other fields on the result to write over an entry or
+    /// record a catalog.
+    pub fn new(name: impl Into<JsString>, text: impl Into<JsString>) -> Self {
+        Self { id: None, name: name.into(), text: text.into(), source: None, keep_current_name: false }
+    }
+}
+
 /// The cached `romajiCapable` of an entry, with the body filename it was
 /// computed from: every save that changes the text writes a new filename,
 /// and nothing else changes the text.

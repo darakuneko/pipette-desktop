@@ -234,29 +234,15 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     assert!(texts.import_file(&ctx, &kana).is_err());
     texts.confirm_import(&ctx).unwrap();
     let aozora = TypingTextSave {
-        id: None,
-        name: JsString::from("作品（作者）"),
-        text: JsString::from("ひらがな カタカナ"),
         source: Some(TypingTextSource {
             provider: JsString::from("aozora"),
             work_id: JsString::from("001257/files/59898_ruby_70679.zip"),
         }),
-        keep_current_name: false,
+        ..TypingTextSave::new("作品（作者）", "ひらがな カタカナ")
     };
     let aozora_id = texts.save(&ctx, &aozora).unwrap().id().unwrap().clone();
     texts.rename(&ctx, &aozora_id, &JsString::from("作品 😀")).unwrap();
-    let gone = texts
-        .save(
-            &ctx,
-            &TypingTextSave {
-                id: None,
-                name: JsString::from("Gone"),
-                text: JsString::from("bye"),
-                source: None,
-                keep_current_name: false,
-            },
-        )
-        .unwrap();
+    let gone = texts.save(&ctx, &TypingTextSave::new("Gone", "bye")).unwrap();
     texts.delete(&ctx, gone.id().unwrap()).unwrap();
     assert_ne!(kana_id, aozora_id);
 

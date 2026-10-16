@@ -78,10 +78,7 @@ impl TypingTextStore {
             return Err(TypingTextError::refused(TypingTextErrorCode::DuplicateName, &message));
         }
         self.state.set_pending(None);
-        self.save(
-            ctx,
-            &TypingTextSave { id: None, name, text: text.into(), source: None, keep_current_name: false },
-        )
+        self.save(ctx, &TypingTextSave::new(name, text))
     }
 
     /// Saves the import held by [`Self::import_file`] over the text it
@@ -95,10 +92,8 @@ impl TypingTextStore {
             ctx,
             &TypingTextSave {
                 id: Some(held.existing_id),
-                name: held.name,
-                text: held.text,
-                source: None,
                 keep_current_name: true,
+                ..TypingTextSave::new(held.name, held.text)
             },
         )
     }

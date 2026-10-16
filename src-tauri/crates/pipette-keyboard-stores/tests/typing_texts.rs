@@ -20,7 +20,7 @@ use pipette_keyboard_stores::{
 };
 
 fn input(name: &str, text: &str) -> TypingTextSave {
-    TypingTextSave { id: None, name: name.into(), text: text.into(), source: None, keep_current_name: false }
+    TypingTextSave::new(name, text)
 }
 
 fn save(h: &Harness, store: &TypingTextStore, name: &str, text: &str) -> Entry {
