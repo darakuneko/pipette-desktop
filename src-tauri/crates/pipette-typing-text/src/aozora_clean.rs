@@ -46,11 +46,11 @@ const RULE_CHARS: [u16; 4] = bmp("-＝=―");
 pub fn clean_aozora_text(raw: &[u16]) -> Result<Vec<u16>, InvalidCodePoint> {
     let text = normalize_newlines(raw);
     let text = remove_header(&text);
-    let text = remove_footer(&text);
+    let text = remove_footer(text);
     let text = resolve_warichu(text);
     let text = remove_ruby(&text);
-    let text = resolve_gaiji(&text)?;
-    let text = replace_all(&replace_all(&text, &REPEAT_VOICED, &REPEAT_VOICED_TO), &REPEAT, &REPEAT_TO);
+    let text = resolve_gaiji(text)?;
+    let text = replace_all(replace_all(text, &REPEAT_VOICED, &REPEAT_VOICED_TO), &REPEAT, &REPEAT_TO);
     let mut text = remove_annotations(text);
     text.retain(|&unit| unit != REPLACEMENT_CHARACTER);
     Ok(trim_edges(&text))
@@ -99,7 +99,7 @@ fn is_colophon_line(line: &[u16]) -> bool {
 /// (`底本：`) or holds the end-of-body marker. Both searches of the
 /// TypeScript match at a line start, so the earlier of the two is the
 /// first line that satisfies either.
-fn remove_footer(text: &[u16]) -> Vec<u16> {
+fn remove_footer(mut text: Vec<u16>) -> Vec<u16> {
     let mut start = 0;
     loop {
         let end = text[start..]
@@ -108,10 +108,11 @@ fn remove_footer(text: &[u16]) -> Vec<u16> {
             .map_or(text.len(), |at| start + at);
         let line = &text[start..end];
         if is_colophon_line(line) || find(line, &END_OF_BODY, 0).is_some() {
-            return text[..start].to_vec();
+            text.truncate(start);
+            return text;
         }
         if end == text.len() {
-            return text.to_vec();
+            return text;
         }
         start = end + 1;
     }
@@ -194,13 +195,13 @@ fn gaiji_code_point(content: &[u16]) -> Option<u32> {
 
 /// `resolveGaiji`: `※［＃…］` becomes the code point its `U+XXXX` names, or
 /// nothing when it has none (a menkuten reference only).
-fn resolve_gaiji(text: &[u16]) -> Result<Vec<u16>, InvalidCodePoint> {
-    let mut out = Vec::with_capacity(text.len());
+fn resolve_gaiji(text: Vec<u16>) -> Result<Vec<u16>, InvalidCodePoint> {
+    let mut out = Vec::new();
     let mut i = 0;
-    while let Some(open) = find(text, &GAIJI_OPEN, i) {
+    while let Some(open) = find(&text, &GAIJI_OPEN, i) {
         let content_start = open + GAIJI_OPEN.len();
         // Without a `］` after this note, none after a later one.
-        let Some(close) = find_unit(text, BRACKETS[1], content_start) else { break };
+        let Some(close) = find_unit(&text, BRACKETS[1], content_start) else { break };
         out.extend_from_slice(&text[i..open]);
         if let Some(cp) = gaiji_code_point(&text[content_start..close]) {
             if cp > 0x10_ffff {
@@ -210,18 +211,24 @@ fn resolve_gaiji(text: &[u16]) -> Result<Vec<u16>, InvalidCodePoint> {
         }
         i = close + 1;
     }
+    if i == 0 {
+        return Ok(text);
+    }
     out.extend_from_slice(&text[i..]);
     Ok(out)
 }
 
 /// `text.replace(/pattern/g, replacement)` for a literal pattern.
-fn replace_all(text: &[u16], pattern: &[u16], replacement: &[u16]) -> Vec<u16> {
-    let mut out = Vec::with_capacity(text.len());
+fn replace_all(text: Vec<u16>, pattern: &[u16], replacement: &[u16]) -> Vec<u16> {
+    let mut out = Vec::new();
     let mut i = 0;
-    while let Some(at) = find(text, pattern, i) {
+    while let Some(at) = find(&text, pattern, i) {
         out.extend_from_slice(&text[i..at]);
         out.extend_from_slice(replacement);
         i = at + pattern.len();
+    }
+    if i == 0 {
+        return text;
     }
     out.extend_from_slice(&text[i..]);
     out

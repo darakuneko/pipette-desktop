@@ -76,27 +76,45 @@ fn remove_header_scan_window_counts_from_the_top_of_the_file() {
 
 #[test]
 fn remove_footer_cuts_at_the_colophon() {
-    assert_eq!(run(remove_footer, "本文\n底本：「作品集」出版社\n発行日など"), "本文\n");
-    assert_eq!(run(remove_footer, "本文\n　底本:出典社\n以下略"), "本文\n");
+    assert_eq!(
+        run(|text: &[u16]| remove_footer(text.to_vec()), "本文\n底本：「作品集」出版社\n発行日など"),
+        "本文\n"
+    );
+    assert_eq!(run(|text: &[u16]| remove_footer(text.to_vec()), "本文\n　底本:出典社\n以下略"), "本文\n");
     let input = "本文のみ、底本情報なし";
-    assert_eq!(run(remove_footer, input), input);
+    assert_eq!(run(|text: &[u16]| remove_footer(text.to_vec()), input), input);
 }
 
 #[test]
 fn remove_footer_cuts_at_the_end_of_body_marker() {
-    assert_eq!(run(remove_footer, "本文\n続き［＃本文終わり］\n入力者付記など"), "本文\n");
+    assert_eq!(
+        run(|text: &[u16]| remove_footer(text.to_vec()), "本文\n続き［＃本文終わり］\n入力者付記など"),
+        "本文\n"
+    );
 }
 
 #[test]
 fn remove_footer_cuts_at_whichever_marker_comes_first() {
-    assert_eq!(run(remove_footer, "本文\n続き［＃本文終わり］\n底本：「作品集」出版社"), "本文\n");
-    assert_eq!(run(remove_footer, "本文\n底本：「作品集」出版社\n続き［＃本文終わり］"), "本文\n");
+    assert_eq!(
+        run(
+            |text: &[u16]| remove_footer(text.to_vec()),
+            "本文\n続き［＃本文終わり］\n底本：「作品集」出版社"
+        ),
+        "本文\n"
+    );
+    assert_eq!(
+        run(
+            |text: &[u16]| remove_footer(text.to_vec()),
+            "本文\n底本：「作品集」出版社\n続き［＃本文終わり］"
+        ),
+        "本文\n"
+    );
 }
 
 #[test]
 fn remove_footer_line_starts_include_u2028_but_not_a_mid_line_colophon() {
-    assert_eq!(run(remove_footer, "本文\u{2028}底本：x"), "本文\u{2028}");
-    assert_eq!(run(remove_footer, "本文 底本：x"), "本文 底本：x");
+    assert_eq!(run(|text: &[u16]| remove_footer(text.to_vec()), "本文\u{2028}底本：x"), "本文\u{2028}");
+    assert_eq!(run(|text: &[u16]| remove_footer(text.to_vec()), "本文 底本：x"), "本文 底本：x");
 }
 
 #[test]
@@ -120,7 +138,7 @@ fn remove_ruby_drops_spans_and_the_ruby_start_marker() {
 
 #[test]
 fn resolve_gaiji_substitutes_the_code_point() {
-    let step = |text: &[u16]| resolve_gaiji(text).unwrap_or_default();
+    let step = |text: &[u16]| resolve_gaiji(text.to_vec()).unwrap_or_default();
     assert_eq!(run(step, "※［＃「はしごだか」、U+9AD9、12-3］橋"), "髙橋");
     assert_eq!(run(step, "前※［＃「にんべん＋并」、第3水準1-14-8］後"), "前後");
     assert_eq!(run(step, "※［＃U+1F600］"), "😀");
@@ -129,14 +147,14 @@ fn resolve_gaiji_substitutes_the_code_point() {
 
 #[test]
 fn resolve_gaiji_keeps_a_lone_surrogate_and_rejects_past_u10ffff() {
-    assert_eq!(resolve_gaiji(&utf16("※［＃U+D800］")), Ok(vec![0xd800]));
-    assert_eq!(resolve_gaiji(&utf16("※［＃U+110000］")), Err(InvalidCodePoint(0x11_0000)));
+    assert_eq!(resolve_gaiji(utf16("※［＃U+D800］")), Ok(vec![0xd800]));
+    assert_eq!(resolve_gaiji(utf16("※［＃U+110000］")), Err(InvalidCodePoint(0x11_0000)));
 }
 
 #[test]
 fn convert_repeat_marks_converts_the_voiced_mark_first() {
     let step = |text: &[u16]| {
-        replace_all(&replace_all(text, &REPEAT_VOICED, &REPEAT_VOICED_TO), &REPEAT, &REPEAT_TO)
+        replace_all(replace_all(text.to_vec(), &REPEAT_VOICED, &REPEAT_VOICED_TO), &REPEAT, &REPEAT_TO)
     };
     assert_eq!(run(step, "あ／″＼い／＼う"), "あ〴〵い〳〵う");
 }
