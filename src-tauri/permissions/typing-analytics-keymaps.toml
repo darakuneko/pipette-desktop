@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/analytics_commands/keymaps.rs: the keymap snapshots
+# this device saves when recording starts.
+
+[[set]]
+identifier = "typing-analytics-keymaps"
+description = "Saves, picks and lists the keymap snapshots of a keyboard on this device."
+permissions = [
+  "allow-typing-analytics-save-keymap-snapshot",
+  "allow-typing-analytics-get-keymap-snapshot-for-range",
+  "allow-typing-analytics-list-keymap-snapshots",
+]

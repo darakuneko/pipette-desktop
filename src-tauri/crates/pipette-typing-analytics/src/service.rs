@@ -20,7 +20,7 @@ use tokio::sync::watch;
 use crate::Error;
 use crate::cache_rebuild::ensure_cache_is_fresh;
 use crate::db_actor::{DbActor, db_path};
-use crate::identity::MachineIdentity;
+use crate::identity::{IdentityError, MachineIdentity};
 use crate::sync_state::TypingSyncState;
 
 /// Rebuilds the cache from the JSONL masters on the database thread:
@@ -61,6 +61,23 @@ impl TypingAnalytics {
         rebuild: RebuildCache,
     ) -> Self {
         Self { user_data: user_data.to_path_buf(), identity, clock, rebuild, init: Mutex::new(Init::Idle) }
+    }
+
+    /// The userData directory the analytics read and write.
+    pub fn user_data(&self) -> &Path {
+        &self.user_data
+    }
+
+    /// `getMachineHash`, without waiting for the initialization: the keymap
+    /// snapshot handlers need the hash and nothing else. Blocks on file I/O
+    /// the first time.
+    pub fn machine_hash(&self) -> Result<String, IdentityError> {
+        self.identity.machine_hash()
+    }
+
+    /// `Date.now()` of the analytics' clock.
+    pub fn now_ms(&self) -> i64 {
+        self.clock.now_ms()
     }
 
     fn lock(&self) -> MutexGuard<'_, Init> {

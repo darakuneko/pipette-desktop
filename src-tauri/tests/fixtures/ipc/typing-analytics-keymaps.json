@@ -1,0 +1,35 @@
+[
+  {
+    "member": "typingAnalyticsSaveKeymapSnapshot",
+    "args": [
+      {
+        "uid": "0xA1B2",
+        "productName": "Pipette",
+        "savedAt": 1000,
+        "layers": 1,
+        "matrix": { "rows": 1, "cols": 1 },
+        "keymap": [[["KC_A"]]],
+        "layout": null
+      }
+    ],
+    "command": "typing_analytics_save_keymap_snapshot",
+    "invokeArgs": {
+      "snapshot": "{\"uid\":\"0xA1B2\",\"productName\":\"Pipette\",\"savedAt\":1000,\"layers\":1,\"matrix\":{\"rows\":1,\"cols\":1},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}"
+    },
+    "response": { "saved": true, "savedAt": 1000 }
+  },
+  {
+    "member": "typingAnalyticsGetKeymapSnapshotForRange",
+    "args": ["0xA1B2", 0, 2000],
+    "command": "typing_analytics_get_keymap_snapshot_for_range",
+    "invokeArgs": { "uid": "0xA1B2", "fromMs": 0, "toMs": 2000 },
+    "response": null
+  },
+  {
+    "member": "typingAnalyticsListKeymapSnapshots",
+    "args": ["0xA1B2"],
+    "command": "typing_analytics_list_keymap_snapshots",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": []
+  }
+]
