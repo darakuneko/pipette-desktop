@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-keyboard-stores"
-description = "The per-keyboard stores under the userData directory: the keyboard names (sync/meta/keyboard-names.json), the list of stored keyboards, and the snapshots and pipette settings of each keyboard"
+description = "The per-keyboard stores under the userData directory: the keyboard names (sync/meta/keyboard-names.json), the list of stored keyboards, and the snapshots and pipette settings of each keyboard; and the key labels, favorites and typing test texts kept across keyboards"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,6 +14,9 @@ pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-fs = { path = "../pipette-fs" }
 pipette-js-json = { path = "../pipette-js-json" }
 pipette-time = { path = "../pipette-time" }
+# The text rules of the typing test texts: the import normalization and the
+# kana-only check.
+pipette-typing-text = { path = "../pipette-typing-text" }
 # The etag of a settings file.
 sha2 = { version = "=0.10.9", default-features = false }
 thiserror = "=2.0.21"

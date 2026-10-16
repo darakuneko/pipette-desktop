@@ -4,6 +4,9 @@
 //!
 //! - the key labels (`sync/key-labels`, the sync unit of the same name) of
 //!   src/main/key-label-store.ts, kept across keyboards;
+//! - the typing test texts (`sync/typing-test-texts`, the sync unit of the
+//!   same name) of src/main/typing-test-text-store.ts, kept across
+//!   keyboards;
 //! - the favorites of each type (`sync/favorites/{type}`, the sync unit of
 //!   the same name) of src/main/favorite-store.ts;
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
@@ -34,6 +37,7 @@ mod settings;
 mod snapshot_filename;
 mod snapshots;
 mod stored_keyboards;
+mod typing_texts;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -70,6 +74,10 @@ pub use snapshots::{
     update_snapshot,
 };
 pub use stored_keyboards::{StoredKeyboard, list_stored_keyboards, stored_keyboards_json};
+pub use typing_texts::{
+    TYPING_TEXT_MAX_FILE_BYTES, TYPING_TEXT_SYNC_UNIT, TypingTextError, TypingTextErrorCode, TypingTextSave,
+    TypingTextSource, TypingTextStore, typing_text_response,
+};
 
 /// Told the sync unit of each change a store makes (`notifyChange` of
 /// src/main/sync/sync-flush.ts).
