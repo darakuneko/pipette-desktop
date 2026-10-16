@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The specs of src/main/sync/__tests__/sync-pending-store.test.ts that cover
-//! what this crate does: the delayed writes, the generations and the startup
-//! restore. The settle, cancel and account hand-over specs belong to the
-//! upload side, which is not here.
+//! The specs of src/main/sync/__tests__/sync-pending-store.test.ts on the
+//! delayed writes, the generations and the startup restore. The settle,
+//! cancel and account hand-over specs are in sync_pending_upload.rs.
 
 #![allow(clippy::unwrap_used)]
 

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-sync-pending"
-description = "The pending sync units kept in local/sync-pending.json: the startup restore, the generations and the delayed writes"
+description = "The pending sync units kept in local/sync-pending.json: the startup restore, the generations, the delayed writes, the settles and cancels of the upload side and the account each unit belongs to"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -16,6 +16,7 @@ pipette-js-json = { path = "../pipette-js-json" }
 # The pending units in the order they were first marked, as a JS Set keeps them.
 indexmap = "=2.14.2"
 log = "=0.4.34"
+thiserror = "=2.0.21"
 
 [dev-dependencies]
 serde = { workspace = true }
