@@ -11,6 +11,15 @@
 //! limit ([`Limits`]), so a stalled server ends in an error rather than a
 //! request that never settles.
 
+// The endpoint variables let a process send the sync's Google requests
+// (tokens included) elsewhere, so only a debug build may read them. Every
+// bundled build is a release build without debug assertions.
+#[cfg(all(feature = "url-override", not(debug_assertions)))]
+compile_error!(
+    "the url-override feature of pipette-net is not allowed without debug assertions: it reads \
+     the Google endpoints from the environment"
+);
+
 mod client;
 mod google;
 mod hub;

@@ -23,7 +23,8 @@ thiserror = "=2.0.21"
 
 [features]
 # Reads the Google endpoint variables (src/google.rs). The app's
-# development tools turn it on; a release build has no code that reads them.
+# development tools turn it on; a release build has no code that reads them,
+# and src/lib.rs refuses to compile it without debug assertions.
 url-override = []
 
 [dev-dependencies]
