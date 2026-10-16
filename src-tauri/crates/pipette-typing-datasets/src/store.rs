@@ -422,8 +422,7 @@ impl LanguageStore {
                         return Err(CATALOG_ERROR.to_owned());
                     }
                     let entry = dataset.entry(&name).ok_or_else(|| "Unknown language".to_owned())?;
-                    let url = format!("{}/{name}.json", dataset.download_url_base.to_string_lossy());
-                    Ok((url, file_size(entry)))
+                    Ok((dataset.download_url(&name, ".json"), file_size(entry)))
                 })
             })
             .await

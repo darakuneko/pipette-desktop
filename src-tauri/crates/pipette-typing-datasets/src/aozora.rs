@@ -95,7 +95,7 @@ fn find_work(dataset: Dataset<'_>, work_id: &str) -> Result<Work, Stop> {
         .entry(work_id)
         .ok_or_else(|| Stop::Answer(NOT_IN_CATALOG, format!("Aozora work not in catalog: {work_id}")))?;
     Ok(Work {
-        url: format!("{}/{work_id}", dataset.download_url_base.to_string_lossy()),
+        url: dataset.download_url(work_id, ""),
         size: file_size(entry),
         name: text_name(entry, work_id),
     })
