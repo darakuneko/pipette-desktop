@@ -53,12 +53,6 @@ pub async fn sync_password_status(
     Ok(stored_password_status(&sync.secrets).await)
 }
 
-/// What follows a password that was stored and opened the password-check.
-/// Electron flushes the pending changes and starts polling here
-/// (`scheduleFlushIfPending`, `startPollingIfAutoSync`); this app has no
-/// flush or polling, so nothing runs.
-fn on_password_ready() {}
-
 /// Sets the first sync password (`setPasswordAndValidate`): stored once
 /// it opens the password-check on Drive, which is created (after the
 /// sync-format marker) when Drive has none.
@@ -68,11 +62,7 @@ pub async fn sync_set_password(
     password: String,
 ) -> Result<SyncOperationResult, CommandError> {
     let password = Zeroizing::new(password);
-    let result = preflight.set_password_and_validate(&password).await;
-    if result.is_ok() {
-        on_password_ready();
-    }
-    Ok(result.into())
+    Ok(preflight.set_password_and_validate(&password).await.into())
 }
 
 /// Replaces the stored password with one changed on another machine
@@ -87,11 +77,7 @@ pub async fn sync_replace_password(
     if password.is_empty() {
         return Ok(SyncOperationResult::failure("Invalid password".to_owned(), None));
     }
-    let result = preflight.replace_password_and_validate(&password).await;
-    if result.is_ok() {
-        on_password_ready();
-    }
-    Ok(result.into())
+    Ok(preflight.replace_password_and_validate(&password).await.into())
 }
 
 /// Whether Drive has a password-check (`checkPasswordCheckExists`); a
