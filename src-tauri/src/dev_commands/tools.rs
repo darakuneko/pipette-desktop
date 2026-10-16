@@ -115,14 +115,13 @@ pub fn dev_log(message: String) {
     log::info!("[webview] {message}");
 }
 
-/// Answers for the next file dialogs, in order: the path the user would
-/// choose, or `None` for a dialog the user cancels. Each answer is used
-/// once.
+/// Answers for the next file dialogs, in order: the paths the user would
+/// choose, none for a dialog the user cancels. Each answer is used once.
 #[derive(Default)]
-pub struct DialogQueue(Mutex<VecDeque<Option<PathBuf>>>);
+pub struct DialogQueue(Mutex<VecDeque<Vec<PathBuf>>>);
 
 impl DialogQueue {
-    fn push(&self, answer: Option<PathBuf>) {
+    fn push(&self, answer: Vec<PathBuf>) {
         self.0.lock().unwrap_or_else(PoisonError::into_inner).push_back(answer);
     }
 
@@ -130,7 +129,7 @@ impl DialogQueue {
         self.0.lock().unwrap_or_else(PoisonError::into_inner).len()
     }
 
-    fn pop(&self) -> Option<Option<PathBuf>> {
+    fn pop(&self) -> Option<Vec<PathBuf>> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner).pop_front()
     }
 }
@@ -144,7 +143,7 @@ struct QueuedDialogs<F> {
 }
 
 impl<F: DialogProvider> DialogProvider for QueuedDialogs<F> {
-    fn show(&self, request: DialogRequest) -> Option<PathBuf> {
+    fn show(&self, request: DialogRequest) -> Vec<PathBuf> {
         match self.queue.pop() {
             Some(answer) => {
                 log::info!("[dev] answered the file dialog {:?} from the queue: {answer:?}", request.title);
@@ -163,10 +162,25 @@ pub fn manage_queued_dialogs(app: &AppHandle<Wry>, system: SystemDialogs) {
     app.manage(queue);
 }
 
-/// Queues the answer of the next file dialog: `path`, or a cancel for null.
+/// Queues the answer of the next file dialog: `path` for a dialog of one
+/// file or `paths` for one of several, a cancel for a null `path` or empty
+/// `paths`.
 #[tauri::command]
-pub fn dev_dialog_respond(queue: State<'_, Arc<DialogQueue>>, path: Option<PathBuf>) {
-    queue.push(path);
+pub fn dev_dialog_respond(
+    queue: State<'_, Arc<DialogQueue>>,
+    path: Option<PathBuf>,
+    paths: Option<Vec<PathBuf>>,
+) -> Result<(), CommandError> {
+    queue.push(dialog_answer(path, paths)?);
+    Ok(())
+}
+
+fn dialog_answer(path: Option<PathBuf>, paths: Option<Vec<PathBuf>>) -> Result<Vec<PathBuf>, CommandError> {
+    match (path, paths) {
+        (Some(_), Some(_)) => Err(CommandError::new("give either path or paths, not both")),
+        (path, None) => Ok(path.into_iter().collect()),
+        (None, Some(paths)) => Ok(paths),
+    }
 }
 
 /// How many queued answers no file dialog has taken yet: a step that should
@@ -368,15 +382,30 @@ mod tests {
             title: title.to_owned(),
             filters: Vec::new(),
         };
-        queue.push(Some(PathBuf::from("/tmp/a.vil")));
-        queue.push(None);
+        queue.push(vec![PathBuf::from("/tmp/a.vil")]);
+        queue.push(Vec::new());
+        queue.push(vec![PathBuf::from("/tmp/b.json"), PathBuf::from("/tmp/c.json")]);
 
-        assert_eq!(queue.len(), 2);
-        assert_eq!(dialogs.show(request("first")), Some(PathBuf::from("/tmp/a.vil")));
-        assert_eq!(dialogs.show(request("second")), None);
+        assert_eq!(queue.len(), 3);
+        assert_eq!(dialogs.show(request("first")), [PathBuf::from("/tmp/a.vil")]);
+        assert_eq!(dialogs.show(request("second")), Vec::<PathBuf>::new());
+        assert_eq!(
+            dialogs.show(request("third")),
+            [PathBuf::from("/tmp/b.json"), PathBuf::from("/tmp/c.json")]
+        );
         assert_eq!(queue.len(), 0);
-        assert_eq!(dialogs.show(request("third")), Some(PathBuf::from("/from/the/fallback")));
-        assert_eq!(*fallback_titles.lock().unwrap(), ["third"]);
+        assert_eq!(dialogs.show(request("fourth")), [PathBuf::from("/from/the/fallback")]);
+        assert_eq!(*fallback_titles.lock().unwrap(), ["fourth"]);
+    }
+
+    #[test]
+    fn a_dialog_answer_is_a_path_or_paths_and_null_or_empty_cancels() {
+        let path = |p: &str| PathBuf::from(p);
+        assert_eq!(dialog_answer(Some(path("/a")), None), Ok(vec![path("/a")]));
+        assert_eq!(dialog_answer(None, None), Ok(Vec::new()));
+        assert_eq!(dialog_answer(None, Some(vec![path("/a"), path("/b")])), Ok(vec![path("/a"), path("/b")]));
+        assert_eq!(dialog_answer(None, Some(Vec::new())), Ok(Vec::new()));
+        assert!(dialog_answer(Some(path("/a")), Some(vec![path("/b")])).is_err());
     }
 
     #[test]

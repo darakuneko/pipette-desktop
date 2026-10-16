@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The native file dialogs of the file commands (file_commands.rs) and of the
 //! favorite export and import (store_commands/favorites.rs). A command
-//! describes its dialog in a [`DialogRequest`] and gets back the path the
+//! describes its dialog in a [`DialogRequest`] and gets back the paths the
 //! user chose; the page never names a path itself. Which provider answers is
 //! managed state ([`Dialogs`]): the system's dialogs in the app
 //! ([`SystemDialogs`]), a queue in front of them in builds with the
@@ -32,6 +32,21 @@ impl FileFilter {
     pub fn all_files() -> Self {
         Self::new("All Files", &["*"])
     }
+
+    /// Whether the filter lets every file through: Electron's `*` extension.
+    fn matches_any_file(&self) -> bool {
+        self.extensions.iter().any(|ext| ext == "*")
+    }
+}
+
+/// The filters to hand to rfd: none when every filter lets every file
+/// through. rfd turns the `*` extension into the pattern `*.*`, which hides
+/// the files without an extension that Electron's `*` shows; a list of
+/// `*` filters alone (the typing test text import's) filters nothing, so
+/// leaving it out shows every file, as Electron does. A list that also has
+/// a real filter keeps its `All Files` as `*.*`.
+fn native_filters(filters: &[FileFilter]) -> &[FileFilter] {
+    if filters.iter().all(FileFilter::matches_any_file) { &[] } else { filters }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +55,12 @@ pub enum DialogKind {
     SaveFile { default_name: String },
     /// Choose an existing file.
     OpenFile,
+    /// Choose one or more existing files (Electron's `multiSelections`).
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "for the key label and pack imports, not in the app yet")
+    )]
+    OpenMany,
     /// Choose a directory; the dialog can create one.
     OpenFolder,
 }
@@ -51,15 +72,22 @@ pub struct DialogRequest {
     pub filters: Vec<FileFilter>,
 }
 
-/// Shows a file dialog and returns the chosen path, or `None` when the user
-/// cancels it. Called on a blocking-task thread, never on the main thread.
+/// Shows a file dialog and returns the chosen paths, none when the user
+/// cancels it: one at most, except for [`DialogKind::OpenMany`]. Called on a
+/// blocking-task thread, never on the main thread.
 pub trait DialogProvider: Send + Sync {
-    fn show(&self, request: DialogRequest) -> Option<PathBuf>;
+    fn show(&self, request: DialogRequest) -> Vec<PathBuf>;
 }
 
-impl<F: Fn(DialogRequest) -> Option<PathBuf> + Send + Sync> DialogProvider for F {
-    fn show(&self, request: DialogRequest) -> Option<PathBuf> {
-        self(request)
+/// A closure answers with an `Option<PathBuf>` for a dialog of one path or
+/// a `Vec<PathBuf>`.
+impl<F, R> DialogProvider for F
+where
+    F: Fn(DialogRequest) -> R + Send + Sync,
+    R: IntoIterator<Item = PathBuf>,
+{
+    fn show(&self, request: DialogRequest) -> Vec<PathBuf> {
+        self(request).into_iter().collect()
     }
 }
 
@@ -72,7 +100,18 @@ impl Dialogs {
         Self(Arc::new(provider))
     }
 
+    /// The path chosen in a dialog of one path, `None` when cancelled.
     pub fn show(&self, request: DialogRequest) -> Option<PathBuf> {
+        self.0.show(request).into_iter().next()
+    }
+
+    /// The paths chosen in a [`DialogKind::OpenMany`] dialog, none when
+    /// cancelled.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "for the key label and pack imports, not in the app yet")
+    )]
+    pub fn show_many(&self, request: DialogRequest) -> Vec<PathBuf> {
         self.0.show(request)
     }
 }
@@ -86,7 +125,7 @@ pub struct SystemDialogs {
     app: AppHandle<Wry>,
 }
 
-type PendingChoice = Pin<Box<dyn Future<Output = Option<rfd::FileHandle>> + Send>>;
+type PendingChoice = Pin<Box<dyn Future<Output = Vec<PathBuf>> + Send>>;
 
 impl SystemDialogs {
     pub fn new(app: AppHandle<Wry>) -> Self {
@@ -95,13 +134,13 @@ impl SystemDialogs {
 }
 
 impl DialogProvider for SystemDialogs {
-    fn show(&self, request: DialogRequest) -> Option<PathBuf> {
+    fn show(&self, request: DialogRequest) -> Vec<PathBuf> {
         let (chosen, choice) = std::sync::mpsc::channel();
         let app = self.app.clone();
         let scheduled = self.app.run_on_main_thread(move || {
             let mut dialog =
                 rfd::AsyncFileDialog::new().set_title(&request.title).set_can_create_directories(true);
-            for filter in &request.filters {
+            for filter in native_filters(&request.filters) {
                 dialog = dialog.add_filter(&filter.name, &filter.extensions);
             }
             if let Some(window) = crate::main_window::main_window(&app) {
@@ -109,21 +148,76 @@ impl DialogProvider for SystemDialogs {
             }
             let pending: PendingChoice = match request.kind {
                 DialogKind::SaveFile { default_name } => {
-                    Box::pin(dialog.set_file_name(default_name).save_file())
+                    let save = dialog.set_file_name(default_name).save_file();
+                    Box::pin(async move { paths(save.await) })
                 }
-                DialogKind::OpenFile => Box::pin(dialog.pick_file()),
-                DialogKind::OpenFolder => Box::pin(dialog.pick_folder()),
+                DialogKind::OpenFile => {
+                    let pick = dialog.pick_file();
+                    Box::pin(async move { paths(pick.await) })
+                }
+                DialogKind::OpenMany => {
+                    let pick = dialog.pick_files();
+                    Box::pin(async move { paths(pick.await.into_iter().flatten()) })
+                }
+                DialogKind::OpenFolder => {
+                    let pick = dialog.pick_folder();
+                    Box::pin(async move { paths(pick.await) })
+                }
             };
             std::thread::spawn(move || {
-                let path = tauri::async_runtime::block_on(pending).map(|handle| handle.path().to_path_buf());
+                let paths = tauri::async_runtime::block_on(pending);
                 // The receiver only goes away if the command was dropped.
-                let _ = chosen.send(path);
+                let _ = chosen.send(paths);
             });
         });
         if let Err(err) = scheduled {
             log::error!("failed to show a file dialog: {err}");
-            return None;
+            return Vec::new();
         }
-        choice.recv().ok().flatten()
+        choice.recv().unwrap_or_default()
+    }
+}
+
+fn paths(handles: impl IntoIterator<Item = rfd::FileHandle>) -> Vec<PathBuf> {
+    handles.into_iter().map(|handle| handle.path().to_path_buf()).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn request(kind: DialogKind) -> DialogRequest {
+        DialogRequest { kind, title: "Import".to_owned(), filters: Vec::new() }
+    }
+
+    #[test]
+    fn a_filter_list_of_any_file_filters_alone_reaches_rfd_as_no_filter() {
+        let text = [FileFilter::new("UTF-8 text", &["*"])];
+        assert!(native_filters(&text).is_empty());
+        assert!(native_filters(&[FileFilter::all_files()]).is_empty());
+        assert!(native_filters(&[]).is_empty());
+
+        let json = [FileFilter::new("JSON", &["json"]), FileFilter::all_files()];
+        assert_eq!(native_filters(&json), json);
+    }
+
+    #[test]
+    fn a_dialog_of_one_path_takes_the_first_answer_and_open_many_takes_all() {
+        let dialogs = Dialogs::new(|request: DialogRequest| match request.kind {
+            DialogKind::OpenMany => vec![PathBuf::from("/a.json"), PathBuf::from("/b.json")],
+            _ => vec![PathBuf::from("/one.json"), PathBuf::from("/ignored.json")],
+        });
+        assert_eq!(dialogs.show(request(DialogKind::OpenFile)), Some(PathBuf::from("/one.json")));
+        assert_eq!(
+            dialogs.show_many(request(DialogKind::OpenMany)),
+            [PathBuf::from("/a.json"), PathBuf::from("/b.json")]
+        );
+    }
+
+    #[test]
+    fn no_answer_is_a_cancel() {
+        let dialogs = Dialogs::new(|_: DialogRequest| None);
+        assert_eq!(dialogs.show(request(DialogKind::OpenFile)), None);
+        assert!(dialogs.show_many(request(DialogKind::OpenMany)).is_empty());
     }
 }
