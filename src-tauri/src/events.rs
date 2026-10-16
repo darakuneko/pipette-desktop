@@ -14,9 +14,15 @@ pub const SYNC_PENDING_STATUS: &str = "sync:pending-status";
 /// update banner changed (`None` once forgotten).
 pub const SYNC_FORMAT_STATUS_CHANGED: &str = "sync:format-status-changed";
 
+/// `IpcChannels.SYNC_PROGRESS`: a sync pass's progress (`SyncProgress`).
+pub const SYNC_PROGRESS: &str = "sync:progress";
+
+/// `IpcChannels.SYNC_UNIT_APPLIED`: a sync merge rewrote a unit's local
+/// files (`{ syncUnit }`).
+pub const SYNC_UNIT_APPLIED: &str = "sync:unit-applied";
+
 /// `IpcChannels.I18N_PACK_CHANGED`: the language packs changed outside the
 /// page's own calls.
-#[cfg_attr(not(test), expect(dead_code, reason = "for the language pack store, not in the app yet"))]
 pub const I18N_PACK_CHANGED: &str = "i18n-pack:changed";
 
 /// `IpcChannels.THEME_PACK_CHANGED`: a theme pack was imported, renamed,
@@ -44,6 +50,8 @@ mod tests {
         for (key, event) in [
             ("SYNC_PENDING_STATUS", SYNC_PENDING_STATUS),
             ("SYNC_FORMAT_STATUS_CHANGED", SYNC_FORMAT_STATUS_CHANGED),
+            ("SYNC_PROGRESS", SYNC_PROGRESS),
+            ("SYNC_UNIT_APPLIED", SYNC_UNIT_APPLIED),
             ("I18N_PACK_CHANGED", I18N_PACK_CHANGED),
             ("THEME_PACK_CHANGED", THEME_PACK_CHANGED),
         ] {

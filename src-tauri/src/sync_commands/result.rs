@@ -3,7 +3,8 @@
 //! (src/main/sync/sync-ipc-wrap.ts) answers it: success, or the failure's
 //! message with the `reason` of a refusal the renderer shows its own
 //! message for (a credential failure, or `syncBusy` from an account
-//! switch).
+//! switch). A sync pass also answers what it did (`status`, and why it was
+//! skipped).
 
 use pipette_sync::preflight::PreflightError;
 use serde::Serialize;
@@ -15,13 +16,31 @@ pub struct SyncOperationResult {
     error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<&'static str>,
+    #[serde(rename = "skipReason", skip_serializing_if = "Option::is_none")]
+    skip_reason: Option<&'static str>,
 }
 
 impl SyncOperationResult {
-    pub const SUCCESS: Self = Self { success: true, error: None, reason: None };
+    pub const SUCCESS: Self =
+        Self { success: true, error: None, reason: None, status: None, skip_reason: None };
 
     pub fn failure(error: String, reason: Option<&'static str>) -> Self {
-        Self { success: false, error: Some(error), reason }
+        Self { success: false, error: Some(error), reason, ..Self::SUCCESS }
+    }
+
+    /// With `error` and `success` kept: a pass whose units partly failed.
+    pub fn with_error(mut self, error: String) -> Self {
+        self.error = Some(error);
+        self
+    }
+
+    /// The outcome of a sync pass: `status` and why it was `skipped`.
+    pub fn with_status(mut self, status: &'static str, skip_reason: Option<&'static str>) -> Self {
+        self.status = Some(status);
+        self.skip_reason = skip_reason;
+        self
     }
 }
 

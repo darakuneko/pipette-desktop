@@ -205,4 +205,6 @@ pub const APP_COMMANDS: &[&str] = &[
     "sync_replace_password",
     "sync_check_password_exists",
     "sync_format_status",
+    // src/sync_commands/execute.rs
+    "sync_execute",
 ];

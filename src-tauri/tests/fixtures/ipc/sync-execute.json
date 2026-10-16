@@ -1,0 +1,60 @@
+[
+  {
+    "member": "syncExecute",
+    "args": [
+      "download"
+    ],
+    "command": "sync_execute",
+    "invokeArgs": {
+      "direction": "download"
+    },
+    "response": {
+      "success": true,
+      "status": "skipped",
+      "skipReason": "unauthenticated"
+    }
+  },
+  {
+    "member": "syncExecute",
+    "args": [
+      "upload",
+      {
+        "favorites": true,
+        "keyboard": "0x1234"
+      }
+    ],
+    "command": "sync_execute",
+    "invokeArgs": {
+      "direction": "upload",
+      "scope": {
+        "favorites": true,
+        "keyboard": "0x1234"
+      }
+    },
+    "response": {
+      "success": true,
+      "status": "skipped",
+      "skipReason": "unauthenticated"
+    }
+  },
+  {
+    "member": "syncExecute",
+    "args": [
+      "download",
+      {
+        "keyboard": "../x"
+      }
+    ],
+    "command": "sync_execute",
+    "invokeArgs": {
+      "direction": "download",
+      "scope": {
+        "keyboard": "../x"
+      }
+    },
+    "response": {
+      "success": false,
+      "error": "Invalid sync scope"
+    }
+  }
+]

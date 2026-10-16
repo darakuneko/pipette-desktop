@@ -17,6 +17,7 @@ use pipette_typing_analytics::SyncRuntime;
 use tauri::{AppHandle, Manager, Runtime};
 
 pub mod auth;
+pub mod execute;
 pub mod password;
 pub mod preflight;
 pub mod result;

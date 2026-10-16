@@ -12,7 +12,8 @@
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs, and so are
 // the Cloud Sync members (each listed with the module that holds it) but
-// the sign-in status, the password members and the sync format status.
+// the sign-in status, the password members, the sync of a scope with its
+// progress and applied-unit events, and the sync format status.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -302,8 +303,9 @@ const SYNC_MEMBERS = [
 
 /** The Cloud Sync members that are real: the sign-in, the sign-out, the
  *  sign-in and password statuses, setting and re-entering the password,
- *  whether Drive has a password-check, the sync format status and its event
- *  (backend commands) and the password strength check (in the shim). */
+ *  whether Drive has a password-check, the sync of a scope with its progress
+ *  and applied-unit events, the sync format status and its event (backend
+ *  commands) and the password strength check (in the shim). */
 const SYNC_REAL = [
   'syncAuthStart',
   'syncAuthStatus',
@@ -315,6 +317,9 @@ const SYNC_REAL = [
   'syncCheckPasswordExists',
   'syncFormatStatus',
   'syncOnFormatStatusChanged',
+  'syncExecute',
+  'syncOnProgress',
+  'syncOnUnitApplied',
 ]
 
 /** The fakes the Cloud Sync members replace: the signed-out answers. */
@@ -402,12 +407,6 @@ describe('shim coverage', () => {
     expect(analytics.filter((name) => !local.includes(name)).sort()).toEqual(
       EXPECTED_FAKES.filter((name) => name.startsWith('typingAnalytics')).sort(),
     )
-  })
-
-  // Applied sync units come from the sync service, which the backend does
-  // not run yet; the renderer only subscribes.
-  it('leaves syncOnUnitApplied to the stub', () => {
-    expect('syncOnUnitApplied' in implemented).toBe(false)
   })
 
   it('lists the Cloud Sync members, each in one module, and the real ones', () => {
