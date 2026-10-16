@@ -1,0 +1,42 @@
+{
+  "now": 1792108800000,
+  "authUrls": [
+    {
+      "port": 8080,
+      "url": "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=456971912849-ktrhpfv849jli5qph50i2rlflv1aadqq.apps.googleusercontent.com&redirect_uri=http%3A%2F%2F127.0.0.1%3A8080&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.appdata+openid+email+profile&state=d02af490ae5a5384e30d8e8955fec413&code_challenge=6vzRfsE8-eYnbi2ET5OHHwssmm6rsxdepV5TgW355oY&code_challenge_method=S256&access_type=offline&prompt=consent",
+      "codeVerifier": "2s36gzpv-6Cu3RtBMRu8toQ3EMoArmdN3BOAB-jUG5I",
+      "state": "d02af490ae5a5384e30d8e8955fec413"
+    },
+    {
+      "port": 54321,
+      "url": "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=456971912849-ktrhpfv849jli5qph50i2rlflv1aadqq.apps.googleusercontent.com&redirect_uri=http%3A%2F%2F127.0.0.1%3A54321&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.appdata+openid+email+profile&state=d30a836c8fa6a3253de2b29057863e8a&code_challenge=3i8oumAf4_PqhgOCLf_rq_5f9EUI5MHqfpAHsO6adnE&code_challenge_method=S256&access_type=offline&prompt=consent",
+      "codeVerifier": "eU_3ORxK58-oAqvB_kq4e4Et_4a9kfajrCBfDI2B6jA",
+      "state": "d30a836c8fa6a3253de2b29057863e8a"
+    }
+  ],
+  "exchange": {
+    "code": "fixture-code/+?&=",
+    "codeVerifier": "2s36gzpv-6Cu3RtBMRu8toQ3EMoArmdN3BOAB-jUG5I",
+    "port": 8080,
+    "request": {
+      "method": "POST",
+      "url": "https://oauth2.googleapis.com/token",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "body": "grant_type=authorization_code&code=fixture-code%2F%2B%3F%26%3D&redirect_uri=http%3A%2F%2F127.0.0.1%3A8080&client_id=456971912849-ktrhpfv849jli5qph50i2rlflv1aadqq.apps.googleusercontent.com&client_secret=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&code_verifier=2s36gzpv-6Cu3RtBMRu8toQ3EMoArmdN3BOAB-jUG5I"
+    }
+  },
+  "refresh": {
+    "refreshToken": "fixture-refresh/+?&=",
+    "request": {
+      "method": "POST",
+      "url": "https://oauth2.googleapis.com/token",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "body": "grant_type=refresh_token&refresh_token=fixture-refresh%2F%2B%3F%26%3D&client_id=456971912849-ktrhpfv849jli5qph50i2rlflv1aadqq.apps.googleusercontent.com&client_secret=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"
+    }
+  },
+  "storedAfterExchange": "{\"accessToken\":\"fixture-access\",\"refreshToken\":\"fixture-refresh\",\"expiresAt\":1792112399000,\"idToken\":\"h.e30.s\"}"
+}
