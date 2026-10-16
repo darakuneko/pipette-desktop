@@ -13,6 +13,7 @@ use tauri::ipc::Response;
 use crate::command_error::CommandError;
 
 pub mod favorites;
+pub mod key_labels;
 pub mod keyboard_data;
 pub mod settings;
 pub mod snapshots;
