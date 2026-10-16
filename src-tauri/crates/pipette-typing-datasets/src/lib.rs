@@ -21,7 +21,7 @@ mod text;
 
 pub use dataset::{Dataset, Model, effective_dataset};
 pub use download::{FetchFailure, Received, fetch_verified_bytes, size_mismatch_detail};
-pub use hub::{encode_uri_component, fetch_dataset, fetch_dataset_version};
+pub use hub::{fetch_dataset, fetch_dataset_version};
 pub use providers::{DEFAULT_PROVIDER, is_bundled, is_registered, provider_default};
 pub use store::{DatasetError, DatasetUpdate, LanguageStore, UpdateCheck};
 pub use text::decode_utf8;

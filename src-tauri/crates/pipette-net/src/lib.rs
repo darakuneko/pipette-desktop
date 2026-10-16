@@ -12,4 +12,6 @@ mod client;
 mod hub;
 
 pub use client::{Http, HttpClient, HttpError, HttpFuture, HttpResponse, Limits, ReqwestClient};
-pub use hub::{HUB_API_DEFAULT, HUB_TEST_ENV, HUB_URL_ENV, hub_api_base, resolve_hub_api_base};
+pub use hub::{
+    HUB_API_DEFAULT, HUB_TEST_ENV, HUB_URL_ENV, encode_uri_component, hub_api_base, resolve_hub_api_base,
+};

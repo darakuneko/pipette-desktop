@@ -5,23 +5,10 @@
 //! callers fall back to what they have.
 
 use pipette_js_json::{JsString, Object, Value};
-use pipette_net::HttpClient;
+use pipette_net::{HttpClient, encode_uri_component};
 
 use crate::dataset::has_dataset_shape;
 use crate::text::decode_utf8;
-
-/// `encodeURIComponent` of a string without lone surrogates.
-pub fn encode_uri_component(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for byte in text.bytes() {
-        if byte.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&byte) {
-            out.push(char::from(byte));
-        } else {
-            out.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    out
-}
 
 fn dataset_route(hub_base: &str, provider: &str) -> String {
     format!("{hub_base}/api/typing-test/datasets/{}", encode_uri_component(provider))
@@ -93,14 +80,6 @@ mod tests {
 
     fn answering(status: u16, body: &'static str) -> impl HttpClient {
         move |_: &str| Ok(HttpResponse { status, body: body.as_bytes().to_vec() })
-    }
-
-    #[test]
-    fn encodes_a_provider_as_encode_uri_component() {
-        assert_eq!(encode_uri_component("monkeytype"), "monkeytype");
-        assert_eq!(encode_uri_component("a b/é?#&=+%"), "a%20b%2F%C3%A9%3F%23%26%3D%2B%25");
-        assert_eq!(encode_uri_component("-_.!~*'()AZaz09"), "-_.!~*'()AZaz09");
-        assert_eq!(encode_uri_component("😀"), "%F0%9F%98%80");
     }
 
     #[test]
