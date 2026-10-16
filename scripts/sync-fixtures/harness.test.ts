@@ -9,7 +9,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, symlinkSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { app, net, safeStorage, shell } from 'electron'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -101,6 +101,15 @@ describe('the sync fixture harness', () => {
     symlinkSync(join(homedir(), '.config', 'pipette-desktop'), link)
     useUserData(join(link, 'sub'))
     expect(() => app.getPath('userData')).toThrow(/refused the real userData/)
+  })
+
+  it('refuses tree paths that leave the seeded userData', () => {
+    const name = `pipette-sync-fixture-escape-${process.pid}`
+    for (const path of [`../${name}`, `sync/../../${name}`, join(tmpdir(), name)]) {
+      expect(() => seedUserData({ [path]: 'x' }), path).toThrow(/refused the tree path/)
+    }
+    expect(existsSync(join(tmpdir(), name))).toBe(false)
+    expect(() => app.getPath('userData')).toThrow(/before seedUserData/)
   })
 
   it('removes the seeded userData when it resets', () => {

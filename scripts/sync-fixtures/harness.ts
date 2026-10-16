@@ -165,9 +165,16 @@ export function useUserData(dir: string): void {
   state.userData = dir
 }
 
+/** Writes `tree` under `dir`. Every path must stay under `dir` (no
+ *  absolute path, no `..` out of it); otherwise nothing is written. */
 export function writeTree(dir: string, tree: Tree): void {
+  for (const path of Object.keys(tree)) {
+    if (isAbsolute(path) || !isInside(resolve(dir, path), resolve(dir))) {
+      throw new Error(`sync fixture harness: refused the tree path ${path} outside ${dir}`)
+    }
+  }
   for (const [path, content] of Object.entries(tree)) {
-    const target = join(dir, path)
+    const target = assertSafePath(join(dir, path))
     if (content === null) {
       mkdirSync(target, { recursive: true })
     } else {
