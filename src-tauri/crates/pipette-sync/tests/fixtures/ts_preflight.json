@@ -1,0 +1,1962 @@
+{
+  "syncFormatVersion": 2,
+  "startMs": 1000000,
+  "scenarios": [
+    {
+      "name": "nothing blocks an empty Drive",
+      "steps": [
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:password-change-lock.json",
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "guardListing"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "assertFormat"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [],
+      "stored": "none"
+    },
+    {
+      "name": "a local change state blocks without listing",
+      "steps": [
+        {
+          "step": {
+            "op": "localState",
+            "content": "{\"version\":1,\"target\":\"new\",\"step\":\"reencrypting\",\"lockId\":\"lock-1\",\"startedAt\":5}"
+          }
+        },
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": "blockedLocal"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "guardListing"
+          },
+          "result": {
+            "ok": "blockedLocal"
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "assertFormat"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [],
+      "stored": "none"
+    },
+    {
+      "name": "an unreadable local change state blocks",
+      "steps": [
+        {
+          "step": {
+            "op": "localState",
+            "content": "not json"
+          }
+        },
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": "blockedLocal"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "localState",
+            "content": "{\"version\":2}"
+          }
+        },
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": "blockedLocal"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "localState",
+            "content": null
+          }
+        },
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:password-change-lock.json",
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [],
+      "stored": "none"
+    },
+    {
+      "name": "a lock of another device blocks",
+      "steps": [
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-change-lock.json",
+                "raw": "{}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": "blockedByOtherDevice"
+          },
+          "drive": [
+            "list:password-change-lock.json",
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "guardListing"
+          },
+          "result": {
+            "ok": "blockedByOtherDevice"
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "assertFormat"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-change-lock.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "a newer marker blocks first and is noted",
+      "steps": [
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-change-lock.json",
+                "raw": "{}"
+              },
+              {
+                "name": "sync-format-v2.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":2}"
+              },
+              {
+                "name": "sync-format-v3.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":3}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "cachedFormatStatus"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "guard"
+          },
+          "result": {
+            "ok": "updateRequired"
+          },
+          "drive": [
+            "list:password-change-lock.json",
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": [
+            {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          ]
+        },
+        {
+          "step": {
+            "op": "cachedFormatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "guardListing"
+          },
+          "result": {
+            "ok": "updateRequired"
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "assertFormat"
+          },
+          "result": {
+            "error": "sync.updateRequired"
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-change-lock.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        },
+        {
+          "id": "fake-3",
+          "name": "sync-format-v3.json",
+          "modifiedTime": "2026-01-01T00:00:02.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "the marker is created once and then seen",
+      "steps": [
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarkerKnown"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "a created marker missing from listings is not created again until the memory expires",
+      "steps": [
+        {
+          "step": {
+            "op": "hideNew",
+            "on": true
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "advance",
+            "ms": 299999
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarkerKnown"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "advance",
+            "ms": 2
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "smaller markers are deleted once ours is listed",
+      "steps": [
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "sync-format-v1.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":1}"
+              },
+              {
+                "name": "sync-format-v0.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":0}"
+              },
+              {
+                "name": "sync-format-vx.json",
+                "raw": "{}"
+              },
+              {
+                "name": "sync-format-v3.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":3}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "hideNew",
+            "on": true
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "hideNew",
+            "on": false
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "delete:fake-1",
+            "delete:fake-2"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-3",
+          "name": "sync-format-vx.json",
+          "modifiedTime": "2026-01-01T00:00:02.000Z"
+        },
+        {
+          "id": "fake-4",
+          "name": "sync-format-v3.json",
+          "modifiedTime": "2026-01-01T00:00:03.000Z"
+        },
+        {
+          "id": "fake-5",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:04.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "a failed delete of a smaller marker does not fail",
+      "steps": [
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "sync-format-v1.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":1}"
+              },
+              {
+                "name": "sync-format-v2.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":2}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "failNext",
+            "what": "delete"
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "delete:fake-1"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v1.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "a failed marker create fails and the next one creates it",
+      "steps": [
+        {
+          "step": {
+            "op": "failNext",
+            "what": "create"
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "error": "Drive upload failed: 400 {\"error\":{\"code\":400,\"message\":\"Injected failure\",\"errors\":[{\"reason\":\"backendError\",\"message\":\"Injected failure\"}]}}"
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "markers seen missing at once are created once",
+      "steps": [
+        {
+          "step": {
+            "op": "parallel",
+            "steps": [
+              {
+                "op": "ensureMarker"
+              },
+              {
+                "op": "ensureMarker"
+              },
+              {
+                "op": "ensureMarker"
+              }
+            ]
+          },
+          "result": {
+            "ok": [
+              {
+                "ok": null
+              },
+              {
+                "ok": null
+              },
+              {
+                "ok": null
+              }
+            ]
+          },
+          "drive": [
+            "list:*",
+            "list:*",
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "sign-out forgets the created marker",
+      "steps": [
+        {
+          "step": {
+            "op": "hideNew",
+            "on": true
+          }
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "forgetAccount"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureMarker"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "the format status follows the markers",
+      "steps": [
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": null,
+              "supported": 2,
+              "updateRequired": false
+            }
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": [
+            {
+              "required": null,
+              "supported": 2,
+              "updateRequired": false
+            }
+          ]
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "sync-format-v1.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":1}"
+              },
+              {
+                "name": "sync-format-v2.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":2}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": 2,
+              "supported": 2,
+              "updateRequired": false
+            }
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": [
+            {
+              "required": 2,
+              "supported": 2,
+              "updateRequired": false
+            }
+          ]
+        },
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": 2,
+              "supported": 2,
+              "updateRequired": false
+            }
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "sync-format-v3.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":3}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": [
+            {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          ]
+        },
+        {
+          "step": {
+            "op": "forgetAccount"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": [
+            null
+          ]
+        },
+        {
+          "step": {
+            "op": "cachedFormatStatus"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "failNext",
+            "what": "list"
+          }
+        },
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "formatStatus"
+          },
+          "result": {
+            "ok": {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          },
+          "drive": [
+            "list:sync-format-v"
+          ],
+          "validated": null,
+          "formatEvents": [
+            {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v1.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        },
+        {
+          "id": "fake-3",
+          "name": "sync-format-v3.json",
+          "modifiedTime": "2026-01-01T00:00:02.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "the password-check is created with the marker first and validated once",
+      "steps": [
+        {
+          "step": {
+            "op": "validate",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "list:sync-format-v",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}",
+            "create:password-check.enc"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "other"
+          },
+          "result": {
+            "error": "sync.passwordMismatch"
+          },
+          "drive": [
+            "list:*",
+            "download:fake-2"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-2"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "resetCache"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-2"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "a created password-check missing from listings is opened by id",
+      "steps": [
+        {
+          "step": {
+            "op": "hideNew",
+            "on": true
+          }
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "list:sync-format-v",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}",
+            "create:password-check.enc"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-2"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "other"
+          },
+          "result": {
+            "error": "sync.passwordMismatch"
+          },
+          "drive": [
+            "list:*",
+            "download:fake-2"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "advance",
+            "ms": 300000
+          }
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "list:sync-format-v",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}",
+            "create:password-check.enc"
+          ],
+          "validated": {
+            "id": "fake-4",
+            "modifiedTime": "2026-01-01T00:00:03.000Z"
+          },
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        },
+        {
+          "id": "fake-3",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:02.000Z"
+        },
+        {
+          "id": "fake-4",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:03.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "password-checks seen missing at once are created once",
+      "steps": [
+        {
+          "step": {
+            "op": "parallel",
+            "steps": [
+              {
+                "op": "ensureValidated",
+                "password": "pw"
+              },
+              {
+                "op": "ensureValidated",
+                "password": "other"
+              }
+            ]
+          },
+          "result": {
+            "ok": [
+              {
+                "ok": null
+              },
+              {
+                "error": "sync.passwordMismatch"
+              }
+            ]
+          },
+          "drive": [
+            "list:*",
+            "list:*",
+            "list:sync-format-v",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}",
+            "create:password-check.enc",
+            "download:fake-2"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "the newest of two password-checks is the one validated",
+      "steps": [
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-check.enc",
+                "passwordCheck": "new"
+              },
+              {
+                "name": "password-check.enc",
+                "passwordCheck": "old"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "validate",
+            "password": "old"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-2"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "rewrite",
+            "id": "fake-1",
+            "password": "new"
+          }
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "old"
+          },
+          "result": {
+            "error": "sync.passwordMismatch"
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "new"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": {
+            "id": "fake-1",
+            "modifiedTime": "2026-01-01T00:00:02.000Z"
+          },
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:02.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "set creates the marker and the password-check and refuses a second set",
+      "steps": [
+        {
+          "step": {
+            "op": "set",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "list:sync-format-v",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}",
+            "create:password-check.enc"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "again"
+          },
+          "result": {
+            "error": "sync.passwordAlreadySet"
+          },
+          "drive": [],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "exists"
+          },
+          "result": {
+            "ok": true
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": {
+            "id": "fake-2",
+            "modifiedTime": "2026-01-01T00:00:01.000Z"
+          },
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "sync-format-v2.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": {
+        "readable": "pw"
+      }
+    },
+    {
+      "name": "set over an undecryptable password validates against Drive",
+      "steps": [
+        {
+          "step": {
+            "op": "stored",
+            "value": "decryptFailed"
+          }
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-check.enc",
+                "passwordCheck": "pw"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "wrong"
+          },
+          "result": {
+            "error": "sync.passwordMismatch"
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "pw"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": {
+            "id": "fake-1",
+            "modifiedTime": "2026-01-01T00:00:00.000Z"
+          },
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": {
+        "readable": "pw"
+      }
+    },
+    {
+      "name": "set is refused before Drive without a key store, with a local change, or a lock",
+      "steps": [
+        {
+          "step": {
+            "op": "stored",
+            "value": "keystoreUnavailable"
+          }
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "pw"
+          },
+          "result": {
+            "error": "sync.changePasswordError.keystoreUnavailable"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "stored",
+            "value": "none"
+          }
+        },
+        {
+          "step": {
+            "op": "localState",
+            "content": "{\"version\":1,\"target\":\"new\",\"step\":\"reencrypting\",\"lockId\":\"lock-1\",\"startedAt\":5}"
+          }
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "pw"
+          },
+          "result": {
+            "error": "sync.passwordChange.blockedLocal"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "localState",
+            "content": null
+          }
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-change-lock.json",
+                "raw": "{}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "pw"
+          },
+          "result": {
+            "error": "sync.passwordChange.blockedByOtherDevice"
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-change-lock.json",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": "none"
+    },
+    {
+      "name": "set stores no password when the marker cannot be created",
+      "steps": [
+        {
+          "step": {
+            "op": "failNext",
+            "what": "create"
+          }
+        },
+        {
+          "step": {
+            "op": "set",
+            "password": "pw"
+          },
+          "result": {
+            "error": "Drive upload failed: 400 {\"error\":{\"code\":400,\"message\":\"Injected failure\",\"errors\":[{\"reason\":\"backendError\",\"message\":\"Injected failure\"}]}}"
+          },
+          "drive": [
+            "list:*",
+            "list:sync-format-v",
+            "create:sync-format-v2.json {\"type\":\"sync-format\",\"version\":2}"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "exists"
+          },
+          "result": {
+            "ok": false
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [],
+      "stored": "none"
+    },
+    {
+      "name": "replace stores only a password that opens the password-check",
+      "steps": [
+        {
+          "step": {
+            "op": "stored",
+            "value": {
+              "readable": "old"
+            }
+          }
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-check.enc",
+                "passwordCheck": "new"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "typo"
+          },
+          "result": {
+            "error": "sync.passwordMismatch"
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "failNext",
+            "what": "download"
+          }
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "new"
+          },
+          "result": {
+            "error": "Drive download failed: 400 {\"error\":{\"code\":400,\"message\":\"Injected failure\",\"errors\":[{\"reason\":\"backendError\",\"message\":\"Injected failure\"}]}}"
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "new"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*",
+            "download:fake-1"
+          ],
+          "validated": {
+            "id": "fake-1",
+            "modifiedTime": "2026-01-01T00:00:00.000Z"
+          },
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "ensureValidated",
+            "password": "new"
+          },
+          "result": {
+            "ok": null
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": {
+            "id": "fake-1",
+            "modifiedTime": "2026-01-01T00:00:00.000Z"
+          },
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": {
+        "readable": "new"
+      }
+    },
+    {
+      "name": "replace is refused without a password-check, signed out, without a key store, or with a newer marker",
+      "steps": [
+        {
+          "step": {
+            "op": "stored",
+            "value": {
+              "readable": "old"
+            }
+          }
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "new"
+          },
+          "result": {
+            "error": "sync.reenterPasswordNoRemote"
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "signedIn",
+            "value": false
+          }
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "new"
+          },
+          "result": {
+            "error": "sync.changePasswordError.unauthenticated"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "signedIn",
+            "value": true
+          }
+        },
+        {
+          "step": {
+            "op": "stored",
+            "value": "keystoreUnavailable"
+          }
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "new"
+          },
+          "result": {
+            "error": "sync.changePasswordError.keystoreUnavailable"
+          },
+          "drive": [],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "stored",
+            "value": {
+              "readable": "old"
+            }
+          }
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-check.enc",
+                "passwordCheck": "new"
+              },
+              {
+                "name": "sync-format-v3.json",
+                "raw": "{\"type\":\"sync-format\",\"version\":3}"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "replace",
+            "password": "new"
+          },
+          "result": {
+            "error": "sync.updateRequired"
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": [
+            {
+              "required": 3,
+              "supported": 2,
+              "updateRequired": true
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "fake-2",
+          "name": "sync-format-v3.json",
+          "modifiedTime": "2026-01-01T00:00:01.000Z"
+        }
+      ],
+      "stored": {
+        "readable": "old"
+      }
+    },
+    {
+      "name": "exists lists every file",
+      "steps": [
+        {
+          "step": {
+            "op": "exists"
+          },
+          "result": {
+            "ok": false
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        },
+        {
+          "step": {
+            "op": "seed",
+            "files": [
+              {
+                "name": "password-check.enc",
+                "passwordCheck": "pw"
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "op": "exists"
+          },
+          "result": {
+            "ok": true
+          },
+          "drive": [
+            "list:*"
+          ],
+          "validated": null,
+          "formatEvents": []
+        }
+      ],
+      "files": [
+        {
+          "id": "fake-1",
+          "name": "password-check.enc",
+          "modifiedTime": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "stored": "none"
+    }
+  ]
+}
