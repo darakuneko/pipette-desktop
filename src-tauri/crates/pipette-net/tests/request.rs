@@ -202,7 +202,13 @@ fn the_loopback_client_sends_to_127_0_0_1_and_follows_redirects_there() {
 #[test]
 fn the_loopback_client_sends_to_ipv6_loopback() {
     // Some machines have no IPv6 loopback; there is nothing to test there.
-    let Ok(listener) = TcpListener::bind("[::1]:0") else { return };
+    let listener = match TcpListener::bind("[::1]:0") {
+        Ok(listener) => listener,
+        Err(err) => {
+            eprintln!("SKIPPED the_loopback_client_sends_to_ipv6_loopback: no [::1] to bind ({err})");
+            return;
+        }
+    };
     let base = serve_on(listener, routes);
     let reply =
         send_with(&loopback(), request(Method::Post, format!("{base}/echo"), &[], Some(b"6"))).unwrap();
