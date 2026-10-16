@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The commands of the shim's word list and dataset members
 //! (`lang{List,Get,Download,Delete}`, `checkTypingDatasetUpdate`,
-//! `updateTypingDataset`; src/tauri-shim/api/typing-datasets.ts), on the
-//! language store of crates/pipette-typing-datasets. Its requests go
-//! through the app's HTTP client (dev_commands.rs).
+//! `updateTypingDataset`, `aozoraImport`;
+//! src/tauri-shim/api/typing-datasets.ts), on the language store of
+//! crates/pipette-typing-datasets. Its requests go through the app's HTTP
+//! client (dev_commands.rs). The Aozora Bunko import saves into the typing
+//! test text store (store_commands/keyboard_data.rs).
 //!
-//! The arguments are taken as any JSON value: like the handlers, a name
-//! that is not a string is not a valid name, and a provider that is not a
-//! string is no provider (the default one).
+//! The arguments are taken as any JSON value: like the handlers, a name or
+//! work id that is not a string is not a valid one, and a provider that is
+//! not a string is no provider (the default one).
 
 use std::path::Path;
 
 use pipette_js_json::Value as JsValue;
+use pipette_keyboard_stores::{StoreContext, TypingTextStore};
 use pipette_net::Http;
 use pipette_typing_datasets::LanguageStore;
 use serde::Serialize;
@@ -130,4 +133,21 @@ pub async fn typing_dataset_update(
 ) -> Result<Response, CommandError> {
     let update = store.update(text(provider).as_deref()).await?;
     Ok(Response::new(update.to_json()))
+}
+
+/// `{success: true, meta}` or `{success: false, errorCode, error}` as JSON
+/// text, the meta as the text store wrote it. Fails, as the handler
+/// rejects, for a gaiji note past U+10FFFF (and for an overrides file
+/// nested too deeply to read).
+#[tauri::command]
+pub async fn aozora_import(
+    languages: State<'_, LanguageStore>,
+    stores: State<'_, StoreContext>,
+    texts: State<'_, TypingTextStore>,
+    work_id: Option<Value>,
+) -> Result<Response, CommandError> {
+    let work_id = text(work_id);
+    let response =
+        pipette_typing_datasets::import_aozora_work(&languages, &stores, &texts, work_id.as_deref()).await?;
+    Ok(Response::new(response))
 }

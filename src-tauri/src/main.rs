@@ -125,6 +125,7 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         typing_dataset_commands::lang_delete,
         typing_dataset_commands::typing_dataset_check,
         typing_dataset_commands::typing_dataset_update,
+        typing_dataset_commands::aozora_import,
         store_commands::i18n_packs::i18n_pack_store_list,
         store_commands::i18n_packs::i18n_pack_store_get,
         store_commands::i18n_packs::i18n_pack_store_rename,

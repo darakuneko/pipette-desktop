@@ -40,16 +40,20 @@ pub enum FetchFailure {
 /// `size mismatch (expected …, got …)`, with the expected size written as
 /// `${number}` writes it.
 pub fn size_mismatch_detail(expected: f64, actual: Received) -> String {
-    let expected = if expected.is_nan() {
+    format!("size mismatch (expected {}, got {actual})", number_text(expected))
+}
+
+/// `String(number)`.
+pub(crate) fn number_text(value: f64) -> String {
+    if value.is_nan() {
         "NaN".to_owned()
-    } else if expected.is_infinite() {
-        if expected > 0.0 { "Infinity" } else { "-Infinity" }.to_owned()
+    } else if value.is_infinite() {
+        if value > 0.0 { "Infinity" } else { "-Infinity" }.to_owned()
     } else {
         let mut text = String::new();
-        pipette_js_json::write_number(&mut text, expected);
+        pipette_js_json::write_number(&mut text, value);
         text
-    };
-    format!("size mismatch (expected {expected}, got {actual})")
+    }
 }
 
 /// Fetches `url` and checks the status and that the body is

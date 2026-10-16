@@ -86,6 +86,12 @@ impl<'a> Dataset<'a> {
         self.languages.iter().filter_map(Value::as_object).find(|entry| string_is(entry.get("name"), name))
     }
 
+    /// `{downloadUrlBase}/{name}{suffix}`: where the file of the entry
+    /// `name` is downloaded from.
+    pub(crate) fn download_url(&self, name: &str, suffix: &str) -> String {
+        format!("{}/{name}{suffix}", self.download_url_base.to_string_lossy())
+    }
+
     /// The fields of a dataset `object` that passed [`has_dataset_shape`]
     /// (or a bundled default), with `model` in place of its own.
     fn of(object: &'a Object, model: Option<Model>) -> Option<Self> {
@@ -95,6 +101,15 @@ impl<'a> Dataset<'a> {
             return None;
         };
         Some(Self { version, download_url_base: base, model, languages })
+    }
+}
+
+/// A manifest entry's `fileSize`, the size its download must have; NaN
+/// (which no size matches) when it is not a number.
+pub(crate) fn file_size(entry: &Object) -> f64 {
+    match entry.get("fileSize") {
+        Some(Value::Number(size)) => *size,
+        _ => f64::NAN,
     }
 }
 

@@ -20,7 +20,7 @@ use pipette_entry_store::is_safe_path_segment;
 use pipette_js_json::{JsString, Object, Value};
 use pipette_net::Http;
 
-use crate::dataset::{Dataset, Model, effective_dataset};
+use crate::dataset::{Dataset, Model, effective_dataset, file_size};
 use crate::download::{FetchFailure, fetch_verified_bytes, size_mismatch_detail};
 use crate::hub::{fetch_dataset, fetch_dataset_version};
 use crate::providers::{DEFAULT_PROVIDER, is_bundled, is_registered};
@@ -206,6 +206,14 @@ fn migrate_legacy_downloads(root: &Path) {
     }
 }
 
+/// Runs `f` on the runtime's blocking pool; a task that does not finish is
+/// [`DatasetError::Task`].
+pub(crate) async fn run_blocking<T: Send + 'static>(
+    f: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, DatasetError> {
+    tokio::task::spawn_blocking(f).await.map_err(|err| DatasetError::Task(err.to_string()))
+}
+
 /// `{...overrides}`: an array's elements under their index keys.
 fn spread(overrides: &Value) -> Object {
     match overrides {
@@ -321,15 +329,13 @@ impl LanguageStore {
         }))
     }
 
-    /// Runs `f` on the runtime's blocking pool.
+    /// Runs `f` on the store's state on the runtime's blocking pool.
     async fn blocking<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Inner) -> Result<T, DatasetError> + Send + 'static,
     ) -> Result<T, DatasetError> {
         let inner = Arc::clone(&self.0);
-        tokio::task::spawn_blocking(move || f(&inner))
-            .await
-            .map_err(|err| DatasetError::Task(err.to_string()))?
+        run_blocking(move || f(&inner)).await?
     }
 
     /// Moves the legacy downloads the first time it is called; later calls
@@ -416,11 +422,7 @@ impl LanguageStore {
                         return Err(CATALOG_ERROR.to_owned());
                     }
                     let entry = dataset.entry(&name).ok_or_else(|| "Unknown language".to_owned())?;
-                    let size = match entry.get("fileSize") {
-                        Some(Value::Number(size)) => *size,
-                        _ => f64::NAN,
-                    };
-                    Ok((format!("{}/{name}.json", dataset.download_url_base.to_string_lossy()), size))
+                    Ok((dataset.download_url(&name, ".json"), file_size(entry)))
                 })
             })
             .await
@@ -534,6 +536,21 @@ impl LanguageStore {
     async fn current_version(&self, provider: &str) -> Result<JsString, DatasetError> {
         let provider = provider.to_owned();
         self.blocking(move |inner| inner.current_version(&provider)).await
+    }
+
+    /// Runs `f` on the dataset in effect for `provider`, on the blocking
+    /// pool (`getEffectiveDataset`).
+    pub(crate) async fn read_dataset<T: Send + 'static>(
+        &self,
+        provider: &'static str,
+        f: impl FnOnce(Dataset<'_>) -> T + Send + 'static,
+    ) -> Result<T, DatasetError> {
+        self.blocking(move |inner| inner.with_dataset(provider, f)).await
+    }
+
+    /// The client the store's requests go through.
+    pub(crate) fn http(&self) -> &Http {
+        &self.0.http
     }
 }
 

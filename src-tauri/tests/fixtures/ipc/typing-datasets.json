@@ -44,5 +44,23 @@
       "changed": false,
       "fromVersion": "629c82e112a2db2122c789dc6abe970b82c3f8c5"
     }
+  },
+  {
+    "member": "aozoraImport",
+    "args": ["000001/files/1_ruby_1.zip"],
+    "command": "aozora_import",
+    "invokeArgs": { "workId": "000001/files/1_ruby_1.zip" },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_IN_CATALOG",
+      "error": "Aozora work not in catalog: 000001/files/1_ruby_1.zip"
+    }
+  },
+  {
+    "member": "aozoraImport",
+    "args": [""],
+    "command": "aozora_import",
+    "invokeArgs": { "workId": "" },
+    "response": { "success": false, "errorCode": "NOT_IN_CATALOG", "error": "Invalid work id" }
   }
 ]

@@ -133,8 +133,16 @@ describe('shim coverage', () => {
     expect(KEYBOARD_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })
 
-  it('backs the Typing Test word list and dataset members with backend commands', () => {
-    const members = ['langList', 'langGet', 'langDownload', 'langDelete', 'checkTypingDatasetUpdate', 'updateTypingDataset']
+  it('backs the Typing Test word list, dataset and Aozora import members with backend commands', () => {
+    const members = [
+      'langList',
+      'langGet',
+      'langDownload',
+      'langDelete',
+      'checkTypingDatasetUpdate',
+      'updateTypingDataset',
+      'aozoraImport',
+    ]
     expect(members.filter((name) => !(name in real))).toEqual([])
   })
 

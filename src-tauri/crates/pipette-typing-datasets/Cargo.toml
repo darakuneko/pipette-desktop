@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-typing-datasets"
-description = "The Typing Test word datasets: the bundled provider defaults, the Hub overrides (local/typing-test-dataset.json) and their update from the Hub, and the downloaded word lists (local/downloads/languages)"
+description = "The Typing Test word datasets: the bundled provider defaults, the Hub overrides (local/typing-test-dataset.json) and their update from the Hub, the downloaded word lists (local/downloads/languages), and the import of Aozora Bunko catalog works into the typing test texts"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -16,8 +16,13 @@ pipette-fs = { path = "../pipette-fs" }
 # The JSON files and Hub payloads read and written as JavaScript does (key
 # order, numbers, lone surrogates).
 pipette-js-json = { path = "../pipette-js-json" }
-# Every request (the word lists and the Hub dataset API).
+# Every request (the word lists, the Aozora Bunko works and the Hub
+# dataset API).
 pipette-net = { path = "../pipette-net" }
+# The typing test text store an Aozora Bunko work is saved into.
+pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
+# The text of an Aozora Bunko zip.
+pipette-typing-text = { path = "../pipette-typing-text" }
 thiserror = "=2.0.21"
 # The file work of each call runs on the blocking pool of the runtime the
 # app (Tauri) already runs; "sync" for the one-time legacy download move
@@ -25,6 +30,11 @@ thiserror = "=2.0.21"
 tokio = { version = "=1.53.3", features = ["rt", "sync"] }
 
 [dev-dependencies]
+# A fixed clock and fixed new ids for the typing test texts an Aozora
+# Bunko import saves.
+pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+# The time of a recorded scenario.
+pipette-time = { path = "../pipette-time" }
 tempfile = { workspace = true }
 # Two updates side by side in the tests.
 tokio = { version = "=1.53.3", features = ["rt-multi-thread"] }

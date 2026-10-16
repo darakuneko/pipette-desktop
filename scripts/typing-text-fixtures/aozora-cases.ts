@@ -44,7 +44,7 @@ export function shiftJisEncoder(decode: (bytes: Uint8Array) => string): (text: s
 /** fflate's zipSync with a fixed modification time (written in local time,
  *  hence TZ=UTC in vitest.config.ts), so the archives are the same on every
  *  run. */
-function zip(files: Zippable, level: ZipOptions['level'] = 6): Uint8Array {
+export function zip(files: Zippable, level: ZipOptions['level'] = 6): Uint8Array {
   return zipSync(files, { level, mtime: new Date(Date.UTC(2020, 0, 1)) })
 }
 
