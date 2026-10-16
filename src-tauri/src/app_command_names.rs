@@ -99,6 +99,10 @@ pub const APP_COMMANDS: &[&str] = &[
     "typing_run_log_save",
     "typing_run_log_list",
     "typing_run_log_get",
+    // src/analytics_commands/keymaps.rs
+    "typing_analytics_save_keymap_snapshot",
+    "typing_analytics_get_keymap_snapshot_for_range",
+    "typing_analytics_list_keymap_snapshots",
     // src/store_commands/settings.rs
     "pipette_settings_read",
     "pipette_settings_write",

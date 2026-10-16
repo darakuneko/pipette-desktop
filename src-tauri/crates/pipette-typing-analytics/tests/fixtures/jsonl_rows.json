@@ -1,0 +1,842 @@
+{
+  "ids": [
+    {
+      "fn": "scope",
+      "args": [
+        "hash|linux|uid"
+      ],
+      "id": "scope|hash%7Clinux%7Cuid"
+    },
+    {
+      "fn": "scope",
+      "args": [
+        "a b%c/d?e#f&g=h+i;j,k:l@m$n!o'p(q)r*s~t-u_v.w"
+      ],
+      "id": "scope|a%20b%25c%2Fd%3Fe%23f%26g%3Dh%2Bi%3Bj%2Ck%3Al%40m%24n!o'p(q)r*s~t-u_v.w"
+    },
+    {
+      "fn": "scope",
+      "args": [
+        "日本 😀 é"
+      ],
+      "id": "scope|%E6%97%A5%E6%9C%AC%20%F0%9F%98%80%20%C3%A9"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        60000,
+        "",
+        "a"
+      ],
+      "id": "char|s|60000||a"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        60000,
+        "run-1",
+        "|"
+      ],
+      "id": "char|s|60000|run-1|%7C"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        60000,
+        "run 1",
+        "😀"
+      ],
+      "id": "char|s|60000|run%201|%F0%9F%98%80"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        1e+21,
+        "",
+        "a"
+      ],
+      "id": "char|s|1e+21||a"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        1.5,
+        "",
+        "a"
+      ],
+      "id": "char|s|1.5||a"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        {
+          "$n": "-0"
+        },
+        "",
+        "a"
+      ],
+      "id": "char|s|0||a"
+    },
+    {
+      "fn": "char",
+      "args": [
+        "s",
+        0.30000000000000004,
+        "",
+        "a"
+      ],
+      "id": "char|s|0.30000000000000004||a"
+    },
+    {
+      "fn": "matrix",
+      "args": [
+        "s",
+        60000,
+        "",
+        2,
+        3,
+        1
+      ],
+      "id": "matrix|s|60000||2|3|1"
+    },
+    {
+      "fn": "matrix",
+      "args": [
+        "s",
+        60000,
+        "run|1",
+        1.5,
+        {
+          "$n": "-0"
+        },
+        1e-7
+      ],
+      "id": "matrix|s|60000|run%7C1|1.5|0|1e-7"
+    },
+    {
+      "fn": "stats",
+      "args": [
+        "s",
+        60000,
+        ""
+      ],
+      "id": "stats|s|60000|"
+    },
+    {
+      "fn": "stats",
+      "args": [
+        "s",
+        60000,
+        "run/1"
+      ],
+      "id": "stats|s|60000|run%2F1"
+    },
+    {
+      "fn": "session",
+      "args": [
+        "uuid|1"
+      ],
+      "id": "session|uuid%7C1"
+    },
+    {
+      "fn": "bigram",
+      "args": [
+        "s",
+        60000,
+        "run-1"
+      ],
+      "id": "bigram|s|60000|run-1"
+    },
+    {
+      "fn": "trigram",
+      "args": [
+        "s",
+        999999999999999900000,
+        ""
+      ],
+      "id": "trigram|s|999999999999999900000|"
+    }
+  ],
+  "rows": [
+    {
+      "row": {
+        "id": "scope|hash-a%7Clinux%7C6.8.0%7Cx64%7C0xAABB",
+        "kind": "scope",
+        "updated_at": 1000,
+        "payload": {
+          "id": "hash-a|linux|6.8.0|x64|0xAABB",
+          "machineHash": "hash-a",
+          "osPlatform": "linux",
+          "osRelease": "6.8.0",
+          "osArch": "x64",
+          "keyboardUid": "0xAABB",
+          "keyboardVendorId": 65261,
+          "keyboardProductId": 1,
+          "keyboardProductName": "Pipette \"60\" \\ 日本 😀  "
+        }
+      },
+      "line": "{\"id\":\"scope|hash-a%7Clinux%7C6.8.0%7Cx64%7C0xAABB\",\"kind\":\"scope\",\"updated_at\":1000,\"payload\":{\"id\":\"hash-a|linux|6.8.0|x64|0xAABB\",\"machineHash\":\"hash-a\",\"osPlatform\":\"linux\",\"osRelease\":\"6.8.0\",\"osArch\":\"x64\",\"keyboardUid\":\"0xAABB\",\"keyboardVendorId\":65261,\"keyboardProductId\":1,\"keyboardProductName\":\"Pipette \\\"60\\\" \\\\ 日本 😀  \"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000||a",
+        "kind": "char-minute",
+        "updated_at": 2000,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": "a",
+          "count": 1,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"char|s%7C1|60000||a\",\"kind\":\"char-minute\",\"updated_at\":2000,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\"a\",\"count\":1,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000|run%201|%7C",
+        "kind": "char-minute",
+        "updated_at": 2001,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": "|",
+          "count": 2,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"char|s%7C1|60000|run%201|%7C\",\"kind\":\"char-minute\",\"updated_at\":2001,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\"|\",\"count\":2,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000||%25",
+        "kind": "char-minute",
+        "updated_at": 2002,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": "%",
+          "count": 3,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"char|s%7C1|60000||%25\",\"kind\":\"char-minute\",\"updated_at\":2002,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\"%\",\"count\":3,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000|run%201|%20",
+        "kind": "char-minute",
+        "updated_at": 2003,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": " ",
+          "count": 4,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"char|s%7C1|60000|run%201|%20\",\"kind\":\"char-minute\",\"updated_at\":2003,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\" \",\"count\":4,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000||%E6%97%A5",
+        "kind": "char-minute",
+        "updated_at": 2004,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": "日",
+          "count": 5,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"char|s%7C1|60000||%E6%97%A5\",\"kind\":\"char-minute\",\"updated_at\":2004,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\"日\",\"count\":5,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000|run%201|%F0%9F%98%80",
+        "kind": "char-minute",
+        "updated_at": 2005,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": "😀",
+          "count": 6,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"char|s%7C1|60000|run%201|%F0%9F%98%80\",\"kind\":\"char-minute\",\"updated_at\":2005,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\"😀\",\"count\":6,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s|60000||lone",
+        "kind": "char-minute",
+        "updated_at": 2100,
+        "payload": {
+          "scopeId": "s",
+          "minuteTs": 60000,
+          "char": "\ud800",
+          "count": 1,
+          "appName": "App \udc00",
+          "typingTest": "words (english)",
+          "runId": "r"
+        }
+      },
+      "line": "{\"id\":\"char|s|60000||lone\",\"kind\":\"char-minute\",\"updated_at\":2100,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"char\":\"\\ud800\",\"count\":1,\"appName\":\"App \\udc00\",\"typingTest\":\"words (english)\",\"runId\":\"r\"}}\n"
+    },
+    {
+      "row": {
+        "id": "matrix|s|60000|run-1|2|3|1",
+        "kind": "matrix-minute",
+        "updated_at": 3000,
+        "payload": {
+          "scopeId": "s",
+          "minuteTs": 60000,
+          "row": 2,
+          "col": 3,
+          "layer": 1,
+          "keycode": 20736,
+          "count": 5,
+          "tapCount": 3,
+          "holdCount": 2,
+          "dh": [
+            0,
+            1,
+            1e+21,
+            1e-7,
+            0.30000000000000004,
+            {
+              "$n": "-0"
+            },
+            1.23e-18,
+            999999999999999900000
+          ],
+          "ds": 1e+21,
+          "dq": 1.5e-7,
+          "appName": "Editor",
+          "typingTest": {
+            "$u": true
+          },
+          "runId": "run-1"
+        }
+      },
+      "line": "{\"id\":\"matrix|s|60000|run-1|2|3|1\",\"kind\":\"matrix-minute\",\"updated_at\":3000,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":2,\"col\":3,\"layer\":1,\"keycode\":20736,\"count\":5,\"tapCount\":3,\"holdCount\":2,\"dh\":[0,1,1e+21,1e-7,0.30000000000000004,0,1.23e-18,999999999999999900000],\"ds\":1e+21,\"dq\":1.5e-7,\"appName\":\"Editor\",\"runId\":\"run-1\"}}\n"
+    },
+    {
+      "row": {
+        "id": "stats|s|60000|",
+        "kind": "minute-stats",
+        "updated_at": 4000,
+        "payload": {
+          "scopeId": "s",
+          "minuteTs": 60000,
+          "keystrokes": 10,
+          "activeMs": 0.30000000000000004,
+          "intervalAvgMs": {
+            "$n": "NaN"
+          },
+          "intervalMinMs": {
+            "$n": "-0"
+          },
+          "intervalP25Ms": 0.000001,
+          "intervalP50Ms": 1e-7,
+          "intervalP75Ms": 9007199254740994,
+          "intervalMaxMs": {
+            "$n": "Infinity"
+          },
+          "pollP50Ms": 5e-324,
+          "pollP95Ms": 1.7976931348623157e+308,
+          "appName": null,
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"stats|s|60000|\",\"kind\":\"minute-stats\",\"updated_at\":4000,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":10,\"activeMs\":0.30000000000000004,\"intervalAvgMs\":null,\"intervalMinMs\":0,\"intervalP25Ms\":0.000001,\"intervalP50Ms\":1e-7,\"intervalP75Ms\":9007199254740994,\"intervalMaxMs\":null,\"pollP50Ms\":5e-324,\"pollP95Ms\":1.7976931348623157e+308,\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "bigram|s|60000|",
+        "kind": "bigram-minute",
+        "updated_at": 5000,
+        "payload": {
+          "scopeId": "s",
+          "minuteTs": 60000,
+          "bigrams": {
+            "0": {
+              "c": 1,
+              "h": [
+                1,
+                0,
+                0,
+                2,
+                3,
+                1,
+                2,
+                1
+              ]
+            },
+            "2": {
+              "c": 1,
+              "h": [
+                1,
+                0,
+                0,
+                2,
+                3,
+                1,
+                2,
+                1
+              ],
+              "s": {
+                "$n": "-Infinity"
+              },
+              "sq": {
+                "$n": "NaN"
+              }
+            },
+            "4_11": {
+              "c": 10,
+              "h": [
+                1,
+                0,
+                0,
+                2,
+                3,
+                1,
+                2,
+                1
+              ],
+              "s": 1200.5,
+              "sq": 1e+21,
+              "oc": 1,
+              "on": 2
+            },
+            "10_2": {
+              "c": 2,
+              "h": [
+                1,
+                0,
+                0,
+                2,
+                3,
+                1,
+                2,
+                1
+              ]
+            }
+          },
+          "appName": null,
+          "typingTest": null,
+          "runId": ""
+        }
+      },
+      "line": "{\"id\":\"bigram|s|60000|\",\"kind\":\"bigram-minute\",\"updated_at\":5000,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"0\":{\"c\":1,\"h\":[1,0,0,2,3,1,2,1]},\"2\":{\"c\":1,\"h\":[1,0,0,2,3,1,2,1],\"s\":null,\"sq\":null},\"4_11\":{\"c\":10,\"h\":[1,0,0,2,3,1,2,1],\"s\":1200.5,\"sq\":1e+21,\"oc\":1,\"on\":2},\"10_2\":{\"c\":2,\"h\":[1,0,0,2,3,1,2,1]}},\"appName\":null,\"typingTest\":null,\"runId\":\"\"}}\n"
+    },
+    {
+      "row": {
+        "id": "trigram|s|60000|run-1",
+        "kind": "trigram-minute",
+        "updated_at": 5001,
+        "payload": {
+          "scopeId": "s",
+          "minuteTs": 60000,
+          "trigrams": {
+            "4_11_7": {
+              "c": 6,
+              "h": [
+                1,
+                0,
+                0,
+                2,
+                3,
+                1,
+                2,
+                1
+              ],
+              "s": 720,
+              "sq": 96000
+            }
+          },
+          "appName": null,
+          "typingTest": null,
+          "runId": "run-1"
+        }
+      },
+      "line": "{\"id\":\"trigram|s|60000|run-1\",\"kind\":\"trigram-minute\",\"updated_at\":5001,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"trigrams\":{\"4_11_7\":{\"c\":6,\"h\":[1,0,0,2,3,1,2,1],\"s\":720,\"sq\":96000}},\"appName\":null,\"typingTest\":null,\"runId\":\"run-1\"}}\n"
+    },
+    {
+      "row": {
+        "id": "session|uuid%7C1",
+        "kind": "session",
+        "updated_at": 6000,
+        "payload": {
+          "id": "uuid|1",
+          "scopeId": "s",
+          "startMs": 1000,
+          "endMs": 2000
+        }
+      },
+      "line": "{\"id\":\"session|uuid%7C1\",\"kind\":\"session\",\"updated_at\":6000,\"payload\":{\"id\":\"uuid|1\",\"scopeId\":\"s\",\"startMs\":1000,\"endMs\":2000}}\n"
+    },
+    {
+      "row": {
+        "id": "char|s%7C1|60000||a",
+        "kind": "char-minute",
+        "updated_at": 9000.5,
+        "payload": {
+          "scopeId": "s|1",
+          "minuteTs": 60000,
+          "char": "a",
+          "count": 1,
+          "appName": {
+            "$u": true
+          },
+          "typingTest": null,
+          "runId": ""
+        },
+        "is_deleted": true
+      },
+      "line": "{\"id\":\"char|s%7C1|60000||a\",\"kind\":\"char-minute\",\"updated_at\":9000.5,\"payload\":{\"scopeId\":\"s|1\",\"minuteTs\":60000,\"char\":\"a\",\"count\":1,\"typingTest\":null,\"runId\":\"\"},\"is_deleted\":true}\n"
+    }
+  ],
+  "parsed": [
+    {
+      "line": "",
+      "parsed": null
+    },
+    {
+      "line": " ",
+      "parsed": null
+    },
+    {
+      "line": "{ not json",
+      "parsed": null
+    },
+    {
+      "line": "null",
+      "parsed": null
+    },
+    {
+      "line": "5",
+      "parsed": null
+    },
+    {
+      "line": "\"x\"",
+      "parsed": null
+    },
+    {
+      "line": "[]",
+      "parsed": null
+    },
+    {
+      "line": "﻿{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"x|1\",\"kind\":\"mystery\",\"updated_at\":1,\"payload\":{}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"char|s|60000|a\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":\"soon\",\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1e400,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":-0,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":0,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"id\":5,\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"\\ud800\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": "{\"id\":\"\\ud800\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"is_deleted\":\"true\",\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"is_deleted\":false,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"is_deleted\":false,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":[]}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":null}",
+      "parsed": null
+    },
+    {
+      "line": "  {\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}  ",
+      "parsed": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"z\":{\"b\":1,\"1\":2},\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2},\"0\":true}",
+      "parsed": "{\"0\":true,\"z\":{\"1\":2,\"b\":1},\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2},\"id\":\"b\",\"updated_at\":2}",
+      "parsed": "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":2,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"__proto__\":1,\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}",
+      "parsed": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"__proto__\":1,\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":\"2\"}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"scope\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"machineHash\":\"h\",\"osPlatform\":\"linux\",\"osRelease\":\"6\",\"osArch\":\"x64\",\"keyboardUid\":\"u\",\"keyboardVendorId\":1,\"keyboardProductId\":2,\"keyboardProductName\":\"n\"}}",
+      "parsed": "{\"id\":\"s\",\"kind\":\"scope\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"machineHash\":\"h\",\"osPlatform\":\"linux\",\"osRelease\":\"6\",\"osArch\":\"x64\",\"keyboardUid\":\"u\",\"keyboardVendorId\":1,\"keyboardProductId\":2,\"keyboardProductName\":\"n\"}}\n"
+    },
+    {
+      "line": "{\"id\":\"s\",\"kind\":\"scope\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"machineHash\":\"h\",\"osPlatform\":\"linux\",\"osRelease\":\"6\",\"osArch\":\"x64\",\"keyboardUid\":\"u\",\"keyboardVendorId\":\"1\",\"keyboardProductId\":2,\"keyboardProductName\":\"n\"}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"c\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":1,\"char\":\"\\ud800\",\"count\":1}}",
+      "parsed": "{\"id\":\"c\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":1,\"char\":\"\\ud800\",\"count\":1}}\n"
+    },
+    {
+      "line": "{\"id\":\"c\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":1,\"char\":\"a\",\"count\":1,\"appName\":5}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"c\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":1,\"char\":\"a\",\"count\":1,\"appName\":null,\"typingTest\":null,\"runId\":null}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"c\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":1,\"char\":\"a\",\"count\":1,\"runId\":7}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"c\",\"kind\":\"char-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":1,\"char\":\"a\",\"count\":1e400}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null}}",
+      "parsed": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null}}\n"
+    },
+    {
+      "line": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":20,\"pollP95Ms\":45}}",
+      "parsed": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":20,\"pollP95Ms\":45}}\n"
+    },
+    {
+      "line": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":null,\"pollP95Ms\":null}}",
+      "parsed": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":null,\"pollP95Ms\":null}}\n"
+    },
+    {
+      "line": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":null,\"pollP95Ms\":5}}",
+      "parsed": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":null,\"pollP95Ms\":5}}\n"
+    },
+    {
+      "line": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP50Ms\":20}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"stats|s|60000\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1,\"intervalAvgMs\":null,\"intervalMinMs\":null,\"intervalP25Ms\":null,\"intervalP50Ms\":null,\"intervalP75Ms\":null,\"intervalMaxMs\":null,\"pollP95Ms\":\"x\",\"pollP50Ms\":1}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"stats\",\"kind\":\"minute-stats\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"keystrokes\":1,\"activeMs\":1}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0}}",
+      "parsed": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0}}\n"
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,1,0,0,0,0,0,0],\"ds\":65,\"dq\":4225}}",
+      "parsed": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,1,0,0,0,0,0,0],\"ds\":65,\"dq\":4225}}\n"
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,1,0,0,0,0,0,0]}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"ds\":65,\"dq\":4225}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,1,0],\"ds\":65,\"dq\":4225}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,1,0,0,0,0,0,\"0\"],\"ds\":65,\"dq\":4225}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":{\"0\":0},\"ds\":65,\"dq\":4225}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"m\",\"kind\":\"matrix-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"row\":0,\"col\":0,\"layer\":0,\"keycode\":4,\"count\":1,\"tapCount\":0,\"holdCount\":0,\"dh\":[0,1,0,0,0,0,0,0],\"ds\":null,\"dq\":4225}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":1,\"h\":[1,0,0]}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":1,\"h\":[1,0,0,0,0,0,0,null]}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"s\":240,\"sq\":28800}}}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"s\":240,\"sq\":28800}}}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0]}}}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0]}}}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"s\":240}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"sq\":28800}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"s\":\"240\",\"sq\":28800}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"s\":null,\"sq\":28800}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1,\"on\":2}}}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1,\"on\":2}}}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":-0,\"on\":0}}}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":0,\"on\":0}}}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"on\":2}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1.5,\"on\":2}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1,\"on\":-1}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":3,\"on\":2}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":\"1\",\"on\":2}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1e21,\"on\":1e22}}}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0],\"oc\":1e+21,\"on\":1e+22}}}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":{\"c\":\"2\",\"h\":[0,2,0,0,0,0,0,0]}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":[2]}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"4_11\":null}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{}}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{}}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":[{\"c\":1,\"h\":[0,2,0,0,0,0,0,0]}]}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":[{\"c\":1,\"h\":[0,2,0,0,0,0,0,0]}]}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":[1]}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":[]}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":[]}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":null}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":\"x\"}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"b\":{\"c\":1,\"h\":[0,2,0,0,0,0,0,0]},\"10\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0]},\"a\\ud800\":{\"c\":3,\"h\":[0,2,0,0,0,0,0,0]}},\"appName\":\"x\",\"runId\":\"\"}}",
+      "parsed": "{\"id\":\"bigram|s|60000\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{\"10\":{\"c\":2,\"h\":[0,2,0,0,0,0,0,0]},\"b\":{\"c\":1,\"h\":[0,2,0,0,0,0,0,0]},\"a\\ud800\":{\"c\":3,\"h\":[0,2,0,0,0,0,0,0]}},\"appName\":\"x\",\"runId\":\"\"}}\n"
+    },
+    {
+      "line": "{\"id\":\"bigram\",\"kind\":\"bigram-minute\",\"updated_at\":1,\"payload\":{\"minuteTs\":60000,\"bigrams\":{}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"t\",\"kind\":\"trigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"trigrams\":{\"4_11_7\":{\"c\":1,\"h\":[0,2,0,0,0,0,0,0],\"s\":150}}}}",
+      "parsed": null
+    },
+    {
+      "line": "{\"id\":\"t\",\"kind\":\"trigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"trigrams\":{\"4_11_7\":{\"c\":1,\"h\":[0,2,0,0,0,0,0,0],\"oc\":0,\"on\":1}}}}",
+      "parsed": "{\"id\":\"t\",\"kind\":\"trigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"trigrams\":{\"4_11_7\":{\"c\":1,\"h\":[0,2,0,0,0,0,0,0],\"oc\":0,\"on\":1}}}}\n"
+    },
+    {
+      "line": "{\"id\":\"t\",\"kind\":\"trigram-minute\",\"updated_at\":1,\"payload\":{\"scopeId\":\"s\",\"minuteTs\":60000,\"bigrams\":{}}}",
+      "parsed": null
+    }
+  ]
+}

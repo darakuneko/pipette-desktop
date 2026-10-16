@@ -2962,6 +2962,7 @@ dependencies = [
 name = "pipette-typing-analytics"
 version = "0.0.0"
 dependencies = [
+ "log",
  "pipette-entry-store",
  "pipette-fs",
  "pipette-js-json",

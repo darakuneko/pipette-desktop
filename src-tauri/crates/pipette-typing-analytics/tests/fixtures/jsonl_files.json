@@ -1,0 +1,689 @@
+{
+  "rows": {
+    "a": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+    "b": "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+    "c": "{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+  },
+  "appends": [
+    {
+      "name": "nothing to a missing file",
+      "start": "missing",
+      "appends": [
+        []
+      ],
+      "error": false,
+      "after": {}
+    },
+    {
+      "name": "to a missing file",
+      "start": "missing",
+      "appends": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "c"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+      }
+    },
+    {
+      "name": "to an empty file",
+      "start": "",
+      "appends": [
+        [
+          "a"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+      }
+    },
+    {
+      "name": "after a newline",
+      "start": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "appends": [
+        [
+          "a"
+        ],
+        [],
+        [
+          "b"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+      }
+    },
+    {
+      "name": "after a truncated line",
+      "start": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"char|trunc",
+      "appends": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"char|trunc\n{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+      }
+    },
+    {
+      "name": "after a carriage return",
+      "start": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r",
+      "appends": [
+        [
+          "a"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r\n{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+      }
+    },
+    {
+      "name": "after a multibyte character",
+      "start": {
+        "hex": "7b226964223a2278222c226b696e64223a2273657373696f6e222c22757064617465645f6174223a312c227061796c6f6164223a7b226964223a2278222c2273636f70654964223a2273222c2273746172744d73223a312c22656e644d73223a327d7d0ae697a5"
+      },
+      "appends": [
+        [
+          "a"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": "{\"id\":\"x\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"x\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n日\n{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":7,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+      }
+    },
+    {
+      "name": "after invalid UTF-8",
+      "start": {
+        "hex": "e697"
+      },
+      "appends": [
+        [
+          "a"
+        ]
+      ],
+      "error": false,
+      "after": {
+        "d/": null,
+        "d/day.jsonl": {
+          "hex": "e6970a7b226964223a2261222c226b696e64223a2273657373696f6e222c22757064617465645f6174223a372c227061796c6f6164223a7b226964223a2261222c2273636f70654964223a2273222c2273746172744d73223a312c22656e644d73223a327d7d0a"
+        }
+      }
+    },
+    {
+      "name": "under a file",
+      "start": "blocked",
+      "appends": [
+        [
+          "a"
+        ]
+      ],
+      "error": true,
+      "after": {
+        "d": "a file"
+      }
+    }
+  ],
+  "reads": [
+    {
+      "name": "missing",
+      "file": "missing",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": null,
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "missing after an id",
+      "file": "missing",
+      "afterId": "prev",
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": "prev",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "missing that must exist",
+      "file": "missing",
+      "mustExist": true,
+      "afterId": null,
+      "result": null
+    },
+    {
+      "name": "a directory",
+      "file": "dir",
+      "afterId": null,
+      "mustExist": false,
+      "result": null
+    },
+    {
+      "name": "empty",
+      "file": "",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": null,
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "rows",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "c",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "rows after the first",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": "a",
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "c",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "rows after the last",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": "b",
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": "b",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "rows after an absent id",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": "zz",
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": "zz",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "rows after a repeated id",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": "a",
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "c",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "rows after the id of a dropped line",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"x\",\"kind\":\"mystery\",\"updated_at\":1,\"payload\":{}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": "x",
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": "x",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "a partial last line",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "a",
+        "partialLineSkipped": true
+      }
+    },
+    {
+      "name": "a partial last line after an id",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}",
+      "afterId": "a",
+      "mustExist": false,
+      "result": {
+        "rows": [],
+        "lastId": "a",
+        "partialLineSkipped": true
+      }
+    },
+    {
+      "name": "malformed lines",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{ garbled\n\n   \n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "b",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "CRLF lines",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r\n",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "b",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "lone CR lines",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"c\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"c\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "c",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "ending with CR",
+      "file": "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\r",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "a",
+        "partialLineSkipped": true
+      }
+    },
+    {
+      "name": "a byte order mark",
+      "file": "﻿{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "b",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "invalid UTF-8 in a string",
+      "file": {
+        "hex": "7b226964223a2261222c226b696e64223a2273657373696f6e222c22757064617465645f6174223a312c227061796c6f6164223a7b226964223a2261222c2273636f70654964223a2273222c2273746172744d73223a312c22656e644d73223a327d7d0a7b226964223a2262ffe69763f09f222c226b696e64223a2273657373696f6e222c22757064617465645f6174223a312c227061796c6f6164223a7b226964223a2273222c2273636f70654964223a2278222c2273746172744d73223a312c22656e644d73223a327d7d0a"
+      },
+      "afterId": null,
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"a\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"a\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+          "{\"id\":\"b��c�\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "b��c�",
+        "partialLineSkipped": false
+      }
+    },
+    {
+      "name": "a lone surrogate id",
+      "file": "{\"id\":\"\\udc00\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"s\",\"scopeId\":\"x\",\"startMs\":1,\"endMs\":2}}\n{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n",
+      "afterId": "\udc00",
+      "mustExist": false,
+      "result": {
+        "rows": [
+          "{\"id\":\"b\",\"kind\":\"session\",\"updated_at\":1,\"payload\":{\"id\":\"b\",\"scopeId\":\"s\",\"startMs\":1,\"endMs\":2}}\n"
+        ],
+        "lastId": "b",
+        "partialLineSkipped": false
+      }
+    }
+  ],
+  "utcDaysFromMs": [
+    {
+      "ms": 0,
+      "day": "1970-01-01"
+    },
+    {
+      "ms": -1,
+      "day": "1969-12-31"
+    },
+    {
+      "ms": 1,
+      "day": "1970-01-01"
+    },
+    {
+      "ms": 1776643199999,
+      "day": "2026-04-19"
+    },
+    {
+      "ms": 1776643200000,
+      "day": "2026-04-20"
+    },
+    {
+      "ms": 8640000000000000,
+      "day": "275760-09-13"
+    },
+    {
+      "ms": -8640000000000000,
+      "day": "-271821-04-20"
+    },
+    {
+      "ms": 8640000000000001,
+      "day": "0NaN-NaN-NaN"
+    },
+    {
+      "ms": -8640000000000001,
+      "day": "0NaN-NaN-NaN"
+    },
+    {
+      "ms": {
+        "$n": "NaN"
+      },
+      "day": "0NaN-NaN-NaN"
+    },
+    {
+      "ms": {
+        "$n": "Infinity"
+      },
+      "day": "0NaN-NaN-NaN"
+    },
+    {
+      "ms": {
+        "$n": "-Infinity"
+      },
+      "day": "0NaN-NaN-NaN"
+    },
+    {
+      "ms": -62198755200000,
+      "day": "00-1-01-01"
+    },
+    {
+      "ms": -62135596800001,
+      "day": "0000-12-31"
+    },
+    {
+      "ms": 253402300800000,
+      "day": "10000-01-01"
+    },
+    {
+      "ms": 1.5,
+      "day": "1970-01-01"
+    },
+    {
+      "ms": -0.5,
+      "day": "1970-01-01"
+    },
+    {
+      "ms": {
+        "$n": "-0"
+      },
+      "day": "1970-01-01"
+    },
+    {
+      "ms": -86400000.5,
+      "day": "1969-12-31"
+    },
+    {
+      "ms": 1e+21,
+      "day": "0NaN-NaN-NaN"
+    }
+  ],
+  "utcDays": [
+    {
+      "day": "2026-04-19",
+      "isUtcDay": true,
+      "range": {
+        "startMs": 1776556800000,
+        "endMs": 1776643200000
+      }
+    },
+    {
+      "day": "2024-02-29",
+      "isUtcDay": true,
+      "range": {
+        "startMs": 1709164800000,
+        "endMs": 1709251200000
+      }
+    },
+    {
+      "day": "2026-02-29",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "2026-13-01",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "2026-00-15",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "2026-04-31",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "2026-4-19",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "20260419",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "abcd-ef-gh",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "0050-01-01",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "0099-12-31",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "0100-01-01",
+      "isUtcDay": true,
+      "range": {
+        "startMs": -59011459200000,
+        "endMs": -59011372800000
+      }
+    },
+    {
+      "day": "9999-12-31",
+      "isUtcDay": true,
+      "range": {
+        "startMs": 253402214400000,
+        "endMs": 253402300800000
+      }
+    },
+    {
+      "day": "1970-01-01",
+      "isUtcDay": true,
+      "range": {
+        "startMs": 0,
+        "endMs": 86400000
+      }
+    },
+    {
+      "day": "２０２６-04-19",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "2026-04-19 ",
+      "isUtcDay": false,
+      "range": null
+    },
+    {
+      "day": "+002026-04-19",
+      "isUtcDay": false,
+      "range": null
+    }
+  ],
+  "listings": {
+    "tree": {
+      "sync/keyboards/0xAABB/devices/hash-a/2026-04-19.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-04-17.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-04-18.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/README.txt": "",
+      "sync/keyboards/0xAABB/devices/hash-a/not-a-day.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-13-01.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-02-29.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/0050-01-01.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-04-16.JSONL": "",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-04-15.jsonl.tmp": "",
+      "sync/keyboards/0xAABB/devices/hash-a/deleted-ranges.json": "{}",
+      "sync/keyboards/0xAABB/devices/hash-a/2026-04-20.jsonl": null,
+      "sync/keyboards/0xAABB/devices/hash-b/2026-04-19.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-c/deleted-ranges.json": null,
+      "sync/keyboards/0xAABB/devices/Hash-D/2026-01-01.jsonl": "",
+      "sync/keyboards/0xAABB/devices/hash-e/": null,
+      "sync/keyboards/0xAABB/devices/stray.jsonl": "",
+      "sync/keyboards/0xCCDD/devices/hash-a/2026-04-19.jsonl": "",
+      "sync/keyboards/～/devices/h/2026-01-01.jsonl": "",
+      "sync/keyboards/😀/devices/h/2026-01-01.jsonl": "",
+      "sync/keyboards/Zed/devices/h/2026-01-01.jsonl": "",
+      "sync/keyboards/file-not-dir": "",
+      "sync/keyboards/no-devices/": null
+    },
+    "deviceDays": {
+      "hash-a": [
+        "2026-04-17",
+        "2026-04-18",
+        "2026-04-19"
+      ],
+      "missing": []
+    },
+    "allDays": [
+      {
+        "uid": "0xAABB",
+        "machineHash": "Hash-D",
+        "utcDay": "2026-01-01",
+        "path": "sync/keyboards/0xAABB/devices/Hash-D/2026-01-01.jsonl"
+      },
+      {
+        "uid": "0xAABB",
+        "machineHash": "hash-a",
+        "utcDay": "2026-04-17",
+        "path": "sync/keyboards/0xAABB/devices/hash-a/2026-04-17.jsonl"
+      },
+      {
+        "uid": "0xAABB",
+        "machineHash": "hash-a",
+        "utcDay": "2026-04-18",
+        "path": "sync/keyboards/0xAABB/devices/hash-a/2026-04-18.jsonl"
+      },
+      {
+        "uid": "0xAABB",
+        "machineHash": "hash-a",
+        "utcDay": "2026-04-19",
+        "path": "sync/keyboards/0xAABB/devices/hash-a/2026-04-19.jsonl"
+      },
+      {
+        "uid": "0xAABB",
+        "machineHash": "hash-b",
+        "utcDay": "2026-04-19",
+        "path": "sync/keyboards/0xAABB/devices/hash-b/2026-04-19.jsonl"
+      },
+      {
+        "uid": "0xCCDD",
+        "machineHash": "hash-a",
+        "utcDay": "2026-04-19",
+        "path": "sync/keyboards/0xCCDD/devices/hash-a/2026-04-19.jsonl"
+      },
+      {
+        "uid": "Zed",
+        "machineHash": "h",
+        "utcDay": "2026-01-01",
+        "path": "sync/keyboards/Zed/devices/h/2026-01-01.jsonl"
+      },
+      {
+        "uid": "😀",
+        "machineHash": "h",
+        "utcDay": "2026-01-01",
+        "path": "sync/keyboards/😀/devices/h/2026-01-01.jsonl"
+      },
+      {
+        "uid": "～",
+        "machineHash": "h",
+        "utcDay": "2026-01-01",
+        "path": "sync/keyboards/～/devices/h/2026-01-01.jsonl"
+      }
+    ],
+    "deletedRangesHashes": {
+      "0xAABB": [
+        "hash-a",
+        "hash-c"
+      ],
+      "missing": []
+    }
+  }
+}

@@ -1,0 +1,728 @@
+{
+  "machineHash": "hash-own",
+  "nowMs": 1792154096789,
+  "tree": {
+    "typing-analytics/keymaps/kb-raw/hash-own/1000.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-raw/hash-own/007.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":7,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-raw/hash-own/2000.json": "not json",
+    "typing-analytics/keymaps/kb-raw/hash-own/3000.json": "null",
+    "typing-analytics/keymaps/kb-raw/hash-own/4000.json": "5",
+    "typing-analytics/keymaps/kb-raw/hash-own/5000.json": "\"text\"",
+    "typing-analytics/keymaps/kb-raw/hash-own/5500.json": "[1,2]",
+    "typing-analytics/keymaps/kb-raw/hash-own/6000.json": null,
+    "typing-analytics/keymaps/kb-raw/hash-own/6500.json": "{\"productName\":7,\"extra\":1,\"matrix\":\"wide\",\"uid\":\"other\"}",
+    "typing-analytics/keymaps/kb-raw/hash-own/1234567890123456789012345.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-raw/hash-own/abc.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":2,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-raw/hash-own/-5.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":-5,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-raw/hash-own/8000.JSON": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":8000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-throw/hash-own/9000.json": "{\"layers\":4,\"matrix\":null}",
+    "typing-analytics/keymaps/kb-array/hash-own/9000.json": "[4]",
+    "typing-analytics/keymaps/kb-order/hash-own/9000.json": "{\"layers\":1,\"matrix\":{\"rows\":1,\"cols\":1},\"keymap\":[],\"layout\":{\"a\":1,\"b\":2}}",
+    "typing-analytics/keymaps/kb-number/hash-own/9000.json": "{\"layers\":1,\"matrix\":{\"rows\":1,\"cols\":1},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "typing-analytics/keymaps/kb-file": "not a directory"
+  },
+  "steps": [
+    {
+      "kind": "list",
+      "args": [
+        "kb-raw"
+      ],
+      "response": "[{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2}},{},{},{},{\"uid\":\"other\",\"productName\":7,\"matrix\":\"wide\"}]"
+    },
+    {
+      "kind": "list",
+      "args": [
+        "kb-none"
+      ],
+      "response": "[]"
+    },
+    {
+      "kind": "list",
+      "args": [
+        ""
+      ],
+      "response": "[]"
+    },
+    {
+      "kind": "list",
+      "args": [
+        5
+      ],
+      "response": "[]"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        500,
+        1500
+      ],
+      "response": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        1000,
+        1000
+      ],
+      "response": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        1500,
+        2500
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        2500,
+        3500
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        3500,
+        4500
+      ],
+      "response": "5"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        5100,
+        5200
+      ],
+      "response": "\"text\""
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        5500,
+        5501
+      ],
+      "response": "[1,2]"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        6000,
+        6001
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        6500,
+        6501
+      ],
+      "response": "{\"productName\":7,\"extra\":1,\"matrix\":\"wide\",\"uid\":\"other\"}"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        0,
+        1e+30
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        -10,
+        -1
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        1e+30,
+        1e+31
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-none",
+        0,
+        10
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "",
+        0,
+        10
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        null,
+        10
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-raw",
+        0,
+        "10"
+      ],
+      "response": "null"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-1",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-1",
+          "productName": "Renamed",
+          "savedAt": 2000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null,
+          "vialProtocol": 6
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":1000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-1",
+          "productName": "Tester",
+          "savedAt": 3000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_B"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":3000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "savedAt": 4000,
+          "keymap": [
+            [
+              [
+                "KC_B"
+              ]
+            ]
+          ],
+          "layers": 4,
+          "uid": "kb-1",
+          "matrix": {
+            "cols": 12,
+            "rows": 5
+          },
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":3000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-1",
+          "productName": "Tester",
+          "savedAt": 5000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12,
+            "extra": true
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":5000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-1",
+          "productName": "Tester",
+          "savedAt": 1.5,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_C"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1.5}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-1",
+          "productName": "Tester",
+          "savedAt": 6000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_C"
+              ]
+            ]
+          ],
+          "layout": null,
+          "vialProtocol": "6",
+          "extra": "dropped"
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":6000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-2"
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1792154096789}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-2",
+          "savedAt": "7000",
+          "layers": "4",
+          "matrix": null,
+          "keymap": "x",
+          "layout": {
+            "$u": true
+          },
+          "vialProtocol": 6.5
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":1792154096789}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-2",
+          "productName": 5,
+          "savedAt": 1e+21,
+          "layers": {
+            "$n": "-0"
+          },
+          "matrix": 3,
+          "keymap": [],
+          "layout": {
+            "b": 1,
+            "a": [
+              null,
+              true
+            ]
+          }
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1e+21}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-2",
+          "savedAt": -5,
+          "layers": 1
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":-5}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-2",
+          "savedAt": 8000,
+          "layers": 1
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":8000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        null
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        5
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        []
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": ""
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": 5
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-throw",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-throw",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 3,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-array",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-order",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 1,
+          "matrix": {
+            "rows": 1,
+            "cols": 1
+          },
+          "keymap": [],
+          "layout": {
+            "b": 2,
+            "a": 1
+          }
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-order",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 1,
+          "matrix": {
+            "rows": 1,
+            "cols": 1
+          },
+          "keymap": [],
+          "layout": {
+            "a": 1,
+            "b": 2
+          }
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":9000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-number",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 1,
+          "matrix": {
+            "rows": "1",
+            "cols": 1
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":true,\"savedAt\":1000}"
+    },
+    {
+      "kind": "save",
+      "args": [
+        {
+          "uid": "kb-file",
+          "productName": "Tester",
+          "savedAt": 1000,
+          "layers": 4,
+          "matrix": {
+            "rows": 5,
+            "cols": 12
+          },
+          "keymap": [
+            [
+              [
+                "KC_A"
+              ]
+            ]
+          ],
+          "layout": null
+        }
+      ],
+      "response": "{\"saved\":false,\"savedAt\":null}"
+    },
+    {
+      "kind": "list",
+      "args": [
+        "kb-1"
+      ],
+      "response": "[{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12}},{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":3000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12}},{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":5000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12,\"extra\":true}},{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":6000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12}}]"
+    },
+    {
+      "kind": "list",
+      "args": [
+        "kb-2"
+      ],
+      "response": "[{\"uid\":\"kb-2\",\"machineHash\":\"hash-own\",\"productName\":\"\",\"savedAt\":8000,\"layers\":1,\"matrix\":{\"rows\":0,\"cols\":0}},{\"uid\":\"kb-2\",\"machineHash\":\"hash-own\",\"productName\":\"\",\"savedAt\":1792154096789,\"layers\":0,\"matrix\":{\"rows\":0,\"cols\":0}}]"
+    },
+    {
+      "kind": "list",
+      "args": [
+        "kb-file"
+      ],
+      "response": null
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-1",
+        0,
+        1e+30
+      ],
+      "response": "{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":6000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_C\"]]],\"layout\":null}"
+    },
+    {
+      "kind": "get",
+      "args": [
+        "kb-1",
+        1.5,
+        2
+      ],
+      "response": "null"
+    }
+  ],
+  "after": {
+    "keymaps/": null,
+    "keymaps/kb-1/": null,
+    "keymaps/kb-1/hash-own/": null,
+    "keymaps/kb-1/hash-own/1.5.json": "{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1.5,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_C\"]]],\"layout\":null}",
+    "keymaps/kb-1/hash-own/1000.json": "{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "keymaps/kb-1/hash-own/3000.json": "{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":3000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-1/hash-own/5000.json": "{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":5000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12,\"extra\":true},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "keymaps/kb-1/hash-own/6000.json": "{\"uid\":\"kb-1\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":6000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_C\"]]],\"layout\":null}",
+    "keymaps/kb-2/": null,
+    "keymaps/kb-2/hash-own/": null,
+    "keymaps/kb-2/hash-own/-5.json": "{\"uid\":\"kb-2\",\"machineHash\":\"hash-own\",\"productName\":\"\",\"savedAt\":-5,\"layers\":1,\"matrix\":{\"rows\":0,\"cols\":0},\"keymap\":[],\"layout\":null}",
+    "keymaps/kb-2/hash-own/1792154096789.json": "{\"uid\":\"kb-2\",\"machineHash\":\"hash-own\",\"productName\":\"\",\"savedAt\":1792154096789,\"layers\":0,\"matrix\":{\"rows\":0,\"cols\":0},\"keymap\":[],\"layout\":null}",
+    "keymaps/kb-2/hash-own/1e+21.json": "{\"uid\":\"kb-2\",\"machineHash\":\"hash-own\",\"productName\":\"\",\"savedAt\":1e+21,\"layers\":0,\"matrix\":3,\"keymap\":[],\"layout\":{\"b\":1,\"a\":[null,true]}}",
+    "keymaps/kb-2/hash-own/8000.json": "{\"uid\":\"kb-2\",\"machineHash\":\"hash-own\",\"productName\":\"\",\"savedAt\":8000,\"layers\":1,\"matrix\":{\"rows\":0,\"cols\":0},\"keymap\":[],\"layout\":null}",
+    "keymaps/kb-array/": null,
+    "keymaps/kb-array/hash-own/": null,
+    "keymaps/kb-array/hash-own/1000.json": "{\"uid\":\"kb-array\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1000,\"layers\":4,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "keymaps/kb-array/hash-own/9000.json": "[4]",
+    "keymaps/kb-file": "not a directory",
+    "keymaps/kb-number/": null,
+    "keymaps/kb-number/hash-own/": null,
+    "keymaps/kb-number/hash-own/1000.json": "{\"uid\":\"kb-number\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1000,\"layers\":1,\"matrix\":{\"rows\":\"1\",\"cols\":1},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "keymaps/kb-number/hash-own/9000.json": "{\"layers\":1,\"matrix\":{\"rows\":1,\"cols\":1},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "keymaps/kb-order/": null,
+    "keymaps/kb-order/hash-own/": null,
+    "keymaps/kb-order/hash-own/1000.json": "{\"uid\":\"kb-order\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1000,\"layers\":1,\"matrix\":{\"rows\":1,\"cols\":1},\"keymap\":[],\"layout\":{\"b\":2,\"a\":1}}",
+    "keymaps/kb-order/hash-own/9000.json": "{\"layers\":1,\"matrix\":{\"rows\":1,\"cols\":1},\"keymap\":[],\"layout\":{\"a\":1,\"b\":2}}",
+    "keymaps/kb-raw/": null,
+    "keymaps/kb-raw/hash-own/": null,
+    "keymaps/kb-raw/hash-own/-5.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":-5,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-raw/hash-own/007.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":7,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-raw/hash-own/1000.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-raw/hash-own/1234567890123456789012345.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":1,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-raw/hash-own/2000.json": "not json",
+    "keymaps/kb-raw/hash-own/3000.json": "null",
+    "keymaps/kb-raw/hash-own/4000.json": "5",
+    "keymaps/kb-raw/hash-own/5000.json": "\"text\"",
+    "keymaps/kb-raw/hash-own/5500.json": "[1,2]",
+    "keymaps/kb-raw/hash-own/6000.json/": null,
+    "keymaps/kb-raw/hash-own/6500.json": "{\"productName\":7,\"extra\":1,\"matrix\":\"wide\",\"uid\":\"other\"}",
+    "keymaps/kb-raw/hash-own/8000.JSON": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":8000,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-raw/hash-own/abc.json": "{\"uid\":\"kb-raw\",\"machineHash\":\"hash-own\",\"productName\":\"Raw\",\"savedAt\":2,\"layers\":2,\"matrix\":{\"rows\":1,\"cols\":2},\"keymap\":[[[\"KC_A\",\"KC_B\"]]],\"layout\":null}",
+    "keymaps/kb-throw/": null,
+    "keymaps/kb-throw/hash-own/": null,
+    "keymaps/kb-throw/hash-own/1000.json": "{\"uid\":\"kb-throw\",\"machineHash\":\"hash-own\",\"productName\":\"Tester\",\"savedAt\":1000,\"layers\":3,\"matrix\":{\"rows\":5,\"cols\":12},\"keymap\":[[[\"KC_A\"]]],\"layout\":null}",
+    "keymaps/kb-throw/hash-own/9000.json": "{\"layers\":4,\"matrix\":null}"
+  }
+}
