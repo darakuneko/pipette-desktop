@@ -8,5 +8,42 @@ license.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[features]
+# The plain-text key file of PIPETTE_DEV_KEYSTORE=file (src/dev_file.rs),
+# for the e2e tests and CI. The app's development tools turn it on; src/lib.rs
+# refuses to compile it without debug assertions, so a release build has no
+# code that reads the variable.
+dev-keystore = []
+# The in-memory key store of the tests of the crates that take a key store.
+test-util = []
+
+[dependencies]
+# The files of local/auth/: AES-256-GCM, the version the sync format uses.
+aes-gcm = { version = "=0.10.3", default-features = false, features = ["aes", "alloc"] }
+# The nonce of each write and the master key, from the OS.
+getrandom = "=0.3.4"
+hex = "=0.4.3"
+log = "=0.4.34"
+pipette-fs = { path = "../pipette-fs" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { version = "=0.10.9", default-features = false }
+thiserror = "=2.0.21"
+# The time limit of a key store call and the blocking file work.
+tokio = { version = "=1.53.3", features = ["rt", "sync", "time"] }
+zeroize = "=1.9.0"
+
+# The OS key store: the Keychain on macOS, the Credential Manager on Windows
+# and the Secret Service over libdbus on Linux (the dbus crate tao already
+# links), with the Secret Service session encrypted in Rust rather than with
+# OpenSSL.
+[target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]
+keyring = { version = "=3.6.3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+
+[dev-dependencies]
+pipette-secret-store = { path = ".", features = ["test-util"] }
+tempfile = { workspace = true }
+tokio = { version = "=1.53.3", features = ["rt", "sync", "time", "macros", "test-util"] }
+
 [lints]
 workspace = true
