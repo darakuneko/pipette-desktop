@@ -370,6 +370,83 @@
     }
   },
   {
+    "name": "the typing analytics units",
+    "tree": {
+      "sync/keyboards/0xA1B2/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16\",\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges\",\"keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges\",\"keyboards/0xA1B2/runs\",\"keyboards/0xA1B2/analyze_filters\"],\"held\":{\"account-b\":[\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16\",\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges\",\"keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges\",\"keyboards/0xA1B2/runs\",\"keyboards/0xA1B2/analyze_filters\"]}}"
+    },
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/0xA1B2/runs"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/0xA1B2/analyze_filters"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/0xA1B2/devices/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc/days/2026-10-17"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16\",\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges\",\"keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges\",\"keyboards/0xA1B2/runs\",\"keyboards/0xA1B2/analyze_filters\"],\"held\":{\"account-b\":[\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16\",\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges\",\"keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges\",\"keyboards/0xA1B2/runs\",\"keyboards/0xA1B2/analyze_filters\"]}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16",
+        6
+      ],
+      [
+        "keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges",
+        7
+      ],
+      [
+        "keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges",
+        8
+      ],
+      [
+        "keyboards/0xA1B2/runs",
+        9
+      ],
+      [
+        "keyboards/0xA1B2/analyze_filters",
+        10
+      ],
+      [
+        "keyboards/0xA1B2/devices/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc/days/2026-10-17",
+        11
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16\",\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges\",\"keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges\",\"keyboards/0xA1B2/runs\",\"keyboards/0xA1B2/analyze_filters\",\"keyboards/0xA1B2/devices/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc/days/2026-10-17\"],\"held\":{\"account-b\":[\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/days/2026-10-16\",\"keyboards/0xA1B2/devices/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/deleted-ranges\",\"keyboards/0xA1B2/devices/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/deleted-ranges\",\"keyboards/0xA1B2/runs\",\"keyboards/0xA1B2/analyze_filters\"]}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null
+    }
+  },
+  {
     "name": "the write at quit takes the place of the delayed one",
     "tree": {},
     "steps": [
