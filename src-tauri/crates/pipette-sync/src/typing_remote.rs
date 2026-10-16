@@ -4,7 +4,7 @@
 //! with the local day files and the upload bookkeeping of
 //! `sync_state.json` before an upload pass collects its units.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::Path;
 
@@ -96,6 +96,11 @@ fn reconcile_pending(reconciled_at: &Value, key: &str) -> bool {
     matches!(reconciled_at.as_object().and_then(|record| record.get(key)), None | Some(Value::Null))
 }
 
+/// Runs `work` on a blocking-task thread.
+async fn blocking<T: Send + 'static>(work: impl FnOnce() -> io::Result<T> + Send + 'static) -> io::Result<T> {
+    tokio::task::spawn_blocking(work).await.map_err(io::Error::other)?
+}
+
 /// The keyboard directories under `sync/keyboards/`, in the byte order of
 /// their names (libuv's scandir order); none when it cannot be read.
 fn local_keyboard_uids(user_data: &Path) -> Vec<String> {
@@ -150,7 +155,10 @@ pub async fn reconcile_own_hash_typing_analytics(
     own_hash: &str,
     clock: &dyn Clock,
 ) -> io::Result<Reconciled> {
-    let mut state = load_sync_state(user_data).unwrap_or_else(|| TypingSyncState::empty(own_hash));
+    let root = user_data.to_path_buf();
+    let (state, local_uids) =
+        blocking(move || Ok((load_sync_state(&root), local_keyboard_uids(&root)))).await?;
+    let mut state = state.unwrap_or_else(|| TypingSyncState::empty(own_hash));
     let mut remote = collect_remote_own_hash_days(listing, own_hash);
 
     let mut candidates: IndexSet<String> = IndexSet::new();
@@ -165,12 +173,27 @@ pub async fn reconcile_own_hash_typing_analytics(
         }
     }
     candidates.extend(remote.keys().cloned());
-    candidates.extend(local_keyboard_uids(user_data));
+    candidates.extend(local_uids);
+    // The local days, read before any delete: the reconcile never changes
+    // them.
+    let mut local_days = {
+        let (root, uids, own) = (user_data.to_path_buf(), candidates.clone(), own_hash.to_owned());
+        blocking(move || {
+            Ok(uids
+                .into_iter()
+                .map(|uid| {
+                    let days: HashSet<String> = list_device_days(&root, &uid, &own).into_iter().collect();
+                    (uid, days)
+                })
+                .collect::<HashMap<_, _>>())
+        })
+        .await?
+    };
 
     let mut mutated = false;
     for uid in &candidates {
         let key = pointer_key(uid, own_hash);
-        let local: HashSet<String> = list_device_days(user_data, uid, own_hash).into_iter().collect();
+        let local = local_days.remove(uid).unwrap_or_default();
         let mut uploaded = uploaded_days(&state.uploaded, &key);
         let mut cloud = remote.shift_remove(uid).unwrap_or_default();
 
@@ -226,7 +249,8 @@ pub async fn reconcile_own_hash_typing_analytics(
 
     if mutated {
         state.last_synced_at = clock.now_ms() as f64;
-        save_sync_state(user_data, &state)?;
+        let (root, saved) = (user_data.to_path_buf(), state.clone());
+        blocking(move || save_sync_state(&root, &saved)).await?;
     }
     Ok(Reconciled { state, mutated })
 }

@@ -15,7 +15,7 @@ use pipette_typing_analytics::sync_state::{TypingSyncState, load_sync_state, sav
 use pipette_typing_analytics_db::DayRows;
 
 use super::settings::written_bytes;
-use super::{AnalyticsEnv, MergeError, prop};
+use super::{AnalyticsEnv, MergeError, blocking, prop};
 use crate::units::DeviceDayUnit;
 
 /// The day file's text as `readRows` reads it: none when it cannot be read.
@@ -50,51 +50,54 @@ pub async fn merge_device_day_bundle(
     };
     let Some(data) = prop(files, "data.jsonl")?.filter(|data| data.is_truthy()) else { return Ok(()) };
 
-    let user_data = env.ops.analytics().user_data();
-    std::fs::create_dir_all(device_day_dir(user_data, day.uid, day.machine_hash))?;
-    // `fs.writeFile` of what the bundle holds: a string as its UTF-8.
+    // `fs.writeFile` of what the bundle holds: a string as its UTF-8. A
+    // value it refuses fails after the directory is made.
     let bytes = match data {
-        Value::String(text) => text.to_string_lossy().into_owned().into_bytes(),
-        other => written_bytes(other)?,
+        Value::String(text) => Ok(text.to_string_lossy().into_owned().into_bytes()),
+        other => written_bytes(other),
     };
-    let path = device_day_jsonl_path(user_data, day.uid, day.machine_hash, day.utc_day);
-    pipette_fs::write_file_atomic(&path, &bytes)?;
-
-    let rows = DayRows::parse(&read_text(&path).unwrap_or_default());
+    let analytics = env.ops.analytics().clone();
+    let (uid, hash, utc_day) = (day.uid.to_owned(), day.machine_hash.to_owned(), day.utc_day.to_owned());
+    let rows = {
+        let (analytics, uid, hash, utc_day) = (analytics.clone(), uid.clone(), hash.clone(), utc_day.clone());
+        blocking(move || {
+            let user_data = analytics.user_data();
+            std::fs::create_dir_all(device_day_dir(user_data, &uid, &hash))?;
+            let path = device_day_jsonl_path(user_data, &uid, &hash, &utc_day);
+            pipette_fs::write_file_atomic(&path, &bytes?)?;
+            Ok(DayRows::parse(&read_text(&path).unwrap_or_default()))
+        })
+        .await?
+    };
     if !rows.is_empty() {
-        let ready = env.ops.analytics().ready().await.map_err(|err| MergeError::Other(err.to_string()))?;
-        let analytics = env.ops.analytics().clone();
-        let (uid, hash, utc_day, own) =
-            (day.uid.to_owned(), day.machine_hash.to_owned(), day.utc_day.to_owned(), own_hash.to_owned());
+        let ready = analytics.ready().await.map_err(|err| MergeError::Other(err.to_string()))?;
+        let (replayed, own) = (analytics.clone(), own_hash.to_owned());
         ready
             .db
             .call(move |db| {
                 // The ranges are read right before the transaction that
                 // uses them; an unreadable ranges file hides nothing.
                 let hidden = || {
-                    let ranges: Vec<_> = read_deleted_ranges_lenient(analytics.user_data(), &uid, &hash)
+                    let ranges: Vec<_> = read_deleted_ranges_lenient(replayed.user_data(), &uid, &hash)
                         .into_iter()
                         .map(|entry| entry.range)
                         .collect();
                     clip_to_utc_day(&ranges, &utc_day).unwrap_or_default()
                 };
-                replay_day_hiding_deleted_ranges(
-                    db,
-                    &rows,
-                    &uid,
-                    &hash,
-                    &own,
-                    analytics.clock().as_ref(),
-                    hidden,
-                )
+                let clock = replayed.clock().as_ref();
+                replay_day_hiding_deleted_ranges(db, &rows, &uid, &hash, &own, clock, hidden)
             })
             .await
             .map_err(|err| MergeError::Other(err.to_string()))?
             .map_err(|err| MergeError::Other(err.to_string()))?;
     }
 
-    let mut state = load_sync_state(user_data).unwrap_or_else(|| TypingSyncState::empty(own_hash));
-    state.last_synced_at = env.ops.analytics().now_ms() as f64;
-    save_sync_state(user_data, &state)?;
-    Ok(())
+    let (now, own) = (analytics.now_ms(), own_hash.to_owned());
+    blocking(move || {
+        let user_data = analytics.user_data();
+        let mut state = load_sync_state(user_data).unwrap_or_else(|| TypingSyncState::empty(&own));
+        state.last_synced_at = now as f64;
+        Ok(save_sync_state(user_data, &state)?)
+    })
+    .await
 }

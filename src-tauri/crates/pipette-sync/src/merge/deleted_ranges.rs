@@ -23,7 +23,7 @@ use pipette_typing_analytics::jsonl::DELETED_RANGES_FILENAME;
 use pipette_typing_analytics_db::DeleteRange;
 use tokio::task::JoinHandle;
 
-use super::{AnalyticsEnv, MergeError, prop};
+use super::{AnalyticsEnv, MergeError, blocking, prop};
 use crate::units::DeletedRangesUnit;
 
 /// What a typing-analytics merge did.
@@ -77,16 +77,15 @@ pub async fn merge_typing_deleted_ranges_bundle(
         ranges.uid.to_owned(),
         ranges.machine_hash.to_owned(),
     );
-    let union = tokio::task::spawn_blocking(move || {
+    let union = blocking(move || {
         // A remote file of the wrong shape unions nothing, so nothing is
         // written; it is refused once the local read succeeded.
         update_deleted_ranges(&locks, &user_data, &uid, &hash, |local| {
             union_deleted_ranges(&local, remote.as_deref().unwrap_or_default())
         })
+        .map_err(store_error)
     })
-    .await
-    .map_err(|err| MergeError::Other(err.to_string()))?
-    .map_err(store_error)?;
+    .await?;
     if malformed {
         return Err(MergeError::Malformed(unit.to_owned()));
     }

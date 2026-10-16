@@ -111,6 +111,14 @@ impl From<pipette_pack_stores::sync::PackSyncError> for MergeError {
     }
 }
 
+/// Runs `work` on a blocking-task thread: the analytics merges read and
+/// write files from async tasks.
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, MergeError> + Send + 'static,
+) -> Result<T, MergeError> {
+    tokio::task::spawn_blocking(work).await.map_err(|err| MergeError::Other(err.to_string()))?
+}
+
 /// `bundle[key]`: reading a property of `null` throws; a value that is not
 /// an object has none.
 fn prop<'a>(bundle: &'a Value, key: &str) -> Result<Option<&'a Value>, MergeError> {
