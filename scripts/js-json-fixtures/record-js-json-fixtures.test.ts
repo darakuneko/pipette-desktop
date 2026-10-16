@@ -11,6 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolve } from 'node:path'
 import { writeJsonFixture } from '../fixture-files'
+import { random32 } from '../fixture-random'
 import { REPO_ROOT } from '../fixture-vitest-config'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-js-json/tests/fixtures/js_json.json')
@@ -50,18 +51,6 @@ const TEXTS = [
 ]
 
 const GAPS = { compact: undefined, twoSpaces: '  ', tab: '\t' } as const
-
-/** Mulberry32: a fixed sequence, so the fixture is the same on every run. */
-function random32(seed: number): () => number {
-  let state = seed >>> 0
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0
-    let t = state
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return (t ^ (t >>> 14)) >>> 0
-  }
-}
 
 function bitsOf(n: number): string {
   const view = new DataView(new ArrayBuffer(8))
