@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/typing_dataset_commands.rs: the Typing Test word lists
+# and their datasets.
+
+[[set]]
+identifier = "typing-datasets"
+description = "Lists, reads, downloads and deletes the Typing Test word lists, and checks for and applies dataset updates from the Hub."
+permissions = [
+  "allow-lang-list",
+  "allow-lang-get",
+  "allow-lang-download",
+  "allow-lang-delete",
+  "allow-typing-dataset-check",
+  "allow-typing-dataset-update",
+]

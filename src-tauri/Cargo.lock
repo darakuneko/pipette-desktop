@@ -2675,6 +2675,7 @@ dependencies = [
  "pipette-logger",
  "pipette-net",
  "pipette-sync-pending",
+ "pipette-typing-datasets",
  "rfd",
  "serde",
  "serde_json",

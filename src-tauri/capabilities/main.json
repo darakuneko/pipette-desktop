@@ -15,6 +15,7 @@
     "favorites",
     "snapshots",
     "settings",
+    "typing-datasets",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

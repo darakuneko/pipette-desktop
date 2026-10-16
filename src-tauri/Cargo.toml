@@ -35,6 +35,8 @@ pipette-entry-store = { path = "crates/pipette-entry-store" }
 pipette-keyboard-stores = { path = "crates/pipette-keyboard-stores" }
 # The HTTP client every request goes through (src/dev_commands.rs).
 pipette-net = { path = "crates/pipette-net" }
+# The Typing Test word lists and datasets (src/typing_dataset_commands.rs).
+pipette-typing-datasets = { path = "crates/pipette-typing-datasets" }
 log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).
