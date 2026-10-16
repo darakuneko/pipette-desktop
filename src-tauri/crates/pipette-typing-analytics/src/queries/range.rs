@@ -8,23 +8,13 @@ use pipette_js_json::{Object, Value};
 use pipette_typing_analytics_db::{AppAggregate, Gram, ScopeFilters};
 
 use super::analyze::heatmap;
-use super::{Args, Context, DeviceScope, Query, empty_list, js};
+use super::{Args, Context, DeviceScope, Query, ceil_minute, empty_list, floor_minute, js};
 use crate::bigram_aggregate::{
     aggregate_duration_totals, aggregate_pair_totals, duration_cell, observed_rollover_ratio, rank_by_count,
     rank_by_slow,
 };
 use crate::keymap_snapshots::get_keymap_snapshot_for_range;
 use crate::layout_comparison;
-
-const MINUTE_MS: f64 = 60_000.0;
-
-fn floor_minute(ms: f64) -> f64 {
-    (ms / MINUTE_MS).floor() * MINUTE_MS
-}
-
-fn ceil_minute(ms: f64) -> f64 {
-    (ms / MINUTE_MS).ceil() * MINUTE_MS
-}
 
 /// The checked `(uid, sinceMs, untilMs, scope)` of a range handler: a
 /// non-empty uid, finite bounds with `until` above `since`, a scope.
@@ -67,18 +57,15 @@ pub(super) fn app_range(query: Query, args: Args<'_>, cx: &Context<'_>) -> Resul
 /// the window widened to whole minutes.
 pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
     let empty = || Value::Object(Object::new());
-    let Some(uid) = args.text(0) else { return Ok(empty()) };
+    let Some(r) = range(args, 0, 2, 3, 4) else { return Ok(empty()) };
     let Some(layer) = args.finite(1).filter(|&l| l >= 0.0) else { return Ok(empty()) };
-    let Some(since) = args.finite(2) else { return Ok(empty()) };
-    let Some(until) = args.finite(3).filter(|&u| u > since) else { return Ok(empty()) };
-    let Some(scope) = DeviceScope::parse(args.get(4)) else { return Ok(empty()) };
-    let hash = scope.machine_hash(cx.own_hash);
+    let hash = r.scope.machine_hash(cx.own_hash);
     let cells = cx.db.matrix_counts_in_range(
-        uid,
+        r.uid,
         hash.as_deref(),
         layer,
-        floor_minute(since),
-        ceil_minute(until),
+        floor_minute(r.since),
+        ceil_minute(r.until),
         &args.filters(5),
     )?;
     Ok(heatmap(&cells))
@@ -222,13 +209,5 @@ mod tests {
         let bad = parse(r#"{"minSampleCount":-1,"limit":0,"gram":"3"}"#);
         assert_eq!((bad.min_sample, bad.limit, bad.gram), (5.0, 30.0, Gram::Bigram));
         assert_eq!(parse(r#"{"limit":0.5}"#).limit, 0.0);
-    }
-
-    #[test]
-    fn widens_windows_to_whole_minutes() {
-        assert_eq!(floor_minute(90_000.0), 60_000.0);
-        assert_eq!(ceil_minute(90_000.0), 120_000.0);
-        assert_eq!(ceil_minute(120_000.0), 120_000.0);
-        assert_eq!(floor_minute(-1.0), -60_000.0);
     }
 }

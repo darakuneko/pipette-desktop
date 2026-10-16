@@ -9,11 +9,9 @@ use std::path::Path;
 use pipette_js_json::{Object, Value};
 use pipette_typing_analytics_db::{PeakRecords, ToJs};
 
-use super::{Args, Context, Devices, Family, empty_list, js};
+use super::{Args, Context, Devices, Family, empty_list, floor_minute, js};
 use crate::bigram_aggregate::js_number;
 use crate::jsonl::paths::list_device_days;
-
-const MINUTE_MS: f64 = 60_000.0;
 
 /// The answer to arguments a handler of `family` rejects.
 fn rejected(family: Family) -> Value {
@@ -77,8 +75,7 @@ pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, 
     let Some(uid) = args.text(0) else { return Ok(empty()) };
     let Some(layer) = args.finite(1).filter(|&l| l >= 0.0) else { return Ok(empty()) };
     let Some(since) = args.finite(2) else { return Ok(empty()) };
-    let since_minute = (since / MINUTE_MS).floor() * MINUTE_MS;
-    let cells = cx.db.matrix_counts_since(uid, cx.own_hash, layer, since_minute)?;
+    let cells = cx.db.matrix_counts_since(uid, cx.own_hash, layer, floor_minute(since))?;
     Ok(heatmap(&cells))
 }
 

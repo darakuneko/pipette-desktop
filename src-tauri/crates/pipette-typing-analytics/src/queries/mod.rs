@@ -148,6 +148,18 @@ fn js(value: impl pipette_typing_analytics_db::ToJs) -> Value {
     value.to_js()
 }
 
+const MINUTE_MS: f64 = 60_000.0;
+
+/// `ms` moved down to a whole minute.
+fn floor_minute(ms: f64) -> f64 {
+    (ms / MINUTE_MS).floor() * MINUTE_MS
+}
+
+/// `ms` moved up to a whole minute.
+fn ceil_minute(ms: f64) -> f64 {
+    (ms / MINUTE_MS).ceil() * MINUTE_MS
+}
+
 fn empty_list() -> Value {
     Value::Array(Vec::new())
 }
@@ -303,6 +315,14 @@ mod tests {
         assert_eq!(Query::from_member("typingAnalyticsListDurationCells"), Some(Query::ListDurationCells));
         assert_eq!(Query::from_member("typingAnalyticsListKeyboardsLocal"), None);
         assert_eq!(Query::from_member("typingAnalyticsEvent"), None);
+    }
+
+    #[test]
+    fn widens_windows_to_whole_minutes() {
+        assert_eq!(floor_minute(90_000.0), 60_000.0);
+        assert_eq!(ceil_minute(90_000.0), 120_000.0);
+        assert_eq!(ceil_minute(120_000.0), 120_000.0);
+        assert_eq!(floor_minute(-1.0), -60_000.0);
     }
 
     #[test]
