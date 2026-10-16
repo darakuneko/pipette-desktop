@@ -54,18 +54,22 @@ process.once('exit', () => {
   rmSync(session.userDataDir, { recursive: true, force: true })
 })
 
+/** `parts` joined under the userData directory of the running session. */
+export function userDataPath(...parts: string[]): string {
+  if (!session) throw new Error('no session is running')
+  return join(session.userDataDir, ...parts)
+}
+
 /** The log of the app of the running session (pipette-logger writes
  *  `<userData>/logs/pipette-0.log`). */
 export function appLogPath(): string {
-  if (!session) throw new Error('no session is running')
-  return join(session.userDataDir, 'logs', 'pipette-0.log')
+  return userDataPath('logs', 'pipette-0.log')
 }
 
 /** The app's config of the running session (`<userData>/config.json`),
  *  parsed; empty before the app first writes it. */
 export function readAppConfig(): Record<string, unknown> {
-  if (!session) throw new Error('no session is running')
-  const path = join(session.userDataDir, 'config.json')
+  const path = userDataPath('config.json')
   return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : {}
 }
 

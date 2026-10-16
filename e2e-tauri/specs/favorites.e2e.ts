@@ -10,23 +10,8 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { browser, expect } from '@wdio/globals'
-import { connectVirtualKeyboard, invokeCommand } from '../helpers/app'
-
-/** Calls the vialAPI member `member` of the page with `args`. The answer
- *  crosses as JSON text: WebDriver takes an answer with an `error` field
- *  for an error of its own. */
-async function vialApi<T>(member: string, ...args: unknown[]): Promise<T> {
-  const text = await browser.execute(
-    async (name: string, memberArgs: unknown[]) => {
-      const api = (window as unknown as { vialAPI: Record<string, (...a: unknown[]) => Promise<unknown>> }).vialAPI
-      return JSON.stringify(await api[name](...memberArgs))
-    },
-    member,
-    args,
-  )
-  return JSON.parse(text) as T
-}
+import { expect } from '@wdio/globals'
+import { connectVirtualKeyboard, invokeCommand, vialApi } from '../helpers/app'
 
 /** Calls `member` with `path` queued as the answer of its file dialog
  *  (`dev_dialog_respond`; null cancels it), and checks that the call took

@@ -34,6 +34,44 @@ export async function invokeCommand<T = void>(command: string, args: Record<stri
   ) as Promise<T>
 }
 
+/** Calls the vialAPI member `member` of the page with `args`. The answer
+ *  crosses as JSON text: WebDriver takes an answer with an `error` field
+ *  for an error of its own. */
+export async function vialApi<T>(member: string, ...args: unknown[]): Promise<T> {
+  const text = await browser.execute(
+    async (name: string, memberArgs: unknown[]) => {
+      const api = (window as unknown as { vialAPI: Record<string, (...a: unknown[]) => Promise<unknown>> }).vialAPI
+      return JSON.stringify(await api[name](...memberArgs))
+    },
+    member,
+    args,
+  )
+  return JSON.parse(text) as T
+}
+
+/** Starts recording the page's errors (console.error calls, uncaught
+ *  errors and unhandled rejections) until the page loads again. */
+export async function recordPageErrors(): Promise<void> {
+  await browser.execute(() => {
+    const page = window as unknown as { __e2eErrors?: string[] }
+    if (page.__e2eErrors) return
+    const errors: string[] = []
+    page.__e2eErrors = errors
+    const consoleError = console.error.bind(console)
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(' '))
+      consoleError(...args)
+    }
+    window.addEventListener('error', (event) => errors.push(`uncaught: ${event.message}`))
+    window.addEventListener('unhandledrejection', (event) => errors.push(`unhandled rejection: ${String(event.reason)}`))
+  })
+}
+
+/** The errors recorded since {@link recordPageErrors} on this page load. */
+export async function recordedPageErrors(): Promise<string[]> {
+  return browser.execute(() => (window as unknown as { __e2eErrors?: string[] }).__e2eErrors ?? [])
+}
+
 export const virtualDevice = {
   setUnlockCounterMax: (n: number) => invokeCommand('virtual_device_set_unlock_counter_max', { n }),
   holdKeys: (pairs: [number, number][]) => invokeCommand('virtual_device_hold_keys', { pairs }),
@@ -122,23 +160,56 @@ export async function openKeycodeHexInput(row: number, col: number): Promise<voi
   await $(HEX_INPUT_SELECTOR).waitForDisplayed()
 }
 
+const KEY_POPOVER_SELECTOR = '[data-testid="key-popover"]'
+
+/** Applies the keycode typed in the Code tab and waits until the keymap
+ *  editor has written it. When the write finishes, the editor closes the
+ *  popover, or with Auto Move moves it on to the next key, so the popover
+ *  of the key being written is gone then. Closing it before that races
+ *  the move: the next key's popover opens where the close click lands.
+ *  Apply is disabled when the key already has the keycode; nothing is
+ *  written then. */
+export async function applyHexKeycode(): Promise<void> {
+  const target = await $(KEY_POPOVER_SELECTOR).getAttribute('data-popover-target-key')
+  if (!target) throw new Error('no key popover is open')
+  const apply = $('[data-testid="popover-code-apply"]')
+  if (!(await apply.isEnabled())) return
+  await apply.click()
+  await waitForGone(
+    `${KEY_POPOVER_SELECTOR}[data-popover-target-key="${target}"]`,
+    `the keycode for ${target} was not written`,
+  )
+}
+
+/** Closes the key popover, whichever key it is on, and waits until none is
+ *  displayed. A click that a re-render of the popover swallows (the close
+ *  button replaced while it is found or clicked, or the popover moved to
+ *  the next key) is tried again on the next poll. */
 export async function closeKeyPopover(): Promise<void> {
-  // A keycode applied from the popover re-renders it, which can replace the
-  // close button while it is being found or clicked; each try finds it
-  // afresh.
   await browser.waitUntil(
     async () => {
       try {
-        await $('[data-testid="popover-close"]').click()
-        return true
+        const popover = $(KEY_POPOVER_SELECTOR)
+        if (!(await popover.isExisting()) || !(await popover.isDisplayed())) return true
+        // Found without waiting: a popover gone by now ends this poll.
+        const [close] = await popover.$$('[data-testid="popover-close"]')
+        if (close) await close.click()
+        return false
       } catch (err) {
         if (isStaleElement(err)) return false
         throw err
       }
     },
-    { timeoutMsg: 'the close button of the key popover could not be clicked' },
+    { interval: 300, timeoutMsg: 'the key popover could not be closed' },
   )
-  await $('[data-testid="key-popover"]').waitForDisplayed({ reverse: true })
+}
+
+/** Writes `keycode` (hex) to the key at `row,col` from the key popover. */
+export async function setKeycode(row: number, col: number, keycode: string): Promise<void> {
+  await openKeycodeHexInput(row, col)
+  await $(HEX_INPUT_SELECTOR).setValue(keycode)
+  await applyHexKeycode()
+  await closeKeyPopover()
 }
 
 /** Whether the keycodes overlay is open and has stopped sliding. A click
