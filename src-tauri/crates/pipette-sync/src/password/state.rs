@@ -175,6 +175,12 @@ pub(crate) struct ChangeStateFile {
     cache: Mutex<(Option<bool>, u64)>,
 }
 
+/// The message of a failed blocking file operation, or of the task that
+/// ran it.
+fn blocking_result(joined: Result<std::io::Result<()>, tokio::task::JoinError>) -> Result<(), String> {
+    joined.map_err(|err| err.to_string())?.map_err(|err| err.to_string())
+}
+
 /// Forgets the cached answer when dropped, so a write or clear forgets it
 /// whether it succeeds, fails or is cancelled.
 struct ForgetOnDrop<'a>(&'a ChangeStateFile);
@@ -240,11 +246,7 @@ impl ChangeStateFile {
             pipette_fs::write_file_atomic(&path, content.as_bytes())
         })
         .await;
-        match written {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(err)) => Err(err.to_string()),
-            Err(err) => Err(err.to_string()),
-        }
+        blocking_result(written)
     }
 
     /// `clearChangeState`: removes the file; a missing one is not an error.
@@ -256,11 +258,7 @@ impl ChangeStateFile {
             other => other,
         })
         .await;
-        match removed {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(err)) => Err(err.to_string()),
-            Err(err) => Err(err.to_string()),
-        }
+        blocking_result(removed)
     }
 
     /// `hasChangeState`: whether the file is there, readable or not.
