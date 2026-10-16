@@ -11,7 +11,6 @@ use pipette_js_json::Value;
 use pipette_typing_analytics::deleted_ranges::{clip_to_utc_day, read_deleted_ranges_lenient};
 use pipette_typing_analytics::jsonl::{device_day_dir, device_day_jsonl_path};
 use pipette_typing_analytics::replay_day_hiding_deleted_ranges;
-use pipette_typing_analytics::sync_state::{TypingSyncState, load_sync_state, save_sync_state};
 use pipette_typing_analytics_db::DayRows;
 
 use super::settings::written_bytes;
@@ -92,12 +91,14 @@ pub async fn merge_device_day_bundle(
             .map_err(other)?;
     }
 
+    // Through the lock the upload's bookkeeping takes, so the two never
+    // write over each other.
     let (now, own) = (analytics.now_ms(), own_hash.to_owned());
     blocking(move || {
-        let user_data = analytics.user_data();
-        let mut state = load_sync_state(user_data).unwrap_or_else(|| TypingSyncState::empty(&own));
-        state.last_synced_at = now as f64;
-        Ok(save_sync_state(user_data, &state)?)
+        Ok(analytics.update_sync_state(&own, |state| {
+            state.last_synced_at = now as f64;
+            true
+        })?)
     })
     .await
 }

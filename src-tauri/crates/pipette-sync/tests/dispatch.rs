@@ -287,3 +287,37 @@ async fn uploads_of_one_unit_run_one_after_the_other() {
     assert_eq!(files.len(), 1, "the second upload updates the file the first created");
     assert!(String::from_utf8_lossy(&files[0].content).contains("line-b"));
 }
+
+#[tokio::test]
+async fn uploads_of_two_days_at_once_both_reach_the_upload_bookkeeping() {
+    const OTHER_DAY: &str = "2026-04-19";
+    let world = World::new().await;
+    write_own_day(&world, "{\"id\":\"x\"}\n");
+    world.write(
+        &format!("sync/keyboards/{UID}/devices/{}/{OTHER_DAY}.jsonl", world.own_hash()),
+        "{\"id\":\"y\"}\n",
+    );
+    let other_unit = format!("keyboards/{UID}/devices/{}/days/{OTHER_DAY}", world.own_hash());
+    let unit = own_day_unit(&world);
+    let empty = Listing::new(Vec::new());
+    // Both uploads reach Drive before either records its day, so the two
+    // records run at once.
+    world.drive.hold(DriveOp::Create, None);
+    let release = async {
+        while world.drive.held() < 2 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        world.drive.open_gate();
+    };
+
+    let (first, second, ()) = tokio::join!(
+        world.units.sync_or_upload(&unit, PASSWORD, &empty),
+        world.units.sync_or_upload(&other_unit, PASSWORD, &empty),
+        release,
+    );
+    first.unwrap();
+    second.unwrap();
+
+    let state: serde_json::Value = serde_json::from_str(&sync_state_text(&world)).unwrap();
+    assert_eq!(state["uploaded"][format!("{UID}|{}", world.own_hash())], serde_json::json!([DAY, OTHER_DAY]));
+}

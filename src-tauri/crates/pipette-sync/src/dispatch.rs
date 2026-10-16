@@ -14,7 +14,8 @@
 //! record), the store lock of the unit's files (held only around a read or
 //! a write), then the `upload:` lock (one upload of a unit at a time, so a
 //! later one bundles the files the earlier one left). No task holds a store
-//! lock while it takes another lock.
+//! lock while it takes another lock, and the lock of `sync_state.json` is
+//! held only around its read and write.
 
 use std::sync::Arc;
 
@@ -29,7 +30,6 @@ use pipette_sync_format::drive_names::drive_file_name;
 use pipette_sync_runtime::{RemoteRevision, SyncRuntime};
 use pipette_typing_analytics::DataOps;
 use pipette_typing_analytics::deleted_ranges::apply::ResetHolds;
-use pipette_typing_analytics::sync_state::{TypingSyncState, load_sync_state, save_sync_state};
 use zeroize::Zeroizing;
 
 use crate::bundle::{BundleError, bundle_plaintext, bundle_sync_unit};
@@ -211,22 +211,26 @@ impl UnitSync {
     /// Adds an uploaded day to `uploaded` of `sync_state.json`, so the
     /// reconcile tells "never uploaded" from "uploaded, then removed on
     /// Drive". The list stays sorted and free of duplicates; nothing is
-    /// written when the day is in it already.
+    /// written when the day is in it already. The uploads of a pass run
+    /// at once, so the read-modify-write goes through
+    /// [`pipette_typing_analytics::TypingAnalytics::update_sync_state`], one
+    /// at a time.
     async fn record_day_uploaded(&self, day: DeviceDayUnit<'_>) -> Result<(), UnitError> {
         let own = self.own_hash()?;
-        let (user_data, now) = (self.ctx.user_data().to_path_buf(), self.ops.analytics().now_ms());
+        let (analytics, now) = (self.ops.analytics().clone(), self.ops.analytics().now_ms());
         let (key, utc_day) = (pointer_key(day.uid, day.machine_hash), day.utc_day.to_owned());
         tokio::task::spawn_blocking(move || {
-            let mut state = load_sync_state(&user_data).unwrap_or_else(|| TypingSyncState::empty(&own));
-            let mut days = uploaded_days(&state.uploaded, &key);
-            if !days.insert(utc_day) {
-                return Ok(());
-            }
-            let mut days: Vec<String> = days.into_iter().collect();
-            days.sort();
-            set(&mut state.uploaded, &key, Value::Array(days.into_iter().map(Value::from).collect()));
-            state.last_synced_at = now as f64;
-            save_sync_state(&user_data, &state)
+            analytics.update_sync_state(&own, |state| {
+                let mut days = uploaded_days(&state.uploaded, &key);
+                if !days.insert(utc_day) {
+                    return false;
+                }
+                let mut days: Vec<String> = days.into_iter().collect();
+                days.sort();
+                set(&mut state.uploaded, &key, Value::Array(days.into_iter().map(Value::from).collect()));
+                state.last_synced_at = now as f64;
+                true
+            })
         })
         .await
         .map_err(other)?
