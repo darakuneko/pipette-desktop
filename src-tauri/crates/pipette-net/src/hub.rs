@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Hub API base URL, as `getHubApiBase` of src/main/hub/hub-base.ts:
 //! the production Hub, or the `PIPETTE_HUB_URL` override where it is
-//! allowed. The environment is read on every call, as Electron does.
+//! allowed. The environment is read on every call, as Electron does. Also
+//! the encoding of the values the Hub API routes carry.
 
 /// `HUB_API_DEFAULT` of src/main/hub/hub-base.ts.
 pub const HUB_API_DEFAULT: &str = "https://pipette-hub-worker.keymaps.workers.dev";
@@ -33,6 +34,22 @@ pub fn resolve_hub_api_base(override_url: Option<&str>, override_allowed: bool) 
     }
 }
 
+/// `encodeURIComponent` of a string (a Rust string has no lone surrogate,
+/// on which JavaScript throws): every byte of the UTF-8 form other than
+/// `A-Z a-z 0-9 - _ . ! ~ * ' ( )` as `%XX` with uppercase hex digits. For
+/// the path segments of Hub API routes.
+pub fn encode_uri_component(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&byte) {
+            out.push(char::from(byte));
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -52,5 +69,13 @@ mod tests {
         assert_eq!(resolve_hub_api_base(Some("http://h/a/"), true), "http://h/a");
         // `'/'.replace(/\/+$/, '')` is the empty string, and so is this.
         assert_eq!(resolve_hub_api_base(Some("//"), true), "");
+    }
+
+    #[test]
+    fn encodes_as_encode_uri_component() {
+        assert_eq!(encode_uri_component("monkeytype"), "monkeytype");
+        assert_eq!(encode_uri_component("a b/é?#&=+%"), "a%20b%2F%C3%A9%3F%23%26%3D%2B%25");
+        assert_eq!(encode_uri_component("-_.!~*'()AZaz09"), "-_.!~*'()AZaz09");
+        assert_eq!(encode_uri_component("😀"), "%F0%9F%98%80");
     }
 }

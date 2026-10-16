@@ -16,6 +16,7 @@
     "key-labels",
     "snapshots",
     "settings",
+    "typing-datasets",
     "i18n-packs",
     "theme-packs",
     "core:event:allow-listen",

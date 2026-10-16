@@ -30,6 +30,7 @@ mod navigation;
 mod shell;
 mod shutdown;
 mod store_commands;
+mod typing_dataset_commands;
 mod window_bounds;
 mod window_commands;
 mod window_state;
@@ -112,6 +113,12 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::settings::pipette_settings_write,
         store_commands::settings::pipette_settings_ensure_dir,
         store_commands::settings::pipette_settings_read_all,
+        typing_dataset_commands::lang_list,
+        typing_dataset_commands::lang_get,
+        typing_dataset_commands::lang_download,
+        typing_dataset_commands::lang_delete,
+        typing_dataset_commands::typing_dataset_check,
+        typing_dataset_commands::typing_dataset_update,
         store_commands::i18n_packs::i18n_pack_store_list,
         store_commands::i18n_packs::i18n_pack_store_get,
         store_commands::i18n_packs::i18n_pack_store_rename,
@@ -180,6 +187,7 @@ fn main() {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             dev_commands::manage_dialogs(app.handle());
             dev_commands::manage_http(app.handle());
+            typing_dataset_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());

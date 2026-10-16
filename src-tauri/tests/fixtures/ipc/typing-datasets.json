@@ -1,0 +1,48 @@
+[
+  {
+    "member": "langList",
+    "args": ["tatoeba"],
+    "command": "lang_list",
+    "invokeArgs": { "provider": "tatoeba" },
+    "response": []
+  },
+  {
+    "member": "langGet",
+    "args": ["english"],
+    "command": "lang_get",
+    "invokeArgs": { "name": "english" },
+    "response": null
+  },
+  {
+    "member": "langDownload",
+    "args": ["english", "monkeytype"],
+    "command": "lang_download",
+    "invokeArgs": { "name": "english", "provider": "monkeytype" },
+    "response": { "success": false, "error": "Language is bundled" }
+  },
+  {
+    "member": "langDelete",
+    "args": ["../x"],
+    "command": "lang_delete",
+    "invokeArgs": { "name": "../x" },
+    "response": { "success": false, "error": "Invalid language name" }
+  },
+  {
+    "member": "checkTypingDatasetUpdate",
+    "args": ["monkeytype"],
+    "command": "typing_dataset_check",
+    "invokeArgs": { "provider": "monkeytype" },
+    "response": { "provider": "monkeytype", "updateAvailable": false }
+  },
+  {
+    "member": "updateTypingDataset",
+    "args": [],
+    "command": "typing_dataset_update",
+    "invokeArgs": {},
+    "response": {
+      "provider": "monkeytype",
+      "changed": false,
+      "fromVersion": "629c82e112a2db2122c789dc6abe970b82c3f8c5"
+    }
+  }
+]

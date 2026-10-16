@@ -133,6 +133,11 @@ describe('shim coverage', () => {
     expect(KEYBOARD_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })
 
+  it('backs the Typing Test word list and dataset members with backend commands', () => {
+    const members = ['langList', 'langGet', 'langDownload', 'langDelete', 'checkTypingDatasetUpdate', 'updateTypingDataset']
+    expect(members.filter((name) => !(name in real))).toEqual([])
+  })
+
   // Applied sync units come from the sync service, which the backend does
   // not run yet; the renderer only subscribes.
   it('backs every key label store member with backend commands', () => {
