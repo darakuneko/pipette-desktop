@@ -11,11 +11,9 @@ use std::sync::PoisonError;
 use pipette_entry_store::{Entry, js_trim};
 use pipette_js_json::{JsString, Value};
 
-use super::{
-    TypingTextError, TypingTextErrorCode, TypingTextSave, TypingTextStore, find_active_by_name, read_index,
-    store_dir,
-};
+use super::{INDEX, TypingTextError, TypingTextErrorCode, TypingTextSave, TypingTextStore, store_dir};
 use crate::StoreContext;
+use crate::entry_index::{find_active_by_name, read_index};
 
 /// The largest file an import reads, in bytes.
 pub const TYPING_TEXT_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
@@ -69,7 +67,7 @@ impl TypingTextStore {
         })?;
         let name = name_of(path);
 
-        let entries = read_index(&store_dir(ctx))?;
+        let entries = read_index(&INDEX, &store_dir(ctx))?.entries;
         let existing = find_active_by_name(&entries, &Value::String(name.clone()), None)?;
         let mut pending = self.state.pending.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(existing) = existing {

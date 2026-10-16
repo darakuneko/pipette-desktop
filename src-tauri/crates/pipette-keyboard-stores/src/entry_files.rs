@@ -102,4 +102,22 @@ mod tests {
         assert_eq!(body_path(dir, &entry(Some(Value::Number(0.0)))), Err(BodyPathError::Invalid));
         assert_eq!(body_path(dir, &entry(Some(Value::Number(5.0)))), Err(BodyPathError::NotString));
     }
+
+    #[test]
+    fn names_compare_trimmed_and_lowercased_as_javascript_does() {
+        let key = |text: &str| name_key(Some(&Value::from(text)), "e.name").unwrap();
+        assert_eq!(key(" QWERTY "), key("qwerty"));
+        assert_eq!(key("ΣΑΣ"), "σας".encode_utf16().collect::<Vec<_>>());
+        assert_eq!(key("İ"), "i\u{307}".encode_utf16().collect::<Vec<_>>());
+        let lone = Value::String(pipette_js_json::JsString::from_utf16(vec![0x41, 0xd800, 0x42]));
+        assert_eq!(name_key(Some(&lone), "e.name").unwrap(), vec![0x61, 0xd800, 0x62]);
+    }
+
+    #[test]
+    fn a_name_that_is_not_a_string_fails_as_javascript_does() {
+        let text = |value: Option<&Value>| name_key(value, "e.name").unwrap_err();
+        assert_eq!(text(None), "Cannot read properties of undefined (reading 'trim')");
+        assert_eq!(text(Some(&Value::Null)), "Cannot read properties of null (reading 'trim')");
+        assert_eq!(text(Some(&Value::Number(5.0))), "e.name.trim is not a function");
+    }
 }

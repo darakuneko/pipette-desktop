@@ -33,23 +33,25 @@ mod transfer;
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use pipette_entry_store::{
-    EPOCH_ISO, Entry, EntryError, EntryGroup, EntryList, EntryStore, OverwriteOptions, builtin_entry,
-    id_body_filename, mark_deleted, migrate_body_filenames, normalize_entries, overwrite_entry, set_clock,
-    touch_clock, ts_for_filename,
+    EPOCH_ISO, Entry, EntryGroup, EntryStore, OverwriteOptions, builtin_entry, id_body_filename,
+    mark_deleted, overwrite_entry, set_clock, touch_clock, ts_for_filename,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_time::iso_8601_millis;
 
-pub use label_file::MAX_NAME_LENGTH;
 pub use transfer::{KeyLabelExport, export_key_label, import_key_label_files};
 
 use crate::StoreContext;
-use crate::entry_files::{BodyPathError, body_path, body_path_of, entry_error_text, read_text};
-use label_file::{is_label_map, name_key, normalize_file, validate_name};
+use crate::coded_error::{CodedStoreError, ErrorCode, coded_store_response};
+use crate::entry_files::body_path;
+use crate::entry_index::{
+    EntryIndex, IndexSpec, find_active_by_name, has_id, read_index, read_index_locked, read_json,
+    validate_name, write_body, write_index,
+};
+use label_file::{is_label_map, normalize_file};
 
 const STORE: EntryStore = EntryStore::KeyLabels;
 
@@ -70,8 +72,12 @@ pub enum KeyLabelErrorCode {
     IoError,
 }
 
-impl KeyLabelErrorCode {
-    pub fn as_str(self) -> &'static str {
+impl ErrorCode for KeyLabelErrorCode {
+    const IO_ERROR: Self = KeyLabelErrorCode::IoError;
+    const INVALID_NAME: Self = KeyLabelErrorCode::InvalidName;
+    const INVALID_FILE: Self = KeyLabelErrorCode::InvalidFile;
+
+    fn as_str(self) -> &'static str {
         match self {
             KeyLabelErrorCode::InvalidName => "INVALID_NAME",
             KeyLabelErrorCode::DuplicateName => "DUPLICATE_NAME",
@@ -82,185 +88,32 @@ impl KeyLabelErrorCode {
     }
 }
 
-/// Why a key label operation failed. The text is what the handler answers
-/// as `error`: its own messages as they are, a thrown error as
-/// `String(err)`. The texts of a file-system error and of a JSON syntax
-/// error are this build's, not Node's and V8's.
-#[derive(Debug, thiserror::Error)]
-pub enum KeyLabelError {
-    /// A failure the store answers with its own code and message.
-    #[error("{1}")]
-    Refused(KeyLabelErrorCode, String),
-    #[error("Error: Invalid filename")]
-    InvalidFilename,
-    /// An entry whose `filename` is a truthy value that is not a string,
-    /// which Node's `path.join` refuses.
-    #[error("TypeError: The \"path\" argument must be of type string")]
-    FilenameNotString,
-    /// The TypeError of a string method called on a value that is not a
-    /// string (a name of another type in the index).
-    #[error("TypeError: {0}")]
-    Type(String),
-    #[error("SyntaxError: {0}")]
-    Syntax(String),
-    #[error("Error: {0}")]
-    Io(#[from] io::Error),
-    #[error("{}", entry_error_text(.0))]
-    Entry(#[from] EntryError),
-    #[error("Error: {}: nested too deeply to read", .0.display())]
-    TooDeep(PathBuf),
+/// Why a key label operation failed.
+pub type KeyLabelError = CodedStoreError<KeyLabelErrorCode>;
+
+fn duplicate_name() -> KeyLabelError {
+    KeyLabelError::refused(KeyLabelErrorCode::DuplicateName, "A label with the same name already exists")
 }
 
-impl KeyLabelError {
-    fn refused(code: KeyLabelErrorCode, message: &str) -> Self {
-        KeyLabelError::Refused(code, message.to_owned())
-    }
-
-    pub(crate) fn invalid_name(message: &str) -> Self {
-        Self::refused(KeyLabelErrorCode::InvalidName, message)
-    }
-
-    fn duplicate_name() -> Self {
-        Self::refused(KeyLabelErrorCode::DuplicateName, "A label with the same name already exists")
-    }
-
-    fn not_found() -> Self {
-        Self::refused(KeyLabelErrorCode::NotFound, "Key label not found")
-    }
-
-    pub(crate) fn invalid_file(message: &str) -> Self {
-        Self::refused(KeyLabelErrorCode::InvalidFile, message)
-    }
-
-    /// The answer of a handler whose argument has the wrong type.
-    pub fn invalid_argument(code: KeyLabelErrorCode, message: &str) -> Self {
-        Self::refused(code, message)
-    }
-
-    /// The `cancelled` answer of a dialog the user closed.
-    pub fn cancelled() -> Self {
-        Self::refused(KeyLabelErrorCode::IoError, "cancelled")
-    }
-
-    /// The handler's `errorCode`: a thrown error is `IO_ERROR`.
-    pub fn code(&self) -> &'static str {
-        match self {
-            KeyLabelError::Refused(code, _) => code.as_str(),
-            _ => KeyLabelErrorCode::IoError.as_str(),
-        }
-    }
-}
-
-impl From<BodyPathError> for KeyLabelError {
-    fn from(err: BodyPathError) -> Self {
-        match err {
-            BodyPathError::Invalid => KeyLabelError::InvalidFilename,
-            BodyPathError::NotString => KeyLabelError::FilenameNotString,
-        }
-    }
+fn not_found() -> KeyLabelError {
+    KeyLabelError::refused(KeyLabelErrorCode::NotFound, "Key label not found")
 }
 
 /// The handler's answer as JSON text ([`crate::coded_response`]).
 pub fn key_label_response(result: Result<Option<Value>, KeyLabelError>) -> String {
-    crate::coded_response_json(result.map_err(|err| (err.code(), err.to_string())))
+    coded_store_response(result)
 }
 
-/// The index file: its top-level object, whose `entries` holds the place of
-/// [`Self::entries`] (the entries as v2 entries) for a write.
-struct KeyLabelIndex {
-    root: Object,
-    entries: Vec<Entry>,
-}
-
-impl KeyLabelIndex {
-    /// An index of `entries` alone, `{entries}`.
-    fn bare(entries: Vec<Entry>) -> Self {
-        Self { root: std::iter::once(("entries", Value::Array(Vec::new()))).collect(), entries }
-    }
-}
-
-impl EntryList for KeyLabelIndex {
-    fn entries(&self) -> &[Entry] {
-        &self.entries
-    }
-
-    fn entries_mut(&mut self) -> &mut [Entry] {
-        &mut self.entries
-    }
-}
+/// The index keeps its other top-level fields for the writes that change
+/// entries in place.
+const INDEX: IndexSpec = IndexSpec { store: STORE, keeps_other_fields: true, on_read: |_| {} };
 
 fn store_dir(ctx: &StoreContext) -> PathBuf {
     ctx.sync_dir().join("key-labels")
 }
 
-/// The index in `dir` (`readIndex`): empty when the file is missing,
-/// unreadable, not JSON, or not an object with an `entries` list.
-fn read_index(dir: &Path) -> Result<KeyLabelIndex, KeyLabelError> {
-    let path = dir.join("index.json");
-    let Ok(text) = read_text(&path) else { return Ok(KeyLabelIndex::bare(Vec::new())) };
-    let mut root = match pipette_js_json::parse(&text) {
-        Ok(Value::Object(root)) if matches!(root.get("entries"), Some(Value::Array(_))) => root,
-        Err(err) if err.is_nesting_too_deep() => return Err(KeyLabelError::TooDeep(path)),
-        _ => return Ok(KeyLabelIndex::bare(Vec::new())),
-    };
-    let entries = normalize_entries(STORE, root.get("entries"));
-    // Holds the place of the entries, which a write puts back.
-    root.insert("entries", Value::Array(Vec::new()));
-    Ok(KeyLabelIndex { root, entries })
-}
-
-fn write_index(dir: &Path, index: &KeyLabelIndex) -> io::Result<()> {
-    fs::create_dir_all(dir)?;
-    let mut root = index.root.clone();
-    root.insert("entries", Value::Array(index.entries.iter().cloned().map(Value::from).collect()));
-    let text = pipette_js_json::stringify_with_gap(&Value::Object(root), "  ");
-    pipette_fs::write_file_atomic(&dir.join("index.json"), text.as_bytes())
-}
-
-/// The index for a writer holding the store's lock, with the legacy body
-/// names moved to id-carrying ones (written back when any moved).
-fn read_index_locked(dir: &Path) -> Result<KeyLabelIndex, KeyLabelError> {
-    let mut index = read_index(dir)?;
-    migrate_body_filenames(STORE, dir, &mut index, |index| write_index(dir, index))?;
-    Ok(index)
-}
-
-fn has_id(entry: &Entry, id: &JsString) -> bool {
-    entry.id() == Some(id)
-}
-
 fn position_of(entries: &[Entry], id: &JsString) -> Option<usize> {
     entries.iter().position(|entry| has_id(entry, id))
-}
-
-/// The first live entry other than `exclude_id` whose name is `name`,
-/// ignoring case and surrounding whitespace (`findActiveByName`). Fails as
-/// JavaScript does on a name that is not a string: `name` read as
-/// `name_receiver`, or a checked entry's.
-fn find_active_by_name<'a>(
-    entries: &'a [Entry],
-    name: Option<&Value>,
-    name_receiver: &str,
-    exclude_id: Option<&JsString>,
-) -> Result<Option<&'a Entry>, KeyLabelError> {
-    let target = name_key(name, name_receiver)?;
-    for entry in entries {
-        if entry.is_deleted() || exclude_id.is_some_and(|id| has_id(entry, id)) {
-            continue;
-        }
-        if name_key(entry.get("name"), "e.name")? == target {
-            return Ok(Some(entry));
-        }
-    }
-    Ok(None)
-}
-
-/// Writes the body of an entry whose filename this store made.
-fn write_body(dir: &Path, filename: &JsString, body: &Object) -> Result<(), KeyLabelError> {
-    fs::create_dir_all(dir)?;
-    let path = body_path_of(dir, &filename.to_string_lossy()).ok_or(KeyLabelError::InvalidFilename)?;
-    let text = pipette_js_json::stringify_with_gap(&Value::Object(body.clone()), "  ");
-    Ok(pipette_fs::write_file_atomic(&path, text.as_bytes())?)
 }
 
 /// The QWERTY body file, the same on every device.
@@ -282,7 +135,7 @@ fn qwerty_complete(entries: &[Entry]) -> bool {
 /// author the author `pipette` at the epoch hub clock, so every device
 /// writes the same entry. Under the store's lock.
 fn ensure_qwerty_locked(ctx: &StoreContext, dir: &Path) -> Result<(), KeyLabelError> {
-    let mut index = read_index_locked(dir)?;
+    let mut index = read_index_locked(&INDEX, dir)?;
     if qwerty_complete(&index.entries) {
         return Ok(());
     }
@@ -318,24 +171,12 @@ fn ensure_qwerty_locked(ctx: &StoreContext, dir: &Path) -> Result<(), KeyLabelEr
 /// the QWERTY entry first, taking the lock only when it has to be written.
 pub fn list_key_labels(ctx: &StoreContext, include_deleted: bool) -> Result<Vec<Entry>, KeyLabelError> {
     let dir = store_dir(ctx);
-    let mut entries = read_index(&dir)?.entries;
+    let mut entries = read_index(&INDEX, &dir)?.entries;
     if !qwerty_complete(&entries) {
         ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || ensure_qwerty_locked(ctx, &dir))?;
-        entries = read_index(&dir)?.entries;
+        entries = read_index(&INDEX, &dir)?.entries;
     }
     Ok(entries.into_iter().filter(|entry| include_deleted || !entry.is_deleted()).collect())
-}
-
-/// The JSON of a body or an imported file, as `JSON.parse(readFile(…))`
-/// reads it.
-fn read_json(path: &Path) -> Result<Value, KeyLabelError> {
-    pipette_js_json::parse(&read_text(path)?).map_err(|err| {
-        if err.is_nesting_too_deep() {
-            KeyLabelError::TooDeep(path.to_path_buf())
-        } else {
-            KeyLabelError::Syntax(err.to_string())
-        }
-    })
 }
 
 /// The live entry `id` and its body (`KEY_LABEL_STORE_GET`): `{meta,
@@ -343,9 +184,9 @@ fn read_json(path: &Path) -> Result<Value, KeyLabelError> {
 /// which a rename changes in the index only.
 pub fn get_key_label(ctx: &StoreContext, id: &JsString) -> Result<Object, KeyLabelError> {
     let dir = store_dir(ctx);
-    let index = read_index(&dir)?;
+    let index = read_index(&INDEX, &dir)?;
     let meta = index.entries.into_iter().find(|entry| has_id(entry, id));
-    let meta = meta.filter(|meta| !meta.is_deleted()).ok_or_else(KeyLabelError::not_found)?;
+    let meta = meta.filter(|meta| !meta.is_deleted()).ok_or_else(not_found)?;
     let path = body_path(&dir, &meta)?;
     let mut data = normalize_file(&read_json(&path)?)
         .ok_or_else(|| KeyLabelError::invalid_file("Stored file is malformed"))?;
@@ -402,7 +243,7 @@ fn save_locked(ctx: &StoreContext, input: &KeyLabelSave) -> Result<Entry, KeyLab
     }
 
     let dir = store_dir(ctx);
-    let index = read_index_locked(&dir)?;
+    let index = read_index_locked(&INDEX, &dir)?;
     let current = match (&input.id, input.keep_current_name) {
         (Some(id), true) => index.entries.iter().find(|entry| has_id(entry, id) && !entry.is_deleted()),
         _ => None,
@@ -412,8 +253,8 @@ fn save_locked(ctx: &StoreContext, input: &KeyLabelSave) -> Result<Entry, KeyLab
         None | Some(Value::Null) => Value::String(validated),
         Some(name) => name.clone(),
     };
-    if find_active_by_name(&index.entries, Some(&name), "name", input.id.as_ref())?.is_some() {
-        return Err(KeyLabelError::duplicate_name());
+    if find_active_by_name(&index.entries, &name, input.id.as_ref())?.is_some() {
+        return Err(duplicate_name());
     }
 
     let now = ctx.now_ms();
@@ -462,7 +303,7 @@ fn save_locked(ctx: &StoreContext, input: &KeyLabelSave) -> Result<Entry, KeyLab
         Some(at) => entries[at] = meta.clone(),
         None => entries.push(meta.clone()),
     }
-    write_index(&dir, &KeyLabelIndex::bare(entries))?;
+    write_index(&dir, &EntryIndex::bare(entries))?;
     ctx.notify(KEY_LABEL_SYNC_UNIT);
     Ok(meta)
 }
@@ -473,15 +314,15 @@ pub fn rename_key_label(ctx: &StoreContext, id: &JsString, name: &JsString) -> R
     let name = validate_name(name)?;
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || {
         let dir = store_dir(ctx);
-        let mut index = read_index_locked(&dir)?;
+        let mut index = read_index_locked(&INDEX, &dir)?;
         let at = index
             .entries
             .iter()
             .position(|entry| has_id(entry, id) && !entry.is_deleted())
-            .ok_or_else(KeyLabelError::not_found)?;
+            .ok_or_else(not_found)?;
         let name = Value::String(name);
-        if find_active_by_name(&index.entries, Some(&name), "name", Some(id))?.is_some() {
-            return Err(KeyLabelError::duplicate_name());
+        if find_active_by_name(&index.entries, &name, Some(id))?.is_some() {
+            return Err(duplicate_name());
         }
         let meta = &mut index.entries[at];
         meta.set("name", name);
@@ -501,8 +342,8 @@ pub fn delete_key_label(ctx: &StoreContext, id: &JsString) -> Result<(), KeyLabe
     }
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || {
         let dir = store_dir(ctx);
-        let mut index = read_index_locked(&dir)?;
-        let at = position_of(&index.entries, id).ok_or_else(KeyLabelError::not_found)?;
+        let mut index = read_index_locked(&INDEX, &dir)?;
+        let at = position_of(&index.entries, id).ok_or_else(not_found)?;
         mark_deleted(&mut index.entries[at], ctx.now_ms());
         write_index(&dir, &index)?;
         ctx.notify(KEY_LABEL_SYNC_UNIT);
@@ -524,8 +365,8 @@ pub fn set_key_label_hub_post_id(
 ) -> Result<Entry, KeyLabelError> {
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || {
         let dir = store_dir(ctx);
-        let mut index = read_index_locked(&dir)?;
-        let at = position_of(&index.entries, id).ok_or_else(KeyLabelError::not_found)?;
+        let mut index = read_index_locked(&INDEX, &dir)?;
+        let at = position_of(&index.entries, id).ok_or_else(not_found)?;
         let meta = &mut index.entries[at];
         meta.set_trimmed("hubPostId", hub_post_id);
         if meta.get("hubPostId").is_none() {
@@ -553,7 +394,7 @@ pub fn set_key_label_hub_post_id(
 pub fn reorder_key_labels(ctx: &StoreContext, ordered_ids: &[JsString]) -> Result<(), KeyLabelError> {
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || {
         let dir = store_dir(ctx);
-        let index = read_index_locked(&dir)?;
+        let index = read_index_locked(&INDEX, &dir)?;
         // The last entry of each id, as a Map built over the entries keeps.
         let mut last_of: HashMap<&JsString, &Entry> = HashMap::new();
         for entry in &index.entries {
@@ -572,7 +413,7 @@ pub fn reorder_key_labels(ctx: &StoreContext, ordered_ids: &[JsString]) -> Resul
         }
         let was_placed = |entry: &Entry| entry.id().is_some_and(|id| placed.contains(id));
         reordered.extend(index.entries.iter().filter(|entry| !was_placed(entry)).cloned());
-        write_index(&dir, &KeyLabelIndex::bare(reordered))?;
+        write_index(&dir, &EntryIndex::bare(reordered))?;
         Ok(())
     })
 }
@@ -584,7 +425,7 @@ pub fn has_key_label_name(
     name: &JsString,
     exclude_id: Option<&JsString>,
 ) -> Result<bool, KeyLabelError> {
-    let index = read_index(&store_dir(ctx))?;
+    let index = read_index(&INDEX, &store_dir(ctx))?;
     let name = Value::String(name.clone());
-    Ok(find_active_by_name(&index.entries, Some(&name), "name", exclude_id)?.is_some())
+    Ok(find_active_by_name(&index.entries, &name, exclude_id)?.is_some())
 }

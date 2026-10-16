@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The rules of a key label's content and name, as src/main/key-label-store.ts
-//! applies them: the label maps, the body file read back or imported
-//! (`normalizeFile`), and the name checks and comparisons, on JavaScript
-//! strings (UTF-16, lone surrogates included).
+//! The rules of a key label's content, as src/main/key-label-store.ts
+//! applies them: the label maps and the body file read back or imported
+//! (`normalizeFile`). The name rules are those of crate::entry_index.
 
-use pipette_entry_store::{js_trim, utf16_len};
-use pipette_js_json::{JsString, Object, Value};
+use pipette_js_json::{Object, Value};
 
 use super::KeyLabelError;
 use crate::entry_files::method_type_error_text;
-
-/// The longest name, in UTF-16 code units.
-pub const MAX_NAME_LENGTH: usize = 100;
 
 /// Keys a label map may not have.
 const DANGEROUS_KEYS: [&str; 3] = ["__proto__", "constructor", "prototype"];
@@ -68,32 +63,10 @@ pub(crate) fn normalize_file(parsed: &Value) -> Option<Object> {
     Some(out)
 }
 
-/// `validateName`: the name trimmed, refused when empty or longer than
-/// [`MAX_NAME_LENGTH`] code units.
-pub(crate) fn validate_name(name: &JsString) -> Result<JsString, KeyLabelError> {
-    let name = js_trim(name);
-    if name.is_empty() {
-        return Err(KeyLabelError::invalid_name("name must not be empty"));
-    }
-    if utf16_len(&name) > MAX_NAME_LENGTH {
-        return Err(KeyLabelError::invalid_name(&format!(
-            "name must be at most {MAX_NAME_LENGTH} characters"
-        )));
-    }
-    Ok(name)
-}
-
 /// The TypeError JavaScript throws when it calls the string method `method`
 /// on `value` (missing for undefined) read as `receiver`.
 pub(crate) fn method_type_error(value: Option<&Value>, receiver: &str, method: &str) -> KeyLabelError {
     KeyLabelError::Type(method_type_error_text(value, receiver, method))
-}
-
-/// `value.trim().toLowerCase()` for the name `value` read as `receiver`:
-/// the key two names are the same by, or the TypeError of a name that is
-/// not a string.
-pub(crate) fn name_key(value: Option<&Value>, receiver: &str) -> Result<Vec<u16>, KeyLabelError> {
-    crate::entry_files::name_key(value, receiver).map_err(KeyLabelError::Type)
 }
 
 #[cfg(test)]
@@ -155,35 +128,5 @@ mod tests {
         ] {
             assert_eq!(normalize_file(&object(bad)), None, "{bad}");
         }
-    }
-
-    #[test]
-    fn names_are_trimmed_and_at_most_100_code_units() {
-        assert_eq!(validate_name(&"  Alpha \u{3000}".into()).unwrap(), JsString::from("Alpha"));
-        let empty = validate_name(&" \u{feff}\n".into()).unwrap_err();
-        assert_eq!(empty.to_string(), "name must not be empty");
-        let hundred = format!("{}😀", "b".repeat(98));
-        assert_eq!(validate_name(&hundred.as_str().into()).unwrap(), JsString::from(hundred.as_str()));
-        let long = validate_name(&format!("{}😀", "a".repeat(99)).into()).unwrap_err();
-        assert_eq!(long.to_string(), "name must be at most 100 characters");
-        assert_eq!(long.code(), "INVALID_NAME");
-    }
-
-    #[test]
-    fn names_compare_trimmed_and_lowercased_as_javascript_does() {
-        let key = |text: &str| name_key(Some(&Value::from(text)), "e.name").unwrap();
-        assert_eq!(key(" QWERTY "), key("qwerty"));
-        assert_eq!(key("ΣΑΣ"), "σας".encode_utf16().collect::<Vec<_>>());
-        assert_eq!(key("İ"), "i\u{307}".encode_utf16().collect::<Vec<_>>());
-        let lone = Value::String(JsString::from_utf16(vec![0x41, 0xd800, 0x42]));
-        assert_eq!(name_key(Some(&lone), "e.name").unwrap(), vec![0x61, 0xd800, 0x62]);
-    }
-
-    #[test]
-    fn a_name_that_is_not_a_string_fails_as_javascript_does() {
-        let text = |value: Option<&Value>| name_key(value, "e.name").unwrap_err().to_string();
-        assert_eq!(text(None), "TypeError: Cannot read properties of undefined (reading 'trim')");
-        assert_eq!(text(Some(&Value::Null)), "TypeError: Cannot read properties of null (reading 'trim')");
-        assert_eq!(text(Some(&Value::Number(5.0))), "TypeError: e.name.trim is not a function");
     }
 }

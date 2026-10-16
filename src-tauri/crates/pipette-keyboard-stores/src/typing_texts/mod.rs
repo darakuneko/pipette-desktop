@@ -35,13 +35,12 @@ mod import;
 
 use std::collections::HashMap;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use pipette_entry_store::{
-    Entry, EntryGroup, EntryStore, OverwriteOptions, id_body_filename, js_trim, mark_deleted,
-    migrate_body_filenames, normalize_entries, overwrite_entry, touch_clock, ts_for_filename, utf16_len,
+    Entry, EntryGroup, EntryStore, OverwriteOptions, id_body_filename, mark_deleted, overwrite_entry,
+    touch_clock, ts_for_filename,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_time::iso_8601_millis;
@@ -51,7 +50,12 @@ pub use error::{TypingTextError, TypingTextErrorCode, typing_text_response};
 pub use import::TYPING_TEXT_MAX_FILE_BYTES;
 
 use crate::StoreContext;
-use crate::entry_files::{body_path, body_path_of, name_key, read_text};
+use crate::entry_files::body_path;
+use crate::entry_index::{
+    EntryIndex, IndexSpec, find_active_by_name, has_id, read_index, read_index_locked, read_json,
+    validate_name, write_body, write_index,
+};
+use error::{duplicate_name, not_found};
 use import::PendingImport;
 
 const STORE: EntryStore = EntryStore::TypingTestTexts;
@@ -59,8 +63,9 @@ const STORE: EntryStore = EntryStore::TypingTestTexts;
 /// The store's sync unit, which is also its write-lock key.
 pub const TYPING_TEXT_SYNC_UNIT: &str = "typing-test-texts";
 
-/// The longest name, in UTF-16 code units.
-const MAX_NAME_LENGTH: usize = 100;
+/// Every read keeps a `source` only in its `{provider, workId}` form, and
+/// every write writes `{entries}` alone.
+const INDEX: IndexSpec = IndexSpec { store: STORE, keeps_other_fields: false, on_read: sanitize_source };
 
 /// The catalog a text was imported from (`source` of the meta).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -128,77 +133,6 @@ fn sanitize_source(entry: &mut Entry) {
     }
 }
 
-/// The index in `dir` (`readIndex`): empty when the file is missing,
-/// unreadable, not JSON, or not an object with an `entries` list.
-fn read_index(dir: &Path) -> Result<Vec<Entry>, TypingTextError> {
-    let path = dir.join("index.json");
-    let Ok(text) = read_text(&path) else { return Ok(Vec::new()) };
-    let root = match pipette_js_json::parse(&text) {
-        Ok(Value::Object(root)) => root,
-        Err(err) if err.is_nesting_too_deep() => return Err(TypingTextError::TooDeep(path)),
-        _ => return Ok(Vec::new()),
-    };
-    let mut entries = normalize_entries(STORE, root.get("entries"));
-    entries.iter_mut().for_each(sanitize_source);
-    Ok(entries)
-}
-
-fn write_index(dir: &Path, entries: &[Entry]) -> io::Result<()> {
-    fs::create_dir_all(dir)?;
-    let entries = Value::Array(entries.iter().cloned().map(Value::from).collect());
-    let root: Object = std::iter::once(("entries", entries)).collect();
-    let text = pipette_js_json::stringify_with_gap(&Value::Object(root), "  ");
-    pipette_fs::write_file_atomic(&dir.join("index.json"), text.as_bytes())
-}
-
-/// The index for a writer holding the store's lock, with the legacy body
-/// names moved to id-carrying ones (written back when any moved).
-fn read_index_locked(dir: &Path) -> Result<Vec<Entry>, TypingTextError> {
-    let mut entries = read_index(dir)?;
-    migrate_body_filenames(STORE, dir, &mut entries, |entries| write_index(dir, entries))?;
-    Ok(entries)
-}
-
-fn has_id(entry: &Entry, id: &JsString) -> bool {
-    entry.id() == Some(id)
-}
-
-/// The first live entry other than `exclude_id` whose name is `name`,
-/// ignoring case and surrounding whitespace (`findActiveByName`). Fails as
-/// JavaScript does on a name that is not a string: `name` read as `name`,
-/// or a checked entry's.
-fn find_active_by_name<'a>(
-    entries: &'a [Entry],
-    name: &Value,
-    exclude_id: Option<&JsString>,
-) -> Result<Option<&'a Entry>, TypingTextError> {
-    let target = name_key(Some(name), "name").map_err(TypingTextError::Type)?;
-    for entry in entries {
-        if entry.is_deleted() || exclude_id.is_some_and(|id| has_id(entry, id)) {
-            continue;
-        }
-        if name_key(entry.get("name"), "e.name").map_err(TypingTextError::Type)? == target {
-            return Ok(Some(entry));
-        }
-    }
-    Ok(None)
-}
-
-/// `validateName`: the name trimmed, refused when empty or longer than
-/// [`MAX_NAME_LENGTH`] code units.
-fn validate_name(name: &JsString) -> Result<JsString, TypingTextError> {
-    let name = js_trim(name);
-    if name.is_empty() {
-        return Err(TypingTextError::invalid_name("name must not be empty"));
-    }
-    if utf16_len(&name) > MAX_NAME_LENGTH {
-        return Err(TypingTextError::invalid_name(&format!(
-            "name must be at most {MAX_NAME_LENGTH} characters"
-        )));
-    }
-    Ok(name)
-}
-
 /// The text of a body file (`normalizeFile`): `None` unless the file is an
 /// object with a string `name` and a string `text`.
 fn body_text(parsed: &Value) -> Option<&JsString> {
@@ -211,17 +145,6 @@ fn body_text(parsed: &Value) -> Option<&JsString> {
 
 fn is_kana_only(text: &JsString) -> bool {
     is_kana_only_text(&text.utf16_units())
-}
-
-/// The JSON of a body file, as `JSON.parse(readFile(…))` reads it.
-fn read_json(path: &Path) -> Result<Value, TypingTextError> {
-    pipette_js_json::parse(&read_text(path)?).map_err(|err| {
-        if err.is_nesting_too_deep() {
-            TypingTextError::TooDeep(path.to_path_buf())
-        } else {
-            TypingTextError::Syntax(err.to_string())
-        }
-    })
 }
 
 impl TypingTextStore {
@@ -246,7 +169,7 @@ impl TypingTextStore {
         if let Some(capable) = self.cached_romaji(entry) {
             return capable;
         }
-        let parsed = body_path(dir, entry).ok().and_then(|path| read_json(&path).ok());
+        let parsed = body_path(dir, entry).ok().and_then(|path| read_json::<TypingTextErrorCode>(&path).ok());
         let capable = parsed.as_ref().and_then(body_text).is_some_and(is_kana_only);
         self.cache_romaji(entry, capable);
         capable
@@ -257,7 +180,10 @@ impl TypingTextStore {
     /// `romajiCapable`.
     pub fn list(&self, ctx: &StoreContext, include_deleted: bool) -> Result<Vec<Entry>, TypingTextError> {
         let dir = store_dir(ctx);
-        let entries = read_index(&dir)?.into_iter().filter(|entry| include_deleted || !entry.is_deleted());
+        let entries = read_index(&INDEX, &dir)?
+            .entries
+            .into_iter()
+            .filter(|entry| include_deleted || !entry.is_deleted());
         Ok(entries
             .map(|mut entry| {
                 let capable = self.romaji_capable(&dir, &entry);
@@ -272,8 +198,8 @@ impl TypingTextStore {
     /// entry's name, which a rename changes in the index only.
     pub fn get(&self, ctx: &StoreContext, id: &JsString) -> Result<Object, TypingTextError> {
         let dir = store_dir(ctx);
-        let meta = read_index(&dir)?.into_iter().find(|entry| has_id(entry, id));
-        let mut meta = meta.filter(|meta| !meta.is_deleted()).ok_or_else(TypingTextError::not_found)?;
+        let meta = read_index(&INDEX, &dir)?.entries.into_iter().find(|entry| has_id(entry, id));
+        let mut meta = meta.filter(|meta| !meta.is_deleted()).ok_or_else(not_found)?;
         let parsed = read_json(&body_path(&dir, &meta)?)?;
         let text = body_text(&parsed)
             .ok_or_else(|| TypingTextError::invalid_file("Stored file is malformed"))?
@@ -309,7 +235,7 @@ impl TypingTextStore {
         let text = JsString::from_utf16(normalized.text);
         ctx.locks().with_write_lock(TYPING_TEXT_SYNC_UNIT, || {
             let dir = store_dir(ctx);
-            let entries = read_index_locked(&dir)?;
+            let entries = read_index_locked(&INDEX, &dir)?.entries;
             let current = match (&input.id, input.keep_current_name) {
                 (Some(id), true) => entries.iter().find(|entry| has_id(entry, id) && !entry.is_deleted()),
                 _ => None,
@@ -320,7 +246,7 @@ impl TypingTextStore {
                 Some(name) => name.clone(),
             };
             if find_active_by_name(&entries, &name, input.id.as_ref())?.is_some() {
-                return Err(TypingTextError::duplicate_name());
+                return Err(duplicate_name());
             }
 
             let now = ctx.now_ms();
@@ -372,7 +298,7 @@ impl TypingTextStore {
                 Some(at) => entries[at] = meta.clone(),
                 None => entries.push(meta.clone()),
             }
-            write_index(&dir, &entries)?;
+            write_index(&dir, &EntryIndex::bare(entries))?;
             ctx.notify(TYPING_TEXT_SYNC_UNIT);
             Ok(meta)
         })
@@ -389,19 +315,19 @@ impl TypingTextStore {
         let name = Value::String(validate_name(name)?);
         ctx.locks().with_write_lock(TYPING_TEXT_SYNC_UNIT, || {
             let dir = store_dir(ctx);
-            let mut entries = read_index_locked(&dir)?;
+            let mut entries = read_index_locked(&INDEX, &dir)?.entries;
             let at = entries
                 .iter()
                 .position(|entry| has_id(entry, id) && !entry.is_deleted())
-                .ok_or_else(TypingTextError::not_found)?;
+                .ok_or_else(not_found)?;
             if find_active_by_name(&entries, &name, Some(id))?.is_some() {
-                return Err(TypingTextError::duplicate_name());
+                return Err(duplicate_name());
             }
             let meta = &mut entries[at];
             meta.set("name", name);
             touch_clock(meta, EntryGroup::Name, ctx.now_ms())?;
             let meta = meta.clone();
-            write_index(&dir, &entries)?;
+            write_index(&dir, &EntryIndex::bare(entries))?;
             ctx.notify(TYPING_TEXT_SYNC_UNIT);
             Ok(meta)
         })
@@ -412,11 +338,10 @@ impl TypingTextStore {
     pub fn delete(&self, ctx: &StoreContext, id: &JsString) -> Result<(), TypingTextError> {
         ctx.locks().with_write_lock(TYPING_TEXT_SYNC_UNIT, || {
             let dir = store_dir(ctx);
-            let mut entries = read_index_locked(&dir)?;
-            let at =
-                entries.iter().position(|entry| has_id(entry, id)).ok_or_else(TypingTextError::not_found)?;
+            let mut entries = read_index_locked(&INDEX, &dir)?.entries;
+            let at = entries.iter().position(|entry| has_id(entry, id)).ok_or_else(not_found)?;
             mark_deleted(&mut entries[at], ctx.now_ms());
-            write_index(&dir, &entries)?;
+            write_index(&dir, &EntryIndex::bare(entries))?;
             ctx.notify(TYPING_TEXT_SYNC_UNIT);
             Ok(())
         })
@@ -427,12 +352,4 @@ impl TypingTextStore {
 fn count(n: usize) -> Value {
     // Counts are at most MAX_WORDS, far below f64's exact integers.
     Value::Number(f64::from(u32::try_from(n).unwrap_or(u32::MAX)))
-}
-
-/// Writes the body of an entry whose filename this store made.
-fn write_body(dir: &Path, filename: &JsString, body: &Object) -> Result<(), TypingTextError> {
-    fs::create_dir_all(dir)?;
-    let path = body_path_of(dir, &filename.to_string_lossy()).ok_or(TypingTextError::InvalidFilename)?;
-    let text = pipette_js_json::stringify_with_gap(&Value::Object(body.clone()), "  ");
-    Ok(pipette_fs::write_file_atomic(&path, text.as_bytes())?)
 }

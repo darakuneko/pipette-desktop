@@ -28,7 +28,9 @@
 //! reported to. The stores of other crates (the pack stores) work through
 //! the same context.
 
+mod coded_error;
 mod entry_files;
+mod entry_index;
 mod favorites;
 mod key_labels;
 mod keyboard_meta;
@@ -44,16 +46,18 @@ use std::sync::Arc;
 
 use pipette_entry_store::{Clock, IdGen, RandomUuid, WriteLocks};
 
+pub use coded_error::{CodedStoreError, ErrorCode, coded_store_response};
+pub use entry_index::MAX_NAME_LENGTH;
 pub use favorites::{
     FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, import_favorites,
     list_favorites, load_favorite, read_favorites_for_export, rename_favorite, save_favorite,
     set_favorite_hub_post_id, set_favorite_hub_private,
 };
 pub use key_labels::{
-    KEY_LABEL_SYNC_UNIT, KeyLabelError, KeyLabelErrorCode, KeyLabelExport, KeyLabelSave, MAX_NAME_LENGTH,
-    QWERTY_ENTRY_ID, delete_key_label, export_key_label, get_key_label, has_key_label_name,
-    import_key_label_files, key_label_response, list_key_labels, rename_key_label, reorder_key_labels,
-    save_key_label, set_key_label_hub_post_id,
+    KEY_LABEL_SYNC_UNIT, KeyLabelError, KeyLabelErrorCode, KeyLabelExport, KeyLabelSave, QWERTY_ENTRY_ID,
+    delete_key_label, export_key_label, get_key_label, has_key_label_name, import_key_label_files,
+    key_label_response, list_key_labels, rename_key_label, reorder_key_labels, save_key_label,
+    set_key_label_hub_post_id,
 };
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
