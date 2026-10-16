@@ -1,24 +1,34 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! This device's typing day files on Drive (src/main/sync/
-//! sync-typing-remote.ts): finding them in a listing, and reconciling them
+//! The typing day files on Drive (src/main/sync/sync-typing-remote.ts):
+//! finding a device's days in a listing; reconciling this device's days
 //! with the local day files and the upload bookkeeping of
-//! `sync_state.json` before an upload pass collects its units.
+//! `sync_state.json` before an upload pass collects its units; and the Data
+//! modal's reads of other devices' days ([`RemoteTyping`]).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io;
 use std::path::Path;
+use std::sync::Arc;
 
 use indexmap::{IndexMap, IndexSet};
 use pipette_drive::DriveFile;
 use pipette_drive::canonical::Listing;
 use pipette_drive::client::DriveClient;
+use pipette_drive::retry::DriveFailure;
 use pipette_entry_store::Clock;
 use pipette_js_json::Value;
-use pipette_sync_format::drive_names::sync_unit_from_file_name;
+use pipette_sync_format::drive_names::{drive_file_name, is_data_file_name, sync_unit_from_file_name};
+use pipette_typing_analytics::jsonl::paths::deleted_ranges_path;
 use pipette_typing_analytics::jsonl::{keyboards_root, list_device_days};
 use pipette_typing_analytics::sync_state::{TypingSyncState, load_sync_state, save_sync_state};
+use pipette_typing_analytics::sync_units::{
+    typing_analytics_device_day_sync_unit, typing_deleted_ranges_sync_unit,
+};
+use zeroize::Zeroizing;
 
-use crate::units::parse_device_day_unit;
+use crate::dispatch::{UnitError, UnitSync};
+use crate::preflight::{Preflight, PreflightError};
+use crate::units::{DeviceDayUnit, parse_device_day_unit};
 
 /// A typing day file on Drive: `live` is the copy sync reads, absent when
 /// only trash files of the day's name are left.
@@ -253,4 +263,187 @@ pub async fn reconcile_own_hash_typing_analytics(
         blocking(move || save_sync_state(&root, &saved)).await?;
     }
     Ok(Reconciled { state, mutated })
+}
+
+/// Why a read of another device's typing data on Drive failed.
+#[derive(Debug, thiserror::Error)]
+pub enum RemoteTypingError {
+    #[error(transparent)]
+    Preflight(#[from] PreflightError),
+    #[error(transparent)]
+    Unit(#[from] UnitError),
+}
+
+impl From<DriveFailure> for RemoteTypingError {
+    fn from(failure: DriveFailure) -> Self {
+        Self::Preflight(failure.into())
+    }
+}
+
+/// The Data modal's reads of the typing data on Drive (the Sync > Typing
+/// tree): whether another device has any, its devices and days, and the
+/// lazy fetch of one of its days. None takes the sync lock or creates the
+/// sync-format marker; each lists Drive whole and stops on the guard like
+/// a pass. Signed out, without a usable password, or while the guard
+/// blocks, they find nothing.
+pub struct RemoteTyping {
+    preflight: Arc<Preflight>,
+    units: Arc<UnitSync>,
+}
+
+impl RemoteTyping {
+    pub fn new(preflight: Arc<Preflight>, units: Arc<UnitSync>) -> Self {
+        Self { preflight, units }
+    }
+
+    /// The local guard, a full listing and the remote guard: the listing
+    /// with the sign-out generation taken before it, or `None` when a guard
+    /// stops the read.
+    async fn guarded_listing(&self) -> Result<Option<(Listing, u64)>, PreflightError> {
+        let preflight = &self.preflight;
+        if preflight.local_sync_block().await.is_some() {
+            return Ok(None);
+        }
+        let generation = preflight.sync_format_generation();
+        let listing = Listing::new(preflight.drive().list_files(None).await?);
+        if preflight.remote_sync_block(listing.files(), generation).is_some() {
+            return Ok(None);
+        }
+        Ok(Some((listing, generation)))
+    }
+
+    /// The stored password once signed in (`requireSyncCredentials`).
+    async fn signed_in_with_password(&self) -> Option<Zeroizing<String>> {
+        self.preflight.require_sync_credentials().await.ok()
+    }
+
+    /// The day units of other devices in `listing`, every copy, trash
+    /// files aside.
+    fn remote_day_units(listing: &Listing, own_hash: &str) -> Vec<(String, String)> {
+        listing
+            .files()
+            .iter()
+            .filter_map(|file| sync_unit_from_file_name(&file.name))
+            .filter_map(|unit| {
+                let day = parse_device_day_unit(&unit)?;
+                (day.machine_hash != own_hash).then(|| (day.uid.to_owned(), day.machine_hash.to_owned()))
+            })
+            .collect()
+    }
+
+    /// `hasAnyRemoteTypingData`: whether Drive holds a day file of another
+    /// device, which decides whether the Sync > Typing tree is shown.
+    pub async fn has_any_remote_typing_data(&self) -> Result<bool, RemoteTypingError> {
+        if self.signed_in_with_password().await.is_none() {
+            return Ok(false);
+        }
+        let own = self.units.own_hash()?;
+        let Some((listing, _)) = self.guarded_listing().await? else { return Ok(false) };
+        Ok(!Self::remote_day_units(&listing, &own).is_empty())
+    }
+
+    /// `listRemoteTypingHashesForUidFromCloud`: the other devices with a day
+    /// file of keyboard `uid` on Drive, sorted; it finds those the cache
+    /// has not merged yet.
+    pub async fn list_remote_typing_hashes(&self, uid: &str) -> Result<Vec<String>, RemoteTypingError> {
+        if self.signed_in_with_password().await.is_none() {
+            return Ok(Vec::new());
+        }
+        let own = self.units.own_hash()?;
+        let Some((listing, _)) = self.guarded_listing().await? else { return Ok(Vec::new()) };
+        let hashes: BTreeSet<String> = Self::remote_day_units(&listing, &own)
+            .into_iter()
+            .filter(|(day_uid, _)| day_uid == uid)
+            .map(|(_, hash)| hash)
+            .collect();
+        Ok(hashes.into_iter().collect())
+    }
+
+    /// `listRemoteTypingDaysFor`: the UTC days with a live day file of
+    /// device `hash` of keyboard `uid` on Drive, sorted.
+    pub async fn list_remote_typing_days(
+        &self,
+        uid: &str,
+        hash: &str,
+    ) -> Result<Vec<String>, RemoteTypingError> {
+        if self.signed_in_with_password().await.is_none() {
+            return Ok(Vec::new());
+        }
+        let Some((listing, _)) = self.guarded_listing().await? else { return Ok(Vec::new()) };
+        let mut per_uid = collect_remote_own_hash_days(&listing, hash);
+        let mut days: Vec<String> = per_uid
+            .shift_remove(uid)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|(_, day)| day.live.is_some())
+            .map(|(day, _)| day)
+            .collect();
+        days.sort();
+        Ok(days)
+    }
+
+    /// `fetchRemoteTypingDay`: downloads the day `utc_day` of device `hash`
+    /// of keyboard `uid` and merges it into the local files and the cache.
+    /// False when Drive has no such day, or when the fetch does not run (a
+    /// reset of the keyboard or a switch of accounts runs, no credentials,
+    /// the guard blocks). Fails when the password-check does not open with
+    /// the stored password.
+    ///
+    /// It takes no lock: it is counted as a fetch of the keyboard before
+    /// its first await, so a password change refuses to start and a reset
+    /// of the keyboard waits or refuses while it runs.
+    pub async fn fetch_remote_typing_day(
+        &self,
+        uid: &str,
+        hash: &str,
+        utc_day: &str,
+    ) -> Result<bool, RemoteTypingError> {
+        let Some(_fetching) = self.preflight.runtime().try_start_remote_day_fetch(uid) else {
+            return Ok(false);
+        };
+        let Some(password) = self.signed_in_with_password().await else { return Ok(false) };
+        let Some((listing, generation)) = self.guarded_listing().await? else { return Ok(false) };
+        let day_unit = typing_analytics_device_day_sync_unit(uid, hash, utc_day);
+        let Some(file) = listing.pick_canonical(&drive_file_name(&day_unit)) else { return Ok(false) };
+        self.preflight.ensure_password_check_validated(&password, listing.files(), generation).await?;
+
+        // The device's deleted ranges first, so the day's rows in them are
+        // hidden as the day is replayed. Skipped only when the revision is
+        // known and the local file exists: the polling also records the
+        // revisions of keyboards it leaves alone because they are not
+        // local, so a known revision alone does not mean the file was
+        // merged. A failed merge fails the fetch before the day is
+        // downloaded.
+        let ranges_unit = typing_deleted_ranges_sync_unit(uid, hash);
+        if let Some(ranges) = listing.pick_canonical(&drive_file_name(&ranges_unit)) {
+            let known =
+                self.preflight.runtime().remote().is_known(&ranges.name, &ranges.id, &ranges.modified_time);
+            let path = deleted_ranges_path(self.units.ctx().user_data(), uid, hash);
+            if !(known && blocking(move || Ok(path.exists())).await.unwrap_or(false)) {
+                self.units.merge_with_remote(ranges, &ranges_unit, &password, Some(&listing)).await?;
+            }
+        }
+        let day = DeviceDayUnit { uid, machine_hash: hash, utc_day };
+        self.units.merge_remote_day(file, day, &password).await?;
+        Ok(true)
+    }
+
+    /// `listRemoteFileNames` (src/main/sync/sync-scan.ts): the names of the
+    /// data files on Drive, which the typing data import checks a file
+    /// against; `None` when Drive is not consulted (no credentials, the
+    /// guard blocks).
+    pub async fn remote_data_file_names(&self) -> Result<Option<HashSet<String>>, PreflightError> {
+        if self.signed_in_with_password().await.is_none() {
+            return Ok(None);
+        }
+        let Some((listing, _)) = self.guarded_listing().await? else { return Ok(None) };
+        Ok(Some(
+            listing
+                .files()
+                .iter()
+                .filter(|file| is_data_file_name(&file.name))
+                .map(|file| file.name.clone())
+                .collect(),
+        ))
+    }
 }

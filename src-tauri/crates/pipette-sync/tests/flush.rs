@@ -370,7 +370,7 @@ async fn the_quit_waits_for_the_running_flush_then_flushes_the_rest() {
         notify(&triggers, TAP);
         assert!(triggers.begin_quit());
         let phases = async {
-            triggers.password_change_ended().await;
+            world.runtime().password_change_ended().await;
             triggers.in_flight_pass_ended().await;
             triggers.flush_pending().await;
         };

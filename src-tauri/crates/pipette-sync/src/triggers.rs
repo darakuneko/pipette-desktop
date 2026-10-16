@@ -156,13 +156,6 @@ impl SyncTriggers {
         work
     }
 
-    /// The passwordChange quit phase: waits for a running password change.
-    /// The change itself stops at its next chunk boundary once the app
-    /// quits and keeps its state for the next launch.
-    pub async fn password_change_ended(&self) {
-        self.runtime.password_change_ended().await;
-    }
-
     /// The inFlightSync quit phase: waits for the holder of the sync lock
     /// (a flush, a manual sync, a poll, a reset).
     pub async fn in_flight_pass_ended(&self) {

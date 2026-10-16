@@ -33,7 +33,7 @@ use std::time::Duration;
 
 use pipette_hid::HidService;
 use pipette_sync_pending::PendingStore;
-use pipette_typing_analytics::Recorder;
+use pipette_typing_analytics::{Recorder, SyncRuntime};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
@@ -57,7 +57,7 @@ use crate::sync_commands::triggers::{SyncTriggers, triggers};
 #[cfg(debug_assertions)]
 const DEV_QUIT_DELAY_MS_ENV: &str = "PIPETTE_DEV_QUIT_DELAY_MS";
 
-/// The passwordChange phase, which waits for a running password change.
+/// The passwordChange phase, which stops a running sync password change.
 const PASSWORD_CHANGE_PHASE: usize = 0;
 
 /// The preSyncFinalizers phase, which writes the typing analytics.
@@ -325,14 +325,18 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let durations = phase_durations();
     let pending = app.state::<PendingStore>().inner().clone();
     let recorder = app.state::<Arc<Recorder>>().inner().clone();
+    let runtime = app.state::<SyncRuntime>().inner().clone();
     let sync = triggers(&app);
     // Polling stops and the app counts as quitting before anything else.
     let sync_work = sync.as_ref().is_some_and(|sync| sync.begin_quit());
-    let work = sync_work || recorder.has_pending_work() || dev_quit_delay().is_some();
+    let work = sync_work
+        || runtime.password_change_running()
+        || recorder.has_pending_work()
+        || dev_quit_delay().is_some();
     tauri::async_runtime::spawn(async move {
         // With nothing to wait for, the phases are skipped and only the
         // pending units are written.
-        let phases = if work { quit_phases(durations, recorder, sync) } else { Vec::new() };
+        let phases = if work { quit_phases(durations, recorder, runtime, sync) } else { Vec::new() };
         let outcome = quit(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit, pending).await;
         log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
@@ -340,31 +344,28 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     });
 }
 
-/// The phases of the before-quit handler: the typing analytics are written
-/// before the sync, whose passwordChange, inFlightSync and flushPending
-/// phases wait for the running password change, then the running pass,
-/// then flush what is pending (none of them when the sync is not managed).
-/// extraFinalizers has nothing to run. Each phase then waits for its
+/// The phases of the before-quit handler: passwordChange stops the running
+/// password change and waits for it, the typing analytics are written, then
+/// inFlightSync and flushPending wait for the running pass and flush what is
+/// pending (neither when the sync is not managed). extraFinalizers has
+/// nothing to run. Each phase other than passwordChange then waits for its
 /// configured time.
 fn quit_phases(
     durations: [Duration; QUIT_PHASES.len()],
     recorder: Arc<Recorder>,
+    runtime: SyncRuntime,
     sync: Option<Arc<SyncTriggers>>,
 ) -> Vec<QuitPhase> {
     let mut phases = stub_phases(durations);
+    phases[PASSWORD_CHANGE_PHASE] =
+        crate::sync_commands::password_change::quit_phase(runtime, QUIT_PHASES[PASSWORD_CHANGE_PHASE]);
     phases[PRE_SYNC_FINALIZERS_PHASE] = analytics_commands::record::quit_phase(
         recorder,
         QUIT_PHASES[PRE_SYNC_FINALIZERS_PHASE],
         durations[PRE_SYNC_FINALIZERS_PHASE],
     );
     if let Some(sync) = sync {
-        let (for_password, for_pass) = (Arc::clone(&sync), Arc::clone(&sync));
-        phases[PASSWORD_CHANGE_PHASE] =
-            then_wait(
-                PASSWORD_CHANGE_PHASE,
-                durations,
-                async move { for_password.password_change_ended().await },
-            );
+        let for_pass = Arc::clone(&sync);
         phases[IN_FLIGHT_SYNC_PHASE] =
             then_wait(IN_FLIGHT_SYNC_PHASE, durations, async move { for_pass.in_flight_pass_ended().await });
         phases[FLUSH_PENDING_PHASE] =
@@ -528,6 +529,7 @@ mod tests {
     #[test]
     fn the_delay_applies_to_flush_pending() {
         assert_eq!(QUIT_PHASES[DEV_DELAYED_PHASE], "flushPending");
+        assert_eq!(QUIT_PHASES[PASSWORD_CHANGE_PHASE], "passwordChange");
     }
 
     /// Runs the second instance handling on a mock app, counting the

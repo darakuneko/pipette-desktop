@@ -210,4 +210,20 @@ pub const APP_COMMANDS: &[&str] = &[
     "import_local_data",
     // src/sync_commands/execute.rs
     "sync_execute",
+    // src/sync_commands/password_change.rs
+    "sync_change_password",
+    "sync_password_change_status",
+    "sync_password_change_resume",
+    "sync_password_change_revert",
+    "sync_password_change_abandon",
+    "sync_password_change_delete_undecryptable",
+    "sync_password_change_lock_status",
+    "sync_password_change_release_locks",
+    "sync_list_undecryptable",
+    // src/sync_commands/analytics_remote.rs
+    "sync_analytics_now",
+    "typing_analytics_has_remote",
+    "typing_analytics_list_remote_cloud_hashes",
+    "typing_analytics_list_remote_cloud_days",
+    "typing_analytics_fetch_remote_day",
 ];
