@@ -13,7 +13,7 @@ use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::{StoreContext, TypingTextSave, TypingTextSource, TypingTextStore};
 use pipette_typing_text::{AozoraTextError, aozora_text_from_zip};
 
-use crate::dataset::{Dataset, Model};
+use crate::dataset::{Dataset, Model, file_size};
 use crate::download::{FetchFailure, fetch_verified_bytes, number_text};
 use crate::store::{DatasetError, LanguageStore};
 
@@ -96,13 +96,9 @@ fn find_work(dataset: Dataset<'_>, work_id: &str) -> Result<Work, Stop> {
     let entry = dataset
         .entry(work_id)
         .ok_or_else(|| Stop::Answer(NOT_IN_CATALOG, format!("Aozora work not in catalog: {work_id}")))?;
-    let size = match entry.get("fileSize") {
-        Some(Value::Number(size)) => *size,
-        _ => f64::NAN,
-    };
     Ok(Work {
         url: format!("{}/{work_id}", dataset.download_url_base.to_string_lossy()),
-        size,
+        size: file_size(entry),
         name: text_name(entry, work_id),
     })
 }

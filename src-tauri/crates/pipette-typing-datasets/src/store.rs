@@ -20,7 +20,7 @@ use pipette_entry_store::is_safe_path_segment;
 use pipette_js_json::{JsString, Object, Value};
 use pipette_net::Http;
 
-use crate::dataset::{Dataset, Model, effective_dataset};
+use crate::dataset::{Dataset, Model, effective_dataset, file_size};
 use crate::download::{FetchFailure, fetch_verified_bytes, size_mismatch_detail};
 use crate::hub::{fetch_dataset, fetch_dataset_version};
 use crate::providers::{DEFAULT_PROVIDER, is_bundled, is_registered};
@@ -416,11 +416,8 @@ impl LanguageStore {
                         return Err(CATALOG_ERROR.to_owned());
                     }
                     let entry = dataset.entry(&name).ok_or_else(|| "Unknown language".to_owned())?;
-                    let size = match entry.get("fileSize") {
-                        Some(Value::Number(size)) => *size,
-                        _ => f64::NAN,
-                    };
-                    Ok((format!("{}/{name}.json", dataset.download_url_base.to_string_lossy()), size))
+                    let url = format!("{}/{name}.json", dataset.download_url_base.to_string_lossy());
+                    Ok((url, file_size(entry)))
                 })
             })
             .await

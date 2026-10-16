@@ -98,6 +98,15 @@ impl<'a> Dataset<'a> {
     }
 }
 
+/// A manifest entry's `fileSize`, the size its download must have; NaN
+/// (which no size matches) when it is not a number.
+pub(crate) fn file_size(entry: &Object) -> f64 {
+    match entry.get("fileSize") {
+        Some(Value::Number(size)) => *size,
+        _ => f64::NAN,
+    }
+}
+
 fn string_is(value: Option<&Value>, text: &str) -> bool {
     matches!(value, Some(Value::String(s)) if s == text)
 }
