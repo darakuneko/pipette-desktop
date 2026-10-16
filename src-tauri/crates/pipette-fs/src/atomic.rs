@@ -24,7 +24,14 @@ pub const MAX_NAME_BYTES: usize = 255;
 
 /// Writes `content` to `path` through a synced temp file and a rename.
 pub fn write_file_atomic(path: &Path, content: &[u8]) -> std::io::Result<()> {
-    write_through_temp(path, content, |_| {})
+    write_through_temp(path, content, Access::Default, |_| {})
+}
+
+/// [`write_file_atomic`] for a file only its owner may read: on Unix the
+/// temp file is created with mode 0600, before any content goes in, so the
+/// file never has wider permissions. Other systems get the default ones.
+pub fn write_file_atomic_private(path: &Path, content: &[u8]) -> std::io::Result<()> {
+    write_through_temp(path, content, Access::OwnerOnly, |_| {})
 }
 
 /// [`write_file_atomic`] that also tries to give the new file the owner of
@@ -34,7 +41,7 @@ pub fn write_file_atomic(path: &Path, content: &[u8]) -> std::io::Result<()> {
 /// do so (only a privileged process may give a file away) is ignored.
 pub fn write_file_atomic_keeping_owner(path: &Path, content: &[u8]) -> std::io::Result<()> {
     let owner = foreign_owner(path);
-    write_through_temp(path, content, |tmp| {
+    write_through_temp(path, content, Access::Default, |tmp| {
         #[cfg(unix)]
         if let Some((uid, gid)) = owner {
             let _ = std::os::unix::fs::chown(tmp, Some(uid), Some(gid));
@@ -60,11 +67,25 @@ fn foreign_owner(_path: &Path) -> Option<(u32, u32)> {
     None
 }
 
+/// Who may read the temp file.
+#[derive(Clone, Copy)]
+enum Access {
+    /// The permissions a new file gets from the process's umask.
+    Default,
+    /// Mode 0600 on Unix.
+    OwnerOnly,
+}
+
 /// Writes the synced temp file, calls `before_rename` with its path, and
 /// renames it over `path`.
-fn write_through_temp(path: &Path, content: &[u8], before_rename: impl FnOnce(&Path)) -> std::io::Result<()> {
+fn write_through_temp(
+    path: &Path,
+    content: &[u8],
+    access: Access,
+    before_rename: impl FnOnce(&Path),
+) -> std::io::Result<()> {
     let tmp = temp_path_for(path);
-    let result = write_synced(&tmp, content).and_then(|()| {
+    let result = write_synced(&tmp, content, access).and_then(|()| {
         before_rename(&tmp);
         std::fs::rename(&tmp, path)
     });
@@ -74,8 +95,17 @@ fn write_through_temp(path: &Path, content: &[u8], before_rename: impl FnOnce(&P
     result
 }
 
-fn write_synced(path: &Path, content: &[u8]) -> std::io::Result<()> {
-    let mut file = std::fs::File::create(path)?;
+fn write_synced(path: &Path, content: &[u8], access: Access) -> std::io::Result<()> {
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    if matches!(access, Access::OwnerOnly) {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    #[cfg(not(unix))]
+    let _ = access;
+    let mut file = options.open(path)?;
     file.write_all(content)?;
     file.sync_all()
 }
@@ -126,6 +156,19 @@ mod tests {
         write_file_atomic(&target, b"two").unwrap();
         assert_eq!(std::fs::read(&target).unwrap(), b"two");
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_private_write_leaves_a_file_only_its_owner_may_read() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = TempDir::new().unwrap();
+        let target = tmp.path().join("key.json");
+        std::fs::write(&target, b"old").unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o644)).unwrap();
+        write_file_atomic_private(&target, b"secret").unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"secret");
+        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o600);
     }
 
     #[test]

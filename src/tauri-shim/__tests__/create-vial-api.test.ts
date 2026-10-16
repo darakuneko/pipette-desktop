@@ -61,8 +61,14 @@ describe('createVialApi', () => {
 describe('implemented', () => {
   it('answers the startup calls with the values of a fresh install', async () => {
     const api = createVialApi(implemented)
-    await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
+  })
+
+  it('asks the backend for the sync sign-in status', async () => {
+    invoke.mockResolvedValueOnce({ authenticated: false })
+    const api = createVialApi(implemented)
+    await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
+    expect(invoke).toHaveBeenLastCalledWith('sync_auth_status', undefined)
   })
 
   it('answers the Hub requests of the language packs as failed', async () => {

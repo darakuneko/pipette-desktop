@@ -22,10 +22,8 @@ export const fakes = {
   // Tray.
   trayStatusUpdate: () => Promise.resolve(),
 
-  // Cloud sync, signed out. With no cached Drive status yet, the main
-  // process reports the sync format status as null.
-  syncAuthStatus: () => Promise.resolve({ authenticated: false }),
-  syncPasswordStatus: () => Promise.resolve('noPasswordFile' as const),
+  // Cloud sync. With no cached Drive status yet, the main process reports
+  // the sync format status as null.
   syncFormatStatus: () => Promise.resolve(null),
 
   // Startup notification.

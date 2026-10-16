@@ -28,6 +28,31 @@ impl ExternalOpener {
     }
 }
 
+/// Opens the authorization URL of the sync's sign-in: the user's browser,
+/// or in builds with the development tools and
+/// `PIPETTE_DEV_SUPPRESS_BROWSER=1` no browser at all
+/// (src/dev_commands/sync_auth.rs records the URL instead). Managed state.
+pub struct AuthBrowser(Box<OpenAuthUrl>);
+
+type OpenAuthUrl = dyn Fn(&str) -> Result<(), String> + Send + Sync;
+
+impl AuthBrowser {
+    /// The user's default browser.
+    pub fn system() -> Self {
+        Self::new(|url| tauri_plugin_opener::open_url(url, None::<&str>).map_err(|err| err.to_string()))
+    }
+
+    pub fn new(open: impl Fn(&str) -> Result<(), String> + Send + Sync + 'static) -> Self {
+        Self(Box::new(open))
+    }
+}
+
+impl pipette_google_auth::BrowserOpener for AuthBrowser {
+    fn open(&self, url: &str) -> Result<(), String> {
+        (self.0)(url)
+    }
+}
+
 /// Why a URL is not opened; the messages are those of the Electron main
 /// process's `SHELL_OPEN_EXTERNAL` handler (src/main/index.ts).
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]

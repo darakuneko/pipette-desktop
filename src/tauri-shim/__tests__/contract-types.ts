@@ -36,6 +36,8 @@ import type { FileSaveResult } from '../generated/FileSaveResult'
 import type { LanguageActionResult } from '../generated/LanguageActionResult'
 import type { TypingDatasetCheckResult } from '../generated/TypingDatasetCheckResult'
 import type { PackImportFileRead } from '../generated/PackImportFileRead'
+import type { StoredPasswordStatus } from '../generated/StoredPasswordStatus'
+import type { SyncAuthStatus } from '../generated/SyncAuthStatus'
 import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
 /** `true` when each type is assignable to the other. The tuples stop the
@@ -67,4 +69,7 @@ export type ContractChecks = [
   Assert<MutuallyAssignable<PackImportFileRead['fileSizeBytes'], PackImportFile['fileSizeBytes']>>,
   // src-tauri/src/dev_commands/tools.rs
   Assert<MutuallyAssignable<GeneratedControllerState, VirtualDeviceControllerState>>,
+  // Cloud Sync
+  Assert<MutuallyAssignable<SyncAuthStatus, Awaited<ReturnType<VialAPI['syncAuthStatus']>>>>,
+  Assert<MutuallyAssignable<StoredPasswordStatus, Awaited<ReturnType<VialAPI['syncPasswordStatus']>>>>,
 ]

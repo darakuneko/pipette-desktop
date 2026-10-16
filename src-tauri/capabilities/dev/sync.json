@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-sync",
+  "description": "Builds with the dev-tools feature only: tells the authorization URL the browserless sign-in (PIPETTE_DEV_SUPPRESS_BROWSER=1) recorded, so the e2e tests play the browser against the loopback redirect.",
+  "windows": ["main"],
+  "permissions": ["allow-dev-sync-last-auth-url"]
+}

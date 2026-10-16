@@ -14,6 +14,8 @@ use pipette_net::{Limits, ReqwestClient};
 use crate::dialog::SystemDialogs;
 
 #[cfg(feature = "dev-tools")]
+mod sync_auth;
+#[cfg(feature = "dev-tools")]
 mod tools;
 
 /// Installs `app`, the handler of the app commands, and `on_page_load`, the
@@ -52,6 +54,15 @@ pub fn manage_http(app: &AppHandle<Wry>) {
     tools::manage_queued_http(app, real);
     #[cfg(not(feature = "dev-tools"))]
     tauri::Manager::manage(app, pipette_net::Http::new(real));
+}
+
+/// Manages the browser of the sync's sign-in: the system's, with the
+/// dev-tools feature replaceable by the recorder of `dev_sync_last_auth_url`.
+pub fn manage_auth_browser(app: &AppHandle<Wry>) {
+    #[cfg(feature = "dev-tools")]
+    sync_auth::manage(app);
+    #[cfg(not(feature = "dev-tools"))]
+    tauri::Manager::manage(app, crate::shell::AuthBrowser::system());
 }
 
 #[cfg(test)]

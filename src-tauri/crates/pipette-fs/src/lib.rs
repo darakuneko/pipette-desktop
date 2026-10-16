@@ -6,7 +6,7 @@ mod atomic;
 mod electron_lock;
 mod user_data;
 
-pub use atomic::{write_file_atomic, write_file_atomic_keeping_owner};
+pub use atomic::{write_file_atomic, write_file_atomic_keeping_owner, write_file_atomic_private};
 // The temp file naming, for tests/ts_temp_names.rs.
 #[doc(hidden)]
 pub use atomic::{MAX_NAME_BYTES, temp_file_name};
