@@ -29,17 +29,17 @@
 
 use std::fs;
 use std::io;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use pipette_entry_store::{
     Entry, EntryError, EntryList, EntryMutation, EntryStore, MetaGroup, apply_entry_mutation, create_entry,
-    id_body_filename, is_safe_path_segment, migrate_body_filenames, normalize_entries, trim_js_whitespace,
-    ts_for_filename,
+    id_body_filename, migrate_body_filenames, normalize_entries, trim_js_whitespace, ts_for_filename,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_time::iso_8601_millis;
 
 use crate::StoreContext;
+use crate::entry_files::{BodyPathError, body_path, body_path_of, entry_error_text, read_text};
 
 const STORE: EntryStore = EntryStore::Favorites;
 
@@ -109,10 +109,12 @@ pub enum FavoriteError {
     TooDeep(PathBuf),
 }
 
-fn entry_error_text(err: &EntryError) -> String {
-    match err {
-        EntryError::TimeOutOfRange => format!("RangeError: {err}"),
-        EntryError::UnattendedRevive => format!("Error: {err}"),
+impl From<BodyPathError> for FavoriteError {
+    fn from(err: BodyPathError) -> Self {
+        match err {
+            BodyPathError::Invalid => FavoriteError::InvalidFilename,
+            BodyPathError::NotString => FavoriteError::FilenameNotString,
+        }
     }
 }
 
@@ -182,30 +184,6 @@ fn read_index_locked(dir: &Path, ty: FavoriteType) -> Result<FavoriteIndex, Favo
     Ok(index)
 }
 
-/// `dir` joined with a body filename that is one path segment.
-fn body_path_of(dir: &Path, filename: &str) -> Result<PathBuf, FavoriteError> {
-    let mut components = Path::new(filename).components();
-    let single = matches!((components.next(), components.next()), (Some(Component::Normal(_)), None));
-    if !is_safe_path_segment(filename) || !single {
-        return Err(FavoriteError::InvalidFilename);
-    }
-    Ok(dir.join(filename))
-}
-
-/// The body file of `entry` (`getSafeFilePath`). A filename with a lone
-/// surrogate maps to the file of its lossy form, as Node's file calls do.
-fn body_path(dir: &Path, entry: &Entry) -> Result<PathBuf, FavoriteError> {
-    match entry.get("filename") {
-        Some(Value::String(name)) => body_path_of(dir, &name.to_string_lossy()),
-        Some(value) if value.is_truthy() => Err(FavoriteError::FilenameNotString),
-        _ => Err(FavoriteError::InvalidFilename),
-    }
-}
-
-fn read_body(path: &Path) -> Result<String, FavoriteError> {
-    Ok(String::from_utf8_lossy(&fs::read(path)?).into_owned())
-}
-
 /// Writes a new body under `dir` and returns its new entry, saved at
 /// `saved_at` (now when `None`), with every clock at now.
 fn write_new_favorite(
@@ -220,7 +198,10 @@ fn write_new_favorite(
     let id = JsString::from(ctx.new_id());
     let legacy = JsString::from(format!("{}_{}.json", ty.name(), ts_for_filename(now)));
     let filename = id_body_filename(STORE, &id, &legacy);
-    pipette_fs::write_file_atomic(&body_path_of(dir, &filename.to_string_lossy())?, body)?;
+    pipette_fs::write_file_atomic(
+        &body_path_of(dir, &filename.to_string_lossy()).ok_or(FavoriteError::InvalidFilename)?,
+        body,
+    )?;
 
     let mut fields = Object::new();
     fields.insert("id", Value::String(id));
@@ -269,7 +250,7 @@ pub fn load_favorite(ctx: &StoreContext, ty: FavoriteType, id: &str) -> Result<S
     if entry.is_deleted() {
         return Err(FavoriteError::Deleted);
     }
-    read_body(&body_path(&dir, entry)?)
+    Ok(read_text(&body_path(&dir, entry)?)?)
 }
 
 /// A meta-only change of the favorite `id` of `ty` (`updateEntry`):
@@ -381,7 +362,7 @@ pub fn read_favorites_for_export(
     }
     let mut bodies = Vec::with_capacity(targets.len());
     for entry in targets {
-        let Ok(body) = body_path(&dir, entry).and_then(|path| read_body(&path)) else { continue };
+        let Some(body) = body_path(&dir, entry).ok().and_then(|path| read_text(&path).ok()) else { continue };
         let mut out = Object::new();
         for key in ["label", "savedAt"] {
             if let Some(value) = entry.get(key) {

@@ -22,7 +22,13 @@ const EXPECTED_FAKES = [
   'notificationFetch',
   'i18nPackList',
   'themePackList',
-  'keyLabelStoreList',
+  'keyLabelHubList',
+  'keyLabelHubDownload',
+  'keyLabelHubUpload',
+  'keyLabelHubUpdate',
+  'keyLabelHubSync',
+  'keyLabelHubTimestamps',
+  'keyLabelHubDelete',
   'typingRunLogList',
 ]
 
@@ -80,6 +86,12 @@ describe('shim coverage', () => {
 
   // Applied sync units come from the sync service, which the backend does
   // not run yet; the renderer only subscribes.
+  it('backs every key label store member with backend commands', () => {
+    const members = Object.keys(implemented).filter((name) => name.startsWith('keyLabelStore'))
+    expect(members).toHaveLength(10)
+    expect(members.filter((name) => !(name in real))).toEqual([])
+  })
+
   it('leaves syncOnUnitApplied to the stub', () => {
     expect('syncOnUnitApplied' in implemented).toBe(false)
   })

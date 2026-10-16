@@ -39,6 +39,7 @@ interface Shim {
   device: typeof import('../api/device')
   favorites: typeof import('../api/favorites')
   files: typeof import('../api/files')
+  keyLabels: typeof import('../api/key-labels')
   keyboardData: typeof import('../api/keyboard-data')
   settings: typeof import('../api/settings')
   shell: typeof import('../api/shell')
@@ -57,6 +58,7 @@ async function load(): Promise<Shim> {
     device: await import('../api/device'),
     favorites: await import('../api/favorites'),
     files: await import('../api/files'),
+    keyLabels: await import('../api/key-labels'),
     keyboardData: await import('../api/keyboard-data'),
     settings: await import('../api/settings'),
     shell: await import('../api/shell'),
@@ -168,6 +170,26 @@ const CALLERS: Record<string, Caller> = {
   'favorites.openImport': { run: ({ favorites }) => favorites.openImport() },
   'favorites.importBatch': {
     run: ({ favorites }, [type, entries]) => favorites.importBatch(type as FavoriteType, entries as FavoriteImportEntry[]),
+  },
+  keyLabelStoreList: { run: ({ keyLabels }) => keyLabels.keyLabelsApi.keyLabelStoreList() },
+  keyLabelStoreListAll: { run: ({ keyLabels }) => keyLabels.keyLabelsApi.keyLabelStoreListAll() },
+  keyLabelStoreGet: { run: ({ keyLabels }, [id]) => keyLabels.keyLabelsApi.keyLabelStoreGet(id as string) },
+  keyLabelStoreRename: {
+    run: ({ keyLabels }, [id, name]) => keyLabels.keyLabelsApi.keyLabelStoreRename(id as string, name as string),
+  },
+  keyLabelStoreDelete: { run: ({ keyLabels }, [id]) => keyLabels.keyLabelsApi.keyLabelStoreDelete(id as string) },
+  keyLabelStoreImport: { run: ({ keyLabels }) => keyLabels.keyLabelsApi.keyLabelStoreImport() },
+  keyLabelStoreExport: { run: ({ keyLabels }, [id]) => keyLabels.keyLabelsApi.keyLabelStoreExport(id as string) },
+  keyLabelStoreReorder: {
+    run: ({ keyLabels }, [ids]) => keyLabels.keyLabelsApi.keyLabelStoreReorder(ids as string[]),
+  },
+  keyLabelStoreSetHubPostId: {
+    run: ({ keyLabels }, [id, postId]) =>
+      keyLabels.keyLabelsApi.keyLabelStoreSetHubPostId(id as string, postId as string | null),
+  },
+  keyLabelStoreHasName: {
+    run: ({ keyLabels }, [name, excludeId]) =>
+      keyLabels.keyLabelsApi.keyLabelStoreHasName(name as string, excludeId as string | undefined),
   },
   snapshotStoreList: { run: ({ snapshots }, [uid]) => snapshots.snapshotsApi.snapshotStoreList(uid as string) },
   snapshotStoreSave: {

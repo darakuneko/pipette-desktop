@@ -1,0 +1,171 @@
+[
+  {
+    "member": "keyLabelStoreList",
+    "args": [],
+    "command": "key_label_store_list",
+    "invokeArgs": {},
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "id": "qwerty",
+          "name": "QWERTY",
+          "uploaderName": "pipette",
+          "filename": "qwerty_builtin.json",
+          "savedAt": "1970-01-01T00:00:00.000Z",
+          "clocks": {
+            "created": "1970-01-01T00:00:00.000Z",
+            "body": "1970-01-01T00:00:00.000Z"
+          },
+          "updatedAt": "1970-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "member": "keyLabelStoreListAll",
+    "args": [],
+    "command": "key_label_store_list_all",
+    "invokeArgs": {},
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "id": "qwerty",
+          "name": "QWERTY",
+          "uploaderName": "pipette",
+          "filename": "qwerty_builtin.json",
+          "savedAt": "1970-01-01T00:00:00.000Z",
+          "clocks": {
+            "created": "1970-01-01T00:00:00.000Z",
+            "body": "1970-01-01T00:00:00.000Z"
+          },
+          "updatedAt": "1970-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "member": "keyLabelStoreGet",
+    "args": [
+      "qwerty"
+    ],
+    "command": "key_label_store_get",
+    "invokeArgs": {
+      "id": "qwerty"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
+  },
+  {
+    "member": "keyLabelStoreRename",
+    "args": [
+      "label-1",
+      "New name"
+    ],
+    "command": "key_label_store_rename",
+    "invokeArgs": {
+      "id": "label-1",
+      "newName": "New name"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
+  },
+  {
+    "member": "keyLabelStoreDelete",
+    "args": [
+      "label-1"
+    ],
+    "command": "key_label_store_delete",
+    "invokeArgs": {
+      "id": "label-1"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
+  },
+  {
+    "member": "keyLabelStoreImport",
+    "args": [],
+    "command": "key_label_store_import",
+    "invokeArgs": {},
+    "response": {
+      "success": false,
+      "errorCode": "IO_ERROR",
+      "error": "cancelled"
+    }
+  },
+  {
+    "member": "keyLabelStoreExport",
+    "args": [
+      "label-1"
+    ],
+    "command": "key_label_store_export",
+    "invokeArgs": {
+      "id": "label-1"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
+  },
+  {
+    "member": "keyLabelStoreReorder",
+    "args": [
+      [
+        "label-1",
+        "qwerty"
+      ]
+    ],
+    "command": "key_label_store_reorder",
+    "invokeArgs": {
+      "orderedIds": [
+        "label-1",
+        "qwerty"
+      ]
+    },
+    "response": {
+      "success": true
+    }
+  },
+  {
+    "member": "keyLabelStoreSetHubPostId",
+    "args": [
+      "label-1",
+      "post-1"
+    ],
+    "command": "key_label_store_set_hub_post_id",
+    "invokeArgs": {
+      "id": "label-1",
+      "hubPostId": "post-1"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
+  },
+  {
+    "member": "keyLabelStoreHasName",
+    "args": [
+      "QWERTY"
+    ],
+    "command": "key_label_store_has_name",
+    "invokeArgs": {
+      "name": "QWERTY"
+    },
+    "response": {
+      "success": true,
+      "data": false
+    }
+  }
+]
