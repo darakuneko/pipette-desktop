@@ -55,8 +55,13 @@ jobs:
       - name: Clear the generated shim files
         run: rm -rf src/tauri-shim/generated
 
+      # PIPETTE_REQUIRE_FAKE_OAUTH: the sign-in test against the Node fake
+      # Google (tests/node_fake_oauth.rs of pipette-google-auth) must run,
+      # not skip.
       - name: Test
         working-directory: src-tauri
+        env:
+          PIPETTE_REQUIRE_FAKE_OAUTH: "1"
         run: cargo test --workspace --features pipette-app/dev-tools
 
       # The step above builds pipette-net with the endpoint variables of the
@@ -179,6 +184,52 @@ jobs:
           PIPETTE_REQUIRE_NODE_IDENTITY: "1"
         run: cargo test -p pipette-typing-analytics --test node_identity
 
+  # The OS key store the sync's master key lives in (the os_keystore test of
+  # pipette-secret-store): the Keychain on macOS, the Credential Manager on
+  # Windows, and on Linux a Secret Service of the test's own inside an
+  # isolated dbus-run-session (scripts/keystore-it-linux.sh), with and
+  # without one.
+  keystore:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the Secret Service and the session bus
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y gnome-keyring dbus libdbus-1-dev pkg-config
+
+      - name: Install the Rust toolchain
+        working-directory: src-tauri
+        run: |
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Key store (Linux, without and with a Secret Service)
+        if: runner.os == 'Linux'
+        run: |
+          scripts/keystore-it-linux.sh unavailable
+          scripts/keystore-it-linux.sh available
+
+      - name: Key store (macOS, Windows)
+        if: runner.os != 'Linux'
+        working-directory: src-tauri
+        env:
+          PIPETTE_KEYSTORE_IT: available
+        run: cargo test -p pipette-secret-store --test os_keystore -- --test-threads=1
+
   # Kept off the job above so the release build does not lengthen it.
   tauri-lint:
     runs-on: ubuntu-latest
@@ -200,3 +251,16 @@ jobs:
       # profile.
       - name: Clippy (release)
         run: cargo clippy --workspace --all-targets --release -- -D warnings
+
+      # The development tools' variables (the plain-text key file, the
+      # browserless sign-in, the Google endpoint overrides) must not even be
+      # named in the binary a release build bundles.
+      - name: The release binary has no development variables
+        run: |
+          cargo build --release -p pipette-app
+          for name in PIPETTE_DEV_KEYSTORE PIPETTE_DEV_SUPPRESS_BROWSER PIPETTE_GOOGLE_AUTH_URL PIPETTE_GOOGLE_TOKEN_URL PIPETTE_DRIVE_API_URL PIPETTE_DRIVE_UPLOAD_URL; do
+            if grep -a -q "$name" target/release/pipette-app; then
+              echo "the release binary names $name"
+              exit 1
+            fi
+          done

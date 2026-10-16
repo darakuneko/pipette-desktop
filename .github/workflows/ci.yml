@@ -60,6 +60,7 @@ jobs:
           pnpm generate:pack-store-fixtures
           pnpm generate:hid-fixtures
           pnpm generate:sync-format-fixtures
+          pnpm generate:sync-auth-fixtures
           pnpm generate:analytics-db-fixtures
           pnpm generate:typing-text-fixtures
           pnpm generate:typing-dataset-fixtures
