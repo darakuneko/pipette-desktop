@@ -19,7 +19,8 @@
 //! - [`preflight`]: what every entry point runs before it touches data,
 //!   with its parts in [`format`] and [`format_status`] (the sync-format
 //!   marker and the status of the update banner) and [`password`] (the
-//!   guard and the password-check);
+//!   guard, the password-check and the password change);
+//! - [`scan`]: what is on Drive, read without merging it;
 //! - [`local_data`]: the export and import of the Data modal's Local Data;
 //! - [`meta_backfill`]: the keyboard names a full download fills in.
 
@@ -36,6 +37,7 @@ pub mod merge;
 pub mod meta_backfill;
 pub mod password;
 pub mod preflight;
+pub mod scan;
 pub mod scope;
 mod single_flight;
 pub mod typing_remote;

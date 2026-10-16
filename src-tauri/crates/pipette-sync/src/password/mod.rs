@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync password before a pass: the guard against a password change
-//! in progress ([`guard`]), this machine's password-change state
-//! ([`state`]) and the password-check ([`check`]).
+//! The sync password: the guard against a password change in progress
+//! ([`guard`]) and the password-check ([`check`]) every pass runs, and the
+//! password change ([`change`], with its re-encryption in [`switch`], this
+//! machine's state and keys in [`state`] and the Drive lock in [`lock`]
+//! and [`lock_release`]).
 
 use pipette_secret_store::{SecretFailure, SecretKind, SecretStore};
 use pipette_sync_runtime::SyncCredentialFailureReason;
@@ -9,9 +11,14 @@ use zeroize::Zeroizing;
 
 use crate::preflight::{BoxFuture, PasswordStore};
 
+pub mod change;
+pub mod change_error;
 pub mod check;
 pub mod guard;
+pub mod lock;
+pub mod lock_release;
 pub mod state;
+mod switch;
 
 fn reason(failure: SecretFailure) -> SyncCredentialFailureReason {
     match failure {
