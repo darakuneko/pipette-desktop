@@ -123,19 +123,28 @@ impl StoreContext {
         &self.user_data
     }
 
-    fn sync_dir(&self) -> PathBuf {
+    /// `{userData}/sync`, where the synced stores keep their files.
+    pub fn sync_dir(&self) -> PathBuf {
         self.user_data.join("sync")
     }
 
-    fn now_ms(&self) -> i64 {
+    /// The clock's time, in milliseconds since the epoch.
+    pub fn now_ms(&self) -> i64 {
         self.clock.now_ms()
     }
 
-    fn new_id(&self) -> String {
+    /// The id of a new entry.
+    pub fn new_id(&self) -> String {
         self.ids.new_id()
     }
 
-    fn notify(&self, unit: &str) {
+    /// Reports a change of the sync unit `unit`.
+    pub fn notify(&self, unit: &str) {
         self.notifier.notify_change(unit);
+    }
+
+    /// The write locks of the process.
+    pub fn locks(&self) -> &WriteLocks {
+        &self.locks
     }
 }

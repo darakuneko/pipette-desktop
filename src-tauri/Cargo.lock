@@ -2795,6 +2795,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-pack-stores"
+version = "0.0.0"
+dependencies = [
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-keyboard-stores",
+ "pipette-time",
+ "tempfile",
+]
+
+[[package]]
 name = "pipette-protocol"
 version = "0.0.0"
 
