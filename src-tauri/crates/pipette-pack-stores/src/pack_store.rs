@@ -30,8 +30,13 @@ pub struct PackStore {
     pub entry_store: EntryStore,
     /// The directory under `sync/`, also the prefix of the sync units.
     pub dir: &'static str,
-    /// Ids whose body never syncs (the built-in English pack).
+    /// Ids whose body never syncs and that a save never takes by name
+    /// (the built-in English pack).
     pub local_only_ids: &'static [&'static str],
+    /// The error of an id the store does not have.
+    pub not_found: &'static str,
+    /// The error of a name another live pack has.
+    pub duplicate_name: &'static str,
 }
 
 /// An index as read: the file's top-level object, whose `metas` holds the
@@ -105,7 +110,7 @@ impl PackStore {
         format!("{}/index", self.dir)
     }
 
-    fn is_local_only(&self, id: &JsString) -> bool {
+    pub(crate) fn is_local_only(&self, id: &JsString) -> bool {
         self.local_only_ids.iter().any(|&local| id.as_str() == Some(local))
     }
 

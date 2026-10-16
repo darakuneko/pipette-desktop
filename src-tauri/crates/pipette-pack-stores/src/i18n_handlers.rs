@@ -5,39 +5,14 @@
 
 use std::path::PathBuf;
 
-use pipette_entry_store::safe_filename;
-use pipette_js_json::{JsString, Object, Value};
+use pipette_js_json::{Object, Value};
 use pipette_keyboard_stores::StoreContext;
 
+pub use crate::handlers::{Answer, Arg};
+use crate::handlers::{ExportName, caught, entries, id_arg, name_arg, options_arg, ordered_ids_arg, string};
 use crate::i18n::{self, Cached, CoverageValues, SavePackInput};
 use crate::pack_store::Field;
-use crate::result::{ErrorCode, PackError, PackResult};
-
-/// An IPC argument; `None` is `undefined`.
-pub type Arg<'a> = Option<&'a Value>;
-
-/// What a handler answers besides `success`: its `data`, if any.
-pub type Answer = PackResult<Option<Value>>;
-
-fn string(arg: Arg<'_>) -> Option<&JsString> {
-    match arg {
-        Some(Value::String(s)) => Some(s),
-        _ => None,
-    }
-}
-
-fn id_arg(id: Arg<'_>) -> PackResult<&JsString> {
-    string(id).ok_or_else(|| PackError::not_found("Invalid id"))
-}
-
-/// A thrown error the handler catches as `IO_ERROR`.
-fn caught(err: PackError) -> PackError {
-    PackError::io(err.message)
-}
-
-fn entries(metas: Vec<pipette_entry_store::Entry>) -> Value {
-    Value::Array(metas.into_iter().map(Value::from).collect())
-}
+use crate::result::{ErrorCode, PackError};
 
 /// `I18N_PACK_STORE_LIST`: the live metas.
 pub fn list(ctx: &StoreContext) -> Answer {
@@ -46,7 +21,7 @@ pub fn list(ctx: &StoreContext) -> Answer {
 
 /// `I18N_PACK_STORE_HAS_NAME`.
 pub fn has_name(ctx: &StoreContext, name: Arg<'_>, exclude_id: Arg<'_>) -> Answer {
-    let name = string(name).ok_or_else(|| PackError::new(ErrorCode::InvalidName, "Invalid name"))?;
+    let name = name_arg(name)?;
     let exists = i18n::has_active_name(ctx, name, string(exclude_id)).map_err(caught)?;
     Ok(Some(exists.into()))
 }
@@ -59,7 +34,7 @@ pub fn get(ctx: &StoreContext, id: Arg<'_>) -> Answer {
 /// `I18N_PACK_STORE_RENAME`.
 pub fn rename(ctx: &StoreContext, id: Arg<'_>, new_name: Arg<'_>) -> Answer {
     let id = id_arg(id)?;
-    let new_name = string(new_name).ok_or_else(|| PackError::new(ErrorCode::InvalidName, "Invalid name"))?;
+    let new_name = name_arg(new_name)?;
     Ok(Some(i18n::rename_pack(ctx, id, new_name)?.into()))
 }
 
@@ -110,12 +85,7 @@ pub fn refresh_coverage(ctx: &StoreContext, id: Arg<'_>, values: Arg<'_>) -> Ans
 
 /// `I18N_PACK_STORE_REORDER`.
 pub fn reorder(ctx: &StoreContext, ordered_ids: Arg<'_>) -> Answer {
-    let ids: Option<Vec<JsString>> = match ordered_ids {
-        Some(Value::Array(list)) => list.iter().map(|id| string(Some(id)).cloned()).collect(),
-        _ => None,
-    };
-    let ids = ids.ok_or_else(|| PackError::new(ErrorCode::InvalidFile, "Invalid order list"))?;
-    i18n::reorder_active(ctx, &ids)?;
+    i18n::reorder_active(ctx, &ordered_ids_arg(ordered_ids)?)?;
     Ok(None)
 }
 
@@ -143,11 +113,7 @@ pub fn set_hub_post_id(
 
 /// The options of `I18N_PACK_IMPORT_APPLY` as the handler reads them.
 fn save_input(raw: Arg<'_>, options: Arg<'_>) -> SavePackInput {
-    let empty = Object::new();
-    let opts = match options {
-        Some(Value::Object(object)) => object,
-        _ => &empty,
-    };
+    let opts = options_arg(options);
     let text = |key: &str| string(opts.get(key)).cloned();
     let text_field = |key: &str| text(key).map_or(Field::Inherit, Field::Set);
     let matched_base_version = match opts.get("matchedBaseVersion") {
@@ -195,9 +161,8 @@ pub fn import_apply(ctx: &StoreContext, raw: Arg<'_>, options: Arg<'_>) -> Answe
 
 /// `I18N_PACK_EXPORT`: writes the live pack `id` where `choose` answers,
 /// given the default file name (`i18n-packs-{safe name}.json`); `None`
-/// cancels. Any failure to read the pack answers `NOT_FOUND` with its text.
-/// `Err` is the error the handler throws, for a meta whose name is not a
-/// string.
+/// cancels. `Err` is the error the handler throws (see
+/// [`crate::handlers`]).
 pub fn export(
     ctx: &StoreContext,
     id: Arg<'_>,
@@ -207,31 +172,14 @@ pub fn export(
         Ok(id) => id,
         Err(err) => return Ok(Err(err)),
     };
-    let (name, text) = match i18n::export_text(ctx, id) {
-        Ok(read) => read,
-        Err(err) => return Ok(Err(PackError::not_found(err.message))),
-    };
-    // The handler cleans the name with `String.prototype.replace`.
-    let name = match name {
-        Some(Value::String(name)) => name,
-        None => return Err("TypeError: Cannot read properties of undefined (reading 'replace')".to_owned()),
-        Some(Value::Null) => {
-            return Err("TypeError: Cannot read properties of null (reading 'replace')".to_owned());
-        }
-        Some(_) => return Err("TypeError: name.replace is not a function".to_owned()),
-    };
-    let default_name = format!("i18n-packs-{}.json", safe_filename(&name.to_string_lossy(), "language-pack"));
-    let Some(path) = choose(&default_name) else { return Ok(Err(PackError::io("cancelled"))) };
-    if let Err(err) = std::fs::write(&path, text) {
-        return Ok(Err(PackError::from_io(&err)));
-    }
-    let mut data = Object::new();
-    data.insert("filePath", path.to_string_lossy().as_ref().into());
-    Ok(Ok(Some(data.into())))
+    let file = ExportName { prefix: "i18n-packs", fallback: "language-pack" };
+    crate::handlers::export(i18n::export_text(ctx, id), &file, choose)
 }
 
 #[cfg(test)]
 mod tests {
+    use pipette_js_json::JsString;
+
     use super::*;
 
     fn parse(text: &str) -> Value {
