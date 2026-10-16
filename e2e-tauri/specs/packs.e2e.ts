@@ -155,7 +155,10 @@ describe('Tauri build packs and labels', () => {
     )
     const sorted = (await listed('keyLabelStoreList')).map((meta) => meta.id)
     expect([...sorted].sort()).toEqual([...before].sort())
-    expect(await shownRowIds('key-labels-row-')).toEqual(sorted)
+    // The list is drawn again after the stored order changes.
+    await browser.waitUntil(async () => (await shownRowIds('key-labels-row-')).join() === sorted.join(), {
+      timeoutMsg: 'the rows are not shown in the sorted order',
+    })
 
     const exported = join(dir, 'eucalyn.json')
     await clickIntoFileDialog(`[data-testid="key-labels-export-${eucalyn.id}"]`, exported)
