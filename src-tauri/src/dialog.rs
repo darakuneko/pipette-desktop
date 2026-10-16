@@ -56,10 +56,6 @@ pub enum DialogKind {
     /// Choose an existing file.
     OpenFile,
     /// Choose one or more existing files (Electron's `multiSelections`).
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "for the key label and pack imports, not in the app yet")
-    )]
     OpenMany,
     /// Choose a directory; the dialog can create one.
     OpenFolder,
@@ -102,7 +98,10 @@ impl Dialogs {
 
     /// The path chosen in a dialog of one path, `None` when cancelled.
     pub fn show(&self, request: DialogRequest) -> Option<PathBuf> {
-        self.0.show(request).into_iter().next()
+        debug_assert!(request.kind != DialogKind::OpenMany, "an OpenMany dialog goes through show_many");
+        let paths = self.0.show(request);
+        debug_assert!(paths.len() <= 1, "a dialog of one path answered {paths:?}");
+        paths.into_iter().next()
     }
 
     /// The paths chosen in a [`DialogKind::OpenMany`] dialog, none when
@@ -112,6 +111,7 @@ impl Dialogs {
         expect(dead_code, reason = "for the key label and pack imports, not in the app yet")
     )]
     pub fn show_many(&self, request: DialogRequest) -> Vec<PathBuf> {
+        debug_assert!(request.kind == DialogKind::OpenMany, "show_many shows OpenMany dialogs only");
         self.0.show(request)
     }
 }
@@ -201,17 +201,39 @@ mod tests {
         assert_eq!(native_filters(&json), json);
     }
 
+    fn answering(paths: &'static [&'static str]) -> Dialogs {
+        Dialogs::new(move |_: DialogRequest| paths.iter().map(PathBuf::from).collect::<Vec<_>>())
+    }
+
     #[test]
-    fn a_dialog_of_one_path_takes_the_first_answer_and_open_many_takes_all() {
-        let dialogs = Dialogs::new(|request: DialogRequest| match request.kind {
-            DialogKind::OpenMany => vec![PathBuf::from("/a.json"), PathBuf::from("/b.json")],
-            _ => vec![PathBuf::from("/one.json"), PathBuf::from("/ignored.json")],
-        });
-        assert_eq!(dialogs.show(request(DialogKind::OpenFile)), Some(PathBuf::from("/one.json")));
+    fn a_dialog_of_one_path_takes_its_answer_and_open_many_takes_all() {
         assert_eq!(
-            dialogs.show_many(request(DialogKind::OpenMany)),
+            answering(&["/one.json"]).show(request(DialogKind::OpenFile)),
+            Some(PathBuf::from("/one.json"))
+        );
+        assert_eq!(
+            answering(&["/a.json", "/b.json"]).show_many(request(DialogKind::OpenMany)),
             [PathBuf::from("/a.json"), PathBuf::from("/b.json")]
         );
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, should_panic(expected = "a dialog of one path answered"))]
+    fn a_dialog_of_one_path_answered_with_more_is_a_bug() {
+        let chosen = answering(&["/one.json", "/two.json"]).show(request(DialogKind::OpenFile));
+        assert_eq!(chosen, Some(PathBuf::from("/one.json")));
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, should_panic(expected = "goes through show_many"))]
+    fn show_refuses_open_many_dialogs() {
+        answering(&[]).show(request(DialogKind::OpenMany));
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, should_panic(expected = "OpenMany dialogs only"))]
+    fn show_many_refuses_dialogs_of_one_path() {
+        answering(&[]).show_many(request(DialogKind::OpenFile));
     }
 
     #[test]
