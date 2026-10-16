@@ -268,14 +268,16 @@ function describeProcess(pid: number): string {
   }
 }
 
-/** Waits until none of `pids` is running, for at most `timeoutMs`, and
- *  returns the ones still running. */
-async function waitForExit(pids: number[], timeoutMs: number): Promise<number[]> {
+/** Waits until no process of the session is running, for at most
+ *  `timeoutMs`, and returns the ones still running. Each check scans /proc
+ *  again, so a pid that exited and was reused by another process is not
+ *  reported. */
+async function waitForSessionExit(userDataDir: string, timeoutMs: number): Promise<number[]> {
   const deadline = Date.now() + timeoutMs
-  let running = pids.filter(isRunning)
+  let running = sessionPids(userDataDir)
   while (running.length > 0 && Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, QUIT_POLL_MS))
-    running = running.filter(isRunning)
+    running = sessionPids(userDataDir)
   }
   return running
 }
@@ -302,11 +304,13 @@ async function killLeftoverProcesses(userDataDir: string): Promise<void> {
   if (pids.length === 0) return
   console.error(`processes of the session still running after tauri-driver exited: ${pids.map(describeProcess).join(', ')}`)
   signalAll(pids, 'SIGTERM')
-  const afterTerm = await waitForExit(pids, LEFTOVER_TERM_WAIT_MS)
+  // The pids come from a fresh scan right before each signal, so a pid that
+  // exited and was reused by another process during the wait is not signalled.
+  const afterTerm = await waitForSessionExit(userDataDir, LEFTOVER_TERM_WAIT_MS)
   if (afterTerm.length === 0) return
   console.error(`sending SIGKILL to the processes that did not exit on SIGTERM: ${afterTerm.join(', ')}`)
   signalAll(afterTerm, 'SIGKILL')
-  const afterKill = await waitForExit(afterTerm, LEFTOVER_KILL_WAIT_MS)
+  const afterKill = await waitForSessionExit(userDataDir, LEFTOVER_KILL_WAIT_MS)
   if (afterKill.length > 0) console.error(`processes of the session still running after SIGKILL: ${afterKill.join(', ')}`)
 }
 
