@@ -13,6 +13,7 @@
     "sync-auth",
     "sync-password",
     "sync-execute",
+    "sync-password-change",
     "sync-data",
     "files",
     "keyboard-data",

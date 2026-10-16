@@ -226,6 +226,15 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::data::export_local_data,
         sync_commands::data::import_local_data,
         sync_commands::execute::sync_execute,
+        sync_commands::password_change::sync_change_password,
+        sync_commands::password_change::sync_password_change_status,
+        sync_commands::password_change::sync_password_change_resume,
+        sync_commands::password_change::sync_password_change_revert,
+        sync_commands::password_change::sync_password_change_abandon,
+        sync_commands::password_change::sync_password_change_delete_undecryptable,
+        sync_commands::password_change::sync_password_change_lock_status,
+        sync_commands::password_change::sync_password_change_release_locks,
+        sync_commands::password_change::sync_list_undecryptable,
         sync_commands::analytics_remote::sync_analytics_now,
         sync_commands::analytics_remote::typing_analytics_has_remote,
         sync_commands::analytics_remote::typing_analytics_list_remote_cloud_hashes,
@@ -286,6 +295,7 @@ fn main() {
             sync_commands::execute::manage(app.handle());
             sync_commands::analytics_remote::manage(app.handle());
             sync_commands::adopt_pending_at_startup(app.handle());
+            sync_commands::password_change::manage(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());

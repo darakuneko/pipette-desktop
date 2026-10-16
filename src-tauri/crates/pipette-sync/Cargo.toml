@@ -45,6 +45,8 @@ thiserror = "=2.0.21"
 # the `sync:` locks are held across awaits, and a switch of accounts waits
 # for running sync work; "macros": the two listings of the guard run at once.
 tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time"] }
+# The random id of a password change's Drive lock (`randomUUID`).
+uuid = { version = "=1.26.1", features = ["v4"] }
 zeroize = "=1.9.0"
 
 [dev-dependencies]
