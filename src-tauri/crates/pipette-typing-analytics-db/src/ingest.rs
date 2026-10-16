@@ -47,11 +47,8 @@ pub struct MinuteStatsInput {
     #[serde(rename = "intervalP75Ms")]
     pub interval_p75_ms: Option<f64>,
     pub interval_max_ms: Option<f64>,
-    #[serde(default)]
     pub app_name: Option<String>,
-    #[serde(default)]
     pub typing_test: Option<String>,
-    #[serde(default)]
     pub run_id: Option<String>,
 }
 
@@ -63,11 +60,8 @@ pub struct CharMinuteInput {
     pub minute_ts: f64,
     pub char: String,
     pub count: f64,
-    #[serde(default)]
     pub app_name: Option<String>,
-    #[serde(default)]
     pub typing_test: Option<String>,
-    #[serde(default)]
     pub run_id: Option<String>,
 }
 
@@ -82,15 +76,10 @@ pub struct MatrixMinuteInput {
     pub layer: f64,
     pub keycode: f64,
     pub count: f64,
-    #[serde(default)]
     pub tap_count: Option<f64>,
-    #[serde(default)]
     pub hold_count: Option<f64>,
-    #[serde(default)]
     pub app_name: Option<String>,
-    #[serde(default)]
     pub typing_test: Option<String>,
-    #[serde(default)]
     pub run_id: Option<String>,
 }
 
