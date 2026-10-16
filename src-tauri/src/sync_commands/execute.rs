@@ -15,9 +15,7 @@ use pipette_drive::canonical::Listing;
 use pipette_keyboard_stores::StoreContext;
 use pipette_sync::codec::EnvelopeCrypto;
 use pipette_sync::dispatch::{UnitSync, UnitSyncDeps};
-use pipette_sync::execute::{
-    ExecuteDeps, KeyboardMetaBackfill, PassHooks, SkipReason, SyncExecuteResult, SyncExecutor,
-};
+use pipette_sync::execute::{ExecuteDeps, KeyboardMetaBackfill, PassHooks, SyncExecuteResult, SyncExecutor};
 use pipette_sync::merge::{MergeEvents, PackKind};
 use pipette_sync::preflight::{BoxFuture, Preflight, PreflightError};
 use pipette_sync::scope::SyncScope;
@@ -196,10 +194,8 @@ pub async fn sync_execute(
             }
             answer(&result)
         }
-        Err(PreflightError::Credential(reason)) => {
-            let skip = SkipReason::Credential(reason).as_str();
-            SyncOperationResult::from(Err(PreflightError::Credential(reason)))
-                .with_status("skipped", Some(skip))
+        Err(err @ PreflightError::Credential(reason)) => {
+            SyncOperationResult::from(Err(err)).with_status("skipped", Some(reason.as_str()))
         }
         Err(err) => SyncOperationResult::failure(err.to_string(), None),
     })
@@ -207,6 +203,7 @@ pub async fn sync_execute(
 
 #[cfg(test)]
 mod tests {
+    use pipette_sync::execute::SkipReason;
     use pipette_sync_runtime::SyncCredentialFailureReason;
     use serde_json::json;
 
