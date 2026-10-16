@@ -305,7 +305,8 @@ fn calls(swaps: &[(&str, &str)]) -> Vec<Value> {
     calls
 }
 
-/// Each call with its answer as JSON text, `null` when it failed.
+/// Each call with its answer as JSON text, `{ "error": true }` when it
+/// failed.
 async fn answer_calls(device: &Device, calls: &[Value]) -> Value {
     let ready = device.analytics.ready().await.unwrap();
     let (user_data, hash, calls) = (device.user_data.clone(), ready.machine_hash.clone(), calls.to_vec());
@@ -348,7 +349,8 @@ async fn answer_calls(device: &Device, calls: &[Value]) -> Value {
                             .map_err(|err| err.to_string()),
                     };
                     let mut out = call.as_object().unwrap().clone();
-                    out.insert("response", answer.map_or(Value::Null, Value::from));
+                    let failed = || Value::Object([("error", Value::Bool(true))].into_iter().collect());
+                    out.insert("response", answer.map_or_else(|_| failed(), Value::from));
                     Value::Object(out)
                 })
                 .collect::<Vec<_>>()

@@ -81,9 +81,12 @@ interface Call {
   member: string
   /** The arguments, tagged as tagged.ts tags them. */
   args: unknown[]
-  /** The answer as JSON text, or null when the call failed. */
-  response: string | null
+  response: Response
 }
+
+/** The answer as JSON text; null when the answer has no JSON text
+ *  (`undefined`); `{ error: true }` when the call failed. */
+type Response = string | null | { error: true }
 
 interface Answers {
   machineId: string
@@ -122,15 +125,17 @@ function untagged(value: unknown): unknown {
   return Object.fromEntries(keys.map((key) => [key, untagged(object[key])]))
 }
 
-async function answer(call: Call): Promise<string | null> {
+async function answer(call: Call): Promise<Response> {
   const channel = (IpcChannels as Record<string, string>)[channelKey(call.member)]
   const handler = channel === undefined ? undefined : pinned.handlers.get(channel)
   if (!handler) throw new Error(`no handler for ${call.member}`)
+  let result: unknown
   try {
-    return JSON.stringify(await handler(undefined, ...(untagged(call.args) as unknown[]))) ?? null
+    result = await handler(undefined, ...(untagged(call.args) as unknown[]))
   } catch {
-    return null
+    return { error: true }
   }
+  return JSON.stringify(result) ?? null
 }
 
 async function expectSameAnswers(calls: Call[]): Promise<void> {
@@ -138,7 +143,7 @@ async function expectSameAnswers(calls: Call[]): Promise<void> {
   const mismatches: string[] = []
   for (const [i, call] of calls.entries()) {
     const got = await answer(call)
-    if (got !== call.response) mismatches.push(`${i} ${call.member} ${JSON.stringify(call.args)}`)
+    if (JSON.stringify(got) !== JSON.stringify(call.response)) mismatches.push(`${i} ${call.member} ${JSON.stringify(call.args)}`)
   }
   expect(mismatches).toEqual([])
 }
