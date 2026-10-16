@@ -14,6 +14,8 @@ use tauri::{AppHandle, Manager, Runtime};
 
 pub mod auth;
 pub mod password;
+pub mod preflight;
+pub mod result;
 
 /// The secret store and the Google sign-in of the sync.
 pub struct SyncSecrets {

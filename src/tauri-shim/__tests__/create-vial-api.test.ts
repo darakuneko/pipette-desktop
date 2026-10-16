@@ -59,9 +59,11 @@ describe('createVialApi', () => {
 })
 
 describe('implemented', () => {
-  it('answers the startup calls with the values of a fresh install', async () => {
+  it('asks the backend for the sync format status', async () => {
+    invoke.mockResolvedValueOnce(null)
     const api = createVialApi(implemented)
     await expect(api.syncFormatStatus()).resolves.toBeNull()
+    expect(invoke).toHaveBeenLastCalledWith('sync_format_status', undefined)
   })
 
   it('asks the backend for the sync sign-in status', async () => {

@@ -11,6 +11,7 @@
     "window",
     "sync-pending",
     "sync-auth",
+    "sync-password",
     "files",
     "keyboard-data",
     "favorites",

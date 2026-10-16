@@ -2907,6 +2907,7 @@ dependencies = [
  "lzma-rs",
  "pipette-active-window",
  "pipette-app-config",
+ "pipette-drive",
  "pipette-entry-store",
  "pipette-fs",
  "pipette-google-auth",
@@ -2917,7 +2918,9 @@ dependencies = [
  "pipette-net",
  "pipette-pack-stores",
  "pipette-secret-store",
+ "pipette-sync",
  "pipette-sync-pending",
+ "pipette-sync-runtime",
  "pipette-time",
  "pipette-typing-analytics",
  "pipette-typing-analytics-db",
@@ -2937,6 +2940,7 @@ dependencies = [
  "ts-rs",
  "webkit2gtk",
  "xz4rust",
+ "zeroize",
 ]
 
 [[package]]
@@ -3145,15 +3149,20 @@ dependencies = [
  "pipette-js-json",
  "pipette-keyboard-stores",
  "pipette-pack-stores",
+ "pipette-secret-store",
  "pipette-sync-format",
  "pipette-sync-runtime",
  "pipette-time",
  "pipette-typing-analytics",
  "pipette-typing-analytics-db",
  "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]

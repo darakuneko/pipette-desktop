@@ -198,4 +198,9 @@ pub const APP_COMMANDS: &[&str] = &[
     // src/sync_commands/auth.rs, src/sync_commands/password.rs
     "sync_auth_status",
     "sync_password_status",
+    // src/sync_commands/password.rs, src/sync_commands/preflight.rs
+    "sync_set_password",
+    "sync_replace_password",
+    "sync_check_password_exists",
+    "sync_format_status",
 ];

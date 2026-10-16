@@ -164,6 +164,7 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     crate::typing_dataset_commands::manage(app.handle(), user_data);
     crate::analytics_commands::mark_cache_fresh(user_data, "machine");
     crate::analytics_commands::manage_with_machine_id(app.handle(), user_data, "machine");
+    crate::sync_commands::preflight::manage_for_tests(app.handle());
     app
 }
 

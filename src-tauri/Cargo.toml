@@ -48,6 +48,13 @@ pipette-typing-analytics-db = { path = "crates/pipette-typing-analytics-db" }
 # The sync's secrets and its Google sign-in (src/sync_commands.rs).
 pipette-secret-store = { path = "crates/pipette-secret-store" }
 pipette-google-auth = { path = "crates/pipette-google-auth" }
+# The Drive client and the parts every sync entry point runs before it
+# touches data (src/sync_commands/preflight.rs).
+pipette-drive = { path = "crates/pipette-drive" }
+pipette-sync = { path = "crates/pipette-sync" }
+pipette-sync-runtime = { path = "crates/pipette-sync-runtime" }
+# The sync password the page sends is zeroed once the command is done.
+zeroize = "=1.9.0"
 pipette-time = { path = "crates/pipette-time" }
 log = "=0.4.34"
 serde = { workspace = true }
@@ -119,6 +126,8 @@ toml = "=1.1.8"
 tokio = { version = "=1.53.3", features = ["rt", "macros", "test-util"] }
 # The in-memory key store of the sync command tests.
 pipette-secret-store = { path = "crates/pipette-secret-store", features = ["test-util"] }
+# The in-memory Drive of the sync command tests.
+pipette-drive = { path = "crates/pipette-drive", features = ["test-util"] }
 # The mock runtime the IPC contract tests (src/ipc_contract.rs) run the app
 # commands on. Same version as the tauri dependency.
 tauri = { version = "=2.12.1", features = ["tray-icon", "test"] }

@@ -22,10 +22,6 @@ export const fakes = {
   // Tray.
   trayStatusUpdate: () => Promise.resolve(),
 
-  // Cloud sync. With no cached Drive status yet, the main process reports
-  // the sync format status as null.
-  syncFormatStatus: () => Promise.resolve(null),
-
   // Startup notification.
   notificationFetch: () => Promise.resolve({ success: false }),
 

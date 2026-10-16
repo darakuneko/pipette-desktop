@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI members of the sync password of the Tauri build: set, replace,
-// status, the strength check and whether Drive has a password-check. The
-// status is the backend's (src-tauri/src/sync_commands/password.rs); the
-// password itself never comes back to the page. The strength check runs
-// here, with the library and dictionaries `checkPasswordStrength` of
-// src/main/sync/sync-crypto.ts uses, loaded the first time a password is
-// checked. Set, replace and the password-check are not backed by a backend
-// command yet and fall back to the stubs of create-vial-api.ts.
+// status, the strength check and whether Drive has a password-check. All but
+// the strength check are the backend's (src-tauri/src/sync_commands/password.rs);
+// the password goes to the backend and never comes back to the page. The
+// strength check runs here, with the library and dictionaries
+// `checkPasswordStrength` of src/main/sync/sync-crypto.ts uses, loaded the
+// first time a password is checked.
 // coverage.test.ts lists the members each of these modules holds.
 
 import type { ZxcvbnFactory } from '@zxcvbn-ts/core'
-import type { PasswordStrength } from '../../shared/types/sync'
+import type { PasswordStrength, SyncOperationResult } from '../../shared/types/sync'
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { StoredPasswordStatus } from '../generated/StoredPasswordStatus'
 import { call } from '../ipc'
@@ -50,6 +49,9 @@ async function checkPasswordStrength(password: string): Promise<PasswordStrength
 }
 
 export const syncPasswordApi = {
+  syncSetPassword: (password) => call<SyncOperationResult>('sync_set_password', { password }),
+  syncReplacePassword: (password) => call<SyncOperationResult>('sync_replace_password', { password }),
   syncPasswordStatus: () => call<StoredPasswordStatus>('sync_password_status'),
   syncValidatePassword: checkPasswordStrength,
+  syncCheckPasswordExists: () => call<boolean>('sync_check_password_exists'),
 } satisfies Partial<VialAPI>
