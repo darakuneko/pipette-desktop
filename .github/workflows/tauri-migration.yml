@@ -59,11 +59,16 @@ jobs:
         working-directory: src-tauri
         run: cargo test --workspace --features pipette-app/dev-tools
 
-      # The test above wrote a userData tree with the Rust stores
-      # (crates/pipette-keyboard-stores/tests/rust_user_data.rs); the
-      # Electron build's handlers must read it and answer as the crate does.
+      # The test above wrote userData trees with the Rust stores (the
+      # tests/rust_user_data.rs of pipette-keyboard-stores,
+      # pipette-pack-stores and pipette-typing-datasets); the Electron
+      # build's handlers must read them, answer as the crates do and write
+      # nothing.
       - name: Read the Rust stores' userData with the Electron handlers
-        run: pnpm run verify:keyboard-store-rust-user-data
+        run: |
+          pnpm run verify:keyboard-store-rust-user-data
+          pnpm run verify:pack-store-rust-user-data
+          pnpm run verify:typing-dataset-rust-user-data
 
       # --intent-to-add makes a new file show up in the diff too;
       # comparing with HEAD keeps a deleted one in it even when the add

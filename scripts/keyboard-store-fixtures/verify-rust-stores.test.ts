@@ -18,7 +18,9 @@
 //   against the shim's members (src/tauri-shim/api/settings.ts) given the
 //   crate's answers;
 // - the pending units restorePendingFromDisk (sync-pending-store.ts) reads
-//   from local/sync-pending.json.
+//   from local/sync-pending.json;
+//
+// and that reading wrote nothing to the tree.
 //
 // Run: pnpm run verify:keyboard-store-rust-user-data
 
@@ -27,6 +29,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { cargoTargetTmpDir } from '../fixture-files'
+import { readTree } from '../rust-user-data-tree'
 
 const { handlers, notified, paths, stub, backend } = vi.hoisted(() => {
   /** A module whose exports are `extra`, and a function resolving to
@@ -154,6 +157,7 @@ describe('the userData tree the Rust stores write', () => {
   setupTypingTestTextStore()
   setupPipetteSettingsStore()
   setupSyncIpc()
+  const before = readTree(copy)
 
   it('lists and loads every keyboard’s snapshots as the crate does', async () => {
     expect(Object.keys(answers.snapshots).length).toBeGreaterThan(0)
@@ -229,6 +233,10 @@ describe('the userData tree the Rust stores write', () => {
     const names = getActiveKeyboardMetaMap(await readKeyboardMetaIndex())
     const listed = JSON.parse(answers.storedKeyboards) as { uid: string; name: string }[]
     expect(Object.fromEntries(names)).toEqual(Object.fromEntries(listed.map(({ uid, name }) => [uid, name])))
+  })
+
+  it('wrote nothing to the tree while reading', () => {
+    expect(readTree(copy)).toEqual(before)
   })
 
   it('restores the pending units in the order the crate reported them', () => {
