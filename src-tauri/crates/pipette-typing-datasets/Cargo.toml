@@ -10,6 +10,8 @@ rust-version.workspace = true
 
 [dependencies]
 log = "=0.4.34"
+# `is_safe_path_segment`, under the check of the paths built from names.
+pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-fs = { path = "../pipette-fs" }
 # The JSON files and Hub payloads read and written as JavaScript does (key
 # order, numbers, lone surrogates).

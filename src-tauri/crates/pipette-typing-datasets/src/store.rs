@@ -13,9 +13,10 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
+use pipette_entry_store::is_safe_path_segment;
 use pipette_js_json::{JsString, Object, Value};
 use pipette_net::Http;
 
@@ -104,6 +105,29 @@ fn is_safe_name(name: &str) -> bool {
     !name.is_empty() && !name.contains(['/', '\\'])
 }
 
+/// Whether `segment` joined onto a directory names an entry directly in
+/// that directory on every OS: [`is_safe_path_segment`] (no separator, not
+/// `.` or `..`), no NUL, no drive prefix (`C:` joins as a drive-relative
+/// path on Windows) and exactly one normal path component. Every path built
+/// from a provider or a word list name goes through this.
+pub(crate) fn is_one_segment(segment: &str) -> bool {
+    let drive_prefix = matches!(segment.as_bytes(), [letter, b':', ..] if letter.is_ascii_alphabetic());
+    is_safe_path_segment(segment)
+        && !segment.contains('\0')
+        && !drive_prefix
+        && matches!(Path::new(segment).components().collect::<Vec<_>>().as_slice(), [Component::Normal(_)])
+}
+
+/// A word list name the handlers accept (`isSafeName`) whose file name
+/// is also one path segment ([`is_one_segment`]).
+fn is_valid_name(name: &str) -> bool {
+    is_safe_name(name) && is_one_segment(&language_file_name(name))
+}
+
+fn language_file_name(name: &str) -> String {
+    format!("{name}.json")
+}
+
 /// `resolveProvider`: a registered provider, else the default one.
 fn resolve_provider(provider: Option<&str>) -> String {
     provider.filter(|p| is_registered(p)).unwrap_or(DEFAULT_PROVIDER).to_owned()
@@ -112,11 +136,6 @@ fn resolve_provider(provider: Option<&str>) -> String {
 /// The provider of a dataset check or update: any non-empty one.
 fn dataset_provider(provider: Option<&str>) -> String {
     provider.filter(|p| !p.is_empty()).unwrap_or(DEFAULT_PROVIDER).to_owned()
-}
-
-/// A provider that names one directory under the languages directory.
-fn is_path_segment(provider: &str) -> bool {
-    is_safe_name(provider) && provider != "." && provider != ".." && !provider.contains('\0')
 }
 
 /// `getStatus`.
@@ -165,8 +184,11 @@ fn migrate_legacy_downloads(root: &Path) {
     let legacy: Vec<_> = entries
         .flatten()
         .filter(|entry| {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
             entry.file_type().is_ok_and(|kind| kind.is_file())
-                && entry.file_name().to_string_lossy().ends_with(".json")
+                && name.ends_with(".json")
+                && is_one_segment(&name)
         })
         .map(|entry| entry.file_name())
         .collect();
@@ -199,8 +221,20 @@ impl Inner {
         self.user_data.join("local").join("downloads").join("languages")
     }
 
-    fn languages_dir(&self, provider: &str) -> PathBuf {
-        self.languages_root().join(provider)
+    /// The provider's word list directory; `None` for a provider that is
+    /// not one path segment.
+    fn languages_dir(&self, provider: &str) -> Option<PathBuf> {
+        is_one_segment(provider).then(|| self.languages_root().join(provider))
+    }
+
+    /// The file of a word list; `None` unless both names are one path
+    /// segment.
+    fn language_file(&self, provider: &str, name: &str) -> Option<PathBuf> {
+        let file = language_file_name(name);
+        if !is_one_segment(&file) {
+            return None;
+        }
+        self.languages_dir(provider).map(|dir| dir.join(file))
     }
 
     fn overrides_path(&self) -> PathBuf {
@@ -260,8 +294,8 @@ impl Inner {
         *lock(&self.overrides) = Some(Arc::new(next));
         // A provider that is not one path segment has no directory of its
         // own to clear.
-        if is_path_segment(provider) {
-            clear_downloaded(&self.languages_dir(provider));
+        if let Some(dir) = self.languages_dir(provider) {
+            clear_downloaded(&dir);
         }
         Ok(())
     }
@@ -315,7 +349,8 @@ impl LanguageStore {
         self.migrated().await;
         let provider = resolve_provider(provider);
         self.blocking(move |inner| {
-            let downloaded = downloaded_set(&inner.languages_dir(&provider));
+            let downloaded =
+                inner.languages_dir(&provider).map(|dir| downloaded_set(&dir)).unwrap_or_default();
             inner.with_dataset(&provider, |dataset| {
                 dataset
                     .languages
@@ -338,7 +373,7 @@ impl LanguageStore {
     /// which reads back as the object Electron answers), or `None` for a
     /// bundled language, a catalog dataset, or a missing or invalid file.
     pub async fn get(&self, name: &str, provider: Option<&str>) -> Result<Option<String>, DatasetError> {
-        if !is_safe_name(name) {
+        if !is_valid_name(name) {
             return Ok(None);
         }
         self.migrated().await;
@@ -351,7 +386,7 @@ impl LanguageStore {
             if inner.with_dataset(&provider, |dataset| dataset.model)? == Some(Model::Catalog) {
                 return Ok(None);
             }
-            let Ok(bytes) = fs::read(inner.languages_dir(&provider).join(format!("{name}.json"))) else {
+            let Some(Ok(bytes)) = inner.language_file(&provider, &name).map(fs::read) else {
                 return Ok(None);
             };
             let text = String::from_utf8_lossy(&bytes).into_owned();
@@ -363,7 +398,7 @@ impl LanguageStore {
     /// `LANG_DOWNLOAD`: fetches `{downloadUrlBase}/{name}.json`, checks its
     /// size and content, and writes the text. `Err` is the handler's error.
     pub async fn download(&self, name: &str, provider: Option<&str>) -> Result<(), String> {
-        if !is_safe_name(name) {
+        if !is_valid_name(name) {
             return Err("Invalid language name".to_owned());
         }
         self.migrated().await;
@@ -414,7 +449,7 @@ impl LanguageStore {
     /// `LANG_DELETE`: removes the downloaded word list. `Err` is the
     /// handler's error.
     pub async fn delete(&self, name: &str, provider: Option<&str>) -> Result<(), String> {
-        if !is_safe_name(name) {
+        if !is_valid_name(name) {
             return Err("Invalid language name".to_owned());
         }
         self.migrated().await;
@@ -427,7 +462,10 @@ impl LanguageStore {
             if inner.with_dataset(&provider, |dataset| dataset.model)? == Some(Model::Catalog) {
                 return Ok(Err(CATALOG_ERROR.to_owned()));
             }
-            Ok(match fs::remove_file(inner.languages_dir(&provider).join(format!("{name}.json"))) {
+            let Some(path) = inner.language_file(&provider, &name) else {
+                return Ok(Err("Invalid language name".to_owned()));
+            };
+            Ok(match fs::remove_file(path) {
                 Ok(()) => {
                     log::info!("Deleted language: {provider}/{name}");
                     Ok(())
@@ -508,13 +546,39 @@ fn write_language(inner: &Inner, provider: &str, name: &str, bytes: &[u8]) -> Re
     if !is_language_data(&data) {
         return Err("Invalid language data".to_owned());
     }
-    let dir = inner.languages_dir(provider);
-    let written = fs::create_dir_all(&dir)
-        .and_then(|()| pipette_fs::write_file_atomic(&dir.join(format!("{name}.json")), text.as_bytes()));
+    let (Some(dir), Some(path)) = (inner.languages_dir(provider), inner.language_file(provider, name)) else {
+        return Err("Invalid language name".to_owned());
+    };
+    let written =
+        fs::create_dir_all(&dir).and_then(|()| pipette_fs::write_file_atomic(&path, text.as_bytes()));
     if let Err(err) = written {
         log::warn!("Failed to download language {provider}/{name}: {err}");
         return Err(format!("Error: {err}"));
     }
     log::info!("Downloaded language: {provider}/{name}");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_segment_names_one_entry_of_its_directory_on_every_os() {
+        for bad in ["C:", "C:foo", "c:\\x", "\\\\server\\x", "/abs", "a/b", "..", ".", "", "a\0b"] {
+            assert!(!is_one_segment(bad), "{bad:?}");
+        }
+        for good in ["monkeytype", "german.json", "...json", "a b?#c.json", "x.json.json", "日本語"] {
+            assert!(is_one_segment(good), "{good:?}");
+        }
+    }
+
+    #[test]
+    fn a_name_is_valid_when_its_file_name_is_one_segment() {
+        assert!(is_valid_name("german"));
+        assert!(is_valid_name(".."));
+        assert!(!is_valid_name("C:"));
+        assert!(!is_valid_name("a/b"));
+        assert!(!is_valid_name(""));
+    }
 }
