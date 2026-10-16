@@ -12,6 +12,7 @@
     "sync-pending",
     "sync-auth",
     "sync-password",
+    "sync-execute",
     "sync-data",
     "files",
     "keyboard-data",

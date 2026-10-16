@@ -225,6 +225,7 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::preflight::sync_format_status,
         sync_commands::data::export_local_data,
         sync_commands::data::import_local_data,
+        sync_commands::execute::sync_execute,
     ]
 }
 
@@ -277,6 +278,7 @@ fn main() {
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             sync_commands::preflight::manage(app.handle());
+            sync_commands::execute::manage(app.handle());
             sync_commands::adopt_pending_at_startup(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;

@@ -23,7 +23,7 @@ use crate::Error;
 use crate::cache_rebuild::ensure_cache_is_fresh;
 use crate::db_actor::{DbActor, db_path};
 use crate::identity::{IdentityError, MachineIdentity};
-use crate::sync_state::TypingSyncState;
+use crate::sync_state::{TypingSyncState, load_sync_state, save_sync_state};
 
 /// Rebuilds the cache from the JSONL masters through the database thread:
 /// `(db, userData, ownHash)`. Called on a thread that may block.
@@ -58,6 +58,8 @@ pub struct TypingAnalytics {
     rebuild: RebuildCache,
     init: Mutex<Init>,
     initialized: OnceLock<InitializedHook>,
+    /// Held by [`TypingAnalytics::update_sync_state`].
+    sync_state_writes: Mutex<()>,
 }
 
 impl TypingAnalytics {
@@ -74,6 +76,7 @@ impl TypingAnalytics {
             rebuild,
             init: Mutex::new(Init::Idle),
             initialized: OnceLock::new(),
+            sync_state_writes: Mutex::new(()),
         }
     }
 
@@ -103,6 +106,22 @@ impl TypingAnalytics {
     /// The analytics' clock.
     pub fn clock(&self) -> &Arc<dyn Clock> {
         &self.clock
+    }
+
+    /// The read-modify-write of `sync_state.json` the sync layer does after
+    /// an upload or a merge: reads the file (an empty state for `own_hash`
+    /// when there is none or it cannot be read), lets `update` change it,
+    /// and writes it when `update` answers true. One runs at a time, so two
+    /// of them never write over each other's change. The flush does not
+    /// take this lock: it writes the state it keeps in memory. Blocks.
+    pub fn update_sync_state(
+        &self,
+        own_hash: &str,
+        update: impl FnOnce(&mut TypingSyncState) -> bool,
+    ) -> std::io::Result<()> {
+        let _writing = self.sync_state_writes.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut state = load_sync_state(&self.user_data).unwrap_or_else(|| TypingSyncState::empty(own_hash));
+        if update(&mut state) { save_sync_state(&self.user_data, &state) } else { Ok(()) }
     }
 
     fn lock(&self) -> MutexGuard<'_, Init> {
@@ -196,7 +215,6 @@ mod tests {
     use pipette_typing_analytics_db::{SCHEMA_VERSION, TypingAnalyticsDb};
 
     use super::*;
-    use crate::sync_state::{load_sync_state, save_sync_state};
 
     const ID: &str = "0f1e2d3c-4b5a-4697-8877-665544332211";
 
@@ -319,5 +337,41 @@ mod tests {
         assert_eq!(calls.load(Ordering::SeqCst), 1);
         assert!(ta.ready().await.is_ok());
         assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn updates_of_the_sync_state_run_one_at_a_time() {
+        let dir = tempfile::tempdir().unwrap();
+        let ta = analytics(dir.path(), || Ok("m".into()), Arc::new(AtomicUsize::new(0)));
+        // Each update adds one to what it reads.
+        let add = |state: &mut TypingSyncState| {
+            state.last_synced_at += 1.0;
+            true
+        };
+        let (entered, first_inside) = std::sync::mpsc::channel();
+        let (release, released) = std::sync::mpsc::channel::<()>();
+        let (ta, entered_too) = (&*ta, entered.clone());
+        std::thread::scope(|scope| {
+            let first = scope.spawn(move || {
+                ta.update_sync_state("h", |state| {
+                    entered.send("first").unwrap();
+                    released.recv().unwrap();
+                    add(state)
+                })
+            });
+            assert_eq!(first_inside.recv().unwrap(), "first");
+            let second = scope.spawn(move || {
+                ta.update_sync_state("h", |state| {
+                    entered_too.send("second").unwrap();
+                    add(state)
+                })
+            });
+            // The second waits for the first to write; it reads that write.
+            assert!(first_inside.recv_timeout(std::time::Duration::from_millis(100)).is_err());
+            release.send(()).unwrap();
+            first.join().unwrap().unwrap();
+            second.join().unwrap().unwrap();
+        });
+        assert_eq!(load_sync_state(dir.path()).unwrap().last_synced_at, 2.0);
     }
 }

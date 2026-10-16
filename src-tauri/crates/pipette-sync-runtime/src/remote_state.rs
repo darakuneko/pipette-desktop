@@ -74,6 +74,20 @@ impl RemoteMemory {
     pub fn clear_created_files(&self) {
         lock(&self.created).clear();
     }
+
+    /// Every revision recorded as handled, by name.
+    pub fn handled_revisions(&self) -> Vec<(String, RemoteRevision)> {
+        let mut handled: Vec<_> = lock(&self.handled).iter().map(|(n, r)| (n.clone(), r.clone())).collect();
+        handled.sort_by(|a, b| a.0.cmp(&b.0));
+        handled
+    }
+
+    /// Every created file remembered, by name.
+    pub fn created_files(&self) -> Vec<(String, String)> {
+        let mut created: Vec<_> = lock(&self.created).iter().map(|(n, id)| (n.clone(), id.clone())).collect();
+        created.sort();
+        created
+    }
 }
 
 #[cfg(test)]

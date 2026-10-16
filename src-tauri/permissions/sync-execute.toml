@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The command of src/sync_commands/execute.rs: a sync pass of a scope with
+# Drive. Its progress and the units it applied come back as events.
+
+[[set]]
+identifier = "sync-execute"
+description = "Runs a sync pass of a scope with Drive, downloading or uploading."
+permissions = [
+  "allow-sync-execute",
+]

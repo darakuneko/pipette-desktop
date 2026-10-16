@@ -25,6 +25,7 @@ import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store'
 import type { TypingAnalyticsEvent, TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
+import type { SyncScope } from '../../shared/types/sync'
 import type { VialAPI } from '../../shared/types/vial-api'
 
 interface Entry {
@@ -180,6 +181,10 @@ const CALLERS: Record<string, Caller> = {
   },
   syncCheckPasswordExists: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncCheckPasswordExists() },
   syncFormatStatus: { run: ({ syncExecute }) => syncExecute.syncExecuteApi.syncFormatStatus() },
+  syncExecute: {
+    run: ({ syncExecute }, [direction, scope]) =>
+      syncExecute.syncExecuteApi.syncExecute(direction as 'download' | 'upload', scope as SyncScope | undefined),
+  },
   exportLocalData: { run: ({ syncData }) => syncData.syncDataApi.exportLocalData() },
   importLocalData: { run: ({ syncData }) => syncData.syncDataApi.importLocalData() },
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },

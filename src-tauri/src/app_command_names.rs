@@ -208,4 +208,6 @@ pub const APP_COMMANDS: &[&str] = &[
     // src/sync_commands/data.rs
     "export_local_data",
     "import_local_data",
+    // src/sync_commands/execute.rs
+    "sync_execute",
 ];

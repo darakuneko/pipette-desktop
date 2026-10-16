@@ -23,7 +23,9 @@ use tokio::task::JoinSet;
 use zeroize::Zeroizing;
 
 use crate::crypto::run_key_derivation;
+use crate::execute::KeyboardMetaBackfill;
 use crate::merge::MergeEvents;
+use crate::preflight::BoxFuture;
 
 /// How many keyboards are resolved at once.
 const BACKFILL_CONCURRENCY: usize = 5;
@@ -141,4 +143,28 @@ pub async fn backfill_keyboard_meta(
         events.unit_applied(KEYBOARD_META_SYNC_UNIT);
     }
     Ok(BackfillResult { resolved, failed })
+}
+
+/// The backfill a pass of [`crate::execute::SyncExecutor`] runs after a
+/// download of `'all'`: [`backfill_keyboard_meta`] on the stores of `ctx`
+/// and on `drive`, reporting to `events`. A failure is the error's message.
+pub struct StoreMetaBackfill {
+    pub ctx: StoreContext,
+    pub drive: DriveClient,
+    pub events: Arc<dyn MergeEvents>,
+}
+
+impl KeyboardMetaBackfill for StoreMetaBackfill {
+    fn backfill<'a>(
+        &'a self,
+        password: &'a str,
+        listing: &'a Listing,
+    ) -> BoxFuture<'a, Result<usize, String>> {
+        Box::pin(async move {
+            backfill_keyboard_meta(&self.ctx, &self.drive, password, listing, self.events.as_ref())
+                .await
+                .map(|result| result.resolved)
+                .map_err(|err| err.to_string())
+        })
+    }
 }
