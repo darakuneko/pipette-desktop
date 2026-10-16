@@ -8,15 +8,17 @@
 // itself — the main-side handler broadcasts `THEME_PACK_CHANGED` on
 // success, which reaches this same window's `themePackOnChanged`
 // listener (see useThemePackStore.ts). Tests simulate that broadcast
-// by invoking the captured callback directly.
+// through the backend. Runs on both vialAPI implementations
+// (theme-pack-backends.ts).
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useThemePackStore } from '../useThemePackStore'
+import { themePackBackends } from './theme-pack-backends'
 
 const mockList = vi.fn()
 const mockReorder = vi.fn()
-let onChangedCallback: (() => void) | undefined
 
 function meta(overrides: Partial<{ id: string; name: string }> = {}) {
   return {
@@ -29,21 +31,19 @@ function meta(overrides: Partial<{ id: string; name: string }> = {}) {
   }
 }
 
-describe('useThemePackStore reorder', () => {
+const backends = themePackBackends({ themePackList: mockList, themePackReorder: mockReorder })
+
+afterEach(() => {
+  clearMocks()
+})
+
+describe.each(backends)('useThemePackStore reorder ($name)', (backend) => {
   beforeEach(() => {
     vi.clearAllMocks()
-    onChangedCallback = undefined
     mockList.mockResolvedValue({ success: true, data: [meta({ id: 'a', name: 'A' }), meta({ id: 'b', name: 'B' })] })
     mockReorder.mockResolvedValue({ success: true })
     Object.defineProperty(window, 'vialAPI', {
-      value: {
-        themePackList: mockList,
-        themePackReorder: mockReorder,
-        themePackOnChanged: (cb: () => void) => {
-          onChangedCallback = cb
-          return () => { onChangedCallback = undefined }
-        },
-      },
+      value: backend.install(),
       writable: true,
       configurable: true,
     })
@@ -62,7 +62,7 @@ describe('useThemePackStore reorder', () => {
     // Simulate the main process's THEME_PACK_CHANGED broadcast that
     // the IPC handler fires on a successful reorder.
     mockList.mockResolvedValueOnce({ success: true, data: [meta({ id: 'b', name: 'B' }), meta({ id: 'a', name: 'A' })] })
-    await act(async () => { onChangedCallback?.() })
+    await act(async () => { await backend.broadcast() })
 
     await waitFor(() => expect(result.current.metas.map((m) => m.id)).toEqual(['b', 'a']))
   })

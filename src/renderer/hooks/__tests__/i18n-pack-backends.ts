@@ -5,15 +5,14 @@
 // pack members over a mocked Tauri IPC, whose commands hand the spies their
 // arguments in the members' order.
 //
-// For the shim, the import dialog's answer crosses as each file's text: a
-// file the spy answers with `raw` crosses as the JSON of it, and one with a
-// `parseError` as a file that could not be read, with that error.
+// For the shim, the import dialog's answer crosses as each file's text
+// (pack-backends.ts).
 
 import { mockIPC } from '@tauri-apps/api/mocks'
 import type { I18nPackImportDialogResult } from '../../../shared/types/i18n-store'
 import type { VialAPI } from '../../../shared/types/vial-api'
 import { i18nPacksApi } from '../../../tauri-shim/api/i18n-packs'
-import type { PackImportRead } from '../../../tauri-shim/generated/PackImportRead'
+import { asRead, parse } from './pack-backends'
 
 type Spy = (...args: unknown[]) => unknown
 type I18nPackMember = Extract<keyof VialAPI, `i18nPack${string}`>
@@ -29,22 +28,6 @@ function spy(spies: I18nPackSpies, member: I18nPackMember): Spy {
   const found = spies[member]
   if (!found) throw new Error(`no spy for ${member}`)
   return found
-}
-
-/** The dialog's answer as the backend sends it. */
-function asRead(result: I18nPackImportDialogResult): PackImportRead {
-  return {
-    canceled: result.canceled,
-    files: result.files.map((file) =>
-      file.raw === undefined
-        ? { filePath: file.filePath, readError: file.parseError }
-        : { filePath: file.filePath, text: JSON.stringify(file.raw), fileSizeBytes: file.fileSizeBytes },
-    ),
-  }
-}
-
-function parse(text: unknown): unknown {
-  return typeof text === 'string' ? JSON.parse(text) : undefined
 }
 
 /** The Tauri shim's members over a mocked backend. */
