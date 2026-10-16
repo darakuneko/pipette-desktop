@@ -98,6 +98,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "lang_delete",
     "typing_dataset_check",
     "typing_dataset_update",
+    "aozora_import",
     // src/store_commands/i18n_packs.rs
     "i18n_pack_store_list",
     "i18n_pack_store_get",

@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The commands of src/typing_dataset_commands.rs: the Typing Test word lists
-# and their datasets.
+# The commands of src/typing_dataset_commands.rs: the Typing Test word lists,
+# their datasets and the Aozora Bunko catalog import.
 
 [[set]]
 identifier = "typing-datasets"
-description = "Lists, reads, downloads and deletes the Typing Test word lists, and checks for and applies dataset updates from the Hub."
+description = "Lists, reads, downloads and deletes the Typing Test word lists, checks for and applies dataset updates from the Hub, and imports Aozora Bunko catalog works as Typing Test texts."
 permissions = [
   "allow-lang-list",
   "allow-lang-get",
@@ -13,4 +13,5 @@ permissions = [
   "allow-lang-delete",
   "allow-typing-dataset-check",
   "allow-typing-dataset-update",
+  "allow-aozora-import",
 ]
