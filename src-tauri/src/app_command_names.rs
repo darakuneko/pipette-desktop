@@ -112,6 +112,11 @@ pub const APP_COMMANDS: &[&str] = &[
     "typing_dataset_check",
     "typing_dataset_update",
     "aozora_import",
+    // src/analytics_commands/queries.rs
+    "typing_analytics_list_keyboards",
+    "typing_analytics_list_items",
+    "typing_analytics_list_items_local",
+    "typing_analytics_list_items_for_hash",
     // src/store_commands/i18n_packs.rs
     "i18n_pack_store_list",
     "i18n_pack_store_get",

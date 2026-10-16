@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/analytics_commands/queries.rs: the keyboards with
+# typing analytics and their daily summaries.
+
+[[set]]
+identifier = "typing-analytics"
+description = "Lists the keyboards with typing analytics and their daily summaries, for every device, this device or one device."
+permissions = [
+  "allow-typing-analytics-list-keyboards",
+  "allow-typing-analytics-list-items",
+  "allow-typing-analytics-list-items-local",
+  "allow-typing-analytics-list-items-for-hash",
+]

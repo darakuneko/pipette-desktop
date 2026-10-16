@@ -2770,6 +2770,7 @@ dependencies = [
  "pipette-pack-stores",
  "pipette-sync-pending",
  "pipette-typing-analytics",
+ "pipette-typing-analytics-db",
  "pipette-typing-datasets",
  "rfd",
  "serde",

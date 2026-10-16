@@ -6,12 +6,14 @@
 //! ([`db_actor`]), startup ([`service`]), the lock the resets and
 //! deletes hold against the sync passes ([`reset_lock`]), and the replay of
 //! a device's day file with its deleted ranges hidden
-//! ([`deleted_ranges_cache`]).
+//! ([`deleted_ranges_cache`]), and the query layer the commands read
+//! through ([`queries`]).
 
 pub mod cache_rebuild;
 pub mod db_actor;
 pub mod deleted_ranges_cache;
 pub mod identity;
+pub mod queries;
 pub mod reset_lock;
 pub mod service;
 pub mod sync_state;
