@@ -524,10 +524,23 @@ pub struct PasswordChangeRun {
     ended: watch::Sender<bool>,
 }
 
+impl PasswordChangeRun {
+    fn release_lock(&mut self) {
+        drop(self.lock.take());
+    }
+}
+
 impl Drop for PasswordChangeRun {
     fn drop(&mut self) {
-        drop(self.lock.take());
-        self.runtime.lock().password_change = None;
+        self.release_lock();
+        // Another thread can start the next password change once the lock
+        // is free, before this clears the mark: clear only this run's.
+        let ours = self.ended.subscribe();
+        let mut state = self.runtime.lock();
+        if state.password_change.as_ref().is_some_and(|running| running.same_channel(&ours)) {
+            state.password_change = None;
+        }
+        drop(state);
         self.ended.send_replace(true);
     }
 }
@@ -673,6 +686,20 @@ mod tests {
         let answer = runtime.with_reset_lock_when_free(&uids(&["a"]), DELETE_BUSY_MESSAGE, async {}).await;
         assert_eq!(answer, Err(Busy(DELETE_BUSY_MESSAGE)));
         assert!(!runtime.reset_holds_keyboard("a") && !runtime.is_syncing());
+    }
+
+    #[test]
+    fn an_ending_password_change_keeps_the_next_runs_mark() {
+        let runtime = SyncRuntime::new();
+        let mut first = runtime.try_start_password_change().unwrap();
+        // The next run starts between the first's lock release and its end.
+        first.release_lock();
+        let second = runtime.try_start_password_change().unwrap();
+        drop(first);
+        assert!(runtime.password_change_running() && runtime.is_syncing());
+        assert!(runtime.try_start_password_change().is_none());
+        drop(second);
+        assert!(!runtime.password_change_running() && !runtime.is_syncing());
     }
 
     #[tokio::test]
