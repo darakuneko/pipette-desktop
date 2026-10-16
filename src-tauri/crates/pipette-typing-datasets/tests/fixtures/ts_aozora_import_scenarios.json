@@ -1,0 +1,445 @@
+[
+  {
+    "name": "imports works into the text store",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":574,\"title\":\"タイトル\",\"author\":\"著者名\",\"authorKana\":\"ちょしゃめい\"},{\"name\":\"000002/files/2_ruby_2.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":143,\"title\":\"かな\"},{\"name\":\"000003/files/3.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"\"},{\"name\":\"padded\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"  Padded  \",\"author\":\"\"},{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":\"Second entry of the same name\"}]}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150092be245c40100009a0200000c0000006469722f776f726b2e747874a592cb4b5b5110c6f781fc2525e0d5069add4d5a0205b19b160b2d4a0345226d0acda3d86c3adfa145bdaf785f0976e74250c942d188af80a242e45e10378288a8a0c6206870272e3c37f1b172a367353033bf6fbe39c3bad86bd6c324bf4f2fa85bf6a2dfe7f7059ef6fc3eea635f593bfbc87af47fa8c80ba8e1546a57788c158c60957e7b784a528aa24c623f791ccf1f50affd8d92d84191528d7cac998563a550b44aea70be0e474d6017555c18cb7a15b34dee5d3fc58cbaf6393722bde59c0a4a58c61cd79bb8e57d2793121435aef3aebaa52b24aa47a80cbe5387e1e4f6ed320e296cbf37bae1f46fe869aef44bafde93471bdd694ead631b75cafebfa40c85878edb727fb53f42407819784589e7ec4cb4b35609e30d7fa71479d805dcc77dc129c47081192c518433d203e78518a794294219ac9b7b70e532afe6596ffe816bd6479f58a73728bc5f19c3c9bd339753a650c698e7ebc38b50f84d88c2426ba08d12d2b4dc8175aee4e97451b7a7a5d7ec2c4529ad9c5971ad93c4a1e3fedae03865b41fe69abae9f9215108055b28aecd17beb406a9d7ec08caaad0625c994525c90b46310987a598c82f4f829b5b912ead925cc19a7286133edc6ed3d60d504b0102140014000000080000002150092be245c40100009a0200000c00000000000000000000000000000000006469722f776f726b2e747874504b050600000000010001003a000000ee0100000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "000002/files/2_ruby_2.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b0304140000000800000021500b63c6e91d0000001a00000008000000776f726b2e747874e3e56a5ad0b4a86949d3b2a6158d0e4d2b9b5637ad6d5adfb491970b00504b01021400140000000800000021500b63c6e91d0000001a000000080000000000000000000000000000000000776f726b2e747874504b0506000000000100010036000000430000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "000003/files/3.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150afe1ae93190000001c00000008000000776f726b2e747874e3e59a563d755bd3998e57bdc5d36e353af1724dfe08630100504b0102140014000000080000002150afe1ae93190000001c000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "padded",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150afe1ae93190000001c00000008000000776f726b2e747874e3e59a563d755bd3998e57bdc5d36e353af1724dfe08630100504b0102140014000000080000002150afe1ae93190000001c000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150092be245c40100009a0200000c0000006469722f776f726b2e747874a592cb4b5b5110c6f781fc2525e0d5069add4d5a0205b19b160b2d4a0345226d0acda3d86c3adfa145bdaf785f0976e74250c942d188af80a242e45e10378288a8a0c6206870272e3c37f1b172a367353033bf6fbe39c3bad86bd6c324bf4f2fa85bf6a2dfe7f7059ef6fc3eea635f593bfbc87af47fa8c80ba8e1546a57788c158c60957e7b784a528aa24c623f791ccf1f50affd8d92d84191528d7cac998563a550b44aea70be0e474d6017555c18cb7a15b34dee5d3fc58cbaf6393722bde59c0a4a58c61cd79bb8e57d2793121435aef3aebaa52b24aa47a80cbe5387e1e4f6ed320e296cbf37bae1f46fe869aef44bafde93471bdd694ead631b75cafebfa40c85878edb727fb53f42407819784589e7ec4cb4b35609e30d7fa71479d805dcc77dc129c47081192c518433d203e78518a794294219ac9b7b70e532afe6596ffe816bd6479f58a73728bc5f19c3c9bd339753a650c698e7ebc38b50f84d88c2426ba08d12d2b4dc8175aee4e97451b7a7a5d7ec2c4529ad9c5971ad93c4a1e3fedae03865b41fe69abae9f9215108055b28aecd17beb406a9d7ec08caaad0625c994525c90b46310987a598c82f4f829b5b912ead925cc19a7286133edc6ed3d60d504b0102140014000000080000002150092be245c40100009a0200000c00000000000000000000000000000000006469722f776f726b2e747874504b050600000000010001003a000000ee0100000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": 5,
+        "replies": []
+      },
+      {
+        "op": "import",
+        "workId": "",
+        "replies": []
+      },
+      {
+        "op": "import",
+        "workId": null,
+        "replies": []
+      },
+      {
+        "op": "import",
+        "replies": []
+      },
+      {
+        "op": "import",
+        "workId": "missing/work.zip",
+        "replies": []
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"タイトル（著者名）\",\"wordCount\":3,\"lineCount\":3,\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"source\":{\"provider\":\"aozora\",\"workId\":\"000001/files/1_ruby_1.zip\"},\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"}}}",
+      "{\"success\":true,\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"name\":\"かな（）\",\"wordCount\":2,\"lineCount\":1,\"filename\":\"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"source\":{\"provider\":\"aozora\",\"workId\":\"000002/files/2_ruby_2.zip\"},\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"}}}",
+      "{\"success\":true,\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"name\":\"000003/files/3.zip\",\"wordCount\":2,\"lineCount\":2,\"filename\":\"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"source\":{\"provider\":\"aozora\",\"workId\":\"000003/files/3.zip\"},\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"}}}",
+      "{\"success\":true,\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000004\",\"name\":\"Padded  （）\",\"wordCount\":2,\"lineCount\":2,\"filename\":\"00000000-0000-4000-8000-000000000004_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"source\":{\"provider\":\"aozora\",\"workId\":\"padded\"},\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"}}}",
+      "{\"success\":false,\"errorCode\":\"DUPLICATE_NAME\",\"error\":\"A text with the same name already exists\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Invalid work id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Invalid work id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Invalid work id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Invalid work id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Aozora work not in catalog: missing/work.zip\"}"
+    ],
+    "urls": [
+      "https://hub.example/aozora/cards/000001/files/1_ruby_1.zip",
+      "https://hub.example/aozora/cards/000002/files/2_ruby_2.zip",
+      "https://hub.example/aozora/cards/000003/files/3.zip",
+      "https://hub.example/aozora/cards/padded",
+      "https://hub.example/aozora/cards/000001/files/1_ruby_1.zip"
+    ],
+    "notified": [
+      "typing-test-texts",
+      "typing-test-texts",
+      "typing-test-texts",
+      "typing-test-texts"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":574,\"title\":\"タイトル\",\"author\":\"著者名\",\"authorKana\":\"ちょしゃめい\"},{\"name\":\"000002/files/2_ruby_2.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":143,\"title\":\"かな\"},{\"name\":\"000003/files/3.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"\"},{\"name\":\"padded\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"  Padded  \",\"author\":\"\"},{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1,\"title\":\"Second entry of the same name\"}]}}",
+      "sync/": null,
+      "sync/typing-test-texts/": null,
+      "sync/typing-test-texts/00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"タイトル（著者名）\",\n  \"text\": \"　本文が始まる。僕は二十世紀の話をした。\\n「会話文だ。」と彼は言った。\\nそれから髙橋君と話した〳〵。\"\n}",
+      "sync/typing-test-texts/00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"かな（）\",\n  \"text\": \"あいうえお かきくけこ\"\n}",
+      "sync/typing-test-texts/00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"000003/files/3.zip\",\n  \"text\": \"本文の一行目。\\n二行目。\"\n}",
+      "sync/typing-test-texts/00000000-0000-4000-8000-000000000004_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"Padded  （）\",\n  \"text\": \"本文の一行目。\\n二行目。\"\n}",
+      "sync/typing-test-texts/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"タイトル（著者名）\",\n      \"wordCount\": 3,\n      \"lineCount\": 3,\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000001/files/1_ruby_1.zip\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"name\": \"かな（）\",\n      \"wordCount\": 2,\n      \"lineCount\": 1,\n      \"filename\": \"00000000-0000-4000-8000-000000000002_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000002/files/2_ruby_2.zip\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000003\",\n      \"name\": \"000003/files/3.zip\",\n      \"wordCount\": 2,\n      \"lineCount\": 2,\n      \"filename\": \"00000000-0000-4000-8000-000000000003_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000003/files/3.zip\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000004\",\n      \"name\": \"Padded  （）\",\n      \"wordCount\": 2,\n      \"lineCount\": 2,\n      \"filename\": \"00000000-0000-4000-8000-000000000004_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"padded\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      }\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "download, archive and text failures",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"size\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":575,\"title\":\"T\"},{\"name\":\"half\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2.5},{\"name\":\"huge\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1e+21},{\"name\":\"http\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"server\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"offline\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"not-a-zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":59},{\"name\":\"no-text\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":234},{\"name\":\"unmapped\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":119},{\"name\":\"title-only\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":129},{\"name\":\"long-name\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"author\":\"b\"},{\"name\":\"gaiji\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139},{\"name\":\"empty-body\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":0}]}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "workId": "size",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150092be245c40100009a0200000c0000006469722f776f726b2e747874a592cb4b5b5110c6f781fc2525e0d5069add4d5a0205b19b160b2d4a0345226d0acda3d86c3adfa145bdaf785f0976e74250c942d188af80a242e45e10378288a8a0c6206870272e3c37f1b172a367353033bf6fbe39c3bad86bd6c324bf4f2fa85bf6a2dfe7f7059ef6fc3eea635f593bfbc87af47fa8c80ba8e1546a57788c158c60957e7b784a528aa24c623f791ccf1f50affd8d92d84191528d7cac998563a550b44aea70be0e474d6017555c18cb7a15b34dee5d3fc58cbaf6393722bde59c0a4a58c61cd79bb8e57d2793121435aef3aebaa52b24aa47a80cbe5387e1e4f6ed320e296cbf37bae1f46fe869aef44bafde93471bdd694ead631b75cafebfa40c85878edb727fb53f42407819784589e7ec4cb4b35609e30d7fa71479d805dcc77dc129c47081192c518433d203e78518a794294219ac9b7b70e532afe6596ffe816bd6479f58a73728bc5f19c3c9bd339753a650c698e7ebc38b50f84d88c2426ba08d12d2b4dc8175aee4e97451b7a7a5d7ec2c4529ad9c5971ad93c4a1e3fedae03865b41fe69abae9f9215108055b28aecd17beb406a9d7ec08caaad0625c994525c90b46310987a598c82f4f829b5b912ead925cc19a7286133edc6ed3d60d504b0102140014000000080000002150092be245c40100009a0200000c00000000000000000000000000000000006469722f776f726b2e747874504b050600000000010001003a000000ee0100000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "half",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "7878"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "huge",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "7878"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "http",
+        "replies": [
+          {
+            "status": 404,
+            "hex": ""
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "server",
+        "replies": [
+          {
+            "status": 500,
+            "hex": ""
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "offline",
+        "replies": [
+          {
+            "error": "net::ERR_INTERNET_DISCONNECTED"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "not-a-zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "54686973206973206e6f742061207a69702066696c652c206a75737420736f6d6520746578742074686174206973206c6f6e6720656e6f7567682e"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "no-text",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b0304140000000800000021501d80bc55050000000300000009000000696d6167652e706e676364620600504b0304140000000800000021508316dc8c0300000001000000110000005f5f4d41434f53582f776f726b2e747874ab0000504b01021400140000000800000021501d80bc550500000003000000090000000000000000000000000000000000696d6167652e706e67504b01021400140000000800000021508316dc8c030000000100000011000000000000000000000000002c0000005f5f4d41434f53582f776f726b2e747874504b05060000000002000200760000005e0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "unmapped",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150871bf048050000006400000008000000776f726b2e7478745b40070000504b0102140014000000080000002150871bf0480500000064000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000002b0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "title-only",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150bdbbc3820f0000000d00000008000000776f726b2e747874f3cfcba90cc92cc949f5c9cc4b0500504b0102140014000000080000002150bdbbc3820f0000000d000000080000000000000000000000000000000000776f726b2e747874504b0506000000000100010036000000350000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "long-name",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150afe1ae93190000001c00000008000000776f726b2e747874e3e59a563d755bd3998e57bdc5d36e353af1724dfe08630100504b0102140014000000080000002150afe1ae93190000001c000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "gaiji",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150a7c91210190000001800000008000000776f726b2e747874e3e59ae8dfb8ac31b7714aa8b6a1a1011034e6f53ce6e50200504b0102140014000000080000002150a7c912101900000018000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "empty-body",
+        "replies": [
+          {
+            "status": 200,
+            "hex": ""
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"SIZE_MISMATCH\",\"error\":\"expected 575 bytes, got 574\"}",
+      "{\"success\":false,\"errorCode\":\"SIZE_MISMATCH\",\"error\":\"expected 2.5 bytes, got 2\"}",
+      "{\"success\":false,\"errorCode\":\"SIZE_MISMATCH\",\"error\":\"expected 1e+21 bytes, got 2\"}",
+      "{\"success\":false,\"errorCode\":\"DOWNLOAD_FAILED\",\"error\":\"HTTP 404\"}",
+      "{\"success\":false,\"errorCode\":\"DOWNLOAD_FAILED\",\"error\":\"HTTP 500\"}",
+      "{\"success\":false,\"errorCode\":\"DOWNLOAD_FAILED\",\"error\":\"Error: net::ERR_INTERNET_DISCONNECTED\"}",
+      "{\"success\":false,\"errorCode\":\"NO_TEXT_ENTRY\",\"error\":\"Failed to unzip: Error: invalid zip data\"}",
+      "{\"success\":false,\"errorCode\":\"NO_TEXT_ENTRY\",\"error\":\"Zip contains no .txt entry\"}",
+      "{\"success\":false,\"errorCode\":\"DECODE_FAILED\",\"error\":\"Decoded text exceeds the replacement-character threshold\"}",
+      "{\"success\":false,\"errorCode\":\"EMPTY_TEXT\",\"error\":\"Cleaned text is empty\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"name must be at most 100 characters\"}",
+      "{\"rejected\":\"Invalid code point 1114112\"}",
+      "{\"success\":false,\"errorCode\":\"NO_TEXT_ENTRY\",\"error\":\"Failed to unzip: Error: invalid zip data\"}"
+    ],
+    "urls": [
+      "https://hub.example/aozora/cards/size",
+      "https://hub.example/aozora/cards/half",
+      "https://hub.example/aozora/cards/huge",
+      "https://hub.example/aozora/cards/http",
+      "https://hub.example/aozora/cards/server",
+      "https://hub.example/aozora/cards/offline",
+      "https://hub.example/aozora/cards/not-a-zip",
+      "https://hub.example/aozora/cards/no-text",
+      "https://hub.example/aozora/cards/unmapped",
+      "https://hub.example/aozora/cards/title-only",
+      "https://hub.example/aozora/cards/long-name",
+      "https://hub.example/aozora/cards/gaiji",
+      "https://hub.example/aozora/cards/empty-body"
+    ],
+    "notified": [],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"size\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":575,\"title\":\"T\"},{\"name\":\"half\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":2.5},{\"name\":\"huge\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":1e+21},{\"name\":\"http\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"server\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"offline\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":10},{\"name\":\"not-a-zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":59},{\"name\":\"no-text\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":234},{\"name\":\"unmapped\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":119},{\"name\":\"title-only\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":129},{\"name\":\"long-name\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"author\":\"b\"},{\"name\":\"gaiji\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139},{\"name\":\"empty-body\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":0}]}}"
+    }
+  },
+  {
+    "name": "a deleted text keeps no name from a new import",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"タイトル\",\"author\":\"著者名\"}]}}",
+      "sync/typing-test-texts/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"old\",\n      \"name\": \"タイトル（著者名）\",\n      \"wordCount\": 1,\n      \"lineCount\": 1,\n      \"filename\": \"old_2026-10-16T11-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T11:30:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:30:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000001/files/1_ruby_1.zip\"\n      }\n    }\n  ]\n}",
+      "sync/typing-test-texts/old_2026-10-16T11-00-00.000Z.json": "{\n  \"name\": \"タイトル（著者名）\",\n  \"text\": \"x\"\n}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150afe1ae93190000001c00000008000000776f726b2e747874e3e59a563d755bd3998e57bdc5d36e353af1724dfe08630100504b0102140014000000080000002150afe1ae93190000001c000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      },
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150afe1ae93190000001c00000008000000776f726b2e747874e3e59a563d755bd3998e57bdc5d36e353af1724dfe08630100504b0102140014000000080000002150afe1ae93190000001c000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"タイトル（著者名）\",\"wordCount\":2,\"lineCount\":2,\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"source\":{\"provider\":\"aozora\",\"workId\":\"000001/files/1_ruby_1.zip\"},\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"}}}",
+      "{\"success\":false,\"errorCode\":\"DUPLICATE_NAME\",\"error\":\"A text with the same name already exists\"}"
+    ],
+    "urls": [
+      "https://hub.example/aozora/cards/000001/files/1_ruby_1.zip",
+      "https://hub.example/aozora/cards/000001/files/1_ruby_1.zip"
+    ],
+    "notified": [
+      "typing-test-texts"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"タイトル\",\"author\":\"著者名\"}]}}",
+      "sync/": null,
+      "sync/typing-test-texts/": null,
+      "sync/typing-test-texts/00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"タイトル（著者名）\",\n  \"text\": \"本文の一行目。\\n二行目。\"\n}",
+      "sync/typing-test-texts/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"old\",\n      \"name\": \"タイトル（著者名）\",\n      \"wordCount\": 1,\n      \"lineCount\": 1,\n      \"filename\": \"old_2026-10-16T11-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T11:30:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:30:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000001/files/1_ruby_1.zip\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:30:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"タイトル（著者名）\",\n      \"wordCount\": 2,\n      \"lineCount\": 2,\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000001/files/1_ruby_1.zip\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/typing-test-texts/old_2026-10-16T11-00-00.000Z.json": "{\n  \"name\": \"タイトル（著者名）\",\n  \"text\": \"x\"\n}"
+    }
+  },
+  {
+    "name": "an aozora override that is pack-shaped",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139}],\"model\":\"pack\"}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": []
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Aozora dataset is not catalog-shaped (model: pack)\"}"
+    ],
+    "urls": [],
+    "notified": [],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139}],\"model\":\"pack\"}}"
+    }
+  },
+  {
+    "name": "an aozora override without a model is a catalog",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"T\",\"author\":\"A\"}]}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": [
+          {
+            "status": 200,
+            "hex": "504b030414000000080000002150afe1ae93190000001c00000008000000776f726b2e747874e3e59a563d755bd3998e57bdc5d36e353af1724dfe08630100504b0102140014000000080000002150afe1ae93190000001c000000080000000000000000000000000000000000776f726b2e747874504b05060000000001000100360000003f0000000000"
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"T（A）\",\"wordCount\":2,\"lineCount\":2,\"filename\":\"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"source\":{\"provider\":\"aozora\",\"workId\":\"000001/files/1_ruby_1.zip\"},\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\"}}}"
+    ],
+    "urls": [
+      "https://hub.example/aozora/cards/000001/files/1_ruby_1.zip"
+    ],
+    "notified": [
+      "typing-test-texts"
+    ],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":\"T\",\"author\":\"A\"}]}}",
+      "sync/": null,
+      "sync/typing-test-texts/": null,
+      "sync/typing-test-texts/00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json": "{\n  \"name\": \"T（A）\",\n  \"text\": \"本文の一行目。\\n二行目。\"\n}",
+      "sync/typing-test-texts/index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"name\": \"T（A）\",\n      \"wordCount\": 2,\n      \"lineCount\": 2,\n      \"filename\": \"00000000-0000-4000-8000-000000000001_2026-10-16T12-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"source\": {\n        \"provider\": \"aozora\",\n        \"workId\": \"000001/files/1_ruby_1.zip\"\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\"\n      }\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an override that is not used leaves the empty bundled catalog",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":null}]}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": []
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Aozora work not in catalog: 000001/files/1_ruby_1.zip\"}"
+    ],
+    "urls": [],
+    "notified": [],
+    "after": {
+      "local/": null,
+      "local/typing-test-dataset.json": "{\"aozora\":{\"provider\":\"aozora\",\"version\":\"a1\",\"downloadUrlBase\":\"https://hub.example/aozora/cards\",\"languages\":[{\"name\":\"000001/files/1_ruby_1.zip\",\"wordCount\":3,\"rightToLeft\":false,\"fileSize\":139,\"title\":null}]}}"
+    }
+  },
+  {
+    "name": "the bundled catalog is empty",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "import",
+        "workId": "000001/files/1_ruby_1.zip",
+        "replies": []
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"NOT_IN_CATALOG\",\"error\":\"Aozora work not in catalog: 000001/files/1_ruby_1.zip\"}"
+    ],
+    "urls": [],
+    "notified": [],
+    "after": {}
+  }
+]

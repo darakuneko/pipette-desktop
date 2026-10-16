@@ -535,6 +535,21 @@ impl LanguageStore {
         let provider = provider.to_owned();
         self.blocking(move |inner| inner.current_version(&provider)).await
     }
+
+    /// Runs `f` on the dataset in effect for `provider`, on the blocking
+    /// pool (`getEffectiveDataset`).
+    pub(crate) async fn read_dataset<T: Send + 'static>(
+        &self,
+        provider: &'static str,
+        f: impl FnOnce(Dataset<'_>) -> T + Send + 'static,
+    ) -> Result<T, DatasetError> {
+        self.blocking(move |inner| inner.with_dataset(provider, f)).await
+    }
+
+    /// The client the store's requests go through.
+    pub(crate) fn http(&self) -> &Http {
+        &self.0.http
+    }
 }
 
 /// The checked text of a fetched word list, written to its file.

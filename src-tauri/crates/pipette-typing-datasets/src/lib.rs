@@ -6,12 +6,14 @@
 //!   aozora), from src/shared/data/typing-test-providers.ts;
 //! - the Hub overrides of those datasets (`local/typing-test-dataset.json`)
 //!   and their update from the Hub's anonymous dataset API;
-//! - the downloaded word lists (`local/downloads/languages/{provider}`).
+//! - the downloaded word lists (`local/downloads/languages/{provider}`);
+//! - the import of an Aozora Bunko catalog work into the typing test texts.
 //!
 //! Requests go through the [`pipette_net::Http`] the store is given, and
 //! the file work of each call runs on the Tokio blocking pool, so the calls
 //! run on a Tokio runtime (Tauri's).
 
+mod aozora;
 mod dataset;
 mod download;
 mod hub;
@@ -19,6 +21,7 @@ mod providers;
 mod store;
 mod text;
 
+pub use aozora::{AozoraImportError, import_aozora_work};
 pub use dataset::{Dataset, Model, effective_dataset};
 pub use download::{FetchFailure, Received, fetch_verified_bytes, size_mismatch_detail};
 pub use hub::{fetch_dataset, fetch_dataset_version};
