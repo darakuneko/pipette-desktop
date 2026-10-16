@@ -96,10 +96,8 @@ pub fn collect_all_sync_units<E: Display>(
         if exists(&dir.join("pipette_settings.json")) {
             units.push(format!("keyboards/{uid}/settings"));
         }
-        for (sub, name) in
-            [("snapshots", "snapshots"), ("analyze_filters", "analyze_filters"), ("runs", "runs")]
-        {
-            if exists(&dir.join(sub).join("index.json")) {
+        for name in ["snapshots", "analyze_filters", "runs"] {
+            if exists(&dir.join(name).join("index.json")) {
                 units.push(format!("keyboards/{uid}/{name}"));
             }
         }
