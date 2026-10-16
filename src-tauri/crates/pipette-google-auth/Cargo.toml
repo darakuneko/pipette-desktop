@@ -8,5 +8,32 @@ license.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+# The base64url of PKCE and of the id_token payload.
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
+# The query of the authorization URL and of the loopback redirect, and the
+# body of the token requests: the encoding of URLSearchParams.
+form_urlencoded = "=1.2.2"
+getrandom = "=0.3.4"
+hex = "=0.4.3"
+log = "=0.4.34"
+pipette-net = { path = "../pipette-net" }
+pipette-secret-store = { path = "../pipette-secret-store" }
+pipette-time = { path = "../pipette-time" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { version = "=0.10.9", default-features = false }
+thiserror = "=2.0.21"
+# The loopback listener and the time limits.
+tokio = { version = "=1.53.3", features = ["rt", "net", "io-util", "sync", "time", "macros"] }
+# The host of the Hub API base, for the Hub test account.
+url = "=2.5.8"
+zeroize = "=1.9.0"
+
+[dev-dependencies]
+pipette-secret-store = { path = "../pipette-secret-store", features = ["test-util"] }
+tempfile = { workspace = true }
+tokio = { version = "=1.53.3", features = ["rt", "rt-multi-thread", "net", "io-util", "sync", "time", "macros", "test-util"] }
+
 [lints]
 workspace = true
