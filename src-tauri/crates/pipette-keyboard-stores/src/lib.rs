@@ -33,6 +33,7 @@ mod entry_files;
 mod entry_index;
 mod favorites;
 mod key_labels;
+mod keyboard_index;
 mod keyboard_meta;
 mod response;
 mod settings;
