@@ -166,6 +166,8 @@ mod tests {
         assert_eq!(local_date_ms_in(&new_york, 275_760, 8, 13), None);
         assert_eq!(local_date_ms_in(&zone("UTC"), 275_760, 8, 13), Some(MAX_TIME_MS));
         assert_eq!(local_date_ms_in(&zone("UTC"), i64::MAX, 0, 1), None);
+        assert_eq!(local_date_ms_in(&zone("UTC"), 2026, 0, 1 << 39), None);
+        assert_eq!(local_date_ms_in(&zone("UTC"), 2026, -(1 << 39), 1), None);
     }
 
     #[test]
