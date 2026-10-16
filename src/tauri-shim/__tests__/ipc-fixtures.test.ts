@@ -62,6 +62,7 @@ interface Shim {
   syncAuth: typeof import('../api/sync-auth')
   syncPassword: typeof import('../api/sync-password')
   syncExecute: typeof import('../api/sync-execute')
+  syncData: typeof import('../api/sync-data')
   themePacks: typeof import('../api/theme-packs')
   typingAnalytics: typeof import('../api/typing-analytics')
   typingAnalyticsRange: typeof import('../api/typing-analytics-range')
@@ -94,6 +95,7 @@ async function load(): Promise<Shim> {
     syncAuth: await import('../api/sync-auth'),
     syncPassword: await import('../api/sync-password'),
     syncExecute: await import('../api/sync-execute'),
+    syncData: await import('../api/sync-data'),
     themePacks: await import('../api/theme-packs'),
     typingAnalytics: await import('../api/typing-analytics'),
     typingAnalyticsRange: await import('../api/typing-analytics-range'),
@@ -178,6 +180,8 @@ const CALLERS: Record<string, Caller> = {
   },
   syncCheckPasswordExists: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncCheckPasswordExists() },
   syncFormatStatus: { run: ({ syncExecute }) => syncExecute.syncExecuteApi.syncFormatStatus() },
+  exportLocalData: { run: ({ syncData }) => syncData.syncDataApi.exportLocalData() },
+  importLocalData: { run: ({ syncData }) => syncData.syncDataApi.importLocalData() },
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
   loadLayout: {
     run: ({ files }, [title, extensions]) => files.filesApi.loadLayout(title as string, extensions as string[]),

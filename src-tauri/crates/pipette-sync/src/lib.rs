@@ -15,14 +15,18 @@
 //! - [`preflight`]: what every entry point runs before it touches data,
 //!   with its parts in [`format`] and [`format_status`] (the sync-format
 //!   marker and the status of the update banner) and [`password`] (the
-//!   guard and the password-check).
+//!   guard and the password-check);
+//! - [`local_data`]: the export and import of the Data modal's Local Data;
+//! - [`meta_backfill`]: the keyboard names a full download fills in.
 
 pub mod account;
 pub mod bundle;
 pub mod crypto;
 pub mod format;
 pub mod format_status;
+pub mod local_data;
 pub mod merge;
+pub mod meta_backfill;
 pub mod password;
 pub mod preflight;
 mod single_flight;

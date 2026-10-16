@@ -11,8 +11,9 @@
 //!   the same name) of src/main/favorite-store.ts;
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
 //!   `meta/keyboard-names`) of src/main/sync/keyboard-meta.ts: the name a
-//!   keyboard gets when it connects, and the name a snapshot save or the
-//!   stored-keyboard list records;
+//!   keyboard gets when it connects, the name a snapshot save, the
+//!   stored-keyboard list or the sync's backfill records, and the
+//!   tombstones a reset leaves;
 //! - the list of stored keyboards (`sync/keyboards/{uid}`) of the
 //!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts;
 //! - the snapshots of a keyboard (`sync/keyboards/{uid}/snapshots`, the
@@ -42,6 +43,7 @@ mod favorites;
 mod key_labels;
 mod keyboard_index;
 mod keyboard_meta;
+mod keyboard_meta_backfill;
 mod keyboard_meta_sync;
 mod response;
 mod run_logs;
@@ -75,8 +77,13 @@ pub use key_labels::{
     set_key_label_hub_post_id,
 };
 pub use keyboard_meta::{
-    KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
-    keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
+    KEYBOARD_META_SYNC_UNIT, MetaOutcome, TombstoneOutcome, active_keyboard_names,
+    extract_device_name_from_filename, keyboard_meta_name_if_missing, name_keyboard_on_connect,
+    name_unnamed_keyboards, tombstone_all_keyboard_meta, tombstone_keyboard_meta, upsert_keyboard_meta,
+};
+pub use keyboard_meta_backfill::{
+    keyboard_meta_uids, keyboard_uids_of_drive_names, resolve_device_name_from_local_snapshots,
+    snapshot_index_device_name,
 };
 pub use keyboard_meta_sync::{
     KeyboardMetaMerge, KeyboardMetaMergeError, apply_remote_keyboard_meta_index, read_keyboard_meta_index,
@@ -126,6 +133,10 @@ pub enum StoreError {
     /// `null` entry in a file.
     #[error("Cannot read properties of null (reading '{0}')")]
     NullEntry(&'static str),
+    /// The TypeError JavaScript's strict mode throws where a store sets a
+    /// property of an entry that is not an object (its JSON text here).
+    #[error("Cannot create property '{0}' on {1}")]
+    PrimitiveEntry(&'static str, String),
     /// A file nested deeper than pipette-js-json reads. `JSON.parse` reads
     /// it, so it is never replaced with what could be read of it.
     #[error("{0}: nested too deeply to read")]

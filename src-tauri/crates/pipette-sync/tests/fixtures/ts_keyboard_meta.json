@@ -1,0 +1,632 @@
+[
+  {
+    "name": "tombstones one keyboard, once",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstone": "0xA"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstone": "0xA"
+        },
+        "result": {
+          "value": "unchanged"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstone": ""
+        },
+        "result": {
+          "value": "unchanged"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a keyboard with no name gets a tombstone, and the expired ones go",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xOld\",\n      \"deviceName\": \"Old\",\n      \"updatedAt\": \"2026-09-06T00:00:00.000Z\",\n      \"deletedAt\": \"2026-09-06T00:00:00.000Z\",\n      \"extra\": 1\n    },\n    {\n      \"uid\": \"0xA\",\n      \"note\": \"kept\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstone": "0xNew"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"note\": \"kept\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xNew\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "without a names file",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstone": "0xA"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 0
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "tombstones every active keyboard and counts them",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xOld\",\n      \"deviceName\": \"Old\",\n      \"updatedAt\": \"2026-09-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-09-15T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xC\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"deletedAt\": \"\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 2
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xC\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 0
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xC\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "nothing to tombstone leaves an expired tombstone",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xOld\",\n      \"deviceName\": \"Old\",\n      \"updatedAt\": \"2026-09-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-09-15T00:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 0
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xOld\",\n      \"deviceName\": \"Old\",\n      \"updatedAt\": \"2026-09-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-09-15T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a null entry fails the tombstones",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    null\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstone": "0xZ"
+        },
+        "result": {
+          "error": "TypeError"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    null\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "error": "TypeError"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    null\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "an entry that is not an object fails the tombstone of all",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    5\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "error": "TypeError"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    5\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstone": "0xZ"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    5,\n    {\n      \"uid\": \"0xZ\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "an entry that is a list is counted by every tombstone of all and left as it is",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 3
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstoneAll": true
+        },
+        "result": {
+          "value": 2
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstone": "0xZ"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    [],\n    [\n      1\n    ],\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xZ\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a names file that is not an index is replaced",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\"type\":\"other\",\"entries\":[]}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "tombstone": "0xA"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "backfills names from local snapshots, then from Drive",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xKnown\",\n      \"deviceName\": \"Known\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xGone\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xStale\",\n      \"deviceName\": \"Stale\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/0xLocal/snapshots/index.json": "{\n  \"uid\": \"0xLocal\",\n  \"entries\": [\n    {\n      \"id\": \"s\",\n      \"label\": \"\",\n      \"filename\": \"Old Board_2026-01-01T00-00-00.000Z.pipette\",\n      \"savedAt\": \"2026-10-13T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"label\": \"\",\n      \"filename\": \"Local Board_2026-04-16T10-00-00.000Z.pipette\",\n      \"savedAt\": \"2026-10-13T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/0xEmpty/snapshots/index.json": "{\n  \"uid\": \"0xEmpty\",\n  \"entries\": []\n}",
+      "sync/keyboards/0xBad/snapshots/index.json": "{not json"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "backfill": [
+            {
+              "id": "k",
+              "name": "keyboards_0xKnown_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"X_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "g",
+              "name": "keyboards_0xGone_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"X_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "l",
+              "name": "keyboards_0xLocal_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"Remote_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "e",
+              "name": "keyboards_0xEmpty_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"  Spaced Board  _2026-02-02.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "b",
+              "name": "keyboards_0xBad_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"Bad Local_2026-02-02.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "r-old",
+              "name": "keyboards_0xRemote_snapshots.enc",
+              "modifiedTime": "2026-09-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"Older_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "r-new",
+              "name": "keyboards_0xRemote_snapshots.enc",
+              "modifiedTime": "2026-10-02T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"Newest_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "w",
+              "name": "keyboards_0xWrong_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"W_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}",
+              "wrong": true
+            },
+            {
+              "id": "m",
+              "name": "keyboards_0xMissing_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z"
+            },
+            {
+              "id": "n",
+              "name": "keyboards_0xNoName_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"no-date.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "nul",
+              "name": "keyboards_0xNull_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "null"
+            },
+            {
+              "id": "t",
+              "name": "keyboards_0xText_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "not json"
+            },
+            {
+              "id": "z",
+              "name": "keyboards_0xNullEntry_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[null,{\"id\":\"s\",\"label\":\"\",\"filename\":\"Z_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "d",
+              "name": "keyboards_0xDeleted_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"D_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\",\"deletedAt\":\"2026-10-15T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "tr",
+              "name": "keyboards_0xTrash_snapshots.enc.trash.1.2.tr",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"T_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "o",
+              "name": "keyboards_0xOther_settings.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{}"
+            }
+          ]
+        },
+        "result": {
+          "value": {
+            "resolved": 4,
+            "failed": [
+              "0xWrong",
+              "0xMissing",
+              "0xNoName",
+              "0xNull",
+              "0xText",
+              "0xNullEntry",
+              "0xDeleted"
+            ]
+          }
+        },
+        "events": [
+          [
+            "sync:unit-applied",
+            {
+              "syncUnit": "meta/keyboard-names"
+            }
+          ]
+        ],
+        "downloads": [
+          "b",
+          "d",
+          "e",
+          "m",
+          "n",
+          "nul",
+          "r-new",
+          "t",
+          "w",
+          "z"
+        ],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/keyboards/0xBad/snapshots/index.json": "{not json",
+          "sync/keyboards/0xEmpty/snapshots/index.json": "{\n  \"uid\": \"0xEmpty\",\n  \"entries\": []\n}",
+          "sync/keyboards/0xLocal/snapshots/index.json": "{\n  \"uid\": \"0xLocal\",\n  \"entries\": [\n    {\n      \"id\": \"s\",\n      \"label\": \"\",\n      \"filename\": \"Old Board_2026-01-01T00-00-00.000Z.pipette\",\n      \"savedAt\": \"2026-10-13T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"s\",\n      \"label\": \"\",\n      \"filename\": \"Local Board_2026-04-16T10-00-00.000Z.pipette\",\n      \"savedAt\": \"2026-10-13T00:00:00.000Z\"\n    }\n  ]\n}",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xKnown\",\n      \"deviceName\": \"Known\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xGone\",\n      \"deviceName\": \"\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xStale\",\n      \"deviceName\": \"Stale\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xLocal\",\n      \"deviceName\": \"Local Board\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xEmpty\",\n      \"deviceName\": \"Spaced Board\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xBad\",\n      \"deviceName\": \"Bad Local\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xRemote\",\n      \"deviceName\": \"Newest\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a backfill that names nothing writes and notifies nothing",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "backfill": []
+        },
+        "result": {
+          "value": {
+            "resolved": 0,
+            "failed": []
+          }
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "backfill": [
+            {
+              "id": "a",
+              "name": "keyboards_0xA_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[]},\"files\":{}}"
+            },
+            {
+              "id": "m",
+              "name": "keyboards_0xMissing_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z"
+            }
+          ]
+        },
+        "result": {
+          "value": {
+            "resolved": 0,
+            "failed": [
+              "0xMissing"
+            ]
+          }
+        },
+        "events": [],
+        "downloads": [
+          "m"
+        ],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "a backfilled name revives nothing and keeps the order of Drive",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0"
+    },
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "backfill": [
+            {
+              "id": "2",
+              "name": "keyboards_0xB_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"B_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            },
+            {
+              "id": "1",
+              "name": "keyboards_0xA_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"A_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            }
+          ]
+        },
+        "result": {
+          "value": {
+            "resolved": 2,
+            "failed": []
+          }
+        },
+        "events": [
+          [
+            "sync:unit-applied",
+            {
+              "syncUnit": "meta/keyboard-names"
+            }
+          ]
+        ],
+        "downloads": [
+          "1",
+          "2"
+        ],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "tombstone": "0xA"
+        },
+        "result": {
+          "value": "tombstoned"
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      },
+      {
+        "step": {
+          "backfill": [
+            {
+              "id": "1",
+              "name": "keyboards_0xA_snapshots.enc",
+              "modifiedTime": "2026-10-01T00:00:00.000Z",
+              "plaintext": "{\"type\":\"layout\",\"key\":\"x\",\"index\":{\"entries\":[{\"id\":\"s\",\"label\":\"\",\"filename\":\"A again_2026-01-01.pipette\",\"savedAt\":\"2026-10-13T00:00:00.000Z\"}]},\"files\":{}}"
+            }
+          ]
+        },
+        "result": {
+          "value": {
+            "resolved": 0,
+            "failed": []
+          }
+        },
+        "events": [],
+        "downloads": [],
+        "tree": {
+          "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+          "sync/meta/keyboard-names.json": "{\n  \"type\": \"keyboard-meta\",\n  \"version\": 1,\n  \"entries\": [\n    {\n      \"uid\": \"0xB\",\n      \"deviceName\": \"B\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"uid\": \"0xA\",\n      \"deviceName\": \"A\",\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}"
+        }
+      }
+    ]
+  }
+]

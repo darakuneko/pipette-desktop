@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/sync_commands/data.rs: the export of the local
+# favorites, snapshots and settings to a file the user picks, and the import
+# of such a file.
+
+[[set]]
+identifier = "sync-data"
+description = "Exports the local favorites, snapshots and settings to a file the user picks, and imports such a file."
+permissions = [
+  "allow-export-local-data",
+  "allow-import-local-data",
+]

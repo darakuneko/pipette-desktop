@@ -1,0 +1,21 @@
+[
+  {
+    "member": "exportLocalData",
+    "args": [],
+    "command": "export_local_data",
+    "invokeArgs": {},
+    "response": {
+      "success": true
+    }
+  },
+  {
+    "member": "importLocalData",
+    "args": [],
+    "command": "import_local_data",
+    "invokeArgs": {},
+    "response": {
+      "success": true,
+      "cancelled": true
+    }
+  }
+]

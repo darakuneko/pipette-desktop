@@ -52,6 +52,8 @@ pipette-net = { path = "../pipette-net" }
 pipette-secret-store = { path = "../pipette-secret-store", features = ["test-util"] }
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
 pipette-drive = { path = "../pipette-drive", features = ["test-util"] }
+# Envelopes sealed with a key derived once per password.
+pipette-sync-format = { path = "../pipette-sync-format", features = ["test-util"] }
 # Reads the cache tables the analytics merges wrote.
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 tempfile = { workspace = true }

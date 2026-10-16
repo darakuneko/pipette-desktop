@@ -12,7 +12,8 @@
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs, and so are
 // the Cloud Sync members (each listed with the module that holds it) but
-// the sign-in status, the password members and the sync format status.
+// the sign-in status, the password members, the sync format status and the
+// export and import of the local data.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -302,8 +303,9 @@ const SYNC_MEMBERS = [
 
 /** The Cloud Sync members that are real: the sign-in, the sign-out, the
  *  sign-in and password statuses, setting and re-entering the password,
- *  whether Drive has a password-check, the sync format status and its event
- *  (backend commands) and the password strength check (in the shim). */
+ *  whether Drive has a password-check, the sync format status and its event,
+ *  the export and import of the local data (backend commands) and the
+ *  password strength check (in the shim). */
 const SYNC_REAL = [
   'syncAuthStart',
   'syncAuthStatus',
@@ -315,6 +317,8 @@ const SYNC_REAL = [
   'syncCheckPasswordExists',
   'syncFormatStatus',
   'syncOnFormatStatusChanged',
+  'exportLocalData',
+  'importLocalData',
 ]
 
 /** The fakes the Cloud Sync members replace: the signed-out answers. */
