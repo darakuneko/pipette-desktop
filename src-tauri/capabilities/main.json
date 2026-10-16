@@ -23,6 +23,7 @@
     "settings",
     "typing-datasets",
     "typing-analytics",
+    "typing-analytics-range",
     "i18n-packs",
     "theme-packs",
     "core:event:allow-listen",

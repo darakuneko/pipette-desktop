@@ -2,7 +2,7 @@
 //! The typing analytics (crates/pipette-typing-analytics) in the app: the
 //! analytics service, its recorder, and the sync lock the resets, deletes
 //! and imports hold, and the commands of each area ([`keymaps`],
-//! [`queries`], [`record`]).
+//! [`queries`], [`range`], [`record`]).
 //!
 //! The initialization is not started at launch, unlike
 //! `setupTypingAnalytics` in the Electron main process: this build cannot
@@ -22,6 +22,7 @@ use tauri::{AppHandle, Manager, Runtime};
 
 pub mod keymaps;
 pub mod queries;
+pub mod range;
 pub mod record;
 
 /// Manages the analytics of `user_data` and the sync lock. The analytics

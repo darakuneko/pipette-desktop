@@ -9,11 +9,14 @@
 //! ([`deleted_ranges`]), the record-start keymap snapshots
 //! ([`keymap_snapshots`]), the replay of a device's day file with its
 //! deleted ranges hidden ([`deleted_ranges_cache`]), the query layer the
-//! commands read through ([`queries`]), and the recording: the events
-//! ([`event`]), their per-minute aggregation ([`minute_buffer`],
-//! [`bigram_bucket`]), the sessions ([`session_detector`]), the rows a
-//! flush writes ([`rows`]) and the flush itself ([`pipeline`]).
+//! commands read through ([`queries`]) with the aggregates it builds
+//! ([`bigram_aggregate`], [`layout_resolver`], [`layout_comparison`]), and
+//! the recording: the events ([`event`]), their per-minute aggregation
+//! ([`minute_buffer`], [`bigram_bucket`]), the sessions
+//! ([`session_detector`]), the rows a flush writes ([`rows`]) and the flush
+//! itself ([`pipeline`]).
 
+pub mod bigram_aggregate;
 pub mod bigram_bucket;
 pub mod cache_rebuild;
 pub mod db_actor;
@@ -24,6 +27,8 @@ pub mod fingerprint;
 pub mod identity;
 pub mod jsonl;
 pub mod keymap_snapshots;
+pub mod layout_comparison;
+pub mod layout_resolver;
 pub mod minute_buffer;
 pub mod pipeline;
 pub mod queries;
@@ -59,4 +64,6 @@ pub enum Error {
     InitializationLost,
     #[error("a blocking task did not finish: {0}")]
     Blocking(String),
+    #[error(transparent)]
+    LayoutEntry(#[from] layout_resolver::BadLayoutEntry),
 }

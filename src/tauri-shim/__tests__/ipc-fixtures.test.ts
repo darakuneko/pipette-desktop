@@ -14,6 +14,8 @@ import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { APP_COMMANDS } from '../generated/app-command-names'
+import { typingAnalyticsApi } from '../api/typing-analytics'
+import { typingAnalyticsRangeApi } from '../api/typing-analytics-range'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
@@ -58,6 +60,7 @@ interface Shim {
   syncPending: typeof import('../api/sync-pending')
   themePacks: typeof import('../api/theme-packs')
   typingAnalytics: typeof import('../api/typing-analytics')
+  typingAnalyticsRange: typeof import('../api/typing-analytics-range')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
@@ -85,6 +88,7 @@ async function load(): Promise<Shim> {
     syncPending: await import('../api/sync-pending'),
     themePacks: await import('../api/theme-packs'),
     typingAnalytics: await import('../api/typing-analytics'),
+    typingAnalyticsRange: await import('../api/typing-analytics-range'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
@@ -101,6 +105,21 @@ interface Caller {
 }
 
 const bytes = (value: unknown): Uint8Array => Uint8Array.from(value as number[])
+
+/** A caller per member of a typing analytics query module, calling it with
+ *  the recorded arguments as they are. `api` gives the member names; the
+ *  call goes to the fresh module `pick` takes from the shim. */
+function queryCallers(pick: (shim: Shim) => object, api: object): Record<string, Caller> {
+  return Object.fromEntries(
+    Object.keys(api).map((member) => [
+      member,
+      {
+        run: (shim: Shim, args: unknown[]) =>
+          (pick(shim) as Record<string, (...args: unknown[]) => Promise<unknown>>)[member](...args),
+      },
+    ]),
+  )
+}
 
 const CALLERS: Record<string, Caller> = {
   listDevices: { run: ({ device }) => device.deviceApi.listDevices() },
@@ -286,18 +305,8 @@ const CALLERS: Record<string, Caller> = {
   typingRunLogSave: {
     run: ({ runLogs }, [uid, log]) => runLogs.runLogsApi.typingRunLogSave(uid as string, log as RunKeystrokeLog),
   },
-  typingAnalyticsListKeyboards: { run: ({ typingAnalytics }) => typingAnalytics.typingAnalyticsApi.typingAnalyticsListKeyboards() },
-  typingAnalyticsListItems: {
-    run: ({ typingAnalytics }, [uid, apps, tests, runs]) =>
-      typingAnalytics.typingAnalyticsApi.typingAnalyticsListItems(uid as string, apps as string[], tests as string[], runs as string[]),
-  },
-  typingAnalyticsListItemsLocal: {
-    run: ({ typingAnalytics }, [uid]) => typingAnalytics.typingAnalyticsApi.typingAnalyticsListItemsLocal(uid as string),
-  },
-  typingAnalyticsListItemsForHash: {
-    run: ({ typingAnalytics }, [uid, hash]) =>
-      typingAnalytics.typingAnalyticsApi.typingAnalyticsListItemsForHash(uid as string, hash as string),
-  },
+  ...queryCallers((shim) => shim.typingAnalytics.typingAnalyticsApi, typingAnalyticsApi),
+  ...queryCallers((shim) => shim.typingAnalyticsRange.typingAnalyticsRangeApi, typingAnalyticsRangeApi),
   typingRunLogList: { run: ({ runLogs }, [uid]) => runLogs.runLogsApi.typingRunLogList(uid as string) },
   typingRunLogGet: {
     run: ({ runLogs }, [uid, runId]) => runLogs.runLogsApi.typingRunLogGet(uid as string, runId as string),

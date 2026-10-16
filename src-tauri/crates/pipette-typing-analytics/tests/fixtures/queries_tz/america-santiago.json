@@ -1,0 +1,2137 @@
+{
+  "timeZone": "America/Santiago",
+  "calls": [
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":220,\"activeMs\":20713},{\"date\":\"2026-11-01\",\"keystrokes\":209,\"activeMs\":20009},{\"date\":\"2026-10-15\",\"keystrokes\":213.5,\"activeMs\":263234.5},{\"date\":\"2026-03-09\",\"keystrokes\":212,\"activeMs\":20705},{\"date\":\"2026-03-08\",\"keystrokes\":208,\"activeMs\":20701},{\"date\":\"2026-01-01\",\"keystrokes\":227,\"activeMs\":20027},{\"date\":\"2025-12-31\",\"keystrokes\":238,\"activeMs\":20731},{\"date\":\"2024-11-03\",\"keystrokes\":340,\"activeMs\":30733},{\"date\":\"2024-09-08\",\"keystrokes\":116,\"activeMs\":10709},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"1969-12-31\",\"keystrokes\":117,\"activeMs\":10017},{\"date\":\"0050-06-15\",\"keystrokes\":125,\"activeMs\":10718}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":213,\"activeMs\":20013},{\"date\":\"2026-11-01\",\"keystrokes\":209,\"activeMs\":20009},{\"date\":\"2026-10-15\",\"keystrokes\":156.5,\"activeMs\":209234.5},{\"date\":\"2026-03-09\",\"keystrokes\":205,\"activeMs\":20005},{\"date\":\"2026-03-08\",\"keystrokes\":201,\"activeMs\":20001},{\"date\":\"2026-01-01\",\"keystrokes\":227,\"activeMs\":20027},{\"date\":\"2025-12-31\",\"keystrokes\":231,\"activeMs\":20031},{\"date\":\"2024-11-03\",\"keystrokes\":333,\"activeMs\":30033},{\"date\":\"2024-09-08\",\"keystrokes\":109,\"activeMs\":10009},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"1969-12-31\",\"keystrokes\":117,\"activeMs\":10017},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":7,\"activeMs\":700},{\"date\":\"2026-10-15\",\"keystrokes\":57,\"activeMs\":54000},{\"date\":\"2026-03-09\",\"keystrokes\":7,\"activeMs\":700},{\"date\":\"2026-03-08\",\"keystrokes\":7,\"activeMs\":700},{\"date\":\"2025-12-31\",\"keystrokes\":7,\"activeMs\":700},{\"date\":\"2024-11-03\",\"keystrokes\":7,\"activeMs\":700},{\"date\":\"2024-09-08\",\"keystrokes\":7,\"activeMs\":700},{\"date\":\"0050-06-15\",\"keystrokes\":7,\"activeMs\":700}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":213,\"activeMs\":20013},{\"date\":\"2026-11-01\",\"keystrokes\":209,\"activeMs\":20009},{\"date\":\"2026-10-15\",\"keystrokes\":156.5,\"activeMs\":209234.5},{\"date\":\"2026-03-09\",\"keystrokes\":205,\"activeMs\":20005},{\"date\":\"2026-03-08\",\"keystrokes\":201,\"activeMs\":20001},{\"date\":\"2026-01-01\",\"keystrokes\":227,\"activeMs\":20027},{\"date\":\"2025-12-31\",\"keystrokes\":231,\"activeMs\":20031},{\"date\":\"2024-11-03\",\"keystrokes\":333,\"activeMs\":30033},{\"date\":\"2024-09-08\",\"keystrokes\":109,\"activeMs\":10009},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"1969-12-31\",\"keystrokes\":117,\"activeMs\":10017},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-b"
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":11,\"activeMs\":11000}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        ""
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        5
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        ""
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        null
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItems",
+      "args": [
+        "uid-a"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":407},{\"date\":\"2026-11-01\",\"intervalMinMs\":144,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":405},{\"date\":\"2026-10-15\",\"intervalMinMs\":40,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":350},{\"date\":\"2026-03-09\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":403},{\"date\":\"2026-03-08\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":401},{\"date\":\"2026-01-01\",\"intervalMinMs\":153,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":414},{\"date\":\"2025-12-31\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":416},{\"date\":\"2024-11-03\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":412},{\"date\":\"2024-09-08\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":409},{\"date\":\"2024-09-07\",\"intervalMinMs\":148,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":408},{\"date\":\"1969-12-31\",\"intervalMinMs\":157,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":417},{\"date\":\"0050-06-15\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":418}]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItemsLocal",
+      "args": [
+        "uid-a"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"intervalMinMs\":146,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":407},{\"date\":\"2026-11-01\",\"intervalMinMs\":144,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":405},{\"date\":\"2026-10-15\",\"intervalMinMs\":40,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":340},{\"date\":\"2026-03-09\",\"intervalMinMs\":142,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":403},{\"date\":\"2026-03-08\",\"intervalMinMs\":140,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":401},{\"date\":\"2026-01-01\",\"intervalMinMs\":153,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":414},{\"date\":\"2025-12-31\",\"intervalMinMs\":155,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":416},{\"date\":\"2024-11-03\",\"intervalMinMs\":150,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":412},{\"date\":\"2024-09-08\",\"intervalMinMs\":149,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":409},{\"date\":\"2024-09-07\",\"intervalMinMs\":148,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":408},{\"date\":\"1969-12-31\",\"intervalMinMs\":157,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":417},{\"date\":\"0050-06-15\",\"intervalMinMs\":158,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":418}]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307},{\"date\":\"2026-10-15\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":350},{\"date\":\"2026-03-09\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307},{\"date\":\"2026-03-08\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307},{\"date\":\"2025-12-31\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307},{\"date\":\"2024-11-03\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307},{\"date\":\"2024-09-08\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307},{\"date\":\"0050-06-15\",\"intervalMinMs\":47,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":307}]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own"
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"intervalMinMs\":146,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":407},{\"date\":\"2026-11-01\",\"intervalMinMs\":144,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":405},{\"date\":\"2026-10-15\",\"intervalMinMs\":40,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":340},{\"date\":\"2026-03-09\",\"intervalMinMs\":142,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":403},{\"date\":\"2026-03-08\",\"intervalMinMs\":140,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":401},{\"date\":\"2026-01-01\",\"intervalMinMs\":153,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":414},{\"date\":\"2025-12-31\",\"intervalMinMs\":155,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":416},{\"date\":\"2024-11-03\",\"intervalMinMs\":150,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":412},{\"date\":\"2024-09-08\",\"intervalMinMs\":149,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":409},{\"date\":\"2024-09-07\",\"intervalMinMs\":148,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":408},{\"date\":\"1969-12-31\",\"intervalMinMs\":157,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":417},{\"date\":\"0050-06-15\",\"intervalMinMs\":158,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":418}]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItems",
+      "args": [
+        "uid-b"
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"intervalMinMs\":51,\"intervalP25Ms\":90,\"intervalP50Ms\":110.5,\"intervalP75Ms\":150,\"intervalMaxMs\":311}]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItems",
+      "args": [
+        ""
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItemsLocal",
+      "args": [
+        5
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItemsForHash",
+      "args": [
+        "uid-a",
+        ""
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListIntervalItemsForHash",
+      "args": [
+        "uid-a",
+        null
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a",
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":106,\"activeMs\":10006},{\"date\":\"2026-11-01\",\"keystrokes\":104,\"activeMs\":10004},{\"date\":\"2026-10-15\",\"keystrokes\":163,\"activeMs\":203000},{\"date\":\"2026-03-09\",\"keystrokes\":102,\"activeMs\":10002},{\"date\":\"2026-03-08\",\"keystrokes\":100,\"activeMs\":10000},{\"date\":\"2026-01-01\",\"keystrokes\":114,\"activeMs\":10014},{\"date\":\"2025-12-31\",\"keystrokes\":116,\"activeMs\":10016},{\"date\":\"2024-11-03\",\"keystrokes\":222,\"activeMs\":20022},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a",
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":106,\"activeMs\":10006},{\"date\":\"2026-11-01\",\"keystrokes\":104,\"activeMs\":10004},{\"date\":\"2026-10-15\",\"keystrokes\":113,\"activeMs\":158000},{\"date\":\"2026-03-09\",\"keystrokes\":102,\"activeMs\":10002},{\"date\":\"2026-03-08\",\"keystrokes\":100,\"activeMs\":10000},{\"date\":\"2026-01-01\",\"keystrokes\":114,\"activeMs\":10014},{\"date\":\"2025-12-31\",\"keystrokes\":116,\"activeMs\":10016},{\"date\":\"2024-11-03\",\"keystrokes\":222,\"activeMs\":20022},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":106,\"activeMs\":10006},{\"date\":\"2026-11-01\",\"keystrokes\":104,\"activeMs\":10004},{\"date\":\"2026-10-15\",\"keystrokes\":113,\"activeMs\":158000},{\"date\":\"2026-03-09\",\"keystrokes\":102,\"activeMs\":10002},{\"date\":\"2026-03-08\",\"keystrokes\":100,\"activeMs\":10000},{\"date\":\"2026-01-01\",\"keystrokes\":114,\"activeMs\":10014},{\"date\":\"2025-12-31\",\"keystrokes\":116,\"activeMs\":10016},{\"date\":\"2024-11-03\",\"keystrokes\":222,\"activeMs\":20022},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a",
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":106,\"activeMs\":10006},{\"date\":\"2026-11-01\",\"keystrokes\":104,\"activeMs\":10004},{\"date\":\"2026-10-15\",\"keystrokes\":175,\"activeMs\":223000},{\"date\":\"2026-03-09\",\"keystrokes\":102,\"activeMs\":10002},{\"date\":\"2026-03-08\",\"keystrokes\":100,\"activeMs\":10000},{\"date\":\"2026-01-01\",\"keystrokes\":114,\"activeMs\":10014},{\"date\":\"2025-12-31\",\"keystrokes\":116,\"activeMs\":10016},{\"date\":\"2024-11-03\",\"keystrokes\":222,\"activeMs\":20022},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a",
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":106,\"activeMs\":10006},{\"date\":\"2026-11-01\",\"keystrokes\":104,\"activeMs\":10004},{\"date\":\"2026-10-15\",\"keystrokes\":125,\"activeMs\":178000},{\"date\":\"2026-03-09\",\"keystrokes\":102,\"activeMs\":10002},{\"date\":\"2026-03-08\",\"keystrokes\":100,\"activeMs\":10000},{\"date\":\"2026-01-01\",\"keystrokes\":114,\"activeMs\":10014},{\"date\":\"2025-12-31\",\"keystrokes\":116,\"activeMs\":10016},{\"date\":\"2024-11-03\",\"keystrokes\":222,\"activeMs\":20022},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":106,\"activeMs\":10006},{\"date\":\"2026-11-01\",\"keystrokes\":104,\"activeMs\":10004},{\"date\":\"2026-10-15\",\"keystrokes\":125,\"activeMs\":178000},{\"date\":\"2026-03-09\",\"keystrokes\":102,\"activeMs\":10002},{\"date\":\"2026-03-08\",\"keystrokes\":100,\"activeMs\":10000},{\"date\":\"2026-01-01\",\"keystrokes\":114,\"activeMs\":10014},{\"date\":\"2025-12-31\",\"keystrokes\":116,\"activeMs\":10016},{\"date\":\"2024-11-03\",\"keystrokes\":222,\"activeMs\":20022},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a",
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":75,\"activeMs\":120000}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a",
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":75,\"activeMs\":120000}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":75,\"activeMs\":120000}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a",
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":20,\"activeMs\":30000}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a",
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":20,\"activeMs\":30000}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":20,\"activeMs\":30000}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a",
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":75,\"activeMs\":120000}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a",
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":75,\"activeMs\":120000}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"date\":\"2026-10-15\",\"keystrokes\":75,\"activeMs\":120000}]"
+    },
+    {
+      "member": "typingAnalyticsListItems",
+      "args": [
+        "uid-a",
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":220,\"activeMs\":20713},{\"date\":\"2026-11-01\",\"keystrokes\":209,\"activeMs\":20009},{\"date\":\"2026-10-15\",\"keystrokes\":213.5,\"activeMs\":263234.5},{\"date\":\"2026-03-09\",\"keystrokes\":212,\"activeMs\":20705},{\"date\":\"2026-03-08\",\"keystrokes\":208,\"activeMs\":20701},{\"date\":\"2026-01-01\",\"keystrokes\":227,\"activeMs\":20027},{\"date\":\"2025-12-31\",\"keystrokes\":238,\"activeMs\":20731},{\"date\":\"2024-11-03\",\"keystrokes\":340,\"activeMs\":30733},{\"date\":\"2024-09-08\",\"keystrokes\":116,\"activeMs\":10709},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"1969-12-31\",\"keystrokes\":117,\"activeMs\":10017},{\"date\":\"0050-06-15\",\"keystrokes\":125,\"activeMs\":10718}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsLocal",
+      "args": [
+        "uid-a",
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":213,\"activeMs\":20013},{\"date\":\"2026-11-01\",\"keystrokes\":209,\"activeMs\":20009},{\"date\":\"2026-10-15\",\"keystrokes\":156.5,\"activeMs\":209234.5},{\"date\":\"2026-03-09\",\"keystrokes\":205,\"activeMs\":20005},{\"date\":\"2026-03-08\",\"keystrokes\":201,\"activeMs\":20001},{\"date\":\"2026-01-01\",\"keystrokes\":227,\"activeMs\":20027},{\"date\":\"2025-12-31\",\"keystrokes\":231,\"activeMs\":20031},{\"date\":\"2024-11-03\",\"keystrokes\":333,\"activeMs\":30033},{\"date\":\"2024-09-08\",\"keystrokes\":109,\"activeMs\":10009},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"1969-12-31\",\"keystrokes\":117,\"activeMs\":10017},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListItemsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"date\":\"2026-11-02\",\"keystrokes\":213,\"activeMs\":20013},{\"date\":\"2026-11-01\",\"keystrokes\":209,\"activeMs\":20009},{\"date\":\"2026-10-15\",\"keystrokes\":156.5,\"activeMs\":209234.5},{\"date\":\"2026-03-09\",\"keystrokes\":205,\"activeMs\":20005},{\"date\":\"2026-03-08\",\"keystrokes\":201,\"activeMs\":20001},{\"date\":\"2026-01-01\",\"keystrokes\":227,\"activeMs\":20027},{\"date\":\"2025-12-31\",\"keystrokes\":231,\"activeMs\":20031},{\"date\":\"2024-11-03\",\"keystrokes\":333,\"activeMs\":30033},{\"date\":\"2024-09-08\",\"keystrokes\":109,\"activeMs\":10009},{\"date\":\"2024-09-07\",\"keystrokes\":108,\"activeMs\":10008},{\"date\":\"1969-12-31\",\"keystrokes\":117,\"activeMs\":10017},{\"date\":\"0050-06-15\",\"keystrokes\":118,\"activeMs\":10018}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":0,\"hour\":1,\"keystrokes\":14},{\"dow\":0,\"hour\":2,\"keystrokes\":7},{\"dow\":1,\"hour\":1,\"keystrokes\":14},{\"dow\":3,\"hour\":20,\"keystrokes\":7},{\"dow\":4,\"hour\":7,\"keystrokes\":57}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":201.5}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":144.5}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":57}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":21.5}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":14.5}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":7}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        -5,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        -5,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        -5,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":0,\"hour\":1,\"keystrokes\":14},{\"dow\":0,\"hour\":2,\"keystrokes\":7},{\"dow\":1,\"hour\":1,\"keystrokes\":14},{\"dow\":3,\"hour\":20,\"keystrokes\":7},{\"dow\":4,\"hour\":7,\"keystrokes\":57}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":104},{\"dow\":0,\"hour\":1,\"keystrokes\":105},{\"dow\":1,\"hour\":1,\"keystrokes\":113},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":4,\"hour\":7,\"keystrokes\":107}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":104},{\"dow\":0,\"hour\":1,\"keystrokes\":105},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":4,\"hour\":7,\"keystrokes\":107}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "[{\"dow\":1,\"hour\":1,\"keystrokes\":7}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        "0",
+        "later"
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        "0",
+        "later"
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        "0",
+        "later"
+      ],
+      "response": "[{\"dow\":0,\"hour\":1,\"keystrokes\":14},{\"dow\":0,\"hour\":2,\"keystrokes\":7},{\"dow\":1,\"hour\":1,\"keystrokes\":14},{\"dow\":3,\"hour\":20,\"keystrokes\":7},{\"dow\":4,\"hour\":7,\"keystrokes\":57}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "[{\"dow\":0,\"hour\":1,\"keystrokes\":14},{\"dow\":0,\"hour\":2,\"keystrokes\":7},{\"dow\":1,\"hour\":1,\"keystrokes\":14},{\"dow\":3,\"hour\":20,\"keystrokes\":7},{\"dow\":4,\"hour\":7,\"keystrokes\":57}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "[{\"dow\":0,\"hour\":1,\"keystrokes\":14},{\"dow\":0,\"hour\":2,\"keystrokes\":7},{\"dow\":1,\"hour\":1,\"keystrokes\":14},{\"dow\":3,\"hour\":20,\"keystrokes\":7},{\"dow\":4,\"hour\":7,\"keystrokes\":57}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":100},{\"dow\":0,\"hour\":2,\"keystrokes\":112},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":163},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":100},{\"dow\":0,\"hour\":2,\"keystrokes\":112},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":100},{\"dow\":0,\"hour\":2,\"keystrokes\":112},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":100},{\"dow\":0,\"hour\":2,\"keystrokes\":112},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":175},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":100},{\"dow\":0,\"hour\":2,\"keystrokes\":112},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":125},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":100},{\"dow\":0,\"hour\":2,\"keystrokes\":112},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":106},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":125},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":75}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":75}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":75}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":20}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":20}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":20}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":75}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":75}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":75}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":425},{\"dow\":0,\"hour\":2,\"keystrokes\":213},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":209},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":115},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":156.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-b",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dow\":4,\"hour\":7,\"keystrokes\":11}]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "",
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        5,
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridLocal",
+      "args": [
+        null,
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        "",
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListActivityGridForHash",
+      "args": [
+        "uid-a",
+        7,
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":20,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":20,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":6,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":6,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        -5,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        -5,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        -5,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":20,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        "0",
+        "later"
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        "0",
+        "later"
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        "0",
+        "later"
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":20,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":20,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":20,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":1,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":30,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":10,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":10,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":36,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":3,\"col\":3,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":4,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "[{\"dayMs\":1725681600000,\"layer\":0,\"row\":0,\"col\":2,\"count\":9,\"tap\":0,\"hold\":0},{\"dayMs\":1725768000000,\"layer\":1,\"row\":1,\"col\":0,\"count\":10,\"tap\":1,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":13,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":0,\"row\":2,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0},{\"dayMs\":1730602800000,\"layer\":1,\"row\":3,\"col\":2,\"count\":12,\"tap\":1,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":17,\"tap\":0,\"hold\":0},{\"dayMs\":1767150000000,\"layer\":1,\"row\":3,\"col\":0,\"count\":16,\"tap\":1,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":0,\"row\":2,\"col\":2,\"count\":15,\"tap\":0,\"hold\":0},{\"dayMs\":1767236400000,\"layer\":1,\"row\":1,\"col\":1,\"count\":14,\"tap\":1,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":0,\"row\":0,\"col\":0,\"count\":1,\"tap\":0,\"hold\":0},{\"dayMs\":1772938800000,\"layer\":1,\"row\":1,\"col\":1,\"count\":2,\"tap\":1,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":0,\"row\":2,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1773025200000,\"layer\":1,\"row\":3,\"col\":0,\"count\":4,\"tap\":1,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":16,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":0,\"count\":5,\"tap\":3,\"hold\":2},{\"dayMs\":1792033200000,\"layer\":0,\"row\":1,\"col\":1,\"count\":4,\"tap\":1,\"hold\":3},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":0,\"count\":8,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":0,\"row\":2,\"col\":1,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":1,\"row\":0,\"col\":2,\"count\":3,\"tap\":0,\"hold\":0},{\"dayMs\":1792033200000,\"layer\":2,\"row\":1,\"col\":2,\"count\":2,\"tap\":0,\"hold\":2},{\"dayMs\":1793502000000,\"layer\":0,\"row\":0,\"col\":1,\"count\":5,\"tap\":0,\"hold\":0},{\"dayMs\":1793502000000,\"layer\":1,\"row\":1,\"col\":2,\"count\":6,\"tap\":1,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":0,\"row\":2,\"col\":0,\"count\":7,\"tap\":0,\"hold\":0},{\"dayMs\":1793588400000,\"layer\":1,\"row\":3,\"col\":1,\"count\":8,\"tap\":1,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "uid-b",
+        0,
+        9007199254740991
+      ],
+      "response": "[{\"dayMs\":1792033200000,\"layer\":0,\"row\":0,\"col\":1,\"count\":11,\"tap\":0,\"hold\":0}]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        "",
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDay",
+      "args": [
+        5,
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayLocal",
+      "args": [
+        null,
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        "",
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsListMatrixCellsByDayForHash",
+      "args": [
+        "uid-a",
+        7,
+        0,
+        9007199254740991
+      ],
+      "response": "[]"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":122,\"atMs\":1767225540000},\"peakKeystrokesPerDay\":{\"value\":340,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":120,\"atMs\":1725768000000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":50,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":57,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "{\"peakWpm\":{\"value\":24.30133657351154,\"atMs\":1792058520000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":85,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":201.5,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "{\"peakWpm\":{\"value\":24.30133657351154,\"atMs\":1792058520000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":55,\"atMs\":1792058640000},\"peakKeystrokesPerDay\":{\"value\":144.5,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":45000,\"startedAtMs\":1792058640000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058400000,
+        1792058700000
+      ],
+      "response": "{\"peakWpm\":{\"value\":13.333333333333334,\"atMs\":1792058400000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":50,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":57,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "{\"peakWpm\":{\"value\":24.30133657351154,\"atMs\":1792058520000},\"lowestWpm\":{\"value\":7.862068965517241,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":19,\"atMs\":1792058460000},\"peakKeystrokesPerDay\":{\"value\":21.5,\"day\":\"2026-10-15\"},\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "{\"peakWpm\":{\"value\":24.30133657351154,\"atMs\":1792058520000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":12,\"atMs\":1792058460000},\"peakKeystrokesPerDay\":{\"value\":14.5,\"day\":\"2026-10-15\"},\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058400000.5,
+        1792058550000
+      ],
+      "response": "{\"peakWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":7,\"atMs\":1792058460000},\"peakKeystrokesPerDay\":{\"value\":7,\"day\":\"2026-10-15\"},\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        -5,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":122,\"atMs\":1767225540000},\"peakKeystrokesPerDay\":{\"value\":340,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        -5,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        -5,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":120,\"atMs\":1725768000000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":50,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":57,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "{\"peakWpm\":{\"value\":128.3101828719896,\"atMs\":1793595600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":113,\"atMs\":1793595540000},\"peakKeystrokesPerDay\":{\"value\":220,\"day\":\"2026-11-02\"},\"longestSession\":{\"durationMs\":45000,\"startedAtMs\":1792058640000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "{\"peakWpm\":{\"value\":128.3101828719896,\"atMs\":1793595600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":107,\"atMs\":1793595600000},\"peakKeystrokesPerDay\":{\"value\":213,\"day\":\"2026-11-02\"},\"longestSession\":{\"durationMs\":45000,\"startedAtMs\":1792058640000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        1792058580000,
+        1792058460000
+      ],
+      "response": "{\"peakWpm\":{\"value\":120,\"atMs\":1793595540000},\"lowestWpm\":{\"value\":120,\"atMs\":1793595540000},\"peakKeystrokesPerMin\":{\"value\":7,\"atMs\":1793595540000},\"peakKeystrokesPerDay\":{\"value\":7,\"day\":\"2026-11-02\"},\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        "0",
+        "later"
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":122,\"atMs\":1767225540000},\"peakKeystrokesPerDay\":{\"value\":340,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        "0",
+        "later"
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        "0",
+        "later"
+      ],
+      "response": "{\"peakWpm\":{\"value\":120,\"atMs\":1725768000000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":50,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":57,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":122,\"atMs\":1767225540000},\"peakKeystrokesPerDay\":{\"value\":340,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        {
+          "$n": "NaN"
+        },
+        {
+          "$n": "Infinity"
+        }
+      ],
+      "response": "{\"peakWpm\":{\"value\":120,\"atMs\":1725768000000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":50,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":57,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":122,\"atMs\":1767225540000},\"peakKeystrokesPerDay\":{\"value\":340,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-remote",
+        {
+          "$u": true
+        },
+        {
+          "$u": true
+        }
+      ],
+      "response": "{\"peakWpm\":{\"value\":120,\"atMs\":1725768000000},\"lowestWpm\":{\"value\":9.333333333333334,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":50,\"atMs\":1792058400000},\"peakKeystrokesPerDay\":{\"value\":57,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":222,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":222,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":222,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":222,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":222,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          " Code ",
+          "Slack",
+          "Code",
+          7
+        ],
+        [],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":222,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058580000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":40,\"atMs\":1792058580000},\"peakKeystrokesPerDay\":{\"value\":75,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058580000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":40,\"atMs\":1792058580000},\"peakKeystrokesPerDay\":{\"value\":75,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [],
+        [
+          "words (english)"
+        ],
+        []
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058580000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":40,\"atMs\":1792058580000},\"peakKeystrokesPerDay\":{\"value\":75,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058640000},\"lowestWpm\":{\"value\":8,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":20,\"atMs\":1792058640000},\"peakKeystrokesPerDay\":{\"value\":20,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058640000},\"lowestWpm\":{\"value\":8,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":20,\"atMs\":1792058640000},\"peakKeystrokesPerDay\":{\"value\":20,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [],
+        [],
+        [
+          "run-2",
+          ""
+        ]
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058640000},\"lowestWpm\":{\"value\":8,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":20,\"atMs\":1792058640000},\"peakKeystrokesPerDay\":{\"value\":20,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058580000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":40,\"atMs\":1792058580000},\"peakKeystrokesPerDay\":{\"value\":75,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058580000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":40,\"atMs\":1792058580000},\"peakKeystrokesPerDay\":{\"value\":75,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        [
+          "Code"
+        ],
+        [
+          "words (english)"
+        ],
+        [
+          "run-1"
+        ]
+      ],
+      "response": "{\"peakWpm\":{\"value\":8,\"atMs\":1792058580000},\"lowestWpm\":{\"value\":7,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":40,\"atMs\":1792058580000},\"peakKeystrokesPerDay\":{\"value\":75,\"day\":\"2026-10-15\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.333333333333333,\"atMs\":1792058640000},\"peakKeystrokesPerMin\":{\"value\":122,\"atMs\":1767225540000},\"peakKeystrokesPerDay\":{\"value\":340,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":1800000,\"startedAtMs\":1792058400000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        "uid-a",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "hash-own",
+        0,
+        9007199254740991,
+        "Code",
+        null,
+        {}
+      ],
+      "response": "{\"peakWpm\":{\"value\":138.9776357827476,\"atMs\":1767225600000},\"lowestWpm\":{\"value\":7.2,\"atMs\":1792058460000},\"peakKeystrokesPerMin\":{\"value\":116,\"atMs\":1767225600000},\"peakKeystrokesPerDay\":{\"value\":333,\"day\":\"2024-11-03\"},\"longestSession\":{\"durationMs\":300000,\"startedAtMs\":1792058280000}}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-b",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":{\"value\":12,\"atMs\":1792058520000},\"lowestWpm\":{\"value\":12,\"atMs\":1792058520000},\"peakKeystrokesPerMin\":{\"value\":11,\"atMs\":1792058520000},\"peakKeystrokesPerDay\":{\"value\":11,\"day\":\"2026-10-15\"},\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":null,\"lowestWpm\":null,\"peakKeystrokesPerMin\":null,\"peakKeystrokesPerDay\":null,\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        5,
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":null,\"lowestWpm\":null,\"peakKeystrokesPerMin\":null,\"peakKeystrokesPerDay\":null,\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsLocal",
+      "args": [
+        null,
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":null,\"lowestWpm\":null,\"peakKeystrokesPerMin\":null,\"peakKeystrokesPerDay\":null,\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        "",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":null,\"lowestWpm\":null,\"peakKeystrokesPerMin\":null,\"peakKeystrokesPerDay\":null,\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecordsForHash",
+      "args": [
+        "uid-a",
+        7,
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":null,\"lowestWpm\":null,\"peakKeystrokesPerMin\":null,\"peakKeystrokesPerDay\":null,\"longestSession\":null}"
+    },
+    {
+      "member": "typingAnalyticsListActivityGrid",
+      "args": [
+        "uid-a",
+        1704067200000,
+        1798761600000
+      ],
+      "response": "[{\"dow\":0,\"hour\":0,\"keystrokes\":214},{\"dow\":0,\"hour\":1,\"keystrokes\":439},{\"dow\":0,\"hour\":2,\"keystrokes\":220},{\"dow\":1,\"hour\":0,\"keystrokes\":102},{\"dow\":1,\"hour\":1,\"keystrokes\":223},{\"dow\":1,\"hour\":2,\"keystrokes\":107},{\"dow\":3,\"hour\":20,\"keystrokes\":122},{\"dow\":3,\"hour\":21,\"keystrokes\":116},{\"dow\":4,\"hour\":7,\"keystrokes\":213.5},{\"dow\":4,\"hour\":11,\"keystrokes\":113},{\"dow\":4,\"hour\":12,\"keystrokes\":114},{\"dow\":6,\"hour\":23,\"keystrokes\":108}]"
+    },
+    {
+      "member": "typingAnalyticsGetPeakRecords",
+      "args": [
+        "uid-empty",
+        0,
+        9007199254740991
+      ],
+      "response": "{\"peakWpm\":null,\"lowestWpm\":null,\"peakKeystrokesPerMin\":null,\"peakKeystrokesPerDay\":null,\"longestSession\":null}"
+    }
+  ]
+}
