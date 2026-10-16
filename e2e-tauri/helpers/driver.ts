@@ -46,11 +46,13 @@ let session: DriverSession | null = null
 let stopping = false
 
 // afterSession does not run when the session never started, so the worker
-// also stops tauri-driver and removes the userData directory when it exits.
+// also stops tauri-driver, kills the session's other processes and removes
+// the userData directory when it exits.
 process.once('exit', () => {
   if (!session) return
   stopping = true
   session.driver.kill()
+  if (process.platform === 'linux') signalAll(sessionPids(session.userDataDir), 'SIGKILL')
   rmSync(session.userDataDir, { recursive: true, force: true })
 })
 
@@ -73,28 +75,44 @@ export function readAppConfig(): Record<string, unknown> {
   return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : {}
 }
 
+/** The sync units local/sync-pending.json lists of the running session;
+ *  empty before the app first writes it. */
+export function readPendingUnits(): string[] {
+  const path = userDataPath('local', 'sync-pending.json')
+  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { units: string[] }).units : []
+}
+
 const QUIT_POLL_MS = 100
 
-/** The pids of the processes of the app binary that run with the running
- *  session's userData directory: the app WebKitWebDriver started, and a
- *  launch of {@link launchAppAgain} while it runs. Linux only: it reads
- *  /proc. */
-function sessionAppPids(userDataDir: string): number[] {
-  const binary = realpathSync(APP_BINARY)
+/** The pids of the running processes that carry the session's userData
+ *  directory in their environment: tauri-driver passes it on to
+ *  WebKitWebDriver, which passes it on to the app it starts, and
+ *  {@link launchAppAgain} launches with it. With `exe`, only the processes of
+ *  that binary. Linux only: it reads /proc. */
+function sessionPids(userDataDir: string, exe?: string): number[] {
   const marker = `PIPETTE_USER_DATA_DIR=${userDataDir}`
   const pids: number[] = []
   for (const entry of readdirSync('/proc')) {
     if (!/^\d+$/.test(entry)) continue
+    const pid = Number(entry)
+    if (pid === process.pid) continue
     try {
-      if (readlinkSync(`/proc/${entry}/exe`) !== binary) continue
+      if (exe !== undefined && readlinkSync(`/proc/${entry}/exe`) !== exe) continue
       if (!readFileSync(`/proc/${entry}/environ`, 'utf8').split('\0').includes(marker)) continue
     } catch {
       // Gone since the listing, or another user's process.
       continue
     }
-    if (isRunning(Number(entry))) pids.push(Number(entry))
+    if (isRunning(pid)) pids.push(pid)
   }
   return pids
+}
+
+/** The pids of the processes of the app binary that run with the session's
+ *  userData directory: the app WebKitWebDriver started, and a launch of
+ *  {@link launchAppAgain} while it runs. Linux only. */
+function sessionAppPids(userDataDir: string): number[] {
+  return sessionPids(userDataDir, realpathSync(APP_BINARY))
 }
 
 /** Whether `pid` is a process that has not exited: an exited child stays a
@@ -128,10 +146,20 @@ export async function quitApp(timeoutMs: number): Promise<void> {
   }
 }
 
+/** A Hub address nothing listens on: the Hub requests a test records no
+ *  response for (`dev_http_respond`) fail at once instead of reaching the
+ *  real Hub. The development tools' build reads PIPETTE_HUB_URL. */
+export const E2E_HUB_URL = 'http://127.0.0.1:9'
+
 /** The environment the app of a session runs with: the virtual keyboard
- *  only, and the session's userData directory. */
+ *  only, the session's userData directory, and a Hub that is not there. */
 function appEnv(userDataDir: string): NodeJS.ProcessEnv {
-  return { ...process.env, PIPETTE_VIRTUAL_DEVICE: 'only', PIPETTE_USER_DATA_DIR: userDataDir }
+  return {
+    ...process.env,
+    PIPETTE_VIRTUAL_DEVICE: 'only',
+    PIPETTE_USER_DATA_DIR: userDataDir,
+    PIPETTE_HUB_URL: E2E_HUB_URL,
+  }
 }
 
 export interface LaunchResult {
@@ -202,7 +230,8 @@ async function waitForPort(): Promise<void> {
   throw new Error(`tauri-driver did not accept connections within ${DRIVER_READY_TIMEOUT_MS} ms`)
 }
 
-/** Stops tauri-driver and removes the userData directory. With `keepUserData`
+/** Stops tauri-driver, ends the session's processes that outlive it, and
+ *  removes the userData directory. With `keepUserData`
  *  the directory stays, and the app logs in it are printed for the failure
  *  report. */
 export async function stopDriver(opts: { keepUserData: boolean }): Promise<void> {
@@ -217,12 +246,72 @@ export async function stopDriver(opts: { keepUserData: boolean }): Promise<void>
     driver.kill()
     await exited
   }
+  if (process.platform === 'linux') await killLeftoverProcesses(userDataDir)
   if (opts.keepUserData) {
     console.error(`userData of the failed session kept at ${userDataDir}`)
     printLogs(join(userDataDir, 'logs'))
   } else {
     rmSync(userDataDir, { recursive: true, force: true })
   }
+}
+
+const LEFTOVER_TERM_WAIT_MS = 5_000
+const LEFTOVER_KILL_WAIT_MS = 5_000
+
+/** `pid` and its command line, for the failure report. */
+function describeProcess(pid: number): string {
+  try {
+    const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0').filter(Boolean).join(' ')
+    return `${pid} (${cmdline})`
+  } catch {
+    return String(pid)
+  }
+}
+
+/** Waits until no process of the session is running, for at most
+ *  `timeoutMs`, and returns the ones still running. Each check scans /proc
+ *  again, so a pid that exited and was reused by another process is not
+ *  reported. */
+async function waitForSessionExit(userDataDir: string, timeoutMs: number): Promise<number[]> {
+  const deadline = Date.now() + timeoutMs
+  let running = sessionPids(userDataDir)
+  while (running.length > 0 && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, QUIT_POLL_MS))
+    running = sessionPids(userDataDir)
+  }
+  return running
+}
+
+function signalAll(pids: number[], signal: NodeJS.Signals): void {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, signal)
+    } catch {
+      // Exited since it was found.
+    }
+  }
+}
+
+/** Ends the processes of the session that outlive tauri-driver. On SIGTERM
+ *  tauri-driver SIGKILLs WebKitWebDriver and exits, so an app that has not
+ *  exited by then stays running without a parent. A running app holds the
+ *  single-instance name on the D-Bus session bus every session shares, and
+ *  each later launch then hands over to it and exits, so no later session
+ *  could start. SIGTERM first, which runs the app's quit sequence, then
+ *  SIGKILL. Linux only: it reads /proc. */
+async function killLeftoverProcesses(userDataDir: string): Promise<void> {
+  const pids = sessionPids(userDataDir)
+  if (pids.length === 0) return
+  console.error(`processes of the session still running after tauri-driver exited: ${pids.map(describeProcess).join(', ')}`)
+  signalAll(pids, 'SIGTERM')
+  // The pids come from a fresh scan right before each signal, so a pid that
+  // exited and was reused by another process during the wait is not signalled.
+  const afterTerm = await waitForSessionExit(userDataDir, LEFTOVER_TERM_WAIT_MS)
+  if (afterTerm.length === 0) return
+  console.error(`sending SIGKILL to the processes that did not exit on SIGTERM: ${afterTerm.join(', ')}`)
+  signalAll(afterTerm, 'SIGKILL')
+  const afterKill = await waitForSessionExit(userDataDir, LEFTOVER_KILL_WAIT_MS)
+  if (afterKill.length > 0) console.error(`processes of the session still running after SIGKILL: ${afterKill.join(', ')}`)
 }
 
 function printLogs(logDir: string): void {

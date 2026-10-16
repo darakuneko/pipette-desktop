@@ -13,7 +13,6 @@ import {
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
   HEX_INPUT_SELECTOR,
-  UNLOCK_DIALOG_HEADING,
   VIRTUAL_DEVICE_NAME,
   closeKeyPopover,
   openKeycodeHexInput,
@@ -23,16 +22,15 @@ import {
   recordedPageErrors,
   restartApp,
   setKeycode,
+  unlockIfAsked,
   vialApi,
   virtualDevice,
   waitForGone,
 } from '../helpers/app'
-import { userDataPath } from '../helpers/driver'
+import { readPendingUnits, userDataPath } from '../helpers/driver'
 
 const KC_X = '001B'
 const KC_Z = '001D'
-const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
-const UNLOCK_TIMEOUT_MS = 15_000
 const LABEL = 'E2E snapshot'
 const RENAMED = 'E2E snapshot renamed'
 /** WebDriver's code of the Enter key. */
@@ -63,11 +61,6 @@ function readSettingsFile(uid: string): Record<string, unknown> | null {
   return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : null
 }
 
-function readPendingUnits(): string[] {
-  const path = userDataPath('local', 'sync-pending.json')
-  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as { units: string[] }).units : []
-}
-
 /** The labels of the snapshots the Import / Save tab shows. */
 function shownLabels(): Promise<string[]> {
   return browser.execute(
@@ -81,22 +74,6 @@ async function submitSave(label: string): Promise<void> {
   await openOverlayTab('data')
   await $('[data-testid="layout-store-save-input"]').setValue(label)
   await $('[data-testid="layout-store-save-submit"]').click()
-}
-
-/** Holds the unlock combo while the unlock dialog is up, if it comes up
- *  within a few seconds. */
-async function unlockIfAsked(): Promise<void> {
-  const asked = await $(UNLOCK_DIALOG_HEADING)
-    .waitForDisplayed({ timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false)
-  if (!asked) return
-  await virtualDevice.holdKeys(UNLOCK_KEYS)
-  try {
-    await $(UNLOCK_DIALOG_HEADING).waitForDisplayed({ reverse: true, timeout: UNLOCK_TIMEOUT_MS })
-  } finally {
-    await virtualDevice.releaseAll()
-  }
 }
 
 async function keycodeAt(row: number, col: number): Promise<string> {

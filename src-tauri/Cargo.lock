@@ -2814,6 +2814,7 @@ dependencies = [
  "pipette-fs",
  "pipette-js-json",
  "pipette-keyboard-stores",
+ "pipette-sync-pending",
  "pipette-time",
  "tempfile",
 ]

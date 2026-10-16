@@ -10,6 +10,9 @@ import { quitApp } from './driver'
 export const VIRTUAL_DEVICE_NAME = 'Virtual Keyboard'
 export const EDITOR_SELECTOR = '[data-testid="editor-content"]'
 export const UNLOCK_DIALOG_HEADING = 'h2=Unlock Keyboard'
+/** The unlock combo of the virtual keyboard's definition. */
+export const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
+const UNLOCK_TIMEOUT_MS = 15_000
 const CONNECT_TIMEOUT_MS = 20_000
 // Longer than the deadline of the app's own quit sequence (30 s).
 const QUIT_TIMEOUT_MS = 40_000
@@ -79,6 +82,22 @@ export const virtualDevice = {
   releaseKey: (row: number, col: number) => invokeCommand('virtual_device_release_key', { row, col }),
   releaseAll: () => invokeCommand('virtual_device_release_all'),
   getState: () => invokeCommand<VirtualDeviceControllerState>('virtual_device_get_state'),
+}
+
+/** Holds the unlock combo while the unlock dialog is up, if it comes up
+ *  within a few seconds. */
+export async function unlockIfAsked(): Promise<void> {
+  const asked = await $(UNLOCK_DIALOG_HEADING)
+    .waitForDisplayed({ timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!asked) return
+  await virtualDevice.holdKeys(UNLOCK_KEYS)
+  try {
+    await $(UNLOCK_DIALOG_HEADING).waitForDisplayed({ reverse: true, timeout: UNLOCK_TIMEOUT_MS })
+  } finally {
+    await virtualDevice.releaseAll()
+  }
 }
 
 /** The device-list button whose name is exactly `name` (a substring match
@@ -246,14 +265,41 @@ export const openToolsOverlay = (): Promise<void> => openOverlayTab('tools')
  *  of the development tools), clicks `selector`, and waits until a file
  *  dialog has taken the answer, so a click that opened no dialog fails here
  *  rather than as a missing result later. */
-export async function clickIntoFileDialog(selector: string, path: string): Promise<void> {
+export function clickIntoFileDialog(selector: string, path: string): Promise<void> {
+  return clickIntoDialog(selector, { path })
+}
+
+/** Like {@link clickIntoFileDialog}, for a dialog that picks several files. */
+export function clickIntoFilesDialog(selector: string, paths: string[]): Promise<void> {
+  return clickIntoDialog(selector, { paths })
+}
+
+async function clickIntoDialog(selector: string, answer: { path: string } | { paths: string[] }): Promise<void> {
   const queued = () => invokeCommand<number>('dev_dialog_queued')
   if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
-  await invokeCommand('dev_dialog_respond', { path })
+  await invokeCommand('dev_dialog_respond', answer)
   await $(selector).click()
   await browser.waitUntil(async () => (await queued()) === 0, {
     timeoutMsg: `clicking ${selector} opened no file dialog`,
   })
+}
+
+/** Records `body` (UTF-8 text, or bytes) with `status` as the response of
+ *  the next GET of `url` (`dev_http_respond` of the development tools), so
+ *  the request never reaches the network. */
+export async function respondHttp(url: string, body: string | Uint8Array, status = 200): Promise<void> {
+  const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : body
+  await invokeCommand('dev_http_respond', { url, status, body: [...bytes] })
+}
+
+/** How many recorded responses no request has taken yet. */
+export function queuedHttpResponses(): Promise<number> {
+  return invokeCommand<number>('dev_http_queued')
+}
+
+/** Waits until every recorded response has been taken. */
+export async function waitForHttpResponsesTaken(timeoutMsg: string): Promise<void> {
+  await browser.waitUntil(async () => (await queuedHttpResponses()) === 0, { timeoutMsg })
 }
 
 /** Quits the app and starts it again in a new WebDriver session, with the

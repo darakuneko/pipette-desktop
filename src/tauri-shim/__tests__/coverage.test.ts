@@ -4,8 +4,10 @@
 // member is exactly one of real or fake, and the fakes are exactly the list
 // below, so adding or replacing one is a deliberate change here too. The
 // keyboard members (HID probe, file dialogs, snapshot, favorite and
-// pipette settings stores, stored keyboards, pending sync units) are all
-// real.
+// pipette settings stores, stored keyboards, pending sync units) and the
+// pack and label members (key labels, typing test texts, language and
+// theme packs, word lists, datasets and the Aozora Bunko import) are all
+// real; the members named after the Hub are fakes or stubs.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -114,17 +116,71 @@ const THEME_PACK_MEMBERS = [
   'themePackOnChanged',
 ]
 
+/** The key label store members, all real. */
+const KEY_LABEL_MEMBERS = [
+  'keyLabelStoreList',
+  'keyLabelStoreListAll',
+  'keyLabelStoreGet',
+  'keyLabelStoreRename',
+  'keyLabelStoreDelete',
+  'keyLabelStoreImport',
+  'keyLabelStoreExport',
+  'keyLabelStoreReorder',
+  'keyLabelStoreSetHubPostId',
+  'keyLabelStoreHasName',
+]
+
+/** The typing test text store members, all real. */
+const TYPING_TEXT_MEMBERS = [
+  'typingTestTextStoreList',
+  'typingTestTextStoreGet',
+  'typingTestTextStoreRename',
+  'typingTestTextStoreDelete',
+  'typingTestTextStoreImport',
+  'typingTestTextStoreImportConfirm',
+]
+
+/** The Typing Test word list, dataset and Aozora Bunko import members, all
+ *  real. */
+const TYPING_DATASET_MEMBERS = [
+  'langList',
+  'langGet',
+  'langDownload',
+  'langDelete',
+  'checkTypingDatasetUpdate',
+  'updateTypingDataset',
+  'aozoraImport',
+]
+
+/** Whether `name` is a member named after the Hub that is not answered
+ *  locally: the setters of a store's Hub link (`…SetHubPostId`,
+ *  `…SetHubPrivate`) and `hubGetOrigin` (the configured origin) are. The
+ *  word list dataset members and the Aozora Bunko import also reach the
+ *  Hub but are real, and are not named after it. */
+const namedAfterHub = (name: string): boolean =>
+  /^hub|Hub/.test(name) && !/SetHub/.test(name) && name !== 'hubGetOrigin'
+
 describe('shim coverage', () => {
-  it('backs every theme pack member with backend commands', () => {
-    expect(new Set(THEME_PACK_MEMBERS).size).toBe(11)
-    expect(THEME_PACK_MEMBERS.filter((name) => !(name in real))).toEqual([])
-    expect(THEME_PACK_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  it('backs every pack and label member with backend commands', () => {
+    const members = [
+      ...KEY_LABEL_MEMBERS,
+      ...TYPING_TEXT_MEMBERS,
+      ...LANGUAGE_PACK_MEMBERS,
+      ...THEME_PACK_MEMBERS,
+      ...TYPING_DATASET_MEMBERS,
+    ]
+    expect(new Set(members).size).toBe(47)
+    expect(members.filter((name) => !(name in real))).toEqual([])
+    expect(members.filter((name) => name in fakes)).toEqual([])
+    // Every key label and typing test text store member is in the list.
+    const stores = Object.keys(implemented).filter((name) => /^(keyLabelStore|typingTestTextStore)/.test(name))
+    expect(stores.filter((name) => !members.includes(name))).toEqual([])
   })
 
-  it('backs every language pack member with backend commands', () => {
-    expect(new Set(LANGUAGE_PACK_MEMBERS).size).toBe(13)
-    expect(LANGUAGE_PACK_MEMBERS.filter((name) => !(name in real))).toEqual([])
-    expect(LANGUAGE_PACK_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  it('leaves the members named after the Hub to fakes or stubs', () => {
+    const hub = VIAL_API_MEMBER_NAMES.filter(namedAfterHub)
+    expect(hub.length).toBeGreaterThan(0)
+    expect(hub.filter((name) => name in real)).toEqual([])
   })
 
   it('backs every keyboard member with backend commands', () => {
@@ -133,33 +189,8 @@ describe('shim coverage', () => {
     expect(KEYBOARD_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })
 
-  it('backs the Typing Test word list, dataset and Aozora import members with backend commands', () => {
-    const members = [
-      'langList',
-      'langGet',
-      'langDownload',
-      'langDelete',
-      'checkTypingDatasetUpdate',
-      'updateTypingDataset',
-      'aozoraImport',
-    ]
-    expect(members.filter((name) => !(name in real))).toEqual([])
-  })
-
   // Applied sync units come from the sync service, which the backend does
   // not run yet; the renderer only subscribes.
-  it('backs every key label store member with backend commands', () => {
-    const members = Object.keys(implemented).filter((name) => name.startsWith('keyLabelStore'))
-    expect(members).toHaveLength(10)
-    expect(members.filter((name) => !(name in real))).toEqual([])
-  })
-
-  it('backs every typing test text store member with backend commands', () => {
-    const members = Object.keys(implemented).filter((name) => name.startsWith('typingTestTextStore'))
-    expect(members).toHaveLength(6)
-    expect(members.filter((name) => !(name in real))).toEqual([])
-  })
-
   it('leaves syncOnUnitApplied to the stub', () => {
     expect('syncOnUnitApplied' in implemented).toBe(false)
   })
