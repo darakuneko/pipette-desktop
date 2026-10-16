@@ -20,7 +20,12 @@ const EXPECTED_FAKES = [
   'syncPasswordStatus',
   'syncFormatStatus',
   'notificationFetch',
-  'i18nPackList',
+  'i18nPackHubTimestamps',
+  'hubListI18nPosts',
+  'hubDownloadI18nPost',
+  'hubUploadI18nPost',
+  'hubUpdateI18nPost',
+  'hubDeleteI18nPost',
   'themePackList',
   'keyLabelHubList',
   'keyLabelHubDownload',
@@ -72,7 +77,30 @@ const KEYBOARD_MEMBERS = [
   'syncOnPendingChange',
 ]
 
+/** The language pack members, all real. */
+const LANGUAGE_PACK_MEMBERS = [
+  'i18nPackList',
+  'i18nPackGet',
+  'i18nPackRename',
+  'i18nPackSetEnabled',
+  'i18nPackRefreshCoverage',
+  'i18nPackDelete',
+  'i18nPackSetHubPostId',
+  'i18nPackHasName',
+  'i18nPackReorder',
+  'i18nPackImport',
+  'i18nPackImportApply',
+  'i18nPackExport',
+  'i18nPackOnChanged',
+]
+
 describe('shim coverage', () => {
+  it('backs every language pack member with backend commands', () => {
+    expect(new Set(LANGUAGE_PACK_MEMBERS).size).toBe(13)
+    expect(LANGUAGE_PACK_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(LANGUAGE_PACK_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
   it('backs every keyboard member with backend commands', () => {
     expect(new Set(KEYBOARD_MEMBERS).size).toBe(36)
     expect(KEYBOARD_MEMBERS.filter((name) => !(name in real))).toEqual([])

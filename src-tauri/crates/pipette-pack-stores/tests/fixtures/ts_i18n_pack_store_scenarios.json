@@ -1,0 +1,2190 @@
+[
+  {
+    "name": "English on the first list, then saves, renames, enabling, coverage, Hub links and deletes",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "builtin-english"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Alpha",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Alpha)"
+            }
+          }
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 10
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "  Beta  ",
+            "version": " 2.0.0 ",
+            "common": {
+              "save": "Save (Beta)"
+            }
+          }
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": null,
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 7
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "hasName",
+        "name": " alpha "
+      },
+      {
+        "op": "hasName",
+        "name": "Alpha",
+        "excludeId": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "hasName",
+        "name": "english",
+        "excludeId": 7
+      },
+      {
+        "op": "hasName",
+        "name": 5
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "  Renamed  "
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "ENGLISH"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀x"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": " 　 "
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": 7
+      },
+      {
+        "op": "rename",
+        "id": 5,
+        "name": "x"
+      },
+      {
+        "op": "rename",
+        "id": "missing",
+        "name": "x"
+      },
+      {
+        "op": "rename",
+        "id": "builtin-english",
+        "name": "Englisch"
+      },
+      {
+        "op": "setEnabled",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "enabled": false
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "setEnabled",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "enabled": false
+      },
+      {
+        "op": "setEnabled",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "enabled": "yes"
+      },
+      {
+        "op": "setEnabled",
+        "id": "missing",
+        "enabled": true
+      },
+      {
+        "op": "refreshCoverage",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "values": {
+          "matchedBaseVersion": "0.9.1",
+          "coverage": {
+            "totalKeys": 12,
+            "coveredKeys": 12
+          },
+          "measuredBodyClock": "2026-10-16T12:00:00.000Z"
+        }
+      },
+      {
+        "op": "refreshCoverage",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "values": {
+          "matchedBaseVersion": "0.9.1",
+          "coverage": {
+            "totalKeys": 12,
+            "coveredKeys": 12
+          },
+          "measuredBodyClock": "2026-10-16T12:00:00.001Z"
+        }
+      },
+      {
+        "op": "refreshCoverage",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "values": {
+          "matchedBaseVersion": "0.9.1",
+          "coverage": {
+            "totalKeys": 12
+          },
+          "measuredBodyClock": "2026-10-16T12:00:00.000Z"
+        }
+      },
+      {
+        "op": "refreshCoverage",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "values": null
+      },
+      {
+        "op": "refreshCoverage",
+        "id": "missing",
+        "values": {
+          "matchedBaseVersion": "x",
+          "coverage": {
+            "totalKeys": 1,
+            "coveredKeys": 1
+          },
+          "measuredBodyClock": "2026-10-16T12:00:00.000Z"
+        }
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": " post-1 ",
+        "uploaderName": " alice ",
+        "hubUpdatedAt": " 2026-05-01T00:00:00.000Z "
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": "post-1",
+        "hubUpdatedAt": " "
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": "post-2",
+        "uploaderName": "",
+        "hubUpdatedAt": "2026-06-01T00:00:00.000Z"
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": null,
+        "uploaderName": "bob"
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": 5,
+        "uploaderName": 5,
+        "hubUpdatedAt": 5
+      },
+      {
+        "op": "hubPostId",
+        "id": "missing",
+        "hubPostId": "p"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:03:00.000Z"
+      },
+      {
+        "op": "delete",
+        "id": "builtin-english"
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:04:00.000Z"
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "delete",
+        "id": "missing"
+      },
+      {
+        "op": "delete",
+        "id": 5
+      },
+      {
+        "op": "hubPostId",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": "post-3"
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "get",
+        "id": "../x"
+      },
+      {
+        "op": "get",
+        "id": 5
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},\"pack\":{\"name\":\"English\",\"version\":\"0.0.0\"}}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Alpha\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Beta\",\"version\":\"2.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      null,
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":false}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Invalid name\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Renamed\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}}",
+      "{\"success\":false,\"errorCode\":\"DUPLICATE_NAME\",\"error\":\"A language pack with the same name already exists\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Name must be at most 64 characters\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.001Z\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Name must be at most 64 characters\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Name must not be empty\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"Invalid name\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":true,\"data\":{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"Englisch\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.001Z\"}}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.001Z\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"enabled must be boolean\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Beta\",\"version\":\"2.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":12,\"coveredKeys\":12},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"matchedBaseVersion\":\"0.9.1\"}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack body changed\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid coverage\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid coverage\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:02:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\",\"hubPostId\":\"post-1\",\"uploaderName\":\"alice\",\"hubUpdatedAt\":\"2026-05-01T00:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:02:00.001Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\",\"hubPostId\":\"post-1\",\"uploaderName\":\"alice\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:02:00.002Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.002Z\",\"hubPostId\":\"post-2\",\"hubUpdatedAt\":\"2026-06-01T00:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:02:00.003Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.003Z\",\"uploaderName\":\"bob\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Beta\",\"version\":\"2.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":12,\"coveredKeys\":12},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:02:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\",\"matchedBaseVersion\":\"0.9.1\"}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      null,
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"English cannot be deleted\"}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Beta\",\"version\":\"2.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":12,\"coveredKeys\":12},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\",\"matchedBaseVersion\":\"0.9.1\",\"deletedAt\":\"2026-10-16T12:04:00.000Z\",\"hubPostId\":\"post-3\"}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:02:00.003Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.003Z\",\"uploaderName\":\"bob\"},\"pack\":{\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Alpha)\"}}}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid pack id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"Englisch\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"version\":\"1.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.001Z\",\"hub\":\"2026-10-16T12:02:00.003Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.003Z\",\"uploaderName\":\"bob\"}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"Englisch\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000001.json\",\n      \"name\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\n      \"version\": \"1.0.0\",\n      \"enabled\": false,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"appVersionAtImport\": \"1.2.3\",\n      \"matchedBaseVersion\": \"0.9.0\",\n      \"coverage\": {\n        \"totalKeys\": 10,\n        \"coveredKeys\": 10\n      },\n      \"dangerousKeyCount\": 0,\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.001Z\",\n        \"hub\": \"2026-10-16T12:02:00.003Z\",\n        \"enabled\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:02:00.003Z\",\n      \"uploaderName\": \"bob\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000002.json\",\n      \"name\": \"Beta\",\n      \"version\": \"2.0.0\",\n      \"enabled\": false,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"appVersionAtImport\": \"1.2.3\",\n      \"coverage\": {\n        \"totalKeys\": 12,\n        \"coveredKeys\": 12\n      },\n      \"dangerousKeyCount\": 0,\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:04:00.000Z\",\n        \"enabled\": \"2026-10-16T12:04:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:04:00.000Z\",\n      \"matchedBaseVersion\": \"0.9.1\",\n      \"deletedAt\": \"2026-10-16T12:04:00.000Z\",\n      \"hubPostId\": \"post-3\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000001.json": "{\n  \"name\": \"Alpha\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Alpha)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000002.json": "{\n  \"name\": \"  Beta  \",\n  \"version\": \" 2.0.0 \",\n  \"common\": {\n    \"save\": \"Save (Beta)\"\n  }\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "saves over packs: same name, kept names, revived tombstones, explicit ids and three-state fields",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Gamma",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Gamma)"
+            }
+          }
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 10
+          },
+          "dangerousKeyCount": 0,
+          "hubPostId": "",
+          "uploaderName": "carol",
+          "hubUpdatedAt": "2026-01-01T00:00:00.000Z",
+          "id": 5
+        }
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "gamma ",
+            "version": "1.1.0",
+            "common": {
+              "save": "Save (gamma )"
+            }
+          }
+        },
+        "options": {
+          "enabled": false,
+          "matchedBaseVersion": null,
+          "coverage": null,
+          "dangerousKeyCount": null,
+          "uploaderName": " ",
+          "hubUpdatedAt": ""
+        }
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "Gamma Renamed"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Gamma",
+            "version": "1.2.0",
+            "common": {
+              "save": "Save (Gamma)"
+            }
+          }
+        },
+        "options": {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "coverage": {
+            "totalKeys": 3,
+            "coveredKeys": "x"
+          },
+          "dangerousKeyCount": "x",
+          "matchedBaseVersion": 7
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Gamma Renamed",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Gamma Renamed)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Delta",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Delta)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:03:00.000Z"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Delta",
+            "version": "3.0.0",
+            "common": {
+              "save": "Save (Delta)"
+            }
+          }
+        },
+        "options": {
+          "enabled": false
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Epsilon",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Epsilon)"
+            }
+          }
+        },
+        "options": {
+          "id": "00000000-0000-4000-8000-000000000002"
+        }
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:04:00.000Z"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Delta",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Delta)"
+            }
+          }
+        },
+        "options": {
+          "id": "00000000-0000-4000-8000-000000000002"
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Hacked",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Hacked)"
+            }
+          }
+        },
+        "options": {
+          "id": "builtin-english"
+        }
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "ENGLISH",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (ENGLISH)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Zeta",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Zeta)"
+            }
+          }
+        },
+        "options": {
+          "id": "../bad"
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Zeta",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Zeta)"
+            }
+          }
+        },
+        "options": {
+          "id": "custom_id-1",
+          "hubPostId": "post-z"
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "zeta",
+            "version": "1.1.0",
+            "common": {
+              "save": "Save (zeta)"
+            }
+          }
+        },
+        "options": {
+          "id": ""
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Omega",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Omega)"
+            }
+          }
+        },
+        "options": {
+          "id": ""
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "No version"
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": " ",
+            "version": "1"
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": [
+            {
+              "name": "Array",
+              "version": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": "just text"
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "absent": true
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Eta",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Eta)"
+            }
+          }
+        },
+        "options": "not an object"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Theta",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Theta)"
+            }
+          }
+        },
+        "options": [
+          1,
+          2
+        ]
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Iota",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Iota)"
+            }
+          }
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "2": "index key",
+            "name": "Kappa",
+            "version": "1",
+            "__proto__": "kept",
+            "nested": [
+              1,
+              2.5,
+              1e+21
+            ]
+          }
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 10
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "get",
+        "id": "custom_id-1"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"\",\"hubUpdatedAt\":\"2026-01-01T00:00:00.000Z\",\"uploaderName\":\"carol\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma\",\"version\":\"1.1.0\",\"enabled\":false,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.001Z\"},\"updatedAt\":\"2026-10-16T12:01:00.001Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.1.0\",\"enabled\":false,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.001Z\"},\"updatedAt\":\"2026-10-16T12:01:00.001Z\"}}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.2.0\",\"enabled\":true,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.000Z\",\"body\":\"2026-10-16T12:02:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.001Z\"},\"updatedAt\":\"2026-10-16T12:02:00.001Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.001Z\",\"body\":\"2026-10-16T12:02:00.001Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.002Z\"},\"updatedAt\":\"2026-10-16T12:02:00.002Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Delta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.000Z\",\"body\":\"2026-10-16T12:02:00.000Z\",\"name\":\"2026-10-16T12:02:00.000Z\",\"hub\":\"2026-10-16T12:02:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.000Z\"},\"updatedAt\":\"2026-10-16T12:02:00.000Z\"}}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Delta\",\"version\":\"3.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Epsilon\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"}}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Epsilon\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_NAME\",\"error\":\"The built-in English pack cannot be overwritten\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.001Z\",\"body\":\"2026-10-16T12:02:00.001Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.002Z\"},\"updatedAt\":\"2026-10-16T12:02:00.002Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Epsilon\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Delta\",\"version\":\"3.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"}]}",
+      "{\"success\":false,\"errorCode\":\"DUPLICATE_NAME\",\"error\":\"A language pack with the same name already exists\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Generated pack id is unsafe\"}",
+      "{\"success\":true,\"data\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.1.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.001Z\",\"body\":\"2026-10-16T12:04:00.001Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.001Z\"},\"updatedAt\":\"2026-10-16T12:04:00.001Z\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Generated pack id is unsafe\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Eta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Theta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Iota\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Kappa\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.1.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.001Z\",\"body\":\"2026-10-16T12:04:00.001Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.001Z\"},\"updatedAt\":\"2026-10-16T12:04:00.001Z\"},\"pack\":{\"name\":\"Zeta\",\"version\":\"1.1.0\",\"common\":{\"save\":\"Save (zeta)\"}}}}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.001Z\",\"body\":\"2026-10-16T12:02:00.001Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.002Z\"},\"updatedAt\":\"2026-10-16T12:02:00.002Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Epsilon\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Delta\",\"version\":\"3.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"},{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.1.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.001Z\",\"body\":\"2026-10-16T12:04:00.001Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.001Z\"},\"updatedAt\":\"2026-10-16T12:04:00.001Z\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Eta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Theta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Iota\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Kappa\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000003",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/index",
+      "i18n/packs/custom_id-1",
+      "i18n/index",
+      "i18n/packs/custom_id-1",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000004",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000005",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000006",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000007",
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": {
+        "sha256": "67726e6175105cb56658b2373adc4ff6b99e7b64527c1aa70625ff740d2c8b76",
+        "size": 4999
+      },
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000001.json": "{\n  \"name\": \"Gamma Renamed\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Gamma Renamed)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000002.json": "{\n  \"name\": \"Delta\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Delta)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000003.json": "{\n  \"name\": \"Delta\",\n  \"version\": \"3.0.0\",\n  \"common\": {\n    \"save\": \"Save (Delta)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000004.json": "{\n  \"name\": \"Eta\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Eta)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000005.json": "{\n  \"name\": \"Theta\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Theta)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000006.json": "{\n  \"name\": \"Iota\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Iota)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000007.json": "{\n  \"2\": \"index key\",\n  \"name\": \"Kappa\",\n  \"version\": \"1\",\n  \"__proto__\": \"kept\",\n  \"nested\": [\n    1,\n    2.5,\n    1e+21\n  ]\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/custom_id-1.json": "{\n  \"name\": \"zeta\",\n  \"version\": \"1.1.0\",\n  \"common\": {\n    \"save\": \"Save (zeta)\"\n  }\n}"
+    }
+  },
+  {
+    "name": "reorder: listed ids first, tombstones and unlisted ids after, other index fields dropped",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"note\": \"top\",\n  \"metas\": [],\n  \"after\": [\n    1\n  ]\n}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "A",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (A)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "B",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (B)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "C",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (C)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "00000000-0000-4000-8000-000000000003",
+          "missing",
+          "00000000-0000-4000-8000-000000000002",
+          "00000000-0000-4000-8000-000000000003",
+          "builtin-english"
+        ]
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "op": "reorder",
+        "ids": []
+      },
+      {
+        "op": "reorder",
+        "ids": "nope"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "a",
+          5
+        ]
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"A\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"B\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"C\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"C\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"A\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid order list\"}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Invalid order list\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"A\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"C\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000003",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000001.json\",\n      \"name\": \"A\",\n      \"version\": \"1.0.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\",\n        \"enabled\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000003\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000003.json\",\n      \"name\": \"C\",\n      \"version\": \"1.0.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\",\n        \"enabled\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000002.json\",\n      \"name\": \"B\",\n      \"version\": \"1.0.0\",\n      \"enabled\": false,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\",\n        \"enabled\": \"2026-10-16T12:00:00.001Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.001Z\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000001.json": "{\n  \"name\": \"A\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (A)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000002.json": "{\n  \"name\": \"B\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (B)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000003.json": "{\n  \"name\": \"C\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (C)\"\n  }\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "reorder with duplicate ids keeps the last meta of a listed id",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"dup\",\n      \"filename\": \"packs/dup.json\",\n      \"name\": \"First\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"other\",\n      \"filename\": \"packs/other.json\",\n      \"name\": \"Other\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"dup\",\n      \"filename\": \"packs/dup.json\",\n      \"name\": \"Second\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}"
+    },
+    "steps": [
+      {
+        "op": "reorder",
+        "ids": [
+          "dup"
+        ]
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "other"
+        ]
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"dup\",\"filename\":\"packs/dup.json\",\"name\":\"Second\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"other\",\"filename\":\"packs/other.json\",\"name\":\"Other\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}}]}",
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"other\",\"filename\":\"packs/other.json\",\"name\":\"Other\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"dup\",\"filename\":\"packs/dup.json\",\"name\":\"Second\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"other\",\n      \"filename\": \"packs/other.json\",\n      \"name\": \"Other\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"dup\",\n      \"filename\": \"packs/dup.json\",\n      \"name\": \"Second\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "a v1 index: body clocks from the body files, other fields kept",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"first\": true,\n  \"metas\": [\n    {\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"coverage\":{\"totalKeys\":2,\"coveredKeys\":1},\"extra\":\"kept\"},\n    {\"id\":\"v1-no-body\",\"filename\":\"packs/v1-no-body.json\",\"name\":\"No Body\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\"},\n    {\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\"},\n    {\"id\":\"bad id!\",\"filename\":\"packs/bad id!.json\",\"name\":\"Unsafe\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\"},\n    {\"id\":\"v1-dead\",\"filename\":\"packs/v1-dead.json\",\"name\":\"Dead\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"deletedAt\":\"2026-10-15T12:00:00.000Z\"},\n    {\"id\":\"v2-waiting\",\"filename\":\"packs/v2-waiting.json\",\"name\":\"Waiting\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"}},\n    {\"id\":\"array-clocks\",\"filename\":\"packs/array-clocks.json\",\"name\":\"Array Clocks\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":[]},\n    {\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One Twin\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},\n    null,\n    \"text\",\n    {\"name\":\"no id\"},\n    {\"id\":7}\n  ],\n  \"last\": 1\n}\n",
+      "sync/i18n/packs/v1-a.json": "{\n  \"name\": \"Vee One\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Vee One)\"\n  }\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/v1-dead.json": "{\n  \"name\": \"Dead\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Dead)\"\n  }\n}",
+      "sync/i18n/packs/v2-waiting.json": "{\n  \"name\": \"Waiting\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Waiting)\"\n  }\n}",
+      "sync/i18n/packs/array-clocks.json": "{\n  \"name\": \"Array Clocks\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Array Clocks)\"\n  }\n}"
+    },
+    "mtimes": {
+      "sync/i18n/packs/v1-a.json": "2026-10-01T01:02:03.500Z",
+      "sync/i18n/packs/builtin-english.json": "2026-10-02T00:00:00.000Z",
+      "sync/i18n/packs/v1-dead.json": "2026-10-03T00:00:00.250Z",
+      "sync/i18n/packs/v2-waiting.json": "2026-10-04T00:00:00.000Z",
+      "sync/i18n/packs/array-clocks.json": "2026-10-05T00:00:00.000Z"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "v1-a"
+      },
+      {
+        "op": "refreshCoverage",
+        "id": "v1-a",
+        "values": {
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 2,
+            "coveredKeys": 2
+          },
+          "measuredBodyClock": "2026-10-01T01:02:03.500Z"
+        }
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "v2-waiting"
+      },
+      {
+        "op": "hasName",
+        "name": "vee one"
+      },
+      {
+        "op": "setEnabled",
+        "id": "v1-a",
+        "enabled": false
+      }
+    ],
+    "mtimesNs": {
+      "sync/i18n/packs/v1-a.json": "1790816523500000000",
+      "sync/i18n/packs/builtin-english.json": "1790899200000000000",
+      "sync/i18n/packs/v1-dead.json": "1790985600250000000",
+      "sync/i18n/packs/v2-waiting.json": "1791072000000000000",
+      "sync/i18n/packs/array-clocks.json": "1791158400000000000"
+    },
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"coverage\":{\"totalKeys\":2,\"coveredKeys\":1},\"extra\":\"kept\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"2026-10-01T01:02:03.500Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}},\"pack\":{\"name\":\"Vee One\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Vee One)\"}}}}",
+      "{\"success\":true,\"data\":{\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"coverage\":{\"totalKeys\":2,\"coveredKeys\":2},\"extra\":\"kept\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"2026-10-01T01:02:03.500Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"},\"matchedBaseVersion\":\"0.9.0\"}}",
+      "{\"success\":true,\"data\":[{\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"coverage\":{\"totalKeys\":2,\"coveredKeys\":2},\"extra\":\"kept\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"2026-10-01T01:02:03.500Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"},\"matchedBaseVersion\":\"0.9.0\"},{\"id\":\"v1-no-body\",\"filename\":\"packs/v1-no-body.json\",\"name\":\"No Body\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"bad id!\",\"filename\":\"packs/bad id!.json\",\"name\":\"Unsafe\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"v2-waiting\",\"filename\":\"packs/v2-waiting.json\",\"name\":\"Waiting\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"}},{\"id\":\"array-clocks\",\"filename\":\"packs/array-clocks.json\",\"name\":\"Array Clocks\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One Twin\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-01T01:02:03.500Z\"}}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"v2-waiting\",\"filename\":\"packs/v2-waiting.json\",\"name\":\"Waiting\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"}},\"pack\":{\"name\":\"Waiting\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Waiting)\"}}}}",
+      "{\"success\":true,\"data\":true}",
+      "{\"success\":true,\"data\":{\"id\":\"v1-a\",\"filename\":\"packs/v1-a.json\",\"name\":\"Vee One\",\"version\":\"0.1.0\",\"enabled\":false,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"coverage\":{\"totalKeys\":2,\"coveredKeys\":2},\"extra\":\"kept\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"2026-10-01T01:02:03.500Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"matchedBaseVersion\":\"0.9.0\"}}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"first\": true,\n  \"metas\": [\n    {\n      \"id\": \"v1-a\",\n      \"filename\": \"packs/v1-a.json\",\n      \"name\": \"Vee One\",\n      \"version\": \"0.1.0\",\n      \"enabled\": false,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"coverage\": {\n        \"totalKeys\": 2,\n        \"coveredKeys\": 2\n      },\n      \"extra\": \"kept\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"2026-10-01T01:02:03.500Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"matchedBaseVersion\": \"0.9.0\"\n    },\n    {\n      \"id\": \"v1-no-body\",\n      \"filename\": \"packs/v1-no-body.json\",\n      \"name\": \"No Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"bad id!\",\n      \"filename\": \"packs/bad id!.json\",\n      \"name\": \"Unsafe\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"v1-dead\",\n      \"filename\": \"packs/v1-dead.json\",\n      \"name\": \"Dead\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"2026-10-03T00:00:00.250Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"v2-waiting\",\n      \"filename\": \"packs/v2-waiting.json\",\n      \"name\": \"Waiting\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"array-clocks\",\n      \"filename\": \"packs/array-clocks.json\",\n      \"name\": \"Array Clocks\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"v1-a\",\n      \"filename\": \"packs/v1-a.json\",\n      \"name\": \"Vee One Twin\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-01T01:02:03.500Z\"\n      }\n    }\n  ],\n  \"last\": 1\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/array-clocks.json": "{\n  \"name\": \"Array Clocks\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Array Clocks)\"\n  }\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/v1-a.json": "{\n  \"name\": \"Vee One\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Vee One)\"\n  }\n}",
+      "sync/i18n/packs/v1-dead.json": "{\n  \"name\": \"Dead\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Dead)\"\n  }\n}",
+      "sync/i18n/packs/v2-waiting.json": "{\n  \"name\": \"Waiting\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Waiting)\"\n  }\n}"
+    }
+  },
+  {
+    "name": "a v1 index whose body file is dated before the epoch",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"old\",\n      \"filename\": \"packs/old.json\",\n      \"name\": \"Old\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/old.json": "{\n  \"name\": \"Old\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Old)\"\n  }\n}"
+    },
+    "mtimes": {
+      "sync/i18n/packs/old.json": "1969-12-31T23:59:59.000Z"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {
+      "sync/i18n/packs/old.json": "-1000000000"
+    },
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"old\",\"filename\":\"packs/old.json\",\"name\":\"Old\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-14T12:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-15T12:00:00.000Z\",\"hub\":\"2026-10-15T12:00:00.000Z\",\"enabled\":\"2026-10-15T12:00:00.000Z\"}}]}"
+    ],
+    "defaultPaths": [
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"old\",\n      \"filename\": \"packs/old.json\",\n      \"name\": \"Old\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-14T12:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/old.json": "{\n  \"name\": \"Old\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Old)\"\n  }\n}"
+    }
+  },
+  {
+    "name": "an index that is not JSON",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "not json",
+      "sync/i18n/packs/x.json": "{\n  \"name\": \"X\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (X)\"\n  }\n}"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "x"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "New",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (New)"
+            }
+          }
+        },
+        "options": {}
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"New\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000001.json\",\n      \"name\": \"New\",\n      \"version\": \"1.0.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\",\n        \"enabled\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000001.json": "{\n  \"name\": \"New\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (New)\"\n  }\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/x.json": "{\n  \"name\": \"X\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (X)\"\n  }\n}"
+    }
+  },
+  {
+    "name": "an index that is an array",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "[{\"metas\":[]}]"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "an index that is null",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "null"
+    },
+    "steps": [
+      {
+        "op": "hasName",
+        "name": "x"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":false}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "an index whose metas is not a list",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\"keep\":1,\"metas\":{\"0\":{\"id\":\"x\"}}}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "an index with a byte order mark",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "﻿{\"metas\":[]}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "invalid UTF-8 in the index and a body",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": {
+        "hex": "7b226d65746173223a5b7b226964223a2278222c2266696c656e616d65223a227061636b732f782e6a736f6e222c226e616d65223a2242616420ffe697222c2276657273696f6e223a2231222c22656e61626c6564223a747275652c2273617665644174223a22323032362d30312d30315430303a30303a30302e3030305a227d5d7d"
+      },
+      "sync/i18n/packs/x.json": {
+        "hex": "7b226e616d65223a2258222c2276657273696f6e223a2231222c226e6f7465223a22c3227d"
+      }
+    },
+    "mtimes": {
+      "sync/i18n/packs/x.json": "2026-09-01T00:00:00.000Z"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "x"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {
+      "sync/i18n/packs/x.json": "1788220800000000000"
+    },
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"x\",\"filename\":\"packs/x.json\",\"name\":\"Bad ��\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-09-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\",\"enabled\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-09-01T00:00:00.000Z\"},\"pack\":{\"name\":\"Bad ��\",\"version\":\"1\",\"note\":\"�\"}}}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"x\",\"filename\":\"packs/x.json\",\"name\":\"Bad ��\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-09-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\",\"enabled\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-09-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"x\",\n      \"filename\": \"packs/x.json\",\n      \"name\": \"Bad ��\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:00.000Z\",\n        \"body\": \"2026-09-01T00:00:00.000Z\",\n        \"name\": \"2026-01-01T00:00:00.000Z\",\n        \"hub\": \"2026-01-01T00:00:00.000Z\",\n        \"enabled\": \"2026-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-09-01T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/x.json": {
+        "hex": "7b226e616d65223a2258222c2276657273696f6e223a2231222c226e6f7465223a22c3227d"
+      }
+    }
+  },
+  {
+    "name": "the English entry without its body file gets the body back",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"now\",\n      \"updatedAt\": \"now\"\n    }\n  ]\n}"
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "builtin-english"
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "builtin-english"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"now\",\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"}}]}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"now\",\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"}},\"pack\":{\"name\":\"English\",\"version\":\"0.0.0\"}}}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"now\",\"updatedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"}}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"now\",\n      \"updatedAt\": \"now\"\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "metas whose name is not a string",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"num\",\n      \"filename\": \"packs/num.json\",\n      \"name\": 5,\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"none\",\n      \"filename\": \"packs/none.json\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"nul\",\n      \"filename\": \"packs/nul.json\",\n      \"name\": null,\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/num.json": "{\n  \"name\": \"Num\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Num)\"\n  }\n}",
+      "sync/i18n/packs/none.json": "{\n  \"name\": \"None\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (None)\"\n  }\n}",
+      "sync/i18n/packs/nul.json": "{\n  \"version\": \"1\"\n}",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "num"
+      },
+      {
+        "op": "get",
+        "id": "none"
+      },
+      {
+        "op": "get",
+        "id": "nul"
+      },
+      {
+        "op": "hasName",
+        "name": "x"
+      },
+      {
+        "op": "rename",
+        "id": "num",
+        "name": "Fine"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Other",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Other)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Other",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Other)"
+            }
+          }
+        },
+        "options": {
+          "id": "nul"
+        }
+      },
+      {
+        "op": "export",
+        "id": "num",
+        "dialog": "exports/num.json"
+      },
+      {
+        "op": "export",
+        "id": "none",
+        "dialog": "exports/none.json"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"num\",\"filename\":\"packs/num.json\",\"name\":5,\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},\"pack\":{\"name\":5,\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Num)\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"none\",\"filename\":\"packs/none.json\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},\"pack\":{\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (None)\"}}}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"nul\",\"filename\":\"packs/nul.json\",\"name\":null,\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},\"pack\":{\"version\":\"1\",\"name\":null}}}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: m.name.trim is not a function\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: Cannot read properties of undefined (reading 'trim')\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: m.name.trim is not a function\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"TypeError: m.name.trim is not a function\"}",
+      {
+        "rejected": "TypeError: name.replace is not a function"
+      },
+      {
+        "rejected": "TypeError: Cannot read properties of undefined (reading 'replace')"
+      },
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"num\",\"filename\":\"packs/num.json\",\"name\":5,\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"none\",\"filename\":\"packs/none.json\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},{\"id\":\"nul\",\"filename\":\"packs/nul.json\",\"name\":null,\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index"
+    ],
+    "after": {
+      "exports/": null,
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"1970-01-01T00:00:00.000Z\",\n        \"hub\": \"1970-01-01T00:00:00.000Z\",\n        \"enabled\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"num\",\n      \"filename\": \"packs/num.json\",\n      \"name\": 5,\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"none\",\n      \"filename\": \"packs/none.json\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"nul\",\n      \"filename\": \"packs/nul.json\",\n      \"name\": null,\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "sync/i18n/packs/none.json": "{\n  \"name\": \"None\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (None)\"\n  }\n}",
+      "sync/i18n/packs/nul.json": "{\n  \"version\": \"1\"\n}",
+      "sync/i18n/packs/num.json": "{\n  \"name\": \"Num\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Num)\"\n  }\n}"
+    }
+  },
+  {
+    "name": "imports read through the dialog and saved, sample packs included",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "imports/": null,
+      "imports/good.json": "{\"name\":\"Good\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Good)\"}}",
+      "imports/bom.json": "﻿{\"name\":\"Bom\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Bom)\"}}",
+      "imports/not-json.json": "{ not valid json",
+      "imports/bad-utf8.json": {
+        "hex": "7b226e616d65223a22426164222c2276657273696f6e223a2231222c2278223a22ff227d"
+      },
+      "imports/array.json": "[1,2]",
+      "imports/lone.json": "{\"name\":\"Lone \\ud800\",\"version\":\"1\"}",
+      "imports/Japanese.json": {
+        "copyOf": "sample-packs/i18n/i18n-packs-Japanese.json"
+      },
+      "imports/Japanese_-_ギャル.json": {
+        "copyOf": "sample-packs/i18n/i18n-packs-Japanese_-_ギャル.json"
+      },
+      "imports/Japanese_-_京言葉.json": {
+        "copyOf": "sample-packs/i18n/i18n-packs-Japanese_-_京言葉.json"
+      },
+      "imports/Japanese_-_紳士.json": {
+        "copyOf": "sample-packs/i18n/i18n-packs-Japanese_-_紳士.json"
+      },
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "import",
+        "dialog": [
+          "imports/good.json",
+          "imports/bom.json",
+          "imports/not-json.json",
+          "imports/bad-utf8.json",
+          "imports/array.json",
+          "imports/lone.json",
+          "imports/missing.json",
+          "imports"
+        ]
+      },
+      {
+        "op": "import",
+        "dialog": [
+          "imports/Japanese.json",
+          "imports/Japanese_-_ギャル.json",
+          "imports/Japanese_-_京言葉.json",
+          "imports/Japanese_-_紳士.json"
+        ]
+      },
+      {
+        "op": "import",
+        "dialog": null
+      },
+      {
+        "op": "import",
+        "dialog": []
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/good.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 10
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/bad-utf8.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": null,
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 7
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/lone.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": null,
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 7
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/Japanese.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 1000,
+            "coveredKeys": 990
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/Japanese_-_ギャル.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 1000,
+            "coveredKeys": 991
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/Japanese_-_京言葉.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 1000,
+            "coveredKeys": 992
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/Japanese_-_紳士.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": "0.9.0",
+          "coverage": {
+            "totalKeys": 1000,
+            "coveredKeys": 993
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "fromFile": "imports/Japanese.json"
+        },
+        "options": {
+          "enabled": true,
+          "appVersionAtImport": "1.2.3",
+          "matchedBaseVersion": null,
+          "coverage": {
+            "totalKeys": 10,
+            "coveredKeys": 7
+          },
+          "dangerousKeyCount": 0
+        }
+      },
+      {
+        "op": "list"
+      },
+      {
+        "op": "get",
+        "id": "00000000-0000-4000-8000-000000000004"
+      },
+      {
+        "op": "rename",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "name": "日本語 / テスト"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "dialog": "exports/ja.json"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000004",
+        "dialog": null
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "dialog": "exports/good.json"
+      },
+      {
+        "op": "export",
+        "id": "builtin-english",
+        "dialog": "exports/en.json"
+      },
+      {
+        "op": "export",
+        "id": "missing",
+        "dialog": "exports/missing.json"
+      },
+      {
+        "op": "export",
+        "id": "../x",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "export",
+        "id": 5,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "dialog": "no-such-dir/good.json"
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "export",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "dialog": "exports/deleted.json"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"canceled\":false,\"files\":[{\"filePath\":\"<userData>/imports/good.json\",\"raw\":{\"name\":\"Good\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Good)\"}},\"fileSizeBytes\":65},{\"filePath\":\"<userData>/imports/bom.json\",\"fileSizeBytes\":66,\"parseError\":\"<parse error>\"},{\"filePath\":\"<userData>/imports/not-json.json\",\"fileSizeBytes\":16,\"parseError\":\"<parse error>\"},{\"filePath\":\"<userData>/imports/bad-utf8.json\",\"raw\":{\"name\":\"Bad\",\"version\":\"1\",\"x\":\"�\"},\"fileSizeBytes\":38},{\"filePath\":\"<userData>/imports/array.json\",\"raw\":[1,2],\"fileSizeBytes\":5},{\"filePath\":\"<userData>/imports/lone.json\",\"raw\":{\"name\":\"Lone \\ud800\",\"version\":\"1\"},\"fileSizeBytes\":36},{\"filePath\":\"<userData>/imports/missing.json\",\"parseError\":\"<os error>\"},{\"filePath\":\"<userData>/imports\",\"parseError\":\"<os error>\"}]}",
+      {
+        "sha256": "4a6311b10b4f413b18a0dc27b84ad8f44beb04107084499dcb6bf5fdd9e0bd9a"
+      },
+      "{\"canceled\":true,\"files\":[]}",
+      "{\"canceled\":true,\"files\":[]}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Good\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Bad\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Lone \\ud800\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Japanese\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":990},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Japanese - ギャル\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":991},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Japanese - 京言葉\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":992},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Japanese - 紳士\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":993},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      null,
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Japanese\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Good\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Bad\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Lone \\ud800\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Japanese\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Japanese - ギャル\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":991},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Japanese - 京言葉\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":992},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Japanese - 紳士\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":1000,\"coveredKeys\":993},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      {
+        "sha256": "5d58d1f0cc6bdf942ed5929d99a4874e96a686d83e3cdf69c241c391b3f4154f"
+      },
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"日本語 / テスト\",\"version\":\"0.1.120\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":7},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/ja.json\"}}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"cancelled\"}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/good.json\"}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/en.json\"}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid pack id\"}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Invalid id\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"}",
+      "{\"success\":true}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"Language pack not found\"}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "i18n-packs-日本語_テスト.json",
+      "i18n-packs-日本語_テスト.json",
+      "i18n-packs-Good.json",
+      "i18n-packs-English.json",
+      null,
+      null,
+      null,
+      "i18n-packs-Good.json",
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000003",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000004",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000005",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000006",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000007",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000004",
+      "i18n/index",
+      "i18n/index",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000002",
+      "i18n/index"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/en.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
+      "exports/good.json": "{\n  \"name\": \"Good\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Good)\"\n  }\n}",
+      "exports/ja.json": {
+        "sha256": "033e1283f6af29ae215e353f673e4be1fd460fe08593a33c5cfab5caca659d50",
+        "size": 108173
+      },
+      "imports/": null,
+      "imports/Japanese.json": {
+        "sha256": "e72418213558d62b6ab820fd4ec5c95648e1f32aa2b045e25a2611a62589d86b",
+        "size": 108161
+      },
+      "imports/Japanese_-_ギャル.json": {
+        "sha256": "bc885f92993d93f4d1f1e6414d9ea545eee6e44ebde4b35c07c34374a3a76911",
+        "size": 104297
+      },
+      "imports/Japanese_-_京言葉.json": {
+        "sha256": "82abe6cfcd429ba3fa30b83736f00b85208735a0cecec3dd9a727cb459573bb9",
+        "size": 112599
+      },
+      "imports/Japanese_-_紳士.json": {
+        "sha256": "200c1da0162c48aa5d91b0a6685a818dda3a360706508ed5a835dd451815c12f",
+        "size": 106509
+      },
+      "imports/array.json": "[1,2]",
+      "imports/bad-utf8.json": {
+        "hex": "7b226e616d65223a22426164222c2276657273696f6e223a2231222c2278223a22ff227d"
+      },
+      "imports/bom.json": "﻿{\"name\":\"Bom\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Bom)\"}}",
+      "imports/good.json": "{\"name\":\"Good\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Good)\"}}",
+      "imports/lone.json": "{\"name\":\"Lone \\ud800\",\"version\":\"1\"}",
+      "imports/not-json.json": "{ not valid json",
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": {
+        "sha256": "48d09b51cc0d8223b0e9f76b68c14976d5162ebc2498dd4008b0ae55a3781b1b",
+        "size": 5554
+      },
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000001.json": "{\n  \"name\": \"Good\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Good)\"\n  }\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000002.json": "{\n  \"name\": \"Bad\",\n  \"version\": \"1\",\n  \"x\": \"�\"\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000003.json": "{\n  \"name\": \"Lone \\ud800\",\n  \"version\": \"1\"\n}",
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000004.json": {
+        "sha256": "138134ac576132d4de107db50067b3065273b799b138c69c88f35be88689de07",
+        "size": 108160
+      },
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000005.json": {
+        "sha256": "050e147454d51cd1ea607e5a68486a6d479d0c4925d060f83fd7770c9dff3f10",
+        "size": 104296
+      },
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000006.json": {
+        "sha256": "36fba61a1c1f636555f6508b9710cc473988825c8ae1aea47780635601cbff06",
+        "size": 112598
+      },
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000007.json": {
+        "sha256": "d2ac7d6e1dcde7aae4e27d8f4a564692a4ef511235ab374e7d0481d46604b4b8",
+        "size": 106508
+      },
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  },
+  {
+    "name": "a body that is not an object is answered and exported as it is",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"arr\",\n      \"filename\": \"packs/arr.json\",\n      \"name\": \"Array Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"str\",\n      \"filename\": \"packs/str.json\",\n      \"name\": \"String Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"bad\",\n      \"filename\": \"packs/bad.json\",\n      \"name\": \"Bad Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"gone\",\n      \"filename\": \"packs/gone.json\",\n      \"name\": \"No Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/arr.json": "[1,{\"name\":\"inner\"}]",
+      "sync/i18n/packs/str.json": "\"text\"",
+      "sync/i18n/packs/bad.json": "{",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "get",
+        "id": "arr"
+      },
+      {
+        "op": "get",
+        "id": "str"
+      },
+      {
+        "op": "get",
+        "id": "bad"
+      },
+      {
+        "op": "get",
+        "id": "gone"
+      },
+      {
+        "op": "export",
+        "id": "arr",
+        "dialog": "exports/arr.json"
+      },
+      {
+        "op": "export",
+        "id": "str",
+        "dialog": "exports/str.json"
+      },
+      {
+        "op": "export",
+        "id": "bad",
+        "dialog": "exports/bad.json"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"arr\",\"filename\":\"packs/arr.json\",\"name\":\"Array Body\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},\"pack\":[1,{\"name\":\"inner\"}]}}",
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"str\",\"filename\":\"packs/str.json\",\"name\":\"String Body\",\"version\":\"0.1.0\",\"enabled\":true,\"savedAt\":\"2026-10-14T12:00:00.000Z\",\"updatedAt\":\"2026-10-15T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-15T12:00:00.000Z\",\"body\":\"2026-10-15T12:00:00.000Z\"}},\"pack\":\"text\"}}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<parse error>\"}",
+      "{\"success\":false,\"errorCode\":\"IO_ERROR\",\"error\":\"<os error>\"}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/arr.json\"}}",
+      "{\"success\":true,\"data\":{\"filePath\":\"<userData>/exports/str.json\"}}",
+      "{\"success\":false,\"errorCode\":\"NOT_FOUND\",\"error\":\"<parse error>\"}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      "i18n-packs-Array_Body.json",
+      "i18n-packs-String_Body.json",
+      null
+    ],
+    "notified": [],
+    "after": {
+      "exports/": null,
+      "exports/arr.json": "[\n  1,\n  {\n    \"name\": \"inner\"\n  }\n]",
+      "exports/str.json": "\"text\"",
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"arr\",\n      \"filename\": \"packs/arr.json\",\n      \"name\": \"Array Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"str\",\n      \"filename\": \"packs/str.json\",\n      \"name\": \"String Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"bad\",\n      \"filename\": \"packs/bad.json\",\n      \"name\": \"Bad Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"gone\",\n      \"filename\": \"packs/gone.json\",\n      \"name\": \"No Body\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-15T12:00:00.000Z\",\n        \"body\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/arr.json": "[1,{\"name\":\"inner\"}]",
+      "sync/i18n/packs/bad.json": "{",
+      "sync/i18n/packs/str.json": "\"text\""
+    }
+  },
+  {
+    "name": "old tombstones stay (no garbage collection outside sync)",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"ancient\",\n      \"filename\": \"packs/ancient.json\",\n      \"name\": \"Ancient\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"deletedAt\": \"2026-07-18T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-07-08T12:00:00.000Z\",\n        \"body\": \"2026-07-08T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/ancient.json": "{\n  \"name\": \"Ancient\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Ancient)\"\n  }\n}"
+    },
+    "steps": [
+      {
+        "op": "list"
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Fresh",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Fresh)"
+            }
+          }
+        },
+        "options": {}
+      },
+      {
+        "op": "reorder",
+        "ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "op": "delete",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "list"
+      }
+    ],
+    "mtimesNs": {},
+    "outcomes": [
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Fresh\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\",\"enabled\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]}"
+    ],
+    "defaultPaths": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index",
+      "i18n/packs/00000000-0000-4000-8000-000000000001",
+      "i18n/index"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/i18n/": null,
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"filename\": \"packs/00000000-0000-4000-8000-000000000001.json\",\n      \"name\": \"Fresh\",\n      \"version\": \"1.0.0\",\n      \"enabled\": false,\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\",\n        \"enabled\": \"2026-10-16T12:00:00.001Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.001Z\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"builtin-english\",\n      \"filename\": \"packs/builtin-english.json\",\n      \"name\": \"English\",\n      \"version\": \"0.0.0\",\n      \"enabled\": true,\n      \"uploaderName\": \"pipette\",\n      \"savedAt\": \"1970-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"1970-01-01T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"1970-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"ancient\",\n      \"filename\": \"packs/ancient.json\",\n      \"name\": \"Ancient\",\n      \"version\": \"0.1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-14T12:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T12:00:00.000Z\",\n      \"deletedAt\": \"2026-07-18T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-07-08T12:00:00.000Z\",\n        \"body\": \"2026-07-08T12:00:00.000Z\",\n        \"name\": \"2026-10-15T12:00:00.000Z\",\n        \"hub\": \"2026-10-15T12:00:00.000Z\",\n        \"enabled\": \"2026-10-15T12:00:00.000Z\"\n      }\n    }\n  ]\n}",
+      "sync/i18n/packs/": null,
+      "sync/i18n/packs/00000000-0000-4000-8000-000000000001.json": "{\n  \"name\": \"Fresh\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Fresh)\"\n  }\n}",
+      "sync/i18n/packs/ancient.json": "{\n  \"name\": \"Ancient\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Ancient)\"\n  }\n}",
+      "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}"
+    }
+  }
+]

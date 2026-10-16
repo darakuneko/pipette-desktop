@@ -2674,6 +2674,7 @@ dependencies = [
  "pipette-keyboard-stores",
  "pipette-logger",
  "pipette-net",
+ "pipette-pack-stores",
  "pipette-sync-pending",
  "pipette-typing-datasets",
  "rfd",
@@ -2802,6 +2803,18 @@ dependencies = [
  "rustls",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "pipette-pack-stores"
+version = "0.0.0"
+dependencies = [
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-keyboard-stores",
+ "pipette-time",
+ "tempfile",
 ]
 
 [[package]]

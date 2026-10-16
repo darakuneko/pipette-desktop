@@ -22,7 +22,8 @@
 //! Every store works through a [`StoreContext`]: the userData directory,
 //! the clock, the ids of new entries, the process-wide write locks shared
 //! by all stores, and the [`ChangeNotifier`] each change of a sync unit is
-//! reported to.
+//! reported to. The stores of other crates (the pack stores) work through
+//! the same context.
 
 mod entry_files;
 mod favorites;
@@ -54,7 +55,7 @@ pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
 };
-pub use response::{done, field, response_json};
+pub use response::{CodedError, coded_response, coded_response_json, done, field, response_json};
 pub use settings::{
     KeyboardSettingsFile, SETTINGS_ETAG_ABSENT, SettingsError, SettingsFile, SettingsWrite,
     ensure_pipette_settings_dir, keyboard_settings_files_json, read_all_pipette_settings,
@@ -133,19 +134,28 @@ impl StoreContext {
         &self.user_data
     }
 
-    fn sync_dir(&self) -> PathBuf {
+    /// `{userData}/sync`, where the synced stores keep their files.
+    pub fn sync_dir(&self) -> PathBuf {
         self.user_data.join("sync")
     }
 
-    fn now_ms(&self) -> i64 {
+    /// The clock's time, in milliseconds since the epoch.
+    pub fn now_ms(&self) -> i64 {
         self.clock.now_ms()
     }
 
-    fn new_id(&self) -> String {
+    /// The id of a new entry.
+    pub fn new_id(&self) -> String {
         self.ids.new_id()
     }
 
-    fn notify(&self, unit: &str) {
+    /// Reports a change of the sync unit `unit`.
+    pub fn notify(&self, unit: &str) {
         self.notifier.notify_change(unit);
+    }
+
+    /// The write locks of the process.
+    pub fn locks(&self) -> &WriteLocks {
+        &self.locks
     }
 }
