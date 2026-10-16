@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VialAPI members of the Typing Test word lists and their datasets for
-// the Tauri build (src-tauri/src/typing_dataset_commands.rs). None of them
-// waits for another: the Electron handlers take no lock either. The word
-// list entries and a word list cross as JSON text the backend writes, so
-// their fields keep the order of the files they come from.
+// The VialAPI members of the Typing Test word lists, their datasets and the
+// Aozora Bunko catalog import for the Tauri build
+// (src-tauri/src/typing_dataset_commands.rs). None of them waits for
+// another: the Electron handlers take no lock either, and the Aozora import
+// stays out of the `typing-test-texts` queue as the text file import does —
+// its download runs outside the text store's lock, and the backend takes the
+// lock for the save. The word list entries, a word list and the imported
+// text's meta cross as JSON text the backend writes, so their fields keep
+// the order of the files they come from.
 
+import type { AozoraImportResult } from '../../shared/types/aozora-import'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
@@ -20,4 +25,5 @@ export const typingDatasetsApi = {
   langDelete: (name, provider) => call<LanguageActionResult>('lang_delete', { name, provider }),
   checkTypingDatasetUpdate: (provider) => call<TypingDatasetCheckResult>('typing_dataset_check', { provider }),
   updateTypingDataset: (provider) => call<DatasetUpdateResult>('typing_dataset_update', { provider }),
+  aozoraImport: (workId) => call<AozoraImportResult>('aozora_import', { workId }),
 } satisfies Partial<VialAPI>

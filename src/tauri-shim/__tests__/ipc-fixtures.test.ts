@@ -264,6 +264,9 @@ const CALLERS: Record<string, Caller> = {
   updateTypingDataset: {
     run: ({ typingDatasets }, [provider]) => typingDatasets.typingDatasetsApi.updateTypingDataset(provider as string),
   },
+  aozoraImport: {
+    run: ({ typingDatasets }, [workId]) => typingDatasets.typingDatasetsApi.aozoraImport(workId as string),
+  },
   i18nPackList: { run: ({ i18nPacks }) => i18nPacks.i18nPacksApi.i18nPackList() },
   i18nPackGet: { run: ({ i18nPacks }, [id]) => i18nPacks.i18nPacksApi.i18nPackGet(id as string) },
   i18nPackRename: {
