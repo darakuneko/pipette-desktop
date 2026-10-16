@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/analytics_commands/record.rs: the recording of the
+# typing analytics.
+
+[[set]]
+identifier = "typing-analytics-record"
+description = "Records typing analytics events and writes the recorded minutes of a keyboard."
+permissions = [
+  "allow-typing-analytics-event",
+  "allow-typing-analytics-flush",
+]

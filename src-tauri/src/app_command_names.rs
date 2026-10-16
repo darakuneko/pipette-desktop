@@ -103,6 +103,9 @@ pub const APP_COMMANDS: &[&str] = &[
     "typing_analytics_save_keymap_snapshot",
     "typing_analytics_get_keymap_snapshot_for_range",
     "typing_analytics_list_keymap_snapshots",
+    // src/analytics_commands/record.rs
+    "typing_analytics_event",
+    "typing_analytics_flush",
     // src/store_commands/settings.rs
     "pipette_settings_read",
     "pipette_settings_write",

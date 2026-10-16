@@ -6,7 +6,7 @@
 // keyboard members (HID probe, file dialogs, snapshot, favorite and
 // pipette settings stores, stored keyboards, pending sync units), the run
 // log and Analyze filter members, the typing analytics members that read
-// the cache, the typing analytics' keymap snapshot members, and the pack
+// the cache, the typing analytics' keymap snapshot and recording members, and the pack
 // and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs.
@@ -119,6 +119,9 @@ const TYPING_ANALYTICS_KEYMAP_MEMBERS = [
   'typingAnalyticsGetKeymapSnapshotForRange',
   'typingAnalyticsListKeymapSnapshots',
 ]
+
+/** The typing analytics' recording members, all real. */
+const TYPING_ANALYTICS_RECORD_MEMBERS = ['typingAnalyticsEvent', 'typingAnalyticsFlush']
 
 /** The language pack members, all real. */
 const LANGUAGE_PACK_MEMBERS = [
@@ -243,6 +246,11 @@ describe('shim coverage', () => {
     expect(TYPING_ANALYTICS_KEYMAP_MEMBERS.filter((name) => name in fakes)).toEqual([])
     const keymaps = Object.keys(implemented).filter((name) => /^typingAnalytics.*KeymapSnapshot/.test(name))
     expect(keymaps.sort()).toEqual([...TYPING_ANALYTICS_KEYMAP_MEMBERS].sort())
+  })
+
+  it('backs the recording members with backend commands', () => {
+    expect(TYPING_ANALYTICS_RECORD_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(TYPING_ANALYTICS_RECORD_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })
 
   // Applied sync units come from the sync service, which the backend does

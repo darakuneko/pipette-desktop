@@ -1,0 +1,30 @@
+[
+  {
+    "member": "typingAnalyticsEvent",
+    "args": [
+      {
+        "kind": "char",
+        "key": "a",
+        "ts": 1776168000000,
+        "keyboard": { "uid": "0xA1B2", "vendorId": 1, "productId": 2, "productName": "K" }
+      }
+    ],
+    "command": "typing_analytics_event",
+    "invokeArgs": {
+      "event": {
+        "kind": "char",
+        "key": "a",
+        "ts": 1776168000000,
+        "keyboard": { "uid": "0xA1B2", "vendorId": 1, "productId": 2, "productName": "K" }
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "typingAnalyticsFlush",
+    "args": ["0xA1B2"],
+    "command": "typing_analytics_flush",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": null
+  }
+]

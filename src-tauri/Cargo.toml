@@ -40,6 +40,9 @@ pipette-net = { path = "crates/pipette-net" }
 pipette-typing-datasets = { path = "crates/pipette-typing-datasets" }
 # The typing analytics and the sync lock (src/analytics_commands.rs).
 pipette-typing-analytics = { path = "crates/pipette-typing-analytics" }
+# The application in focus that the recording tags its minutes with
+# (src/analytics_commands/record.rs).
+pipette-active-window = { path = "crates/pipette-active-window" }
 # The rows and filters of the analytics queries (src/analytics_commands/).
 pipette-typing-analytics-db = { path = "crates/pipette-typing-analytics-db" }
 log = "=0.4.34"

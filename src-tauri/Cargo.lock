@@ -2759,6 +2759,7 @@ dependencies = [
  "hex",
  "log",
  "lzma-rs",
+ "pipette-active-window",
  "pipette-app-config",
  "pipette-entry-store",
  "pipette-fs",
