@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The real client against servers on the loopback interface, written by
 //! hand on std's TcpListener: the status, redirects, the body size limit
-//! and the timeout. Nothing here leaves the machine.
+//! and the timeouts. Nothing here leaves the machine.
 
 #![allow(clippy::unwrap_used)]
 
@@ -12,12 +12,15 @@ use std::time::Duration;
 
 use pipette_net::{HttpClient, HttpError, HttpResponse, Limits, ReqwestClient};
 
-/// What the server sends for one connection, given the request's path.
-type Respond = fn(&str) -> Option<Vec<u8>>;
+/// What the server sends for one connection: pieces written one after the
+/// other with a pause after each, then the connection is closed.
+type Reply = Vec<(Vec<u8>, Duration)>;
+
+/// The reply to a request for a path.
+type Respond = fn(&str) -> Reply;
 
 /// Serves every connection on a thread of its own: reads the request head,
-/// then writes `respond`'s answer and closes the connection, or holds the
-/// connection open without answering when `respond` returns `None`.
+/// then writes `respond`'s reply.
 fn serve(respond: Respond) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -40,13 +43,28 @@ fn answer(mut stream: TcpStream, respond: Respond) {
     }
     let head = String::from_utf8_lossy(&head);
     let path = head.split(' ').nth(1).unwrap_or("").to_owned();
-    match respond(&path) {
-        Some(response) => {
-            let _ = stream.write_all(&response);
+    for (piece, pause) in respond(&path) {
+        if stream.write_all(&piece).and_then(|()| stream.flush()).is_err() {
+            return;
         }
-        // Hold the connection until the client gives up.
-        None => thread::sleep(Duration::from_secs(5)),
+        thread::sleep(pause);
     }
+}
+
+fn whole(response: Vec<u8>) -> Reply {
+    vec![(response, Duration::ZERO)]
+}
+
+/// A 10-byte body, one byte every `gap`.
+fn trickle(gap: Duration) -> Reply {
+    let mut reply = vec![(response("200 OK", "Content-Length: 10\r\n", b""), gap)];
+    reply.extend((0..10).map(|_| (vec![7], gap)));
+    reply
+}
+
+/// A head and 2 of the 10 bytes it declares, then nothing for 5 seconds.
+fn stall_after_head() -> Reply {
+    vec![(response("200 OK", "Content-Length: 10\r\n", &[7, 7]), Duration::from_secs(5))]
 }
 
 fn response(status: &str, headers: &str, body: &[u8]) -> Vec<u8> {
@@ -64,30 +82,41 @@ fn without_length(body: &[u8]) -> Vec<u8> {
     response("200 OK", "", body)
 }
 
-fn routes(path: &str) -> Option<Vec<u8>> {
+fn routes(path: &str) -> Reply {
     match path {
-        "/ok" => Some(with_length("200 OK", b"hello")),
-        "/empty" => Some(with_length("204 No Content", b"")),
-        "/missing" => Some(with_length("404 Not Found", b"not here")),
-        "/moved" => Some(response("302 Found", "Location: /ok\r\nContent-Length: 0\r\n", b"")),
-        "/16" => Some(with_length("200 OK", &[7; 16])),
-        "/17" => Some(with_length("200 OK", &[7; 17])),
-        "/16-unsized" => Some(without_length(&[7; 16])),
-        "/17-unsized" => Some(without_length(&[7; 17])),
-        _ => None,
+        "/ok" => whole(with_length("200 OK", b"hello")),
+        "/empty" => whole(with_length("204 No Content", b"")),
+        "/missing" => whole(with_length("404 Not Found", b"not here")),
+        "/moved" => whole(response("302 Found", "Location: /ok\r\nContent-Length: 0\r\n", b"")),
+        "/16" => whole(with_length("200 OK", &[7; 16])),
+        "/17" => whole(with_length("200 OK", &[7; 17])),
+        "/16-unsized" => whole(without_length(&[7; 16])),
+        "/17-unsized" => whole(without_length(&[7; 17])),
+        // 11 pauses of 100 ms: longer in all than the read timeout, never
+        // idle as long.
+        "/slow" => trickle(Duration::from_millis(100)),
+        "/stall-body" => stall_after_head(),
+        // No answer at all.
+        _ => vec![(Vec::new(), Duration::from_secs(5))],
     }
 }
 
+/// The default limits scaled down: 300 ms without a byte, 3 s in all.
 const TEST_LIMITS: Limits = Limits {
     connect_timeout: Duration::from_secs(5),
-    total_timeout: Duration::from_millis(500),
+    read_timeout: Duration::from_millis(300),
+    total_timeout: Duration::from_secs(3),
     max_body_bytes: 16,
 };
 
-fn get(url: &str) -> Result<HttpResponse, HttpError> {
-    let client = ReqwestClient::new(TEST_LIMITS, "pipette-test");
+fn get_with(limits: Limits, url: &str) -> Result<HttpResponse, HttpError> {
+    let client = ReqwestClient::new(limits, "pipette-test");
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     runtime.block_on(client.get_bytes(url))
+}
+
+fn get(url: &str) -> Result<HttpResponse, HttpError> {
+    get_with(TEST_LIMITS, url)
 }
 
 #[test]
@@ -128,9 +157,30 @@ fn refuses_a_body_over_the_limit_with_or_without_its_length() {
 }
 
 #[test]
-fn gives_up_on_a_server_that_does_not_answer() {
+fn takes_a_slow_body_that_keeps_coming() {
     let base = serve(routes);
-    let err = get(&format!("{base}/stall")).unwrap_err();
+    let started = std::time::Instant::now();
+    assert_eq!(get(&format!("{base}/slow")).unwrap().body, [7; 10]);
+    assert!(started.elapsed() > TEST_LIMITS.read_timeout, "the body came too fast to test anything");
+}
+
+#[test]
+fn gives_up_on_a_server_that_stops_sending() {
+    let base = serve(routes);
+    for path in ["/no-answer", "/stall-body"] {
+        let started = std::time::Instant::now();
+        let err = get(&format!("{base}{path}")).unwrap_err();
+        assert!(matches!(err, HttpError::Timeout), "{path}: {err:?}");
+        // The read timeout, not the total one.
+        assert!(started.elapsed() < TEST_LIMITS.total_timeout, "{path}: {:?}", started.elapsed());
+    }
+}
+
+#[test]
+fn gives_up_on_a_body_that_takes_longer_than_the_total_timeout() {
+    let base = serve(routes);
+    let limits = Limits { total_timeout: Duration::from_millis(500), ..TEST_LIMITS };
+    let err = get_with(limits, &format!("{base}/slow")).unwrap_err();
     assert!(matches!(err, HttpError::Timeout), "{err:?}");
 }
 

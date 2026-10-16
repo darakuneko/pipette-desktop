@@ -76,8 +76,11 @@ impl HttpClient for Http {
 pub struct Limits {
     /// Until the connection (and the TLS handshake) is up.
     pub connect_timeout: Duration,
+    /// The longest wait for the next bytes of the response: a server that
+    /// stops sending fails here, however long the body has been coming in.
+    pub read_timeout: Duration,
     /// From the start of the request until the whole body is in, redirects
-    /// included.
+    /// included: a safety net for a server that keeps trickling bytes.
     pub total_timeout: Duration,
     /// The largest body taken; a larger one is [`HttpError::TooLarge`]
     /// before more of it is read than this.
@@ -85,12 +88,16 @@ pub struct Limits {
 }
 
 impl Limits {
-    /// 30 seconds to connect, 120 seconds in all, 64 MiB: well above the
-    /// largest download (a word list or an Aozora Bunko archive of a few
-    /// megabytes) on a slow line, and far below what would strain memory.
+    /// 30 seconds to connect, 60 seconds without a byte, 30 minutes in all,
+    /// 64 MiB. The largest word list of language-manifest.json is
+    /// about 12.3 MB, which takes about 2 minutes at 0.8 Mbps and about 20
+    /// minutes at 80 kbps; Electron's `net.fetch` has no time limit, so a
+    /// slow line must not be what fails a download. 64 MiB stays far below
+    /// what would strain memory.
     pub const DEFAULT: Self = Self {
         connect_timeout: Duration::from_secs(30),
-        total_timeout: Duration::from_secs(120),
+        read_timeout: Duration::from_secs(60),
+        total_timeout: Duration::from_secs(30 * 60),
         max_body_bytes: 64 * 1024 * 1024,
     };
 }
@@ -120,6 +127,7 @@ impl ReqwestClient {
         let client = reqwest::Client::builder()
             .user_agent(&self.user_agent)
             .connect_timeout(self.limits.connect_timeout)
+            .read_timeout(self.limits.read_timeout)
             .timeout(self.limits.total_timeout)
             .build()
             .map_err(network_error)?;
@@ -155,7 +163,7 @@ impl HttpClient for ReqwestClient {
         Box::pin(async move {
             let result = self.get(url).await;
             if let Err(err @ HttpError::Timeout) = &result {
-                log::warn!("GET {url}: {err} (after {:?} at most)", self.limits.total_timeout);
+                log::warn!("GET {url}: {err}");
             }
             result
         })
@@ -214,9 +222,10 @@ mod tests {
     }
 
     #[test]
-    fn the_default_limits_are_30_seconds_to_connect_120_in_all_and_64_mib() {
+    fn the_default_limits_are_30_s_to_connect_60_s_idle_30_min_in_all_and_64_mib() {
         assert_eq!(Limits::DEFAULT.connect_timeout, Duration::from_secs(30));
-        assert_eq!(Limits::DEFAULT.total_timeout, Duration::from_secs(120));
+        assert_eq!(Limits::DEFAULT.read_timeout, Duration::from_secs(60));
+        assert_eq!(Limits::DEFAULT.total_timeout, Duration::from_secs(1800));
         assert_eq!(Limits::DEFAULT.max_body_bytes, 67_108_864);
     }
 
