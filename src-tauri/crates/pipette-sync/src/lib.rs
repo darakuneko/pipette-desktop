@@ -7,8 +7,10 @@
 //! - [`units`]: what a unit name says (its store, its lock, its shape);
 //! - [`bundle`]: the bundle a unit is uploaded as, and the units a pass
 //!   sends;
-//! - [`merge`]: the merge of a downloaded bundle into the local files.
+//! - [`merge`]: the merge of a downloaded bundle into the local files;
+//! - [`unit_locks`]: the locks a whole sync of one unit holds.
 
 pub mod bundle;
 pub mod merge;
+pub mod unit_locks;
 pub mod units;

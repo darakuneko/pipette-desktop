@@ -2952,7 +2952,9 @@ version = "0.0.0"
 name = "pipette-sync"
 version = "0.0.0"
 dependencies = [
+ "indexmap 2.14.2",
  "log",
+ "pipette-drive",
  "pipette-entry-store",
  "pipette-fs",
  "pipette-js-json",
@@ -2962,8 +2964,11 @@ dependencies = [
  "pipette-sync-runtime",
  "pipette-time",
  "pipette-typing-analytics",
+ "pipette-typing-analytics-db",
+ "rusqlite",
  "tempfile",
  "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]
