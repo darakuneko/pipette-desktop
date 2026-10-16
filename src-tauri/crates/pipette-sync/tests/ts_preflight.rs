@@ -121,12 +121,14 @@ async fn run_op(h: &Harness, step: &Value) -> Result<Value, PreflightError> {
             Ok(Value::Null)
         }
         "validate" => {
+            let generation = p.sync_format_generation();
             let listing = h.list_all().await;
-            p.validate_password_check(&password(), &listing).await.map(|()| Value::Null)
+            p.validate_password_check(&password(), &listing, generation).await.map(|()| Value::Null)
         }
         "ensureValidated" => {
+            let generation = p.sync_format_generation();
             let listing = h.list_all().await;
-            p.ensure_password_check_validated(&password(), &listing).await.map(|()| Value::Null)
+            p.ensure_password_check_validated(&password(), &listing, generation).await.map(|()| Value::Null)
         }
         "set" => p.set_password_and_validate(&password()).await.map(|()| Value::Null),
         "replace" => p.replace_password_and_validate(&password()).await.map(|()| Value::Null),

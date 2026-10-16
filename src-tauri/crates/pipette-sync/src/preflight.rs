@@ -53,6 +53,11 @@ pub enum PreflightError {
     PasswordAlreadySet,
     #[error("sync.reenterPasswordNoRemote")]
     NoRemotePasswordCheck,
+    /// The sign-in changed (a sign-out or another account) while the
+    /// operation ran; what it learned about the previous account is not
+    /// stored or written.
+    #[error("The sign-in changed during the operation; nothing was stored")]
+    AccountChanged,
     #[error("{0}")]
     Drive(DriveFailure),
     /// Anything else: a store, a parse or an encryption failure.
@@ -98,11 +103,13 @@ pub struct PreflightDeps {
     pub now_ms: NowMs,
 }
 
-/// A password-check this process created, and when.
+/// A password-check this process created, when, and in which sign-out
+/// generation ([`Preflight::sync_format_generation`]).
 #[derive(Clone, Debug)]
 pub(crate) struct CreatedPasswordCheck {
     pub file: UploadedFile,
     pub at_ms: u64,
+    pub generation: u64,
 }
 
 pub struct Preflight {
@@ -118,6 +125,10 @@ pub struct Preflight {
     pub(crate) password_check_created: Mutex<Option<CreatedPasswordCheck>>,
     /// The creation of the password-check in flight.
     pub(crate) password_check_creating: SingleFlight<UploadedFile>,
+    /// Held for the whole of a set or a replace of the password, so only
+    /// one of them decides at a time whether a password is stored and
+    /// whether Drive needs a password-check.
+    pub(crate) password_setting: tokio::sync::Mutex<()>,
     pub(crate) format_status: FormatStatusCache,
 }
 
@@ -133,6 +144,7 @@ impl Preflight {
             marker_creating: SingleFlight::default(),
             password_check_created: Mutex::default(),
             password_check_creating: SingleFlight::default(),
+            password_setting: tokio::sync::Mutex::new(()),
             format_status: FormatStatusCache::default(),
         })
     }
@@ -157,9 +169,14 @@ impl Preflight {
     /// What this process learned about the signed-in account and forgets
     /// when the sign-in changes (`forgetAccountCaches` without the Hub
     /// token): the validated and created password-check, the sync-format
-    /// status and the marker this process created.
+    /// status and the marker this process created. The sign-out
+    /// generation is bumped first, so work that started for the previous
+    /// account and finishes meanwhile either records nothing or records
+    /// before the caches below are emptied. A password-check creation in
+    /// flight is forgotten: the next account's callers do not join it.
     pub fn forget_account(&self) {
-        self.reset_password_check_cache();
         self.clear_sync_format_status();
+        self.password_check_creating.forget();
+        self.reset_password_check_cache();
     }
 }

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The timing cases of the preflight parts that the recorded scenarios
 //! (ts_preflight.rs) cannot reach: work that finishes after a sign-out,
-//! refreshes that overlap a block or a clear, and a password that cannot
-//! be stored (src/main/sync/__tests__/sync-format.test.ts,
+//! refreshes that overlap a block or a clear, sets and creations that run
+//! at once, a sign-in change during a set, a replace or a password-check
+//! creation, and a password that cannot be stored (src/main/sync/__tests__/sync-format.test.ts,
 //! sync-format-status.test.ts and sync-password-guard.test.ts).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
@@ -183,14 +184,14 @@ async fn an_answer_that_is_not_json_fails_and_json_that_is_not_an_envelope_does_
     let h = Harness::new();
     h.drive.seed("password-check.enc", "not json").await;
     let listing = h.list_all().await;
-    let err = h.preflight.validate_password_check("pw", &listing).await.unwrap_err();
+    let err = h.preflight.validate_password_check("pw", &listing, 0).await.unwrap_err();
     assert!(matches!(err, PreflightError::Other(_)), "{err:?}");
 
     let h = Harness::new();
     h.drive.seed("password-check.enc", "{}").await;
     let listing = h.list_all().await;
     assert_eq!(
-        h.preflight.validate_password_check("pw", &listing).await,
+        h.preflight.validate_password_check("pw", &listing, 0).await,
         Err(PreflightError::PasswordMismatch)
     );
 }
@@ -210,4 +211,151 @@ async fn the_credentials_need_the_sign_in_then_the_password() {
             .to_string(),
         "sync.changePasswordError.unauthenticated"
     );
+}
+
+/// [`wait_until`] for a condition that waits on work off the runtime (the
+/// key derivation, the file reads): yields until it holds, failing after a
+/// minute.
+async fn wait_for_blocking_work(condition: impl Fn() -> bool) {
+    let waited = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+        while !condition() {
+            tokio::task::yield_now().await;
+        }
+    });
+    waited.await.expect("the condition never held");
+}
+
+fn password_check_creates(events: &[String]) -> usize {
+    events.iter().filter(|event| *event == "create:password-check.enc").count()
+}
+
+fn password_checks_on_drive(h: &Harness) -> usize {
+    h.drive.names().iter().filter(|name| *name == "password-check.enc").count()
+}
+
+#[tokio::test]
+async fn a_sign_in_change_before_the_upload_sends_no_password_check() {
+    let h = Harness::new();
+    let generation = h.preflight.sync_format_generation();
+    // The creation lists the markers before it encrypts and uploads.
+    h.drive.hold(DriveOp::List, Some(Some("sync-format-v")));
+    let preflight = Arc::clone(&h.preflight);
+    let validate =
+        tokio::spawn(async move { preflight.validate_password_check("pw", &[], generation).await });
+    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    h.preflight.forget_account();
+    h.drive.open_gate();
+
+    assert_eq!(validate.await.unwrap(), Err(PreflightError::AccountChanged));
+    assert_eq!(password_check_creates(&h.drive.take_events()), 0);
+    assert_eq!(password_checks_on_drive(&h), 0);
+    assert_eq!(h.validated(), None);
+}
+
+#[tokio::test]
+async fn a_password_check_uploaded_across_a_sign_in_change_is_deleted_and_not_remembered() {
+    let h = Harness::new();
+    h.drive.seed(OWN, &marker_content()).await;
+    let generation = h.preflight.sync_format_generation();
+    h.drive.hold(DriveOp::Create, None);
+    let preflight = Arc::clone(&h.preflight);
+    let validate =
+        tokio::spawn(async move { preflight.validate_password_check("pw", &[], generation).await });
+    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    h.preflight.forget_account();
+    h.drive.open_gate();
+
+    assert_eq!(validate.await.unwrap(), Err(PreflightError::AccountChanged));
+    let events = h.drive.take_events();
+    assert_eq!(password_check_creates(&events), 1);
+    assert!(events.iter().any(|event| event.starts_with("delete:")), "{events:?}");
+    assert_eq!(password_checks_on_drive(&h), 0);
+    assert_eq!(h.validated(), None);
+
+    // The next account's first validation creates its own password-check.
+    let generation = h.preflight.sync_format_generation();
+    h.preflight.validate_password_check("pw", &[], generation).await.unwrap();
+    assert_eq!(password_check_creates(&h.drive.take_events()), 1);
+    assert_eq!(password_checks_on_drive(&h), 1);
+}
+
+#[tokio::test]
+async fn a_set_across_a_sign_in_change_creates_nothing_and_keeps_no_password() {
+    let h = Harness::new();
+    h.drive.hold(DriveOp::List, Some(None));
+    let preflight = Arc::clone(&h.preflight);
+    let set = tokio::spawn(async move { preflight.set_password_and_validate("pw").await });
+    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    h.preflight.forget_account();
+    h.drive.open_gate();
+
+    assert_eq!(set.await.unwrap(), Err(PreflightError::AccountChanged));
+    assert_eq!(password_checks_on_drive(&h), 0);
+    assert_eq!(h.passwords.get(), Stored::None);
+}
+
+#[tokio::test]
+async fn a_validation_after_a_finished_creation_opens_it_instead_of_creating_another() {
+    let h = Harness::new();
+    h.drive.seed(OWN, &marker_content()).await;
+    let generation = h.preflight.sync_format_generation();
+    h.drive.hold(DriveOp::Create, None);
+    let (a, b) = (Arc::clone(&h.preflight), Arc::clone(&h.preflight));
+    let first = tokio::spawn(async move { a.validate_password_check("pw", &[], generation).await });
+    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    // Arrives while the creation is in flight or once it ended: it joins
+    // the run or opens the created file, and never creates another.
+    let joined = tokio::spawn(async move { b.validate_password_check("pw", &[], generation).await });
+    tokio::task::yield_now().await;
+    h.drive.open_gate();
+    first.await.unwrap().unwrap();
+    joined.await.unwrap().unwrap();
+    // After the run ended, a listing that lags opens the created file.
+    assert_eq!(
+        h.preflight.validate_password_check("other", &[], generation).await,
+        Err(PreflightError::PasswordMismatch)
+    );
+    let events = h.drive.take_events();
+    assert_eq!(password_check_creates(&events), 1, "{events:?}");
+    assert_eq!(password_checks_on_drive(&h), 1);
+}
+
+#[tokio::test]
+async fn sets_at_once_store_and_create_only_the_first_password() {
+    let h = Harness::new();
+    h.drive.seed(OWN, &marker_content()).await;
+    // Both would list Drive after finding no stored password.
+    h.drive.hold(DriveOp::List, Some(None));
+    let (a, b) = (Arc::clone(&h.preflight), Arc::clone(&h.preflight));
+    let first = tokio::spawn(async move { a.set_password_and_validate("a").await });
+    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    let second = tokio::spawn(async move { b.set_password_and_validate("b").await });
+    for _ in 0..100 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(h.drive.held(), 1, "the second set waits before it reads the stored password");
+    h.drive.open_gate();
+
+    assert_eq!(first.await.unwrap(), Ok(()));
+    assert_eq!(second.await.unwrap(), Err(PreflightError::PasswordAlreadySet));
+    assert_eq!(password_check_creates(&h.drive.take_events()), 1);
+    assert_eq!(password_checks_on_drive(&h), 1);
+    assert_eq!(h.passwords.get(), Stored::Readable("a".into()));
+}
+
+#[tokio::test]
+async fn a_replace_validated_before_a_sign_in_change_stores_nothing() {
+    let h = Harness::new();
+    h.passwords.set(Stored::Readable("old".into()));
+    h.drive.seed_password_check("new").await;
+    h.drive.hold(DriveOp::List, Some(None));
+    let preflight = Arc::clone(&h.preflight);
+    let replace = tokio::spawn(async move { preflight.replace_password_and_validate("new").await });
+    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    h.preflight.forget_account();
+    h.drive.open_gate();
+
+    assert_eq!(replace.await.unwrap(), Err(PreflightError::AccountChanged));
+    assert_eq!(h.passwords.get(), Stored::Readable("old".into()));
+    assert_eq!(h.validated(), None);
 }
