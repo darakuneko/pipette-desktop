@@ -61,7 +61,7 @@ impl Fault {
     }
 
     /// A failure with `status` and a Drive error body.
-    pub fn status(status: u16) -> Self {
+    pub fn with_status(status: u16) -> Self {
         Self {
             status,
             retry_after: None,

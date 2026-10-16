@@ -96,7 +96,7 @@ async fn run_step(
     let result: Result<(), DriveError> = match text(step, "op") {
         "fault" => {
             let status = u16::try_from(step["status"].as_u64().unwrap()).unwrap();
-            let mut fault = if status == 429 { Fault::rate_limit(None) } else { Fault::status(status) };
+            let mut fault = if status == 429 { Fault::rate_limit(None) } else { Fault::with_status(status) };
             fault.retry_after = step["retryAfter"].as_str().map(str::to_owned);
             fault.count = u32::try_from(step["count"].as_u64().unwrap()).unwrap();
             fault.only = step["only"].as_str().map(op_of);
