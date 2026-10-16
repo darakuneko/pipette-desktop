@@ -4,10 +4,11 @@
 //! (`normalizeFile`), and the name checks and comparisons, on JavaScript
 //! strings (UTF-16, lone surrogates included).
 
-use pipette_entry_store::{js_to_lower_case, js_trim, trim_js_whitespace, utf16_len};
+use pipette_entry_store::{js_trim, utf16_len};
 use pipette_js_json::{JsString, Object, Value};
 
 use super::KeyLabelError;
+use crate::entry_files::method_type_error_text;
 
 /// The longest name, in UTF-16 code units.
 pub const MAX_NAME_LENGTH: usize = 100;
@@ -85,21 +86,14 @@ pub(crate) fn validate_name(name: &JsString) -> Result<JsString, KeyLabelError> 
 /// The TypeError JavaScript throws when it calls the string method `method`
 /// on `value` (missing for undefined) read as `receiver`.
 pub(crate) fn method_type_error(value: Option<&Value>, receiver: &str, method: &str) -> KeyLabelError {
-    KeyLabelError::Type(match value {
-        None => format!("Cannot read properties of undefined (reading '{method}')"),
-        Some(Value::Null) => format!("Cannot read properties of null (reading '{method}')"),
-        Some(_) => format!("{receiver}.{method} is not a function"),
-    })
+    KeyLabelError::Type(method_type_error_text(value, receiver, method))
 }
 
 /// `value.trim().toLowerCase()` for the name `value` read as `receiver`:
 /// the key two names are the same by, or the TypeError of a name that is
 /// not a string.
 pub(crate) fn name_key(value: Option<&Value>, receiver: &str) -> Result<Vec<u16>, KeyLabelError> {
-    match value {
-        Some(Value::String(name)) => Ok(js_to_lower_case(trim_js_whitespace(&name.utf16_units()))),
-        other => Err(method_type_error(other, receiver, "trim")),
-    }
+    crate::entry_files::name_key(value, receiver).map_err(KeyLabelError::Type)
 }
 
 #[cfg(test)]

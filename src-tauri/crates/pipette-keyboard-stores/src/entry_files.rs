@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What the index-based stores of this crate share: the body file an entry
-//! names, read as the Electron build reads it, and the text of a clock
-//! error.
+//! names, read as the Electron build reads it, the text of a clock error,
+//! and the name comparison of `findActiveByName`.
 
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
-use pipette_entry_store::{Entry, EntryError, is_safe_path_segment};
+use pipette_entry_store::{Entry, EntryError, is_safe_path_segment, js_to_lower_case, trim_js_whitespace};
 use pipette_js_json::Value;
 
 /// Why an entry names no body file this store may open.
@@ -53,6 +53,26 @@ pub(crate) fn entry_error_text(err: &EntryError) -> String {
     match err {
         EntryError::TimeOutOfRange => format!("RangeError: {err}"),
         EntryError::UnattendedRevive => format!("Error: {err}"),
+    }
+}
+
+/// The text of the TypeError JavaScript throws when it calls the string
+/// method `method` on `value` (missing for undefined) read as `receiver`.
+pub(crate) fn method_type_error_text(value: Option<&Value>, receiver: &str, method: &str) -> String {
+    match value {
+        None => format!("Cannot read properties of undefined (reading '{method}')"),
+        Some(Value::Null) => format!("Cannot read properties of null (reading '{method}')"),
+        Some(_) => format!("{receiver}.{method} is not a function"),
+    }
+}
+
+/// `value.trim().toLowerCase()` for the name `value` read as `receiver`:
+/// the key two names are the same by, or the text of the TypeError of a
+/// name that is not a string.
+pub(crate) fn name_key(value: Option<&Value>, receiver: &str) -> Result<Vec<u16>, String> {
+    match value {
+        Some(Value::String(name)) => Ok(js_to_lower_case(trim_js_whitespace(&name.utf16_units()))),
+        other => Err(method_type_error_text(other, receiver, "trim")),
     }
 }
 
