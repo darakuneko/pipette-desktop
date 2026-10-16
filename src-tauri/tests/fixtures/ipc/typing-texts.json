@@ -1,0 +1,44 @@
+[
+  {
+    "member": "typingTestTextStoreList",
+    "args": [],
+    "command": "typing_test_text_store_list",
+    "invokeArgs": {},
+    "response": { "success": true, "data": [] }
+  },
+  {
+    "member": "typingTestTextStoreGet",
+    "args": ["x"],
+    "command": "typing_test_text_store_get",
+    "invokeArgs": { "id": "x" },
+    "response": { "success": false, "errorCode": "NOT_FOUND", "error": "Text not found" }
+  },
+  {
+    "member": "typingTestTextStoreRename",
+    "args": ["x", "New"],
+    "command": "typing_test_text_store_rename",
+    "invokeArgs": { "id": "x", "newName": "New" },
+    "response": { "success": false, "errorCode": "NOT_FOUND", "error": "Text not found" }
+  },
+  {
+    "member": "typingTestTextStoreDelete",
+    "args": ["x"],
+    "command": "typing_test_text_store_delete",
+    "invokeArgs": { "id": "x" },
+    "response": { "success": false, "errorCode": "NOT_FOUND", "error": "Text not found" }
+  },
+  {
+    "member": "typingTestTextStoreImport",
+    "args": [],
+    "command": "typing_test_text_store_import",
+    "invokeArgs": {},
+    "response": { "success": false, "errorCode": "IO_ERROR", "error": "cancelled" }
+  },
+  {
+    "member": "typingTestTextStoreImportConfirm",
+    "args": [],
+    "command": "typing_test_text_store_import_confirm",
+    "invokeArgs": {},
+    "response": { "success": false, "errorCode": "NOT_FOUND", "error": "No pending import to confirm" }
+  }
+]

@@ -8,7 +8,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use pipette_entry_store::{SystemClock, WriteLocks};
-use pipette_keyboard_stores::StoreContext;
+use pipette_keyboard_stores::{StoreContext, TypingTextStore};
 use pipette_sync_pending::PendingStore;
 use serde_json::Value;
 use tauri::ipc::Response;
@@ -18,8 +18,9 @@ use crate::command_error::CommandError;
 use crate::store_commands::blocking;
 
 /// Manages the stores of `user_data` (the context every store command
-/// shares, the pack stores' included), reporting their changes to the
-/// pending sync units, which must be managed already.
+/// shares, the pack stores' included, and the state of the typing test
+/// texts), reporting their changes to the pending sync units, which must be
+/// managed already.
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
     let pending = app.state::<PendingStore>().inner().clone();
     app.manage(StoreContext::new(
@@ -28,6 +29,7 @@ pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
         Arc::new(WriteLocks::new()),
         Arc::new(move |unit: &str| pending.notify_change(unit)),
     ));
+    app.manage(TypingTextStore::default());
 }
 
 /// `[{uid, name}, …]` as JSON text: a name read from the keyboard names is

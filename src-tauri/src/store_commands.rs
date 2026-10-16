@@ -20,6 +20,7 @@ mod pack_import;
 pub mod settings;
 pub mod snapshots;
 pub mod sync_pending;
+pub mod typing_texts;
 
 /// Runs `io` on a blocking-task thread (a store waits for its write lock
 /// and syncs its writes to disk) and answers what it returns.

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/typing_texts.rs: the texts imported for
+# the typing test.
+
+[[set]]
+identifier = "typing-texts"
+description = "Lists, reads, renames and deletes the typing test texts, and imports one through a file dialog, confirming the overwrite of a text of the same name."
+permissions = [
+  "allow-typing-test-text-store-list",
+  "allow-typing-test-text-store-get",
+  "allow-typing-test-text-store-rename",
+  "allow-typing-test-text-store-delete",
+  "allow-typing-test-text-store-import",
+  "allow-typing-test-text-store-import-confirm",
+]
