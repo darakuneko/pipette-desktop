@@ -359,3 +359,44 @@ async fn a_replace_validated_before_a_sign_in_change_stores_nothing() {
     assert_eq!(h.passwords.get(), Stored::Readable("old".into()));
     assert_eq!(h.validated(), None);
 }
+
+#[test]
+fn a_clear_during_a_reported_block_is_reported_after_it_and_wins() {
+    use std::sync::mpsc;
+
+    let h = Harness::new();
+    let (entered_tx, entered) = mpsc::channel::<()>();
+    let (release, released) = mpsc::channel::<()>();
+    let released = Mutex::new(Some(released));
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let sink = Arc::clone(&events);
+    // The first report waits inside the listener until released, then
+    // records; the later ones record at once.
+    h.preflight.set_sync_format_status_listener(move |status| {
+        if let Some(released) = released.lock().unwrap().take() {
+            entered_tx.send(()).unwrap();
+            released.recv().unwrap();
+        }
+        sink.lock().unwrap().push(status);
+    });
+    let generation = h.preflight.sync_format_generation();
+    let blocking = Arc::clone(&h.preflight);
+    let block = std::thread::spawn(move || blocking.note_sync_format_update_required(Some(9), generation));
+    entered.recv().unwrap();
+    let clearing = Arc::clone(&h.preflight);
+    let clear = std::thread::spawn(move || clearing.forget_account());
+    // A block noted by a pass of the previous account records nothing.
+    let late = Arc::clone(&h.preflight);
+    let stale = std::thread::spawn(move || late.note_sync_format_update_required(Some(9), generation));
+    release.send(()).unwrap();
+    block.join().unwrap();
+    clear.join().unwrap();
+    stale.join().unwrap();
+
+    let blocked =
+        SyncFormatStatus { required: Some(9), supported: SYNC_FORMAT_VERSION, update_required: true };
+    let events = events.lock().unwrap();
+    assert_eq!(events.first(), Some(&Some(blocked)));
+    assert_eq!(events.last(), Some(&None), "{events:?}");
+    assert_eq!(h.preflight.cached_sync_format_status(), None);
+}
