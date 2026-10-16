@@ -416,6 +416,9 @@ function crateBackend(dir: string, commands: Command[]): (cmd: string, args?: Re
   }
   return async (cmd, args = {}) => {
     if (cmd === 'app_config_get_all') return config.current
+    // The typing analytics, which name a keyboard known only by its uid,
+    // are not this crate's; no keyboard here has typing data.
+    if (cmd === 'typing_analytics_list_keyboards') return []
     const logged: Command = { command: cmd, args }
     commands.push(logged)
     try {
