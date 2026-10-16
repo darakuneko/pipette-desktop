@@ -1,0 +1,37 @@
+[
+  {
+    "member": "typingRunLogSave",
+    "args": [
+      "0xA1B2",
+      {
+        "runId": "run-1",
+        "uid": "0xA1B2",
+        "startedAt": "2026-10-16T12:00:00.000Z",
+        "durationMs": 1000,
+        "mode": "words",
+        "language": "english",
+        "words": []
+      }
+    ],
+    "command": "typing_run_log_save",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "log": "{\"runId\":\"run-1\",\"uid\":\"0xA1B2\",\"startedAt\":\"2026-10-16T12:00:00.000Z\",\"durationMs\":1000,\"mode\":\"words\",\"language\":\"english\",\"words\":[]}"
+    },
+    "response": { "success": false, "error": "Recording consent not accepted" }
+  },
+  {
+    "member": "typingRunLogList",
+    "args": ["0xA1B2"],
+    "command": "typing_run_log_list",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": { "success": true, "entries": [] }
+  },
+  {
+    "member": "typingRunLogGet",
+    "args": ["0xA1B2", "run-1"],
+    "command": "typing_run_log_get",
+    "invokeArgs": { "uid": "0xA1B2", "runId": "run-1" },
+    "response": { "success": false, "error": "Not found" }
+  }
+]

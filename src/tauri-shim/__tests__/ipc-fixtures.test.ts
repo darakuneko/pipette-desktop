@@ -20,6 +20,7 @@ import type { HubPrivateLink } from '../../shared/types/hub-private'
 import type { I18nPackImportApplyOptions } from '../../shared/types/i18n-store'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store'
+import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { VialAPI } from '../../shared/types/vial-api'
 
 interface Entry {
@@ -38,6 +39,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
   .flatMap((name) => JSON.parse(readFileSync(resolve(FIXTURE_DIR, name), 'utf8')) as Entry[])
 
 interface Shim {
+  analyzeFilters: typeof import('../api/analyze-filters')
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
   favorites: typeof import('../api/favorites')
@@ -45,6 +47,7 @@ interface Shim {
   i18nPacks: typeof import('../api/i18n-packs')
   keyLabels: typeof import('../api/key-labels')
   keyboardData: typeof import('../api/keyboard-data')
+  runLogs: typeof import('../api/run-logs')
   settings: typeof import('../api/settings')
   shell: typeof import('../api/shell')
   snapshots: typeof import('../api/snapshots')
@@ -60,6 +63,7 @@ interface Shim {
 async function load(): Promise<Shim> {
   vi.resetModules()
   return {
+    analyzeFilters: await import('../api/analyze-filters'),
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
     favorites: await import('../api/favorites'),
@@ -67,6 +71,7 @@ async function load(): Promise<Shim> {
     i18nPacks: await import('../api/i18n-packs'),
     keyLabels: await import('../api/key-labels'),
     keyboardData: await import('../api/keyboard-data'),
+    runLogs: await import('../api/run-logs'),
     settings: await import('../api/settings'),
     shell: await import('../api/shell'),
     snapshots: await import('../api/snapshots'),
@@ -239,6 +244,44 @@ const CALLERS: Record<string, Caller> = {
   snapshotStoreSetHubPrivate: {
     run: ({ snapshots }, [uid, entryId, link]) =>
       snapshots.snapshotsApi.snapshotStoreSetHubPrivate(uid as string, entryId as string, link as HubPrivateLink | null),
+  },
+  analyzeFilterStoreList: {
+    run: ({ analyzeFilters }, [uid]) => analyzeFilters.analyzeFiltersApi.analyzeFilterStoreList(uid as string),
+  },
+  analyzeFilterStoreSave: {
+    run: ({ analyzeFilters }, [uid, json, label, summary]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreSave(uid as string, json as string, label as string, summary as string),
+  },
+  analyzeFilterStoreLoad: {
+    run: ({ analyzeFilters }, [uid, entryId]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreLoad(uid as string, entryId as string),
+  },
+  analyzeFilterStoreUpdate: {
+    run: ({ analyzeFilters }, [uid, entryId, json]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreUpdate(uid as string, entryId as string, json as string),
+  },
+  analyzeFilterStoreRename: {
+    run: ({ analyzeFilters }, [uid, entryId, label]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreRename(uid as string, entryId as string, label as string),
+  },
+  analyzeFilterStoreDelete: {
+    run: ({ analyzeFilters }, [uid, entryId]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreDelete(uid as string, entryId as string),
+  },
+  analyzeFilterStoreSetHubPostId: {
+    run: ({ analyzeFilters }, [uid, entryId, postId]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreSetHubPostId(uid as string, entryId as string, postId as string | null),
+  },
+  analyzeFilterStoreSetHubPrivate: {
+    run: ({ analyzeFilters }, [uid, entryId, link]) =>
+      analyzeFilters.analyzeFiltersApi.analyzeFilterStoreSetHubPrivate(uid as string, entryId as string, link as HubPrivateLink | null),
+  },
+  typingRunLogSave: {
+    run: ({ runLogs }, [uid, log]) => runLogs.runLogsApi.typingRunLogSave(uid as string, log as RunKeystrokeLog),
+  },
+  typingRunLogList: { run: ({ runLogs }, [uid]) => runLogs.runLogsApi.typingRunLogList(uid as string) },
+  typingRunLogGet: {
+    run: ({ runLogs }, [uid, runId]) => runLogs.runLogsApi.typingRunLogGet(uid as string, runId as string),
   },
   'settings.readSettingsFile': { run: ({ settings }, [uid]) => settings.readSettingsFile(uid as string) },
   'settings.writeSettingsFile': {

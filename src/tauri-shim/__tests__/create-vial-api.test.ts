@@ -85,9 +85,11 @@ describe('implemented', () => {
     await expect(api.hubDeleteThemePost('post-1')).resolves.toEqual(failed)
   })
 
-  it('answers the store calls of connecting a keyboard as a fresh install', async () => {
+  it('asks the backend for the run logs of a keyboard', async () => {
+    invoke.mockResolvedValueOnce({ success: true, entries: [] })
     const api = createVialApi(implemented)
     await expect(api.typingRunLogList('uid')).resolves.toEqual({ success: true, entries: [] })
+    expect(invoke).toHaveBeenCalledWith('typing_run_log_list', { uid: 'uid' })
   })
 
   it('asks the backend for the app config', async () => {

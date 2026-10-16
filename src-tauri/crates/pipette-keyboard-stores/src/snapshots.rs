@@ -24,14 +24,15 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use pipette_entry_store::{
-    Entry, EntryError, EntryGroup, EntryList, EntryMutation, EntryStore, MetaGroup, OverwriteOptions,
-    apply_entry_mutation, clock_ms, create_entry, is_safe_path_segment, migrate_body_filenames,
-    normalize_entries, overwrite_entry, sanitize_filename, set_clock, trim_js_whitespace, ts_for_filename,
+    Entry, EntryError, EntryGroup, EntryMutation, EntryStore, MetaGroup, OverwriteOptions,
+    apply_entry_mutation, clock_ms, create_entry, is_safe_path_segment, overwrite_entry, sanitize_filename,
+    set_clock, trim_js_whitespace, ts_for_filename,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_time::{iso_8601_millis, iso_8601_millis_checked};
 
 use crate::entry_files::{BodyPathError, body_path, body_path_of, entry_error_text, read_text};
+use crate::keyboard_index::{self, IndexError, KeyboardIndex, write_index};
 use crate::keyboard_meta::{KEYBOARD_META_SYNC_UNIT, MetaOutcome, upsert_keyboard_meta};
 use crate::snapshot_filename::build_snapshot_filename;
 use crate::{StoreContext, StoreError};
@@ -82,6 +83,15 @@ pub enum SnapshotError {
     Meta(StoreError),
 }
 
+impl From<IndexError> for SnapshotError {
+    fn from(err: IndexError) -> Self {
+        match err {
+            IndexError::TooDeep(path) => SnapshotError::TooDeep(path),
+            IndexError::Io(err) => SnapshotError::Io(err),
+        }
+    }
+}
+
 impl From<BodyPathError> for SnapshotError {
     fn from(err: BodyPathError) -> Self {
         match err {
@@ -98,24 +108,6 @@ fn meta_error_text(err: &StoreError) -> String {
     }
 }
 
-/// The index file: its top-level object, whose `entries` holds the place
-/// of [`Self::entries`] (the entries as v2 entries) for a write.
-#[derive(Clone)]
-struct SnapshotIndex {
-    root: Object,
-    entries: Vec<Entry>,
-}
-
-impl EntryList for SnapshotIndex {
-    fn entries(&self) -> &[Entry] {
-        &self.entries
-    }
-
-    fn entries_mut(&mut self) -> &mut [Entry] {
-        &mut self.entries
-    }
-}
-
 fn validate_uid(uid: &str) -> Result<(), SnapshotError> {
     if is_safe_path_segment(uid) { Ok(()) } else { Err(SnapshotError::InvalidUid) }
 }
@@ -124,55 +116,16 @@ fn snapshot_dir(ctx: &StoreContext, uid: &str) -> PathBuf {
     ctx.sync_dir().join("keyboards").join(uid).join("snapshots")
 }
 
-/// The index of `uid` in `dir` (`readIndex`): empty when the file is
-/// missing, unreadable, not JSON, not an object naming `uid`, or without an
-/// `entries` list.
-fn read_index(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotError> {
-    let empty = || {
-        let mut root = Object::new();
-        root.insert("uid", uid.into());
-        root.insert("entries", Value::Array(Vec::new()));
-        SnapshotIndex { root, entries: Vec::new() }
-    };
-    let path = dir.join("index.json");
-    let Ok(bytes) = fs::read(&path) else { return Ok(empty()) };
-    // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD.
-    let mut root = match pipette_js_json::parse(&String::from_utf8_lossy(&bytes)) {
-        Ok(Value::Object(root)) => root,
-        Ok(_) => return Ok(empty()),
-        Err(err) if err.is_nesting_too_deep() => return Err(SnapshotError::TooDeep(path)),
-        Err(_) => return Ok(empty()),
-    };
-    let names_uid = matches!(root.get("uid"), Some(Value::String(s)) if s.as_str() == Some(uid));
-    if !names_uid || !matches!(root.get("entries"), Some(Value::Array(_))) {
-        return Ok(empty());
-    }
-    let entries = normalize_entries(STORE, root.get("entries"));
-    // Holds the place of the entries, which a write puts back.
-    root.insert("entries", Value::Array(Vec::new()));
-    Ok(SnapshotIndex { root, entries })
+fn read_index(dir: &Path, uid: &str) -> Result<KeyboardIndex, SnapshotError> {
+    Ok(keyboard_index::read_index(STORE, dir, uid)?)
 }
 
-fn write_index(dir: &Path, index: SnapshotIndex) -> io::Result<()> {
-    fs::create_dir_all(dir)?;
-    let SnapshotIndex { mut root, entries } = index;
-    root.insert("entries", Value::Array(entries.into_iter().map(Value::from).collect()));
-    let text = pipette_js_json::stringify_with_gap(&Value::Object(root), "  ");
-    pipette_fs::write_file_atomic(&dir.join("index.json"), text.as_bytes())
-}
-
-/// The index for a writer holding the uid lock, with the legacy body names
-/// moved to id-carrying ones (written back when any moved).
-fn read_index_locked(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotError> {
-    let mut index = read_index(dir, uid)?;
-    // The move keeps the index it renamed, so its write takes a copy; this
-    // runs only while legacy names are left.
-    migrate_body_filenames(STORE, dir, &mut index, |index| write_index(dir, index.clone()))?;
-    Ok(index)
+fn read_index_locked(dir: &Path, uid: &str) -> Result<KeyboardIndex, SnapshotError> {
+    Ok(keyboard_index::read_index_locked(STORE, dir, uid)?)
 }
 
 fn find_entry(entries: &[Entry], id: &str) -> Option<usize> {
-    entries.iter().position(|entry| entry.id().is_some_and(|own| own.as_str() == Some(id)))
+    keyboard_index::find_entry(entries, &JsString::from(id))
 }
 
 /// The live snapshots of `uid` (`SNAPSHOT_STORE_LIST`), newest first.

@@ -2,8 +2,8 @@
 // Fixed answers for the VialAPI members the renderer awaits during startup
 // and while connecting a keyboard and opening its editor, for areas the
 // backend does not implement yet: the values of a fresh install (sync
-// signed out, no packs, no saved keyboard data), and failed answers for the
-// Hub requests whose answer the renderer reads. Writes succeed without
+// signed out, no startup notification), and failed answers for the Hub
+// requests whose answer the renderer reads. Writes succeed without
 // storing anything. Each group names the backend area whose commands take
 // its place; coverage.test.ts lists them.
 
@@ -82,7 +82,4 @@ export const fakes = {
   typingAnalyticsListRemoteCloudDays: () => Promise.resolve([]),
   typingAnalyticsFetchRemoteDay: () => Promise.resolve(false),
   syncAnalyticsNow: () => Promise.resolve(false),
-
-  // Typing run log store.
-  typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
 } satisfies Partial<VialAPI>

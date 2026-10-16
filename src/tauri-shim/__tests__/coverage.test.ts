@@ -4,8 +4,8 @@
 // member is exactly one of real or fake, and the fakes are exactly the list
 // below, so adding or replacing one is a deliberate change here too. The
 // keyboard members (HID probe, file dialogs, snapshot, favorite and
-// pipette settings stores, stored keyboards, pending sync units) and the
-// pack and label members (key labels, typing test texts, language and
+// pipette settings stores, stored keyboards, pending sync units), the run
+// log and Analyze filter members, and the pack and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs.
 
@@ -46,7 +46,6 @@ const EXPECTED_FAKES = [
   'typingAnalyticsListRemoteCloudDays',
   'typingAnalyticsFetchRemoteDay',
   'syncAnalyticsNow',
-  'typingRunLogList',
 ]
 
 /** The members the keyboard editor needs from the backend, all real. */
@@ -87,6 +86,21 @@ const KEYBOARD_MEMBERS = [
   'keyboardMetaNameIfMissing',
   'syncHasPendingChanges',
   'syncOnPendingChange',
+]
+
+/** The Typing Test run log and Analyze filter store members, all real. */
+const RUN_LOG_AND_FILTER_MEMBERS = [
+  'typingRunLogSave',
+  'typingRunLogList',
+  'typingRunLogGet',
+  'analyzeFilterStoreList',
+  'analyzeFilterStoreSave',
+  'analyzeFilterStoreLoad',
+  'analyzeFilterStoreUpdate',
+  'analyzeFilterStoreRename',
+  'analyzeFilterStoreDelete',
+  'analyzeFilterStoreSetHubPostId',
+  'analyzeFilterStoreSetHubPrivate',
 ]
 
 /** The language pack members, all real. */
@@ -192,6 +206,14 @@ describe('shim coverage', () => {
     expect(new Set(KEYBOARD_MEMBERS).size).toBe(36)
     expect(KEYBOARD_MEMBERS.filter((name) => !(name in real))).toEqual([])
     expect(KEYBOARD_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
+  it('backs every run log and Analyze filter member with backend commands', () => {
+    expect(new Set(RUN_LOG_AND_FILTER_MEMBERS).size).toBe(11)
+    expect(RUN_LOG_AND_FILTER_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(RUN_LOG_AND_FILTER_MEMBERS.filter((name) => name in fakes)).toEqual([])
+    const stores = Object.keys(implemented).filter((name) => /^(typingRunLog|analyzeFilterStore)/.test(name))
+    expect(stores.filter((name) => !RUN_LOG_AND_FILTER_MEMBERS.includes(name))).toEqual([])
   })
 
   // Applied sync units come from the sync service, which the backend does

@@ -1,0 +1,1250 @@
+[
+  {
+    "name": "save, list, load, rename, hub links and delete",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1,\"tab\":\"wpm\"}",
+        "label": "First",
+        "summary": "WPM · 7 days"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "second body\n",
+        "label": "",
+        "summary": ""
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "rename",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "label": "Renamed 名前 😀"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": " post-1 "
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "link": {
+          "id": "p1",
+          "url": "/files/p1?token=t",
+          "expiresAt": null
+        }
+      },
+      {
+        "op": "hubPostId",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": "　"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": "post-2"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": null
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "link": null
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "delete",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:03:00.000Z"
+      },
+      {
+        "op": "delete",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "missing"
+      },
+      {
+        "op": "rename",
+        "uid": "0xA1B2",
+        "id": "missing",
+        "label": "x"
+      },
+      {
+        "op": "delete",
+        "uid": "0xA1B2",
+        "id": "missing"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "0xA1B2",
+        "id": "missing",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "0xA1B2",
+        "id": "missing",
+        "link": null
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "missing",
+        "json": "{}"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"First\",\"summary\":\"WPM · 7 days\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"label\":\"\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      null,
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000002\",\"label\":\"\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"First\",\"summary\":\"WPM · 7 days\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"{\\\"version\\\":1,\\\"tab\\\":\\\"wpm\\\"}\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"Renamed 名前 😀\",\"summary\":\"WPM · 7 days\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.002Z\"},\"updatedAt\":\"2026-10-16T12:01:00.002Z\"}]}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1,\"tab\":\"wpm\"}",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json": "second body\n",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"label\": \"\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.002Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:03:00.000Z\",\n      \"hubPrivate\": {\n        \"id\": \"p1\",\n        \"url\": \"/files/p1?token=t\",\n        \"expiresAt\": null\n      },\n      \"deletedAt\": \"2026-10-16T12:03:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"Renamed 名前 😀\",\n      \"summary\": \"WPM · 7 days\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.002Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.002Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "a v1 index with future clocks and unknown fields",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"before\": [1, 2.50, 1e21],\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\"id\":\"v1\",\"label\":\"Label v1\",\"filename\":\"2026-10-16T11-00-00.000Z_v1.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"summary\":\"old\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"extra\":{\"keep\":true}},\n    {\"note\":\"first\",\"id\":\"future\",\"label\":\"Future\",\"filename\":\"2030-01-01T00-00-00.000Z_future.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2030-01-02T00:00:00.000Z\",\"hub\":\"nonsense\",\"enabled\":\"2030-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"},\n    {\"id\":\"gone\",\"label\":\"Label gone\",\"filename\":\"2026-10-16T10-00-00.000Z_gone.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"deletedAt\":\"2026-10-16T11:50:00.000Z\",\"hubPostId\":\"h\"},\n    \"a string entry\",\n    null,\n    42,\n    {\"label\":\"no id\"},\n    {\"id\":7,\"label\":\"numeric id\"}\n  ],\n  \"after\": \"kept\"\n}\n",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T11-00-00.000Z_v1.json": "v1 body",
+      "sync/keyboards/0xA1B2/analyze_filters/2030-01-01T00-00-00.000Z_future.json": "future body",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T10-00-00.000Z_gone.json": "gone body"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "future"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "gone"
+      },
+      {
+        "op": "rename",
+        "uid": "0xA1B2",
+        "id": "v1",
+        "label": "Renamed v1"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "future",
+        "json": "future body 2"
+      },
+      {
+        "op": "rename",
+        "uid": "0xA1B2",
+        "id": "future",
+        "label": "Renamed future"
+      },
+      {
+        "op": "delete",
+        "uid": "0xA1B2",
+        "id": "future"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "gone",
+        "json": "revived"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[{\"id\":\"v1\",\"label\":\"Label v1\",\"filename\":\"2026-10-16T11-00-00.000Z_v1.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"summary\":\"old\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:30:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},{\"note\":\"first\",\"id\":\"future\",\"label\":\"Future\",\"filename\":\"2030-01-01T00-00-00.000Z_future.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2031-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.000Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"future body\"}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true,\"entries\":[{\"id\":\"v1\",\"label\":\"Renamed v1\",\"filename\":\"2026-10-16T11-00-00.000Z_v1.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"summary\":\"old\",\"updatedAt\":\"2026-10-16T12:00:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:30:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},{\"id\":\"gone\",\"label\":\"Label gone\",\"filename\":\"2026-10-16T10-00-00.000Z_gone.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"hubPostId\":\"h\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T10-00-00.000Z_gone.json": "revived",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T11-00-00.000Z_v1.json": "v1 body",
+      "sync/keyboards/0xA1B2/analyze_filters/2030-01-01T00-00-00.000Z_future.json": "future body 2",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"before\": [\n    1,\n    2.5,\n    1e+21\n  ],\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"v1\",\n      \"label\": \"Renamed v1\",\n      \"filename\": \"2026-10-16T11-00-00.000Z_v1.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"summary\": \"old\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"extra\": {\n        \"keep\": true\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:30:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:30:00.000Z\"\n      }\n    },\n    {\n      \"note\": \"first\",\n      \"id\": \"future\",\n      \"label\": \"Renamed future\",\n      \"filename\": \"2030-01-01T00-00-00.000Z_future.json\",\n      \"savedAt\": \"2030-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2030-01-01T00:00:00.001Z\",\n        \"body\": \"2031-01-01T00:00:00.001Z\",\n        \"name\": \"2031-01-01T00:00:00.001Z\",\n        \"hub\": \"2031-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2031-01-01T00:00:00.001Z\",\n      \"deletedAt\": \"2030-01-01T00:00:00.001Z\"\n    },\n    {\n      \"id\": \"gone\",\n      \"label\": \"Label gone\",\n      \"filename\": \"2026-10-16T10-00-00.000Z_gone.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"hubPostId\": \"h\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ],\n  \"after\": \"kept\"\n}"
+    }
+  },
+  {
+    "name": "legacy names without the id move on a write",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"Label a\",\n      \"filename\": \"2026-01-01T00-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"b\",\n      \"label\": \"Label b\",\n      \"filename\": \"2026-01-01T00-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"c\",\n      \"label\": \"Label c\",\n      \"filename\": \"2026-01-02T00-00-00.000Z.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    },\n    {\n      \"id\": \"d\",\n      \"label\": \"Label d\",\n      \"filename\": \"../outside.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"e\",\n      \"label\": \"Label e\",\n      \"filename\": \"2026-01-03T00-00-00.000Z_e.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z.json": "shared legacy body",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-03T00-00-00.000Z_e.json": "kept body"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "a"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "d"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "New"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "a"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "b"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "c"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[{\"id\":\"a\",\"label\":\"Label a\",\"filename\":\"2026-01-01T00-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"b\",\"label\":\"Label b\",\"filename\":\"2026-01-01T00-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"d\",\"label\":\"Label d\",\"filename\":\"../outside.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"e\",\"label\":\"Label e\",\"filename\":\"2026-01-03T00-00-00.000Z_e.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"shared legacy body\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"New\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"New\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"a\",\"label\":\"Label a\",\"filename\":\"2026-01-01T00-00-00.000Z_a.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"b\",\"label\":\"Label b\",\"filename\":\"2026-01-01T00-00-00.000Z_b.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"d\",\"label\":\"Label d\",\"filename\":\"../outside.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"e\",\"label\":\"Label e\",\"filename\":\"2026-01-03T00-00-00.000Z_e.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"shared legacy body\"}",
+      "{\"success\":true,\"data\":\"shared legacy body\"}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_a.json": "shared legacy body",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_b.json": "shared legacy body",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-03T00-00-00.000Z_e.json": "kept body",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"New\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"a\",\n      \"label\": \"Label a\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"b\",\n      \"label\": \"Label b\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_b.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"c\",\n      \"label\": \"Label c\",\n      \"filename\": \"2026-01-02T00-00-00.000Z_c.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:59:00.000Z\"\n    },\n    {\n      \"id\": \"d\",\n      \"label\": \"Label d\",\n      \"filename\": \"../outside.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"e\",\n      \"label\": \"Label e\",\n      \"filename\": \"2026-01-03T00-00-00.000Z_e.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an index that is not JSON is replaced by the next save",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "not json!!!"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "x"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "L"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an index of another uid is replaced by the next save",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xFFFF\",\n  \"entries\": [\n    {\n      \"id\": \"other\",\n      \"label\": \"Label other\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_other.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_other.json": "other body"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "other"
+      },
+      {
+        "op": "rename",
+        "uid": "0xA1B2",
+        "id": "other",
+        "label": "x"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_other.json": "other body",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an index that is an array",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "[{\"uid\":\"0xA1B2\",\"entries\":[]}]"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an index that is null",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "null"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an index without an entries list",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\"uid\":\"0xA1B2\",\"entries\":{\"0\":{\"id\":\"x\"}}}"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "an index with a byte order mark",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "﻿{\"uid\":\"0xA1B2\",\"entries\":[]}"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"version\":1}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "invalid UTF-8 in the index",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": {
+        "hex": "7b22756964223a22307841314232222c22656e7472696573223a5b7b226964223a2278222c226c6162656c223a2242616420ffe697222c2266696c656e616d65223a22785f782e6a736f6e222c2273617665644174223a22323032362d30312d30315430303a30303a30302e3030305a227d5d7d"
+      },
+      "sync/keyboards/0xA1B2/analyze_filters/x_x.json": {
+        "hex": "626f647920c3"
+      }
+    },
+    "steps": [
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "uid": "0xA1B2",
+        "id": "x",
+        "label": "Good"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[{\"id\":\"x\",\"label\":\"Bad ��\",\"filename\":\"x_x.json\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-01-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"body �\"}",
+      "{\"success\":true}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"x\",\n      \"label\": \"Good\",\n      \"filename\": \"x_x_x0078.json\",\n      \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:00.000Z\",\n        \"body\": \"2026-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/0xA1B2/analyze_filters/x_x_x0078.json": {
+        "hex": "626f647920c3"
+      }
+    }
+  },
+  {
+    "name": "the 50-entry cap counts live entries only",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"live-0\",\n      \"label\": \"Label live-0\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-0.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-1\",\n      \"label\": \"Label live-1\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-1.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-2\",\n      \"label\": \"Label live-2\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-2.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-3\",\n      \"label\": \"Label live-3\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-3.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-4\",\n      \"label\": \"Label live-4\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-4.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-5\",\n      \"label\": \"Label live-5\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-5.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-6\",\n      \"label\": \"Label live-6\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-6.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-7\",\n      \"label\": \"Label live-7\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-7.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-8\",\n      \"label\": \"Label live-8\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-8.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-9\",\n      \"label\": \"Label live-9\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-9.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-10\",\n      \"label\": \"Label live-10\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-10.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-11\",\n      \"label\": \"Label live-11\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-11.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-12\",\n      \"label\": \"Label live-12\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-12.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-13\",\n      \"label\": \"Label live-13\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-13.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-14\",\n      \"label\": \"Label live-14\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-14.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-15\",\n      \"label\": \"Label live-15\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-15.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-16\",\n      \"label\": \"Label live-16\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-16.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-17\",\n      \"label\": \"Label live-17\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-17.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-18\",\n      \"label\": \"Label live-18\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-18.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-19\",\n      \"label\": \"Label live-19\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-19.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-20\",\n      \"label\": \"Label live-20\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-20.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-21\",\n      \"label\": \"Label live-21\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-21.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-22\",\n      \"label\": \"Label live-22\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-22.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-23\",\n      \"label\": \"Label live-23\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-23.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-24\",\n      \"label\": \"Label live-24\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-24.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-25\",\n      \"label\": \"Label live-25\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-25.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-26\",\n      \"label\": \"Label live-26\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-26.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-27\",\n      \"label\": \"Label live-27\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-27.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-28\",\n      \"label\": \"Label live-28\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-28.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-29\",\n      \"label\": \"Label live-29\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-29.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-30\",\n      \"label\": \"Label live-30\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-30.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-31\",\n      \"label\": \"Label live-31\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-31.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-32\",\n      \"label\": \"Label live-32\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-32.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-33\",\n      \"label\": \"Label live-33\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-33.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-34\",\n      \"label\": \"Label live-34\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-34.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-35\",\n      \"label\": \"Label live-35\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-35.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-36\",\n      \"label\": \"Label live-36\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-36.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-37\",\n      \"label\": \"Label live-37\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-37.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-38\",\n      \"label\": \"Label live-38\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-38.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-39\",\n      \"label\": \"Label live-39\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-39.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-40\",\n      \"label\": \"Label live-40\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-40.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-41\",\n      \"label\": \"Label live-41\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-41.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-42\",\n      \"label\": \"Label live-42\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-42.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-43\",\n      \"label\": \"Label live-43\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-43.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-44\",\n      \"label\": \"Label live-44\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-44.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-45\",\n      \"label\": \"Label live-45\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-45.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-46\",\n      \"label\": \"Label live-46\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-46.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-47\",\n      \"label\": \"Label live-47\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-47.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-48\",\n      \"label\": \"Label live-48\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-48.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-49\",\n      \"label\": \"Label live-49\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-49.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"dead-0\",\n      \"label\": \"Label dead-0\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_dead-0.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    },\n    {\n      \"id\": \"dead-1\",\n      \"label\": \"Label dead-1\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_dead-1.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_dead-0.json": "dead body"
+    },
+    "steps": [
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "Over the cap"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "dead-0"
+      },
+      {
+        "op": "delete",
+        "uid": "0xA1B2",
+        "id": "live-3"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{}",
+        "label": "Fits",
+        "summary": "summary"
+      },
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"version\":1}",
+        "label": "Over again"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "dead-0",
+        "json": "revived over the cap"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"max entries reached\"}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"Fits\",\"summary\":\"summary\",\"filename\":\"2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}}",
+      "{\"success\":false,\"error\":\"max entries reached\"}",
+      "{\"success\":true}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"Fits\",\"summary\":\"summary\",\"filename\":\"2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:01:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"},{\"id\":\"live-0\",\"label\":\"Label live-0\",\"filename\":\"2026-01-01T00-00-00.000Z_live-0.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-1\",\"label\":\"Label live-1\",\"filename\":\"2026-01-01T00-00-00.000Z_live-1.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-2\",\"label\":\"Label live-2\",\"filename\":\"2026-01-01T00-00-00.000Z_live-2.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-4\",\"label\":\"Label live-4\",\"filename\":\"2026-01-01T00-00-00.000Z_live-4.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-5\",\"label\":\"Label live-5\",\"filename\":\"2026-01-01T00-00-00.000Z_live-5.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-6\",\"label\":\"Label live-6\",\"filename\":\"2026-01-01T00-00-00.000Z_live-6.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-7\",\"label\":\"Label live-7\",\"filename\":\"2026-01-01T00-00-00.000Z_live-7.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-8\",\"label\":\"Label live-8\",\"filename\":\"2026-01-01T00-00-00.000Z_live-8.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-9\",\"label\":\"Label live-9\",\"filename\":\"2026-01-01T00-00-00.000Z_live-9.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-10\",\"label\":\"Label live-10\",\"filename\":\"2026-01-01T00-00-00.000Z_live-10.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-11\",\"label\":\"Label live-11\",\"filename\":\"2026-01-01T00-00-00.000Z_live-11.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-12\",\"label\":\"Label live-12\",\"filename\":\"2026-01-01T00-00-00.000Z_live-12.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-13\",\"label\":\"Label live-13\",\"filename\":\"2026-01-01T00-00-00.000Z_live-13.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-14\",\"label\":\"Label live-14\",\"filename\":\"2026-01-01T00-00-00.000Z_live-14.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-15\",\"label\":\"Label live-15\",\"filename\":\"2026-01-01T00-00-00.000Z_live-15.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-16\",\"label\":\"Label live-16\",\"filename\":\"2026-01-01T00-00-00.000Z_live-16.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-17\",\"label\":\"Label live-17\",\"filename\":\"2026-01-01T00-00-00.000Z_live-17.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-18\",\"label\":\"Label live-18\",\"filename\":\"2026-01-01T00-00-00.000Z_live-18.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-19\",\"label\":\"Label live-19\",\"filename\":\"2026-01-01T00-00-00.000Z_live-19.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-20\",\"label\":\"Label live-20\",\"filename\":\"2026-01-01T00-00-00.000Z_live-20.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-21\",\"label\":\"Label live-21\",\"filename\":\"2026-01-01T00-00-00.000Z_live-21.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-22\",\"label\":\"Label live-22\",\"filename\":\"2026-01-01T00-00-00.000Z_live-22.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-23\",\"label\":\"Label live-23\",\"filename\":\"2026-01-01T00-00-00.000Z_live-23.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-24\",\"label\":\"Label live-24\",\"filename\":\"2026-01-01T00-00-00.000Z_live-24.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-25\",\"label\":\"Label live-25\",\"filename\":\"2026-01-01T00-00-00.000Z_live-25.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-26\",\"label\":\"Label live-26\",\"filename\":\"2026-01-01T00-00-00.000Z_live-26.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-27\",\"label\":\"Label live-27\",\"filename\":\"2026-01-01T00-00-00.000Z_live-27.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-28\",\"label\":\"Label live-28\",\"filename\":\"2026-01-01T00-00-00.000Z_live-28.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-29\",\"label\":\"Label live-29\",\"filename\":\"2026-01-01T00-00-00.000Z_live-29.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-30\",\"label\":\"Label live-30\",\"filename\":\"2026-01-01T00-00-00.000Z_live-30.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-31\",\"label\":\"Label live-31\",\"filename\":\"2026-01-01T00-00-00.000Z_live-31.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-32\",\"label\":\"Label live-32\",\"filename\":\"2026-01-01T00-00-00.000Z_live-32.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-33\",\"label\":\"Label live-33\",\"filename\":\"2026-01-01T00-00-00.000Z_live-33.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-34\",\"label\":\"Label live-34\",\"filename\":\"2026-01-01T00-00-00.000Z_live-34.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-35\",\"label\":\"Label live-35\",\"filename\":\"2026-01-01T00-00-00.000Z_live-35.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-36\",\"label\":\"Label live-36\",\"filename\":\"2026-01-01T00-00-00.000Z_live-36.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-37\",\"label\":\"Label live-37\",\"filename\":\"2026-01-01T00-00-00.000Z_live-37.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-38\",\"label\":\"Label live-38\",\"filename\":\"2026-01-01T00-00-00.000Z_live-38.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-39\",\"label\":\"Label live-39\",\"filename\":\"2026-01-01T00-00-00.000Z_live-39.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-40\",\"label\":\"Label live-40\",\"filename\":\"2026-01-01T00-00-00.000Z_live-40.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-41\",\"label\":\"Label live-41\",\"filename\":\"2026-01-01T00-00-00.000Z_live-41.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-42\",\"label\":\"Label live-42\",\"filename\":\"2026-01-01T00-00-00.000Z_live-42.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-43\",\"label\":\"Label live-43\",\"filename\":\"2026-01-01T00-00-00.000Z_live-43.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-44\",\"label\":\"Label live-44\",\"filename\":\"2026-01-01T00-00-00.000Z_live-44.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-45\",\"label\":\"Label live-45\",\"filename\":\"2026-01-01T00-00-00.000Z_live-45.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-46\",\"label\":\"Label live-46\",\"filename\":\"2026-01-01T00-00-00.000Z_live-46.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-47\",\"label\":\"Label live-47\",\"filename\":\"2026-01-01T00-00-00.000Z_live-47.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-48\",\"label\":\"Label live-48\",\"filename\":\"2026-01-01T00-00-00.000Z_live-48.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"live-49\",\"label\":\"Label live-49\",\"filename\":\"2026-01-01T00-00-00.000Z_live-49.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"id\":\"dead-0\",\"label\":\"Label dead-0\",\"filename\":\"2026-01-01T00-00-00.000Z_dead-0.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}]}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_dead-0.json": "revived over the cap",
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000001.json": "{}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"Fits\",\n      \"summary\": \"summary\",\n      \"filename\": \"2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:01:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    },\n    {\n      \"id\": \"live-0\",\n      \"label\": \"Label live-0\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-0.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-1\",\n      \"label\": \"Label live-1\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-1.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-2\",\n      \"label\": \"Label live-2\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-2.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-3\",\n      \"label\": \"Label live-3\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-3.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-4\",\n      \"label\": \"Label live-4\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-4.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-5\",\n      \"label\": \"Label live-5\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-5.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-6\",\n      \"label\": \"Label live-6\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-6.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-7\",\n      \"label\": \"Label live-7\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-7.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-8\",\n      \"label\": \"Label live-8\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-8.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-9\",\n      \"label\": \"Label live-9\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-9.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-10\",\n      \"label\": \"Label live-10\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-10.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-11\",\n      \"label\": \"Label live-11\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-11.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-12\",\n      \"label\": \"Label live-12\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-12.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-13\",\n      \"label\": \"Label live-13\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-13.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-14\",\n      \"label\": \"Label live-14\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-14.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-15\",\n      \"label\": \"Label live-15\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-15.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-16\",\n      \"label\": \"Label live-16\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-16.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-17\",\n      \"label\": \"Label live-17\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-17.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-18\",\n      \"label\": \"Label live-18\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-18.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-19\",\n      \"label\": \"Label live-19\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-19.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-20\",\n      \"label\": \"Label live-20\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-20.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-21\",\n      \"label\": \"Label live-21\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-21.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-22\",\n      \"label\": \"Label live-22\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-22.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-23\",\n      \"label\": \"Label live-23\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-23.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-24\",\n      \"label\": \"Label live-24\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-24.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-25\",\n      \"label\": \"Label live-25\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-25.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-26\",\n      \"label\": \"Label live-26\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-26.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-27\",\n      \"label\": \"Label live-27\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-27.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-28\",\n      \"label\": \"Label live-28\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-28.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-29\",\n      \"label\": \"Label live-29\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-29.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-30\",\n      \"label\": \"Label live-30\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-30.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-31\",\n      \"label\": \"Label live-31\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-31.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-32\",\n      \"label\": \"Label live-32\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-32.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-33\",\n      \"label\": \"Label live-33\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-33.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-34\",\n      \"label\": \"Label live-34\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-34.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-35\",\n      \"label\": \"Label live-35\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-35.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-36\",\n      \"label\": \"Label live-36\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-36.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-37\",\n      \"label\": \"Label live-37\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-37.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-38\",\n      \"label\": \"Label live-38\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-38.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-39\",\n      \"label\": \"Label live-39\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-39.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-40\",\n      \"label\": \"Label live-40\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-40.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-41\",\n      \"label\": \"Label live-41\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-41.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-42\",\n      \"label\": \"Label live-42\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-42.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-43\",\n      \"label\": \"Label live-43\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-43.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-44\",\n      \"label\": \"Label live-44\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-44.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-45\",\n      \"label\": \"Label live-45\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-45.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-46\",\n      \"label\": \"Label live-46\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-46.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-47\",\n      \"label\": \"Label live-47\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-47.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-48\",\n      \"label\": \"Label live-48\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-48.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"live-49\",\n      \"label\": \"Label live-49\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_live-49.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"dead-0\",\n      \"label\": \"Label dead-0\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_dead-0.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    },\n    {\n      \"id\": \"dead-1\",\n      \"label\": \"Label dead-1\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_dead-1.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "updates: user saves and revivals",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "save",
+        "uid": "0xA1B2",
+        "json": "{\"v\":1}",
+        "label": "L",
+        "summary": "S"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "json": "{\"v\":2}"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "json": "{\"v\":2}"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:03:00.000Z"
+      },
+      {
+        "op": "delete",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:04:00.000Z"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "json": "{\"v\":3}"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "list",
+        "uid": "0xA1B2"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"summary\":\"S\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      null,
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":\"{\\\"v\\\":3}\"}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"summary\":\"S\",\"filename\":\"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters",
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"v\":3}",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"summary\": \"S\",\n      \"filename\": \"2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:04:00.000Z\",\n        \"body\": \"2026-10-16T12:04:00.000Z\",\n        \"name\": \"2026-10-16T12:04:00.000Z\",\n        \"hub\": \"2026-10-16T12:04:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:04:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "a body that is gone",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"Label a\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}"
+    },
+    "steps": [
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "a"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "a",
+        "json": "written again"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "a"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"<os error>\"}",
+      "{\"success\":true}",
+      "{\"success\":true,\"data\":\"written again\"}"
+    ],
+    "notified": [
+      "keyboards/0xA1B2/analyze_filters"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/2026-01-01T00-00-00.000Z_a.json": "written again",
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"Label a\",\n      \"filename\": \"2026-01-01T00-00-00.000Z_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "uids that are not one path segment",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "list",
+        "uid": ""
+      },
+      {
+        "op": "save",
+        "uid": "",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "uid": "",
+        "id": "x"
+      },
+      {
+        "op": "update",
+        "uid": "",
+        "id": "x",
+        "json": "{}"
+      },
+      {
+        "op": "rename",
+        "uid": "",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "uid": "",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "list",
+        "uid": "."
+      },
+      {
+        "op": "save",
+        "uid": ".",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "uid": ".",
+        "id": "x"
+      },
+      {
+        "op": "update",
+        "uid": ".",
+        "id": "x",
+        "json": "{}"
+      },
+      {
+        "op": "rename",
+        "uid": ".",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "uid": ".",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "uid": ".",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": ".",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "list",
+        "uid": ".."
+      },
+      {
+        "op": "save",
+        "uid": "..",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "uid": "..",
+        "id": "x"
+      },
+      {
+        "op": "update",
+        "uid": "..",
+        "id": "x",
+        "json": "{}"
+      },
+      {
+        "op": "rename",
+        "uid": "..",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "uid": "..",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "..",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "..",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "list",
+        "uid": "a/b"
+      },
+      {
+        "op": "save",
+        "uid": "a/b",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "uid": "a/b",
+        "id": "x"
+      },
+      {
+        "op": "update",
+        "uid": "a/b",
+        "id": "x",
+        "json": "{}"
+      },
+      {
+        "op": "rename",
+        "uid": "a/b",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "uid": "a/b",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "a/b",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "a/b",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "list",
+        "uid": "a\\b"
+      },
+      {
+        "op": "save",
+        "uid": "a\\b",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "uid": "a\\b",
+        "id": "x"
+      },
+      {
+        "op": "update",
+        "uid": "a\\b",
+        "id": "x",
+        "json": "{}"
+      },
+      {
+        "op": "rename",
+        "uid": "a\\b",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "uid": "a\\b",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "a\\b",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "a\\b",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "list",
+        "uid": "../x"
+      },
+      {
+        "op": "save",
+        "uid": "../x",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "uid": "../x",
+        "id": "x"
+      },
+      {
+        "op": "update",
+        "uid": "../x",
+        "id": "x",
+        "json": "{}"
+      },
+      {
+        "op": "rename",
+        "uid": "../x",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "uid": "../x",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "uid": "../x",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "uid": "../x",
+        "id": "x",
+        "link": null
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid uid\"}"
+    ],
+    "notified": [],
+    "after": {}
+  },
+  {
+    "name": "body filenames that are not safe",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"up\",\n      \"filename\": \"../escape.json\"\n    },\n    {\n      \"id\": \"none\"\n    },\n    {\n      \"id\": \"null\",\n      \"filename\": null\n    },\n    {\n      \"id\": \"empty\",\n      \"filename\": \"\"\n    },\n    {\n      \"id\": \"dot\",\n      \"filename\": \"..\"\n    }\n  ]\n}"
+    },
+    "steps": [
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "up"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "up",
+        "json": "{}"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "none"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "none",
+        "json": "{}"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "null"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "null",
+        "json": "{}"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "empty"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "empty",
+        "json": "{}"
+      },
+      {
+        "op": "load",
+        "uid": "0xA1B2",
+        "id": "dot"
+      },
+      {
+        "op": "update",
+        "uid": "0xA1B2",
+        "id": "dot",
+        "json": "{}"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}"
+    ],
+    "notified": [],
+    "after": {
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/0xA1B2/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/": null,
+      "sync/keyboards/0xA1B2/analyze_filters/index.json": "{\n  \"uid\": \"0xA1B2\",\n  \"entries\": [\n    {\n      \"id\": \"up\",\n      \"filename\": \"../escape.json\"\n    },\n    {\n      \"id\": \"none\"\n    },\n    {\n      \"id\": \"null\",\n      \"filename\": null\n    },\n    {\n      \"id\": \"empty\",\n      \"filename\": \"\"\n    },\n    {\n      \"id\": \"dot\",\n      \"filename\": \"..\"\n    }\n  ]\n}"
+    }
+  }
+]

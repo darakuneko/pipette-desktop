@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/run_logs.rs: the keystroke logs of each
+# keyboard's Typing Test runs.
+
+[[set]]
+identifier = "run-logs"
+description = "Saves, lists and reads the keystroke logs of a keyboard's Typing Test runs."
+permissions = [
+  "allow-typing-run-log-save",
+  "allow-typing-run-log-list",
+  "allow-typing-run-log-get",
+]

@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-active-window"
+description = "The name of the active application for typing analytics, as the Electron build reads it: the native window lookup, the GNOME Shell FocusedWindow query, and the name normalization"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# The JavaScript strings the names are (UTF-16, lone surrogates included),
+# and JSON.parse of the FocusedWindow reply.
+pipette-js-json = { path = "../pipette-js-json" }
+log = "=0.4.34"
+
+[lints]
+workspace = true

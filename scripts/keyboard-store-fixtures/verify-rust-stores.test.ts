@@ -7,6 +7,8 @@
 // that they answer the same, byte for byte:
 //
 // - SNAPSHOT_STORE_LIST / SNAPSHOT_STORE_LOAD of every keyboard;
+// - ANALYZE_FILTER_STORE_LIST / ANALYZE_FILTER_STORE_LOAD and
+//   TYPING_RUN_LOG_LIST / TYPING_RUN_LOG_GET of a keyboard;
 // - FAVORITE_STORE_LIST / FAVORITE_STORE_LOAD of every type;
 // - KEY_LABEL_STORE_LIST / KEY_LABEL_STORE_LIST_ALL / KEY_LABEL_STORE_GET of
 //   every live key label;
@@ -90,6 +92,8 @@ vi.mock('../../src/tauri-shim/ipc', () => ({
 }))
 
 import { setupSnapshotStore } from '../../src/main/snapshot-store'
+import { setupAnalyzeFilterStore } from '../../src/main/analyze-filter-store'
+import { setupTypingRunLogStore } from '../../src/main/typing-run-log-ipc'
 import { setupFavoriteStore } from '../../src/main/favorite-store'
 import { setupKeyLabelStore } from '../../src/main/key-label-ipc'
 import { setupTypingTestTextStore } from '../../src/main/typing-test-text-ipc'
@@ -112,6 +116,9 @@ interface Loaded {
 
 interface Answers {
   snapshots: Record<string, Loaded>
+  analyzeFilters: Record<string, Loaded>
+  /** By uid: the list answer, and each listed run's get answer by id, as JSON text. */
+  runLogs: Record<string, { list: string; gets: Record<string, string> }>
   favorites: Record<string, Loaded>
   /** The key label answers as JSON text: the lists, and each live label's get by id. */
   keyLabels: { list: string; listAll: string; gets: Record<string, string> }
@@ -152,6 +159,8 @@ describe('the userData tree the Rust stores write', () => {
   cpSync(join(RUST_DIR, 'user-data'), copy, { recursive: true })
   paths.userData = copy
   setupSnapshotStore()
+  setupAnalyzeFilterStore()
+  setupTypingRunLogStore()
   setupFavoriteStore()
   setupKeyLabelStore()
   setupTypingTestTextStore()
@@ -166,6 +175,29 @@ describe('the userData tree the Rust stores write', () => {
       expect(Object.keys(rust.loads).length).toBeGreaterThan(0)
       for (const [id, load] of Object.entries(rust.loads)) {
         expect(JSON.stringify(await handler(IpcChannels.SNAPSHOT_STORE_LOAD)({}, uid, id))).toBe(load)
+      }
+    }
+  })
+
+  it('lists and loads a keyboard’s Analyze filters as the crate does', async () => {
+    expect(Object.keys(answers.analyzeFilters).length).toBeGreaterThan(0)
+    for (const [uid, rust] of Object.entries(answers.analyzeFilters)) {
+      expect(JSON.stringify(await handler(IpcChannels.ANALYZE_FILTER_STORE_LIST)({}, uid))).toBe(rust.list)
+      expect(Object.keys(rust.loads)).toHaveLength(2)
+      for (const [id, load] of Object.entries(rust.loads)) {
+        expect(JSON.stringify(await handler(IpcChannels.ANALYZE_FILTER_STORE_LOAD)({}, uid, id))).toBe(load)
+      }
+    }
+  })
+
+  it('lists and reads a keyboard’s run logs as the crate does', async () => {
+    expect(Object.keys(answers.runLogs).length).toBeGreaterThan(0)
+    for (const [uid, rust] of Object.entries(answers.runLogs)) {
+      expect(JSON.stringify(await handler(IpcChannels.TYPING_RUN_LOG_LIST)({}, uid))).toBe(rust.list)
+      // The crate kept 50 of the 51 runs.
+      expect(Object.keys(rust.gets)).toHaveLength(50)
+      for (const [id, get] of Object.entries(rust.gets)) {
+        expect(JSON.stringify(await handler(IpcChannels.TYPING_RUN_LOG_GET)({}, uid, id))).toBe(get)
       }
     }
   })

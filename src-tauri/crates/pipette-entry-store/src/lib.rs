@@ -24,6 +24,7 @@ mod clocks;
 mod entry;
 mod migration;
 mod normalize;
+mod retention;
 mod runtime;
 mod safe_filename;
 mod store_groups;
@@ -45,6 +46,7 @@ pub use migration::{
     read_index_migrated, unlink_unreferenced_body_files,
 };
 pub use normalize::{normalize_entries, normalize_entry};
+pub use retention::apply_run_log_retention;
 pub use runtime::{Clock, IdGen, RandomUuid, SystemClock};
 #[cfg(feature = "test-util")]
 pub use runtime::{FixedClock, SequenceIds};

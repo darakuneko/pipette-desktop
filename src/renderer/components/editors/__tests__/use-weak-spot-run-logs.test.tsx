@@ -12,9 +12,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useWeakSpotRunLogs } from '../use-weak-spot-run-logs'
 import type { TypingTestResult } from '../../../../shared/types/pipette-settings'
 import type { RunKeystrokeLog, RunLogMeta } from '../../../../shared/types/typing-run-log'
+import { runLogBackends } from '../../../hooks/__tests__/run-log-backends'
 
 const mockTypingRunLogList = vi.fn<(uid: string) => Promise<{ success: boolean; entries?: RunLogMeta[] }>>()
 const mockTypingRunLogGet = vi.fn<(uid: string, runId: string) => Promise<{ success: boolean; data?: RunKeystrokeLog }>>()
@@ -25,17 +27,10 @@ const mockSyncOnUnitApplied = vi.fn((cb: (syncUnit: string) => void) => {
   return () => undefined
 })
 
-function installVialApi(): void {
-  Object.defineProperty(window, 'vialAPI', {
-    value: {
-      typingRunLogList: mockTypingRunLogList,
-      typingRunLogGet: mockTypingRunLogGet,
-      syncOnUnitApplied: mockSyncOnUnitApplied,
-    },
-    writable: true,
-    configurable: true,
-  })
-}
+const backends = runLogBackends(
+  { typingRunLogList: mockTypingRunLogList, typingRunLogGet: mockTypingRunLogGet },
+  { syncOnUnitApplied: mockSyncOnUnitApplied },
+)
 
 function meta(id: string): RunLogMeta {
   return { id, startedAt: '2026-01-01T00:00:00.000Z', filename: `${id}.json`, savedAt: '2026-01-01T00:00:00.000Z' }
@@ -58,10 +53,10 @@ function result(runId: string): TypingTestResult {
 beforeEach(() => {
   mockTypingRunLogList.mockReset()
   mockTypingRunLogGet.mockReset().mockImplementation((_uid, runId) => Promise.resolve({ success: true, data: stubLog(runId) }))
-  installVialApi()
 })
 
 afterEach(() => {
+  clearMocks()
   vi.restoreAllMocks()
 })
 
@@ -71,7 +66,11 @@ async function flushMicrotasks(rounds = 10): Promise<void> {
   })
 }
 
-describe('useWeakSpotRunLogs — re-fetches the availability index when results grows', () => {
+describe.each(backends)('useWeakSpotRunLogs — re-fetches the availability index when results grows ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   it('a run saved later in the same session (no remount) is fetched once its runId enters the index, without re-fetching an already-cached runId\'s log', async () => {
     // First index snapshot only knows about r1 (mirrors the store's real
     // state at that point in time — r2 doesn't exist on disk yet).
@@ -139,7 +138,11 @@ describe('useWeakSpotRunLogs — re-fetches the availability index when results 
   })
 })
 
-describe('useWeakSpotRunLogs — sync merge of the keyboard\'s run logs', () => {
+describe.each(backends)('useWeakSpotRunLogs — sync merge of the keyboard\'s run logs ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   function logWith(runId: string, durationMs: number): RunKeystrokeLog {
     return { ...stubLog(runId), durationMs }
   }
