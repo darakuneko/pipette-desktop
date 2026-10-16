@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Fixed answers for the VialAPI members the renderer awaits during startup
 // and while connecting a keyboard and opening its editor, for areas the
-// backend does not implement yet: the values of a fresh install (sync
-// signed out, no startup notification), and failed answers for the Hub
+// backend does not implement yet: the values of a fresh install (no
+// startup notification), and failed answers for the Hub
 // requests whose answer the renderer reads. Writes succeed without
 // storing anything. Each group names the backend area whose commands take
 // its place; coverage.test.ts lists them.
@@ -64,16 +64,4 @@ export const fakes = {
   keyLabelHubSync: hubUnavailable,
   keyLabelHubTimestamps: hubUnavailable,
   keyLabelHubDelete: hubUnavailable,
-
-  // Typing analytics on Drive, signed out: no remote data and no sync. The
-  // Data modal spreads the remote hash list into the cached ones
-  // (`useDataNavTree`); a stub's `undefined` would throw there, and the
-  // catch would empty the keyboard's list, local hashes included. The
-  // analytics sync of the Analyze pane reports a failure, so the pane tries
-  // again on its next mount.
-  typingAnalyticsHasRemote: () => Promise.resolve(false),
-  typingAnalyticsListRemoteCloudHashes: () => Promise.resolve([]),
-  typingAnalyticsListRemoteCloudDays: () => Promise.resolve([]),
-  typingAnalyticsFetchRemoteDay: () => Promise.resolve(false),
-  syncAnalyticsNow: () => Promise.resolve(false),
 } satisfies Partial<VialAPI>

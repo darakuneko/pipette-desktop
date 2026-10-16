@@ -1,0 +1,85 @@
+[
+  {
+    "member": "syncAnalyticsNow",
+    "args": [
+      "0x1234"
+    ],
+    "command": "sync_analytics_now",
+    "invokeArgs": {
+      "uid": "0x1234"
+    },
+    "response": false
+  },
+  {
+    "member": "syncAnalyticsNow",
+    "args": [
+      ""
+    ],
+    "command": "sync_analytics_now",
+    "invokeArgs": {
+      "uid": ""
+    },
+    "response": false
+  },
+  {
+    "member": "typingAnalyticsHasRemote",
+    "args": [],
+    "command": "typing_analytics_has_remote",
+    "invokeArgs": {},
+    "response": false
+  },
+  {
+    "member": "typingAnalyticsListRemoteCloudHashes",
+    "args": [
+      "0x1234"
+    ],
+    "command": "typing_analytics_list_remote_cloud_hashes",
+    "invokeArgs": {
+      "uid": "0x1234"
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListRemoteCloudDays",
+    "args": [
+      "0x1234",
+      "hash-a"
+    ],
+    "command": "typing_analytics_list_remote_cloud_days",
+    "invokeArgs": {
+      "uid": "0x1234",
+      "machineHash": "hash-a"
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsFetchRemoteDay",
+    "args": [
+      "0x1234",
+      "hash-a",
+      "2026-04-18"
+    ],
+    "command": "typing_analytics_fetch_remote_day",
+    "invokeArgs": {
+      "uid": "0x1234",
+      "machineHash": "hash-a",
+      "utcDay": "2026-04-18"
+    },
+    "response": false
+  },
+  {
+    "member": "typingAnalyticsFetchRemoteDay",
+    "args": [
+      "0x1234",
+      "../x",
+      "2026-04-18"
+    ],
+    "command": "typing_analytics_fetch_remote_day",
+    "invokeArgs": {
+      "uid": "0x1234",
+      "machineHash": "../x",
+      "utcDay": "2026-04-18"
+    },
+    "response": false
+  }
+]

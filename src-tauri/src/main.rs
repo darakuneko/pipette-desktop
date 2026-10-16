@@ -226,6 +226,11 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::data::export_local_data,
         sync_commands::data::import_local_data,
         sync_commands::execute::sync_execute,
+        sync_commands::analytics_remote::sync_analytics_now,
+        sync_commands::analytics_remote::typing_analytics_has_remote,
+        sync_commands::analytics_remote::typing_analytics_list_remote_cloud_hashes,
+        sync_commands::analytics_remote::typing_analytics_list_remote_cloud_days,
+        sync_commands::analytics_remote::typing_analytics_fetch_remote_day,
     ]
 }
 
@@ -279,6 +284,7 @@ fn main() {
             analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             sync_commands::preflight::manage(app.handle());
             sync_commands::execute::manage(app.handle());
+            sync_commands::analytics_remote::manage(app.handle());
             sync_commands::adopt_pending_at_startup(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;

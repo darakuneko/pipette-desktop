@@ -20,8 +20,9 @@ use std::sync::Arc;
 
 use pipette_entry_store::is_safe_key;
 use pipette_js_json::{Object, Value};
+use pipette_sync::typing_remote::RemoteTyping;
 use pipette_typing_analytics::device_delete::DeviceDays;
-use pipette_typing_analytics::import_export::{ImportResult, export_typing_data_for_keyboard};
+use pipette_typing_analytics::import_export::{CloudHasFile, ImportResult, export_typing_data_for_keyboard};
 use pipette_typing_analytics::jsonl::paths::is_utc_day;
 use pipette_typing_analytics::reset_lock::{DELETE_BUSY_MESSAGE, IMPORT_BUSY_MESSAGE};
 use pipette_typing_analytics::{DataOps, DeleteScope, ResetKeyboards, SyncRuntime};
@@ -223,13 +224,29 @@ fn import_answer(outcome: Result<(ImportResult, bool), Failed>) -> Response {
     Response::new(pipette_js_json::stringify(&answer.into()))
 }
 
-/// Imports the day files the user picks, offline: a file is matched with
-/// a local day file only (Drive is not consulted).
+/// The cloud check of the import: whether Drive holds the data file of an
+/// export file's name (`<unit>.jsonl` there, `<unit>.enc` on Drive). `None`
+/// when Drive is not consulted (signed out, no usable password, the guard
+/// blocks), so a file matches a local day file only.
+fn cloud_has_file(names: Option<HashSet<String>>) -> Option<CloudHasFile> {
+    let names = names?;
+    Some(Arc::new(move |name: &str| {
+        let drive_name =
+            name.strip_suffix(".jsonl").map_or_else(|| name.to_owned(), |unit| format!("{unit}.enc"));
+        names.contains(&drive_name)
+    }))
+}
+
+/// Imports the day files the user picks. Drive is listed once for the
+/// whole batch, holding the lock, so a file whose day this device has
+/// uploaded and removed locally is still accepted; a failed listing fails
+/// the import.
 #[tauri::command]
 pub async fn typing_analytics_import(
     ops: State<'_, Arc<DataOps>>,
     runtime: State<'_, SyncRuntime>,
     dialogs: State<'_, Dialogs>,
+    remote: State<'_, Arc<RemoteTyping>>,
 ) -> Result<Response, CommandError> {
     let request = DialogRequest {
         kind: DialogKind::OpenMany,
@@ -240,8 +257,15 @@ pub async fn typing_analytics_import(
     if paths.is_empty() {
         return Ok(import_answer(Ok((ImportResult::default(), true))));
     }
-    let import = ops.inner().import_typing_files(paths, None);
-    let outcome = locked(&runtime, ResetKeyboards::All, IMPORT_BUSY_MESSAGE, import).await;
+    let import = async {
+        let names = remote.remote_data_file_names().await?;
+        Ok::<_, Failed>(ops.inner().import_typing_files(paths, cloud_has_file(names)).await?)
+    };
+    let outcome =
+        match runtime.with_reset_lock_when_free(&ResetKeyboards::All, IMPORT_BUSY_MESSAGE, import).await {
+            Ok(imported) => imported,
+            Err(busy) => Err(busy.into()),
+        };
     Ok(import_answer(outcome.map(|result| (result, false))))
 }
 
@@ -272,8 +296,12 @@ mod tests {
             assert!(!answers.is_empty(), "an unexpected dialog");
             answers.remove(0)
         }));
+        crate::sync_commands::manage_for_tests(app.handle(), user_data);
         mark_cache_fresh(user_data, "machine");
         manage_with_machine_id(app.handle(), user_data, "machine");
+        crate::sync_commands::preflight::manage_for_tests(app.handle());
+        crate::sync_commands::execute::manage(app.handle());
+        crate::sync_commands::analytics_remote::manage(app.handle());
         app
     }
 
@@ -427,12 +455,27 @@ mod tests {
         drop(app);
 
         let app = self::app(user_data.path(), vec![Vec::new(), vec![file, notes]]);
-        let import =
-            || text(block_on(typing_analytics_import(app.state(), app.state(), app.state())).unwrap());
+        let import = || {
+            text(
+                block_on(typing_analytics_import(app.state(), app.state(), app.state(), app.state()))
+                    .unwrap(),
+            )
+        };
         assert_eq!(import(), r#"{"success":true,"result":{"imported":0,"rejections":[]},"cancelled":true}"#);
         assert_eq!(
             import(),
             r#"{"success":true,"result":{"imported":1,"rejections":[{"fileName":"notes.txt","reason":"invalid-filename"}]},"cancelled":false}"#
         );
+    }
+
+    #[test]
+    fn checks_an_export_name_against_the_drive_names() {
+        assert!(cloud_has_file(None).is_none());
+        let names: HashSet<String> = ["keyboards_k_devices_h_days_2026-04-14.enc".to_owned()].into();
+        let has = cloud_has_file(Some(names)).unwrap();
+        assert!(has("keyboards_k_devices_h_days_2026-04-14.jsonl"));
+        assert!(!has("keyboards_k_devices_h_days_2026-04-15.jsonl"));
+        // A name without the suffix is looked up as it is.
+        assert!(!has("keyboards_k_devices_h_days_2026-04-14"));
     }
 }
