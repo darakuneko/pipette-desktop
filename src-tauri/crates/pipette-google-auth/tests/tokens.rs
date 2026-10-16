@@ -112,6 +112,16 @@ async fn a_failed_refresh_gives_no_access_token_and_keeps_the_sign_in() {
     assert!(harness.auth.is_authenticated().await);
 }
 
+#[tokio::test]
+async fn an_expired_access_token_without_a_refresh_token_is_none_and_sends_no_refresh() {
+    let harness = Harness::new();
+    harness.endpoint.ok(json!({ "access_token": "a", "expires_in": -1 }));
+    harness.auth.exchange_code_for_tokens("code", "v", 8080, &SwitchDirectly).await.unwrap();
+    assert!(harness.auth.is_authenticated().await);
+    assert!(harness.auth.access_token().await.is_none());
+    assert_eq!(harness.endpoint.forms().len(), 1);
+}
+
 mod id_token {
     use super::*;
 

@@ -38,5 +38,6 @@
       "body": "grant_type=refresh_token&refresh_token=fixture-refresh%2F%2B%3F%26%3D&client_id=456971912849-ktrhpfv849jli5qph50i2rlflv1aadqq.apps.googleusercontent.com&client_secret=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"
     }
   },
-  "storedAfterExchange": "{\"accessToken\":\"fixture-access\",\"refreshToken\":\"fixture-refresh\",\"expiresAt\":1792112399000,\"idToken\":\"h.e30.s\"}"
+  "storedAfterExchange": "{\"accessToken\":\"fixture-access\",\"refreshToken\":\"fixture-refresh\",\"expiresAt\":1792112399000,\"idToken\":\"h.e30.s\"}",
+  "storedWithoutRefreshToken": "{\"accessToken\":\"fixture-access-only\",\"expiresAt\":1792112399000,\"idToken\":null}"
 }

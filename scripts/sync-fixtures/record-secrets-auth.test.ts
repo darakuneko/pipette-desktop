@@ -6,7 +6,8 @@
 //   - the stored password status for each state of the file and the key
 //     store (crates/pipette-secret-store/tests/fixtures/ts_secret_status.json);
 //   - authorization URLs with their verifier and state, the token requests
-//     of a code exchange and of a refresh, and the stored token JSON
+//     of a code exchange and of a refresh, and the stored token JSON, with
+//     and without a refresh token in the exchange's answer
 //     (crates/pipette-google-auth/tests/fixtures/ts_auth.json);
 //   - `checkPasswordStrength` over a table of passwords
 //     (src-tauri/tests/fixtures/password-strength.json), which the shim's
@@ -69,6 +70,7 @@ describe('record the sign-in fixtures', () => {
     const answers = [
       { access_token: 'fixture-access', refresh_token: 'fixture-refresh', expires_in: 3599, token_type: 'Bearer', id_token: 'h.e30.s' },
       { access_token: 'fixture-refreshed', expires_in: 3599, token_type: 'Bearer' },
+      { access_token: 'fixture-access-only', expires_in: 3599, token_type: 'Bearer' },
     ]
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: { method: string; headers: unknown; body: string }) => {
       requests.push({ method: init.method, url, headers: init.headers, body: init.body })
@@ -87,13 +89,20 @@ describe('record the sign-in fixtures', () => {
     expect(await getAccessToken()).toBe('fixture-refreshed')
     await signOut()
 
-    expect(requests).toHaveLength(2)
+    // An exchange whose answer has no refresh token.
+    const withoutRefreshToken = seedUserData()
+    await exchangeCodeForTokens('fixture-code', authUrls[0].codeVerifier, 8080)
+    const storedWithoutRefreshToken = readTree(withoutRefreshToken)['local/auth/oauth-tokens.enc']
+    await signOut()
+
+    expect(requests).toHaveLength(3)
     writeJsonFixture(AUTH_OUT, {
       now: Date.now(),
       authUrls,
       exchange: { code: 'fixture-code/+?&=', codeVerifier: authUrls[0].codeVerifier, port: 8080, request: requests[0] },
       refresh: { refreshToken: expired.refreshToken, request: requests[1] },
       storedAfterExchange: storedAfterExchange?.replace(/^fixture-safe-storage:/, ''),
+      storedWithoutRefreshToken: storedWithoutRefreshToken?.replace(/^fixture-safe-storage:/, ''),
     })
   })
 })

@@ -33,7 +33,10 @@ use crate::AuthError;
 #[serde(rename_all = "camelCase")]
 pub struct StoredTokens {
     pub access_token: String,
-    pub refresh_token: String,
+    /// Absent when the code exchange returned none: Electron's
+    /// `JSON.stringify` leaves out the `undefined` it holds then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
     /// Unix time in milliseconds.
     pub expires_at: i64,
     pub id_token: Option<String>,
@@ -43,9 +46,7 @@ impl Drop for StoredTokens {
     fn drop(&mut self) {
         self.access_token.zeroize();
         self.refresh_token.zeroize();
-        if let Some(id_token) = &mut self.id_token {
-            id_token.zeroize();
-        }
+        self.id_token.zeroize();
     }
 }
 
@@ -230,7 +231,7 @@ mod tests {
     fn serializes_in_the_electron_shape() {
         let tokens = StoredTokens {
             access_token: "a".into(),
-            refresh_token: "r".into(),
+            refresh_token: Some("r".into()),
             expires_at: 1_700_000_000_000,
             id_token: None,
         };
@@ -244,7 +245,7 @@ mod tests {
     fn tokens(access_token: &str) -> StoredTokens {
         StoredTokens {
             access_token: access_token.into(),
-            refresh_token: "r".into(),
+            refresh_token: Some("r".into()),
             expires_at: i64::MAX,
             id_token: None,
         }
@@ -265,5 +266,13 @@ mod tests {
         file.sign_out_in_turn().await;
         assert!(file.load().await.is_none());
         assert!(!file.secrets.path(SecretKind::OauthTokens).exists());
+    }
+
+    #[test]
+    fn leaves_out_a_missing_refresh_token_as_electron_does() {
+        let text = r#"{"accessToken":"a","expiresAt":1,"idToken":null}"#;
+        let tokens: StoredTokens = serde_json::from_str(text).unwrap();
+        assert_eq!(tokens.refresh_token, None);
+        assert_eq!(serde_json::to_string(&tokens).unwrap(), text);
     }
 }

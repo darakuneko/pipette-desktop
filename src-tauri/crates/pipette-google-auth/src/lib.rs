@@ -185,9 +185,15 @@ mod golden {
     #[test]
     fn stores_the_token_json_of_electron() {
         let fixture = fixture();
-        let stored = text(&fixture["storedAfterExchange"]);
-        let tokens: StoredTokens = serde_json::from_str(stored).unwrap();
-        assert_eq!(tokens.expires_at, fixture["now"].as_i64().unwrap() + 3599 * 1000);
-        assert_eq!(serde_json::to_string(&tokens).unwrap(), stored);
+        for name in ["storedAfterExchange", "storedWithoutRefreshToken"] {
+            let stored = text(&fixture[name]);
+            let tokens: StoredTokens = serde_json::from_str(stored).unwrap();
+            assert_eq!(tokens.expires_at, fixture["now"].as_i64().unwrap() + 3599 * 1000, "{name}");
+            assert_eq!(serde_json::to_string(&tokens).unwrap(), stored, "{name}");
+        }
+        let without: StoredTokens =
+            serde_json::from_str(text(&fixture["storedWithoutRefreshToken"])).unwrap();
+        assert_eq!(without.refresh_token, None);
+        assert!(!text(&fixture["storedWithoutRefreshToken"]).contains("refreshToken"));
     }
 }

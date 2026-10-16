@@ -185,7 +185,7 @@ impl GoogleAuth {
         };
         let tokens = StoredTokens {
             access_token: response.access_token.clone(),
-            refresh_token: response.refresh_token.clone().unwrap_or_default(),
+            refresh_token: response.refresh_token.clone(),
             expires_at: response.expires_at(self.now()),
             id_token: response.id_token.clone(),
         };
@@ -244,9 +244,14 @@ impl GoogleAuth {
     /// Refreshes the access token of `loaded` and stores the new tokens,
     /// keeping the stored id_token when the response has none
     /// (`refreshAccessToken`). The new tokens are stored only while the
-    /// stamp of `loaded` is the current one.
+    /// stamp of `loaded` is the current one. Tokens without a refresh
+    /// token (none, or an empty one) are not refreshed: Electron sends the
+    /// request anyway, which the token endpoint cannot accept.
     async fn refresh(&self, loaded: &Loaded) -> Result<Zeroizing<String>, AuthError> {
-        let refresh_token = loaded.tokens.refresh_token.as_str();
+        let Some(refresh_token) = loaded.tokens.refresh_token.as_deref().filter(|token| !token.is_empty())
+        else {
+            return Err(AuthError::Other("no refresh token is stored".to_owned()));
+        };
         let response = self.token_request(refresh_form(refresh_token), "Token refresh").await?;
         let existing = self.tokens.load().await.filter(|existing| existing.stamp == loaded.stamp);
         let id_token = response
@@ -255,7 +260,7 @@ impl GoogleAuth {
             .or_else(|| existing.and_then(|existing| existing.tokens.id_token.clone()));
         let tokens = StoredTokens {
             access_token: response.access_token.clone(),
-            refresh_token: refresh_token.to_owned(),
+            refresh_token: Some(refresh_token.to_owned()),
             expires_at: response.expires_at(self.now()),
             id_token,
         };
@@ -273,9 +278,6 @@ impl GoogleAuth {
         let loaded = self.tokens.load().await?;
         if let Some(id_token) = loaded.tokens.id_token.as_deref().filter(|token| self.is_fresh(token)) {
             return Some(Zeroizing::new(id_token.to_owned()));
-        }
-        if loaded.tokens.refresh_token.is_empty() {
-            return None;
         }
         self.refresh(&loaded).await.ok()?;
         let refreshed = self.tokens.load().await?;
