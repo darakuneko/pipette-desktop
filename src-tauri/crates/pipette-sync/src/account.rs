@@ -88,9 +88,7 @@ impl SignedInAccount for GoogleAuth {
 
 /// `forgetAccountCaches`: the files this run created on the previous
 /// account's Drive, and the password-check and sync-format marker it saw
-/// there. What the app keeps per account elsewhere (the Hub token, the
-/// sync-format status) is forgotten by the listeners of
-/// `GoogleAuth::on_account_changed`, which run at the same points.
+/// there.
 pub fn forget_account_caches(runtime: &SyncRuntime) {
     runtime.remote().clear_created_files();
     runtime.credentials().forget_validated_password_check();
