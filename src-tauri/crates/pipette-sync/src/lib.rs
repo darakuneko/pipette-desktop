@@ -8,9 +8,12 @@
 //! - [`bundle`]: the bundle a unit is uploaded as, and the units a pass
 //!   sends;
 //! - [`merge`]: the merge of a downloaded bundle into the local files;
+//! - [`typing_remote`]: this device's typing days on Drive and their
+//!   reconcile with the local files before an upload pass;
 //! - [`unit_locks`]: the locks a whole sync of one unit holds.
 
 pub mod bundle;
 pub mod merge;
+pub mod typing_remote;
 pub mod unit_locks;
 pub mod units;
