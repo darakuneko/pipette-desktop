@@ -59,6 +59,22 @@ jobs:
         working-directory: src-tauri
         run: cargo test --workspace --features pipette-app/dev-tools
 
+      # The step above builds pipette-net with the endpoint variables of the
+      # development tools; without them, as in a release build, the
+      # variables must change nothing.
+      - name: Test the Google endpoints without the development tools
+        working-directory: src-tauri
+        run: cargo test -p pipette-net --test endpoints
+
+      # The Node fake Drive passes the conformance cases the in-memory Drive
+      # of pipette-drive passes (in the step above), and the harness of the
+      # sync fixture generators keeps the Electron code off the network and
+      # the real userData.
+      - name: Fake Drive and sync fixture harness
+        run: |
+          pnpm run test:fake-drive
+          pnpm run test:sync-fixtures-harness
+
       # The test above wrote userData trees with the Rust stores (the
       # tests/rust_user_data.rs of pipette-keyboard-stores,
       # pipette-pack-stores and pipette-typing-datasets); the Electron
