@@ -331,7 +331,7 @@ async fn a_fetch_merges_the_devices_ranges_before_its_day_and_once_per_revision(
 
     // Known and local: only the day.
     assert!(e.remote.fetch_remote_typing_day(UID, REMOTE, DAY).await.unwrap());
-    assert_eq!(downloads(&e.world.requests(), &e.world), [day.id.clone()]);
+    assert_eq!(downloads(&e.world.requests(), &e.world), std::slice::from_ref(&day.id));
 
     // Known but no local file (a poll records keyboards it leaves alone):
     // merged again.
