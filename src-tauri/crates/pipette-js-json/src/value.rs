@@ -216,6 +216,12 @@ impl Object {
         Self::default()
     }
 
+    /// An empty object with room for `capacity` keys that are not array
+    /// indexes, so building one of a known shape does not grow it.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self { indexed: BTreeMap::new(), named: IndexMap::with_capacity(capacity) }
+    }
+
     /// Sets `key`, returning the value it replaced.
     pub fn insert(&mut self, key: impl Into<JsString>, value: Value) -> Option<Value> {
         let key = key.into();

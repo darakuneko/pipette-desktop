@@ -55,7 +55,7 @@ impl<T: ToJs> ToJs for Vec<T> {
 
 /// An object of `(key, value)` pairs in that order.
 pub(crate) fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
-    let mut out = Object::new();
+    let mut out = Object::with_capacity(N);
     for (key, value) in fields {
         out.insert(key, value);
     }
