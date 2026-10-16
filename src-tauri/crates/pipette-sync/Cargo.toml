@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-sync"
+description = "The sync engine: the bundles, the merges, the passes and their entry points, the password and its change, the trash and the resets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true

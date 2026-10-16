@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-secret-store"
+description = "The sync's secrets at rest: a master key in the OS key store and the files of local/auth/ encrypted with it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
