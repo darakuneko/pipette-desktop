@@ -15,6 +15,9 @@ export default mergeConfig(
     include: ['scripts/analytics-db-fixtures/verify-rust-analytics.test.ts'],
     setupFiles: ['src/main/__tests__/setup-sqlite-mock.ts'],
     env: { TZ: 'UTC' },
+    // Hundreds of handler calls and a rebuild on sql.js, as the sibling
+    // config of this directory allows.
+    testTimeout: 600_000,
   }),
   {
     resolve: {
