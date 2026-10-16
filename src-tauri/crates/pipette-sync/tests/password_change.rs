@@ -358,3 +358,19 @@ async fn a_change_the_electron_build_left_reads_as_one_without_keys() {
     assert_eq!(std::fs::read(&electron_keys).unwrap(), b"safeStorage bytes");
     machine.preflight.assert_sync_allowed(None).await.unwrap();
 }
+
+/// Keys without a state are left by a start that never wrote its state,
+/// unless a change runs: then its state may be written right after the
+/// recovery's read, and its keys must stay.
+#[tokio::test]
+async fn the_startup_recovery_keeps_the_keys_of_a_running_change() {
+    let world = World::new();
+    let machine = world.machine("pc", MachineOptions::default());
+    machine.store_keys("old", "new").await;
+    let run = machine.runtime.try_start_password_change().unwrap();
+    assert_eq!(machine.change.recover_on_startup().await, PasswordChangeRecovery::None);
+    assert_eq!(machine.keys_summary().await, "old>new");
+    drop(run);
+    assert_eq!(machine.change.recover_on_startup().await, PasswordChangeRecovery::None);
+    assert_eq!(machine.keys_summary().await, "noPasswordFile");
+}

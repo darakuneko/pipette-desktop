@@ -485,10 +485,27 @@ impl PasswordChange {
         }
     }
 
+    /// Removes keys a start left without writing its state. Only as the
+    /// password-change run, with the state read again under it: a change
+    /// started meanwhile writes its state before its keys, and its keys
+    /// must stay. While other work holds the run they are left for the
+    /// next launch.
+    async fn clear_keys_left_without_state(&self) -> Result<(), PasswordChangeError> {
+        let Some(run) = self.preflight.runtime().try_start_password_change() else { return Ok(()) };
+        let cleared = match self.preflight.change_state.read().await {
+            ChangeStateRead::None => {
+                clear_change_keys(&self.secrets).await.map_err(PasswordChangeError::Other)
+            }
+            ChangeStateRead::Ok(_) | ChangeStateRead::Invalid => Ok(()),
+        };
+        drop(run);
+        cleared
+    }
+
     async fn recover(&self) -> Result<PasswordChangeRecovery, PasswordChangeError> {
         let state = match self.preflight.change_state.read().await {
             ChangeStateRead::None => {
-                clear_change_keys(&self.secrets).await.map_err(PasswordChangeError::Other)?;
+                self.clear_keys_left_without_state().await?;
                 return Ok(PasswordChangeRecovery::None);
             }
             ChangeStateRead::Invalid => {
