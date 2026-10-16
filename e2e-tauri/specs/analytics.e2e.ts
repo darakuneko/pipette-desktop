@@ -433,7 +433,10 @@ describe('Tauri build typing analytics', () => {
     expect(await recordedPageErrors()).toEqual([])
   })
 
-  it('records the virtual keyboard with REC on, into its day file and a sync unit', async () => {
+  it('records the virtual keyboard with REC on, into its day file and a sync unit', async function () {
+    // Waiting for room in the minute alone can take 20 s on top of the
+    // connect, the unlock and the file waits.
+    this.timeout(3 * MINUTE_MS)
     await connectVirtualKeyboard()
     await recordPageErrors()
     await virtualDevice.setUnlockCounterMax(3)
@@ -500,7 +503,10 @@ describe('Tauri build typing analytics', () => {
     expect(await recordedPageErrors()).toEqual([])
   })
 
-  it('writes the minute typed right before a quit', async () => {
+  it('writes the minute typed right before a quit', async function () {
+    // Waiting for the next minute alone can take a whole minute, on top of
+    // the relaunch.
+    this.timeout(3 * MINUTE_MS)
     await $(tid('typing-record-button')).click()
     await $(tid('typing-record-toggle')).click()
     await unlockIfAsked()
