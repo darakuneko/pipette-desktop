@@ -3,6 +3,8 @@
 //! cached always matches what the file holds, a cancelled sign-in never
 //! ends a later one's session, and a write under way finishes.
 
+#![allow(clippy::unwrap_used)]
+
 mod common;
 
 use std::sync::Arc;

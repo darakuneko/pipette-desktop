@@ -6,6 +6,8 @@
 //! scripts/sync-fixtures/record-secrets-auth.test.ts), the writes, and that
 //! Electron's `*.enc` files are neither read nor written.
 
+#![allow(clippy::unwrap_used)]
+
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;

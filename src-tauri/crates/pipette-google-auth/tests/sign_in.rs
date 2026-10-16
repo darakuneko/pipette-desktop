@@ -4,6 +4,8 @@
 //! tests named `differs_from_electron_*` pin the places where the sign-in
 //! deliberately does not do what Electron does.
 
+#![allow(clippy::unwrap_used)]
+
 mod common;
 
 use std::sync::Arc;

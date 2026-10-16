@@ -4,6 +4,8 @@
 //! `sub`, the races with a sign-out, the time limits and the Hub test
 //! account.
 
+#![allow(clippy::unwrap_used)]
+
 mod common;
 
 use std::sync::{Arc, Mutex};
@@ -299,7 +301,7 @@ struct Refusing(Mutex<Option<Option<String>>>);
 
 impl TokenSwitch for Refusing {
     fn switch<'a>(&'a self, _store: StoreTokens<'a>, new_account_sub: Option<String>) -> SwitchFuture<'a> {
-        *self.0.lock().unwrap() = Some(new_account_sub);
+        *self.0.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(new_account_sub);
         Box::pin(async { Err(AuthError::Switch("busy".into())) })
     }
 }

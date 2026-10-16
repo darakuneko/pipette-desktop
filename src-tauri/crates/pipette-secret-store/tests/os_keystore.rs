@@ -13,6 +13,8 @@
 //! temporary home and a Secret Service started for the run, so the test
 //! never reaches a desktop session's key store.
 
+#![allow(clippy::unwrap_used)]
+
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
