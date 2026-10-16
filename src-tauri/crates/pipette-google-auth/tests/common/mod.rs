@@ -3,7 +3,7 @@
 //! with an in-memory key store, a scripted token endpoint, a settable clock
 //! and Hub test account, and a browser that records the URL it is given.
 
-#![allow(dead_code)]
+#![allow(dead_code, clippy::unwrap_used)]
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicI64, Ordering};

@@ -4,9 +4,11 @@
 //! A sign-in takes an attempt generation when it starts. A sign-out, or a
 //! sign-in started after it, advances the generation, and the earlier
 //! attempt then drops what it has (the wait for the browser, the code
-//! exchange, the tokens) and fails. Electron advances its session only when
-//! it stores the tokens, so a sign-out during the exchange can be followed
-//! by the sign-in it meant to cancel; here it cannot.
+//! exchange, its tokens when their turn to be written comes) and fails. A
+//! write already under way finishes; a sign-out still removes what it
+//! wrote, and a later sign-in replaces it. Electron advances its session
+//! only when it stores the tokens, so a sign-out during the exchange can be
+//! followed by the sign-in it meant to cancel; here it cannot.
 
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -191,11 +193,10 @@ impl GoogleAuth {
         switch.switch(StoreTokens { auth: self, tokens, attempt }, sub).await
     }
 
-    /// The store step a [`StoreTokens`] runs: a new session, then the
-    /// write while `attempt` is still the current one.
+    /// The store step a [`StoreTokens`] runs: a new session and the write,
+    /// while `attempt` is still the current one when its turn comes.
     pub(crate) async fn store_sign_in(&self, tokens: StoredTokens, attempt: u64) -> Result<(), AuthError> {
-        let generation = self.tokens.next_session();
-        self.tokens.store(tokens, generation, || self.is_current_attempt(attempt)).await?;
+        self.tokens.store_new_session(tokens, || self.is_current_attempt(attempt)).await?;
         self.account_changed();
         Ok(())
     }
@@ -233,19 +234,20 @@ impl GoogleAuth {
     /// The access token, refreshed first when it expires within 5 minutes
     /// (`getAccessToken`); `None` when signed out or when the refresh fails.
     pub async fn access_token(&self) -> Option<Zeroizing<String>> {
+        let generation = self.tokens.session();
         let tokens = self.tokens.load().await?;
         if self.now() >= tokens.expires_at.saturating_sub(REFRESH_MARGIN_MS) {
-            return self.refresh(&tokens.refresh_token).await.ok();
+            return self.refresh(&tokens.refresh_token, generation).await.ok();
         }
         Some(Zeroizing::new(tokens.access_token.clone()))
     }
 
     /// Refreshes the access token with `refresh_token` and stores the new
     /// tokens, keeping the stored id_token when the response has none
-    /// (`refreshAccessToken`). Fails without storing anything when a
-    /// sign-in or sign-out happened meanwhile.
-    async fn refresh(&self, refresh_token: &str) -> Result<Zeroizing<String>, AuthError> {
-        let generation = self.tokens.session();
+    /// (`refreshAccessToken`). `generation` is the session taken before
+    /// `refresh_token` was read; the refresh stores nothing when a sign-in
+    /// or sign-out came since.
+    async fn refresh(&self, refresh_token: &str, generation: u64) -> Result<Zeroizing<String>, AuthError> {
         let response = self.token_request(refresh_form(refresh_token), "Token refresh").await?;
         let existing = self.tokens.load().await;
         let id_token =
@@ -256,7 +258,7 @@ impl GoogleAuth {
             expires_at: response.expires_at(self.now()),
             id_token,
         };
-        self.tokens.store(tokens, generation, || true).await?;
+        self.tokens.store_refresh(tokens, generation).await?;
         Ok(Zeroizing::new(response.access_token.clone()))
     }
 
@@ -267,6 +269,7 @@ impl GoogleAuth {
         if let Some(account) = (self.config.hub_test_account)() {
             return Some(Zeroizing::new(format!("test:{account}")));
         }
+        let generation = self.tokens.session();
         let tokens = self.tokens.load().await?;
         if let Some(id_token) = tokens.id_token.as_deref().filter(|token| self.is_fresh(token)) {
             return Some(Zeroizing::new(id_token.to_owned()));
@@ -274,7 +277,7 @@ impl GoogleAuth {
         if tokens.refresh_token.is_empty() {
             return None;
         }
-        self.refresh(&tokens.refresh_token).await.ok()?;
+        self.refresh(&tokens.refresh_token, generation).await.ok()?;
         let refreshed = self.tokens.load().await?;
         refreshed
             .id_token

@@ -8,6 +8,8 @@
 //! Needs Node and the repository's node_modules (tsx). Without them the test is
 //! skipped, unless `PIPETTE_REQUIRE_FAKE_OAUTH=1` (CI) makes that a failure.
 
+#![allow(clippy::unwrap_used)]
+
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
