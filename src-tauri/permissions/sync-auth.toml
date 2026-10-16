@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The commands of src/sync_commands/: the sync's sign-in and password
-# statuses. The secrets themselves never reach the page.
+# The commands of src/sync_commands/: the sync's sign-in, its sign-out, and
+# the sign-in and password statuses. The secrets themselves never reach the
+# page.
 
 [[set]]
 identifier = "sync-auth"
-description = "Reports whether the sync is signed in and whether its stored password can be read."
+description = "Signs the sync in and out, and reports whether it is signed in and whether its stored password can be read."
 permissions = [
   "allow-sync-auth-status",
+  "allow-sync-auth-start",
+  "allow-sync-auth-sign-out",
   "allow-sync-password-status",
 ]

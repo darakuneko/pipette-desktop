@@ -28,6 +28,8 @@ pipette-logger = { path = "crates/pipette-logger" }
 pipette-app-config = { path = "crates/pipette-app-config" }
 pipette-js-json = { path = "crates/pipette-js-json" }
 pipette-sync-pending = { path = "crates/pipette-sync-pending" }
+# The account switch of the sign-in and sign-out commands.
+pipette-sync = { path = "crates/pipette-sync" }
 # The stores of src/store_commands/: the clock and write locks they share,
 # and the stores themselves; sanitize_filename of the file commands
 # (src/file_commands.rs).

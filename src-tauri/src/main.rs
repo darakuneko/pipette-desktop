@@ -216,6 +216,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::theme_packs::theme_pack_import_apply,
         store_commands::theme_packs::theme_pack_export,
         sync_commands::auth::sync_auth_status,
+        sync_commands::auth::sync_auth_start,
+        sync_commands::auth::sync_auth_sign_out,
         sync_commands::password::sync_password_status,
     ]
 }

@@ -197,5 +197,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "theme_pack_export",
     // src/sync_commands/auth.rs, src/sync_commands/password.rs
     "sync_auth_status",
+    "sync_auth_start",
+    "sync_auth_sign_out",
     "sync_password_status",
 ];

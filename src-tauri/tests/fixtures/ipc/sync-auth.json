@@ -7,6 +7,20 @@
     "response": { "authenticated": false }
   },
   {
+    "member": "syncAuthStart",
+    "args": [],
+    "command": "sync_auth_start",
+    "invokeArgs": {},
+    "response": { "success": false, "error": "the Google sign-in endpoints are unavailable" }
+  },
+  {
+    "member": "syncAuthSignOut",
+    "args": [],
+    "command": "sync_auth_sign_out",
+    "invokeArgs": {},
+    "response": { "success": true }
+  },
+  {
     "member": "syncPasswordStatus",
     "args": [],
     "command": "sync_password_status",

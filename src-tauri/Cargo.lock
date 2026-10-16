@@ -2917,6 +2917,7 @@ dependencies = [
  "pipette-net",
  "pipette-pack-stores",
  "pipette-secret-store",
+ "pipette-sync",
  "pipette-sync-pending",
  "pipette-time",
  "pipette-typing-analytics",

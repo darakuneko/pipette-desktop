@@ -301,10 +301,10 @@ const SYNC_MEMBERS = [
   },
 ]
 
-/** The Cloud Sync members that are real: the sign-in and password
- *  statuses (backend commands) and the password strength check (in the
- *  shim). */
-const SYNC_REAL = ['syncAuthStatus', 'syncPasswordStatus', 'syncValidatePassword']
+/** The Cloud Sync members that are real: the sign-in, the sign-out and the
+ *  sign-in and password statuses (backend commands) and the password
+ *  strength check (in the shim). */
+const SYNC_REAL = ['syncAuthStart', 'syncAuthStatus', 'syncAuthSignOut', 'syncPasswordStatus', 'syncValidatePassword']
 
 /** The fakes the Cloud Sync members replace: the signed-out answers. */
 const SYNC_FAKES = [
