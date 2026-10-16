@@ -24,10 +24,11 @@ use pipette_sync::dispatch::{UnitSync, UnitSyncDeps};
 use pipette_sync::execute::{
     ExecuteDeps, KeyboardMetaBackfill, PassAccount, PassHooks, SyncExecuteResult, SyncExecutor,
 };
+use pipette_sync::format::{SYNC_FORMAT_VERSION, marker_content};
 use pipette_sync::merge::{MergeEvents, PackKind};
 use pipette_sync::preflight::{BoxFuture, Preflight, PreflightDeps, PreflightError};
 use pipette_sync::scope::SyncScope;
-use pipette_sync_format::drive_names::drive_file_name;
+use pipette_sync_format::drive_names::{drive_file_name, sync_format_file_name};
 use pipette_sync_pending::{PendingStore, Scheduler};
 use pipette_sync_runtime::{SyncDirection, SyncProgress, SyncRuntime};
 use pipette_typing_analytics::fingerprint::OsInfo;
@@ -147,11 +148,13 @@ pub struct Options {
     pub concurrency: usize,
     /// Seeds a password-check of [`PASSWORD`] and stores the password.
     pub password: bool,
+    /// Seeds this app's sync-format marker, so a pass creates none.
+    pub marker: bool,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self { real_crypto: false, concurrency: 10, password: true }
+        Self { real_crypto: false, concurrency: 10, password: true, marker: true }
     }
 }
 
@@ -245,6 +248,9 @@ impl World {
         if options.password {
             passwords.set(Stored::Readable(PASSWORD.to_owned()));
             drive.seed_password_check(PASSWORD).await;
+        }
+        if options.marker {
+            drive.seed(&sync_format_file_name(SYNC_FORMAT_VERSION), &marker_content()).await;
         }
         Self {
             _dir: dir,
