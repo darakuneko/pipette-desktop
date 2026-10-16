@@ -67,12 +67,6 @@ pub struct Listing {
     trash: OnceLock<TrashIndex>,
 }
 
-impl From<Vec<DriveFile>> for Listing {
-    fn from(files: Vec<DriveFile>) -> Self {
-        Self::new(files)
-    }
-}
-
 impl Listing {
     pub fn new(files: Vec<DriveFile>) -> Self {
         Self { files, names: OnceLock::new(), trash: OnceLock::new() }
@@ -81,10 +75,6 @@ impl Listing {
     /// Every file, in the listed order.
     pub fn files(&self) -> &[DriveFile] {
         &self.files
-    }
-
-    pub fn into_files(self) -> Vec<DriveFile> {
-        self.files
     }
 
     fn names(&self) -> &NameIndex {
