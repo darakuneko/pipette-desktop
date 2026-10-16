@@ -49,6 +49,7 @@ interface Shim {
   snapshots: typeof import('../api/snapshots')
   typingTexts: typeof import('../api/typing-texts')
   syncPending: typeof import('../api/sync-pending')
+  typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
 }
@@ -69,6 +70,7 @@ async function load(): Promise<Shim> {
     snapshots: await import('../api/snapshots'),
     typingTexts: await import('../api/typing-texts'),
     syncPending: await import('../api/sync-pending'),
+    typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
   }
@@ -241,6 +243,24 @@ const CALLERS: Record<string, Caller> = {
   },
   'settings.ensureSettingsDir': { run: ({ settings }, [uid]) => settings.ensureSettingsDir(uid as string), void: true },
   'settings.readAllSettingsFiles': { run: ({ settings }) => settings.readAllSettingsFiles() },
+  langList: { run: ({ typingDatasets }, [provider]) => typingDatasets.typingDatasetsApi.langList(provider as string) },
+  langGet: {
+    run: ({ typingDatasets }, [name, provider]) => typingDatasets.typingDatasetsApi.langGet(name as string, provider as string),
+  },
+  langDownload: {
+    run: ({ typingDatasets }, [name, provider]) =>
+      typingDatasets.typingDatasetsApi.langDownload(name as string, provider as string),
+  },
+  langDelete: {
+    run: ({ typingDatasets }, [name, provider]) =>
+      typingDatasets.typingDatasetsApi.langDelete(name as string, provider as string),
+  },
+  checkTypingDatasetUpdate: {
+    run: ({ typingDatasets }, [provider]) => typingDatasets.typingDatasetsApi.checkTypingDatasetUpdate(provider as string),
+  },
+  updateTypingDataset: {
+    run: ({ typingDatasets }, [provider]) => typingDatasets.typingDatasetsApi.updateTypingDataset(provider as string),
+  },
   i18nPackList: { run: ({ i18nPacks }) => i18nPacks.i18nPacksApi.i18nPackList() },
   i18nPackGet: { run: ({ i18nPacks }, [id]) => i18nPacks.i18nPacksApi.i18nPackGet(id as string) },
   i18nPackRename: {
