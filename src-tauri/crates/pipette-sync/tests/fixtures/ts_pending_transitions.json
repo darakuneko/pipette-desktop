@@ -1,0 +1,2113 @@
+[
+  {
+    "name": "a settle removes a unit only at the generation the pass took",
+    "keyboards": [
+      "uid1"
+    ],
+    "file": null,
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/uid1/settings"
+      },
+      {
+        "op": "advance"
+      },
+      {
+        "op": "snapshot"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "settle",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "settle",
+        "unit": "keyboards/uid1/settings"
+      },
+      {
+        "op": "settle",
+        "unit": "favorites/never"
+      },
+      {
+        "op": "broadcast"
+      },
+      {
+        "op": "advance"
+      },
+      {
+        "op": "snapshot"
+      },
+      {
+        "op": "settle",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "broadcast"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "notify",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "snapshot",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "settle",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "settle",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "settle",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "broadcast",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "snapshot",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "settle",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "broadcast",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "cancels of prefixes, held units included, and putting them back",
+    "keyboards": [
+      "uid1",
+      "uid2"
+    ],
+    "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/settings\",\"favorites/macro\",\"themes/index\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"keyboards/uid1/snapshots\",\"i18n/index\"],\"account-c\":[\"themes/packs/p1\"]}}",
+    "steps": [
+      {
+        "op": "copy"
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "keyboards/uid1/",
+          "themes/"
+        ]
+      },
+      {
+        "op": "cancel",
+        "prefixes": []
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "nothing/"
+        ]
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "nothing/"
+        ],
+        "writeAlways": true
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/uid1/settings"
+      },
+      {
+        "op": "restore"
+      },
+      {
+        "op": "copy"
+      },
+      {
+        "op": "cancel"
+      },
+      {
+        "op": "restore"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "copy",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "themes/index",
+            3
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "keyboards/uid1/snapshots",
+            "i18n/index"
+          ],
+          "account-c": [
+            "themes/packs/p1"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/settings\",\"favorites/macro\",\"themes/index\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"keyboards/uid1/snapshots\",\"i18n/index\"],\"account-c\":[\"themes/packs/p1\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            4
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            4
+          ],
+          [
+            "keyboards/uid1/settings",
+            5
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "restore",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            4
+          ],
+          [
+            "keyboards/uid1/settings",
+            5
+          ],
+          [
+            "themes/index",
+            3
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index",
+            "keyboards/uid1/snapshots"
+          ],
+          "account-c": [
+            "themes/packs/p1"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/combo\",\"keyboards/uid1/settings\",\"themes/index\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\",\"keyboards/uid1/snapshots\"],\"account-c\":[\"themes/packs/p1\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "copy",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            4
+          ],
+          [
+            "keyboards/uid1/settings",
+            5
+          ],
+          [
+            "themes/index",
+            3
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index",
+            "keyboards/uid1/snapshots"
+          ],
+          "account-c": [
+            "themes/packs/p1"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/combo\",\"keyboards/uid1/settings\",\"themes/index\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\",\"keyboards/uid1/snapshots\"],\"account-c\":[\"themes/packs/p1\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[],\"held\":{}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "restore",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            4
+          ],
+          [
+            "keyboards/uid1/settings",
+            5
+          ],
+          [
+            "themes/index",
+            3
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index",
+            "keyboards/uid1/snapshots"
+          ],
+          "account-c": [
+            "themes/packs/p1"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/combo\",\"keyboards/uid1/settings\",\"themes/index\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\",\"keyboards/uid1/snapshots\"],\"account-c\":[\"themes/packs/p1\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            4
+          ],
+          [
+            "keyboards/uid1/settings",
+            5
+          ],
+          [
+            "themes/index",
+            3
+          ]
+        ],
+        "held": {
+          "7": [
+            "keyboards/uid2/settings"
+          ],
+          "account-b": [
+            "i18n/index",
+            "keyboards/uid1/snapshots"
+          ],
+          "account-c": [
+            "themes/packs/p1"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/combo\",\"keyboards/uid1/settings\",\"themes/index\"],\"held\":{\"7\":[\"keyboards/uid2/settings\"],\"account-b\":[\"i18n/index\",\"keyboards/uid1/snapshots\"],\"account-c\":[\"themes/packs/p1\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "a cancel that cannot be written changes nothing",
+    "keyboards": [
+      "uid1"
+    ],
+    "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/settings\"],\"held\":{\"account-b\":[\"keyboards/uid1/snapshots\"]}}",
+    "steps": [
+      {
+        "op": "blockWrites"
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "keyboards/uid1/"
+        ]
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "nothing/"
+        ]
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "nothing/"
+        ],
+        "writeAlways": true
+      },
+      {
+        "op": "unblockWrites"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/uid1/settings"
+      },
+      {
+        "op": "advance"
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "keyboards/uid1/"
+        ],
+        "writeAlways": true
+      }
+    ],
+    "recorded": [
+      {
+        "op": "blockWrites",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": true,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": true,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "unblockWrites",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": null,
+        "statuses": []
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": null,
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "keyboards/uid1/snapshots"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/settings\"],\"held\":{\"account-b\":[\"keyboards/uid1/snapshots\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[],\"held\":{}}",
+        "statuses": [
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "name": "units marked after the copy keep their newer generation",
+    "keyboards": [],
+    "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/tapDance\",\"favorites/macro\"],\"held\":{\"account-b\":[\"favorites/combo\"]}}",
+    "steps": [
+      {
+        "op": "copy"
+      },
+      {
+        "op": "cancel",
+        "prefixes": [
+          "favorites/"
+        ],
+        "writeAlways": true
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/altRepeatKey"
+      },
+      {
+        "op": "markPendingFor",
+        "owner": "account-b",
+        "unit": "favorites/keyOverride"
+      },
+      {
+        "op": "restore"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "copy",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/tapDance\",\"favorites/macro\"],\"held\":{\"account-b\":[\"favorites/combo\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "cancel",
+        "error": false,
+        "owner": "account-a",
+        "units": [],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[],\"held\":{}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ],
+          [
+            "favorites/altRepeatKey",
+            4
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "markPendingFor",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ],
+          [
+            "favorites/altRepeatKey",
+            4
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/keyOverride"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/altRepeatKey\"],\"held\":{\"account-b\":[\"favorites/keyOverride\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "restore",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ],
+          [
+            "favorites/altRepeatKey",
+            4
+          ],
+          [
+            "favorites/tapDance",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/keyOverride",
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/altRepeatKey\",\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/keyOverride\",\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            3
+          ],
+          [
+            "favorites/altRepeatKey",
+            4
+          ],
+          [
+            "favorites/tapDance",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/keyOverride",
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/altRepeatKey\",\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/keyOverride\",\"favorites/combo\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "handing the units to the signed-in account",
+    "keyboards": [],
+    "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/macro\"]}}",
+    "steps": [
+      {
+        "op": "adopt",
+        "sub": null
+      },
+      {
+        "op": "adopt",
+        "sub": "account-a"
+      },
+      {
+        "op": "adopt",
+        "sub": "account-b"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "adopt",
+        "sub": "account-a"
+      },
+      {
+        "op": "adopt",
+        "sub": "account-c"
+      },
+      {
+        "op": "adopt",
+        "sub": "2"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/macro"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/macro\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/macro"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/macro\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[\"favorites/macro\"],\"held\":{\"account-a\":[\"favorites/tapDance\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/macro",
+            2
+          ],
+          [
+            "favorites/combo",
+            3
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[\"favorites/macro\"],\"held\":{\"account-a\":[\"favorites/tapDance\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/tapDance",
+            4
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/macro",
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/macro\",\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "account-c",
+        "units": [],
+        "held": {
+          "account-b": [
+            "favorites/macro",
+            "favorites/combo"
+          ],
+          "account-a": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-c\",\"units\":[],\"held\":{\"account-b\":[\"favorites/macro\",\"favorites/combo\"],\"account-a\":[\"favorites/tapDance\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "2",
+        "units": [],
+        "held": {
+          "account-b": [
+            "favorites/macro",
+            "favorites/combo"
+          ],
+          "account-a": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"2\",\"units\":[],\"held\":{\"account-b\":[\"favorites/macro\",\"favorites/combo\"],\"account-a\":[\"favorites/tapDance\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "2",
+        "units": [],
+        "held": {
+          "account-b": [
+            "favorites/macro",
+            "favorites/combo"
+          ],
+          "account-a": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"2\",\"units\":[],\"held\":{\"account-b\":[\"favorites/macro\",\"favorites/combo\"],\"account-a\":[\"favorites/tapDance\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "marking a unit pending for the account a pass ran as",
+    "keyboards": [],
+    "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{}}",
+    "steps": [
+      {
+        "op": "markPendingFor",
+        "owner": "account-b",
+        "unit": "favorites/tapDance"
+      },
+      {
+        "op": "markPendingFor",
+        "owner": null,
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "markPendingFor",
+        "owner": "account-b",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "markPendingFor",
+        "owner": "account-a",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "markPendingFor",
+        "owner": "account-a",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "broadcast"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "markPendingFor",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "markPendingFor",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "markPendingFor",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "markPendingFor",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[\"favorites/tapDance\",\"favorites/macro\"],\"held\":{\"account-a\":[\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "markPendingFor",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[\"favorites/tapDance\",\"favorites/macro\"],\"held\":{\"account-a\":[\"favorites/combo\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "broadcast",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[\"favorites/tapDance\",\"favorites/macro\"],\"held\":{\"account-a\":[\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/tapDance",
+            1
+          ],
+          [
+            "favorites/macro",
+            2
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[\"favorites/tapDance\",\"favorites/macro\"],\"held\":{\"account-a\":[\"favorites/combo\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "the units the Electron build left, then another account and the same account",
+    "keyboards": [
+      "uid1"
+    ],
+    "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+    "steps": [
+      {
+        "op": "adopt",
+        "sub": null
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "signIn",
+        "current": null,
+        "sub": "tauri-other"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/tapDance"
+      },
+      {
+        "op": "signOut",
+        "current": "tauri-other"
+      },
+      {
+        "op": "signIn",
+        "current": null,
+        "sub": "104242424242424242424"
+      },
+      {
+        "op": "adopt",
+        "sub": "104242424242424242424"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": []
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ],
+          [
+            "favorites/combo",
+            3
+          ]
+        ],
+        "held": {},
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "tauri-other",
+        "units": [],
+        "held": {
+          "104242424242424242424": [
+            "favorites/macro",
+            "keyboards/uid1/settings",
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"tauri-other\",\"units\":[],\"held\":{\"104242424242424242424\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"favorites/combo\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "tauri-other",
+        "units": [
+          [
+            "favorites/tapDance",
+            4
+          ]
+        ],
+        "held": {
+          "104242424242424242424": [
+            "favorites/macro",
+            "keyboards/uid1/settings",
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"tauri-other\",\"units\":[],\"held\":{\"104242424242424242424\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "signOut",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {
+          "104242424242424242424": [
+            "favorites/macro",
+            "keyboards/uid1/settings",
+            "favorites/combo"
+          ],
+          "tauri-other": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{\"104242424242424242424\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"favorites/combo\"],\"tauri-other\":[\"favorites/tapDance\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            5
+          ],
+          [
+            "keyboards/uid1/settings",
+            6
+          ],
+          [
+            "favorites/combo",
+            7
+          ]
+        ],
+        "held": {
+          "tauri-other": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"favorites/combo\"],\"held\":{\"tauri-other\":[\"favorites/tapDance\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            5
+          ],
+          [
+            "keyboards/uid1/settings",
+            6
+          ],
+          [
+            "favorites/combo",
+            7
+          ]
+        ],
+        "held": {
+          "tauri-other": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"favorites/combo\"],\"held\":{\"tauri-other\":[\"favorites/tapDance\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            5
+          ],
+          [
+            "keyboards/uid1/settings",
+            6
+          ],
+          [
+            "favorites/combo",
+            7
+          ]
+        ],
+        "held": {
+          "tauri-other": [
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"favorites/combo\"],\"held\":{\"tauri-other\":[\"favorites/tapDance\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "the units the Electron build left, then the same account",
+    "keyboards": [
+      "uid1"
+    ],
+    "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{\"someone-else\":[\"favorites/combo\"]}}",
+    "steps": [
+      {
+        "op": "adopt",
+        "sub": null
+      },
+      {
+        "op": "signIn",
+        "current": null,
+        "sub": "104242424242424242424"
+      },
+      {
+        "op": "adopt",
+        "sub": "104242424242424242424"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {
+          "someone-else": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{\"someone-else\":[\"favorites/combo\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {
+          "someone-else": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{\"someone-else\":[\"favorites/combo\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "adopt",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {
+          "someone-else": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{\"someone-else\":[\"favorites/combo\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "104242424242424242424",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ],
+          [
+            "keyboards/uid1/settings",
+            2
+          ]
+        ],
+        "held": {
+          "someone-else": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"104242424242424242424\",\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\"],\"held\":{\"someone-else\":[\"favorites/combo\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "signing in and out with units nobody owns",
+    "keyboards": [],
+    "file": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}",
+    "steps": [
+      {
+        "op": "signIn",
+        "current": "account-a",
+        "sub": "account-b"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "signOut",
+        "current": "account-b"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/tapDance"
+      },
+      {
+        "op": "signOut",
+        "current": "account-a"
+      },
+      {
+        "op": "signIn",
+        "current": null,
+        "sub": "account-a"
+      },
+      {
+        "op": "signIn",
+        "current": "account-a",
+        "sub": null
+      },
+      {
+        "op": "signOut",
+        "current": null
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "account-b",
+        "units": [],
+        "held": {
+          "account-a": [
+            "favorites/macro"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\"]}}",
+        "statuses": [
+          true,
+          false
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": "account-b",
+        "units": [
+          [
+            "favorites/combo",
+            2
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/macro"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "signOut",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {
+          "account-a": [
+            "favorites/macro"
+          ],
+          "account-b": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\"],\"account-b\":[\"favorites/combo\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "notify",
+        "error": false,
+        "owner": null,
+        "units": [
+          [
+            "favorites/tapDance",
+            3
+          ]
+        ],
+        "held": {
+          "account-a": [
+            "favorites/macro"
+          ],
+          "account-b": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\"],\"account-b\":[\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "signOut",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {
+          "account-a": [
+            "favorites/macro",
+            "favorites/tapDance"
+          ],
+          "account-b": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\",\"favorites/tapDance\"],\"account-b\":[\"favorites/combo\"]}}",
+        "statuses": [
+          true,
+          false
+        ]
+      },
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            4
+          ],
+          [
+            "favorites/tapDance",
+            5
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/combo\"]}}",
+        "statuses": [
+          true
+        ]
+      },
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            4
+          ],
+          [
+            "favorites/tapDance",
+            5
+          ]
+        ],
+        "held": {
+          "account-b": [
+            "favorites/combo"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\",\"favorites/tapDance\"],\"held\":{\"account-b\":[\"favorites/combo\"]}}",
+        "statuses": []
+      },
+      {
+        "op": "signOut",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {
+          "account-b": [
+            "favorites/combo"
+          ],
+          "account-a": [
+            "favorites/macro",
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{\"account-b\":[\"favorites/combo\"],\"account-a\":[\"favorites/macro\",\"favorites/tapDance\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": null,
+        "units": [],
+        "held": {
+          "account-b": [
+            "favorites/combo"
+          ],
+          "account-a": [
+            "favorites/macro",
+            "favorites/tapDance"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{\"account-b\":[\"favorites/combo\"],\"account-a\":[\"favorites/macro\",\"favorites/tapDance\"]}}",
+        "statuses": []
+      }
+    ]
+  },
+  {
+    "name": "a hand-over that cannot be written keeps the old account",
+    "keyboards": [],
+    "file": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"favorites/macro\"],\"held\":{}}",
+    "steps": [
+      {
+        "op": "blockWrites"
+      },
+      {
+        "op": "signIn",
+        "current": "account-a",
+        "sub": "account-b"
+      },
+      {
+        "op": "signOut",
+        "current": "account-a"
+      },
+      {
+        "op": "unblockWrites"
+      },
+      {
+        "op": "signIn",
+        "current": "account-a",
+        "sub": "account-b"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "recorded": [
+      {
+        "op": "blockWrites",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ]
+        ],
+        "held": {},
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "signIn",
+        "error": true,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ]
+        ],
+        "held": {},
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "signOut",
+        "error": true,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ]
+        ],
+        "held": {},
+        "file": "<blocked>",
+        "statuses": []
+      },
+      {
+        "op": "unblockWrites",
+        "error": false,
+        "owner": "account-a",
+        "units": [
+          [
+            "favorites/macro",
+            1
+          ]
+        ],
+        "held": {},
+        "file": null,
+        "statuses": []
+      },
+      {
+        "op": "signIn",
+        "error": false,
+        "owner": "account-b",
+        "units": [],
+        "held": {
+          "account-a": [
+            "favorites/macro"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\"]}}",
+        "statuses": [
+          false
+        ]
+      },
+      {
+        "op": "advance",
+        "error": false,
+        "owner": "account-b",
+        "units": [],
+        "held": {
+          "account-a": [
+            "favorites/macro"
+          ]
+        },
+        "file": "{\"version\":1,\"owner\":\"account-b\",\"units\":[],\"held\":{\"account-a\":[\"favorites/macro\"]}}",
+        "statuses": []
+      }
+    ]
+  }
+]
