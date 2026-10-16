@@ -194,6 +194,12 @@ struct UploadedJson {
     modified_time: String,
 }
 
+impl From<UploadedJson> for UploadedFile {
+    fn from(file: UploadedJson) -> Self {
+        Self { id: file.id, modified_time: file.modified_time }
+    }
+}
+
 #[derive(Deserialize)]
 struct IdJson {
     id: String,
@@ -238,8 +244,7 @@ impl<R: HttpRequester, T: AccessTokenSource> DriveApi for HttpDrive<R, T> {
     fn create(&self, name: String, content: String) -> DriveFuture<'_, UploadedFile> {
         Box::pin(async move {
             let body = self.create_file(name, content, "id,modifiedTime").await?;
-            let file: UploadedJson = parse(&body)?;
-            Ok(UploadedFile { id: file.id, modified_time: file.modified_time })
+            Ok(parse::<UploadedJson>(&body)?.into())
         })
     }
 
@@ -257,8 +262,7 @@ impl<R: HttpRequester, T: AccessTokenSource> DriveApi for HttpDrive<R, T> {
             let url = format!("{}/files/{id}?uploadType=media&fields=id,modifiedTime", self.upload);
             let body =
                 self.send(Method::Patch, url, Some("application/json"), Some(content.into_bytes())).await?;
-            let file: UploadedJson = parse(&body)?;
-            Ok(UploadedFile { id: file.id, modified_time: file.modified_time })
+            Ok(parse::<UploadedJson>(&body)?.into())
         })
     }
 
