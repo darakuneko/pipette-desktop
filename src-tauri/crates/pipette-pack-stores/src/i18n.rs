@@ -212,10 +212,14 @@ pub fn save_pack(ctx: &StoreContext, input: SavePackInput) -> PackResult<Entry> 
                 return Err(PackError::not_found("Language pack is no longer linked to this Hub post"));
             }
         }
+        // `if (!resolvedId)`: an empty id also looks the name up, and stays
+        // when no pack has the name.
         let mut resolved = input.id.clone();
-        if resolved.is_none() {
+        if resolved.as_ref().is_none_or(JsString::is_empty) {
             let by_name = find_active_by_name(&index.metas, &Value::String(header_name.clone()), None)?;
-            resolved = by_name.and_then(Entry::id).filter(|id| !is_english(id)).cloned();
+            if let Some(id) = by_name.and_then(Entry::id).filter(|id| !is_english(id)) {
+                resolved = Some(id.clone());
+            }
         }
         // A live pack saved over keeps its (possibly renamed) name.
         let kept_name = resolved

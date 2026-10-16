@@ -665,6 +665,36 @@
         "op": "importApply",
         "raw": {
           "value": {
+            "name": "zeta",
+            "version": "1.1.0",
+            "common": {
+              "save": "Save (zeta)"
+            }
+          }
+        },
+        "options": {
+          "id": ""
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
+            "name": "Omega",
+            "version": "1.0.0",
+            "common": {
+              "save": "Save (Omega)"
+            }
+          }
+        },
+        "options": {
+          "id": ""
+        }
+      },
+      {
+        "op": "importApply",
+        "raw": {
+          "value": {
             "name": "No version"
           }
         },
@@ -802,6 +832,8 @@
       "{\"success\":false,\"errorCode\":\"DUPLICATE_NAME\",\"error\":\"A language pack with the same name already exists\"}",
       "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Generated pack id is unsafe\"}",
       "{\"success\":true,\"data\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
+      "{\"success\":true,\"data\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.1.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.001Z\",\"body\":\"2026-10-16T12:04:00.001Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.001Z\"},\"updatedAt\":\"2026-10-16T12:04:00.001Z\"}}",
+      "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Generated pack id is unsafe\"}",
       "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
       "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
       "{\"success\":false,\"errorCode\":\"INVALID_FILE\",\"error\":\"Pack JSON missing required name/version fields\"}",
@@ -811,10 +843,12 @@
       "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Theta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
       "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Iota\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
       "{\"success\":true,\"data\":{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Kappa\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}}",
-      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},\"pack\":{\"name\":\"Zeta\",\"version\":\"1.0.0\",\"common\":{\"save\":\"Save (Zeta)\"}}}}",
-      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.001Z\",\"body\":\"2026-10-16T12:02:00.001Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.002Z\"},\"updatedAt\":\"2026-10-16T12:02:00.002Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Epsilon\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Delta\",\"version\":\"3.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"},{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Eta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Theta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Iota\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Kappa\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}"
+      "{\"success\":true,\"data\":{\"meta\":{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.1.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.001Z\",\"body\":\"2026-10-16T12:04:00.001Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.001Z\"},\"updatedAt\":\"2026-10-16T12:04:00.001Z\"},\"pack\":{\"name\":\"Zeta\",\"version\":\"1.1.0\",\"common\":{\"save\":\"Save (zeta)\"}}}}",
+      "{\"success\":true,\"data\":[{\"id\":\"builtin-english\",\"filename\":\"packs/builtin-english.json\",\"name\":\"English\",\"version\":\"0.0.0\",\"enabled\":true,\"uploaderName\":\"pipette\",\"savedAt\":\"1970-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"filename\":\"packs/00000000-0000-4000-8000-000000000001.json\",\"name\":\"Gamma Renamed\",\"version\":\"1.0.0\",\"enabled\":true,\"hubPostId\":\"\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:02:00.001Z\",\"body\":\"2026-10-16T12:02:00.001Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\",\"enabled\":\"2026-10-16T12:02:00.002Z\"},\"updatedAt\":\"2026-10-16T12:02:00.002Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"filename\":\"packs/00000000-0000-4000-8000-000000000002.json\",\"name\":\"Epsilon\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:02:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000003\",\"filename\":\"packs/00000000-0000-4000-8000-000000000003.json\",\"name\":\"Delta\",\"version\":\"3.0.0\",\"enabled\":false,\"savedAt\":\"2026-10-16T12:03:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:03:00.000Z\",\"body\":\"2026-10-16T12:03:00.000Z\",\"name\":\"2026-10-16T12:03:00.000Z\",\"hub\":\"2026-10-16T12:03:00.000Z\",\"enabled\":\"2026-10-16T12:03:00.000Z\"},\"updatedAt\":\"2026-10-16T12:03:00.000Z\"},{\"id\":\"custom_id-1\",\"filename\":\"packs/custom_id-1.json\",\"name\":\"Zeta\",\"version\":\"1.1.0\",\"enabled\":true,\"hubPostId\":\"post-z\",\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.001Z\",\"body\":\"2026-10-16T12:04:00.001Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.001Z\"},\"updatedAt\":\"2026-10-16T12:04:00.001Z\"},{\"id\":\"00000000-0000-4000-8000-000000000004\",\"filename\":\"packs/00000000-0000-4000-8000-000000000004.json\",\"name\":\"Eta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000005\",\"filename\":\"packs/00000000-0000-4000-8000-000000000005.json\",\"name\":\"Theta\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000006\",\"filename\":\"packs/00000000-0000-4000-8000-000000000006.json\",\"name\":\"Iota\",\"version\":\"1.0.0\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000007\",\"filename\":\"packs/00000000-0000-4000-8000-000000000007.json\",\"name\":\"Kappa\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-16T12:04:00.000Z\",\"appVersionAtImport\":\"1.2.3\",\"matchedBaseVersion\":\"0.9.0\",\"coverage\":{\"totalKeys\":10,\"coveredKeys\":10},\"dangerousKeyCount\":0,\"clocks\":{\"created\":\"2026-10-16T12:04:00.000Z\",\"body\":\"2026-10-16T12:04:00.000Z\",\"name\":\"2026-10-16T12:04:00.000Z\",\"hub\":\"2026-10-16T12:04:00.000Z\",\"enabled\":\"2026-10-16T12:04:00.000Z\"},\"updatedAt\":\"2026-10-16T12:04:00.000Z\"}]}"
     ],
     "defaultPaths": [
+      null,
+      null,
       null,
       null,
       null,
@@ -869,6 +903,8 @@
       "i18n/index",
       "i18n/packs/custom_id-1",
       "i18n/index",
+      "i18n/packs/custom_id-1",
+      "i18n/index",
       "i18n/packs/00000000-0000-4000-8000-000000000004",
       "i18n/index",
       "i18n/packs/00000000-0000-4000-8000-000000000005",
@@ -882,7 +918,7 @@
       "sync/": null,
       "sync/i18n/": null,
       "sync/i18n/index.json": {
-        "sha256": "9347b58eb8d35bb8bb4e64ca76ad97aff6f1377e0e0a1e799602aca6d69e60a3",
+        "sha256": "67726e6175105cb56658b2373adc4ff6b99e7b64527c1aa70625ff740d2c8b76",
         "size": 4999
       },
       "sync/i18n/packs/": null,
@@ -894,7 +930,7 @@
       "sync/i18n/packs/00000000-0000-4000-8000-000000000006.json": "{\n  \"name\": \"Iota\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Iota)\"\n  }\n}",
       "sync/i18n/packs/00000000-0000-4000-8000-000000000007.json": "{\n  \"2\": \"index key\",\n  \"name\": \"Kappa\",\n  \"version\": \"1\",\n  \"__proto__\": \"kept\",\n  \"nested\": [\n    1,\n    2.5,\n    1e+21\n  ]\n}",
       "sync/i18n/packs/builtin-english.json": "{\n  \"name\": \"English\",\n  \"version\": \"0.0.0\"\n}",
-      "sync/i18n/packs/custom_id-1.json": "{\n  \"name\": \"Zeta\",\n  \"version\": \"1.0.0\",\n  \"common\": {\n    \"save\": \"Save (Zeta)\"\n  }\n}"
+      "sync/i18n/packs/custom_id-1.json": "{\n  \"name\": \"zeta\",\n  \"version\": \"1.1.0\",\n  \"common\": {\n    \"save\": \"Save (zeta)\"\n  }\n}"
     }
   },
   {

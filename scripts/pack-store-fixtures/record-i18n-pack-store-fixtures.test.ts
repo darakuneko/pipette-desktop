@@ -235,6 +235,8 @@ const SCENARIOS: Scenario[] = [
       apply(pack('ENGLISH'), {}),
       apply(pack('Zeta'), { id: '../bad' }),
       apply(pack('Zeta'), { id: 'custom_id-1', hubPostId: 'post-z' }),
+      apply(pack('zeta', { version: '1.1.0' }), { id: '' }),
+      apply(pack('Omega'), { id: '' }),
       apply({ name: 'No version' }, {}),
       apply({ name: ' ', version: '1' }, {}),
       apply([{ name: 'Array', version: '1' }], {}),
