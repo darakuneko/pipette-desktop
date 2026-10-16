@@ -117,7 +117,7 @@ pub async fn backfill_keyboard_meta(
     }
     let mut names: Vec<Option<JsString>> = vec![None; missing.len()];
     while let Some(done) = tasks.join_next().await {
-        // A task that panicked resolves nothing (`Promise.allSettled`).
+        // A task that panicked names nothing: its keyboard is listed as failed.
         if let Ok((at, name)) = done {
             names[at] = name;
         }

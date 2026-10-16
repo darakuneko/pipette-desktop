@@ -26,7 +26,7 @@ use pipette_entry_store::{
     Entry, EntryGroup, EntryStore, OverwriteOptions, id_body_filename, is_safe_key, is_safe_path,
     normalize_entries, normalize_entry, overwrite_entry, read_index_dir_migrated, touch_clock,
 };
-use pipette_js_json::{JsString, Object, ParseError, Value};
+use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
 use pipette_time::date_value_ms;
 
@@ -314,11 +314,9 @@ fn plan_settings_bundle(dir: &Path, bundle: &Value) -> Result<Option<PlannedWrit
     if let Some(bytes) = &local {
         let newer = match pipette_js_json::parse(&lossy(bytes)) {
             Ok(local) => updated_at_ms(&local).zip(updated_at_ms(&remote)).is_none_or(|(l, r)| r > l),
-            Err(err) if is_too_deep(&err) => {
-                return Err(LocalDataImportError::Type(format!(
-                    "{}: nested too deeply to read",
-                    path.display()
-                )));
+            Err(err) if err.is_nesting_too_deep() => {
+                let text = format!("{}: nested too deeply to read", path.display());
+                return Err(LocalDataImportError::Io(io::Error::other(text)));
             }
             // A local file that is not JSON is replaced.
             Err(_) => true,
@@ -328,10 +326,6 @@ fn plan_settings_bundle(dir: &Path, bundle: &Value) -> Result<Option<PlannedWrit
         }
     }
     Ok(Some(PlannedWrite::new(path, remote_content, local)))
-}
-
-fn is_too_deep(err: &ParseError) -> bool {
-    err.is_nesting_too_deep()
 }
 
 /// The safe keys of `data[category]`, with their bundles, in the object's
@@ -566,5 +560,32 @@ mod tests {
         let fs = FailingFs { writes: AtomicUsize::new(0), fail_write: 2, fail_remove: false };
         import_with(&ctx, &file, &fs).unwrap_err();
         assert_eq!(std::fs::read(dir.join("s_e0.pipette")).unwrap(), b"\xff\xfe old");
+    }
+
+    #[test]
+    fn local_files_too_deep_to_read_are_never_written_over() {
+        let (root, ctx, dir, _) = setup();
+        let deep = format!(
+            "{}{}",
+            "[".repeat(pipette_js_json::MAX_DEPTH + 1),
+            "]".repeat(pipette_js_json::MAX_DEPTH + 1)
+        );
+        let settings = root.path().join("sync/keyboards/uid1/pipette_settings.json");
+        std::fs::write(&settings, format!(r#"{{"_updatedAt":"2030-01-01T00:00:00.000Z","x":{deep}}}"#))
+            .unwrap();
+        std::fs::write(dir.join("index.json"), format!(r#"{{"uid":"uid1","entries":[],"x":{deep}}}"#))
+            .unwrap();
+        let before = read_existing(&settings).unwrap();
+        let settings_only = pipette_js_json::parse(
+            r#"{"version":1,"settings":{"uid1":{"files":{"pipette_settings.json":"{}"}}}}"#,
+        )
+        .unwrap();
+        assert!(import_local_data(&ctx, &settings_only).is_err());
+        assert_eq!(read_existing(&settings).unwrap(), before);
+        let snapshots = pipette_js_json::parse(
+            r#"{"version":1,"snapshots":{"uid1":{"index":{"entries":[{"id":"e1","filename":"s_e1.pipette"}]},"files":{}}}}"#,
+        )
+        .unwrap();
+        assert!(matches!(import_local_data(&ctx, &snapshots), Err(LocalDataImportError::CorruptedIndex(_))));
     }
 }
