@@ -12,9 +12,9 @@
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs, and so are
 // the Cloud Sync members (each listed with the module that holds it) but
-// the sign-in status, the password members, the sync of a scope with its
-// progress and applied-unit events, the sync format status and the export
-// and import of the local data.
+// the sign-in status, the password members, the password change members,
+// the sync of a scope with its progress and applied-unit events, the sync
+// format status and the export and import of the local data.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -304,7 +304,8 @@ const SYNC_MEMBERS = [
 
 /** The Cloud Sync members that are real: the sign-in, the sign-out, the
  *  sign-in and password statuses, setting and re-entering the password,
- *  whether Drive has a password-check, the sync of a scope with its progress
+ *  whether Drive has a password-check, the password change with its Drive
+ *  lock and the files no password opens, the sync of a scope with its progress
  *  and applied-unit events, the sync format status and its event, the export
  *  and import of the local data (backend commands) and the password strength
  *  check (in the shim). */
@@ -317,6 +318,15 @@ const SYNC_REAL = [
   'syncSetPassword',
   'syncReplacePassword',
   'syncCheckPasswordExists',
+  'syncChangePassword',
+  'syncPasswordChangeStatus',
+  'syncPasswordChangeResume',
+  'syncPasswordChangeRevert',
+  'syncPasswordChangeAbandon',
+  'syncPasswordChangeDeleteUndecryptable',
+  'syncPasswordChangeLockStatus',
+  'syncPasswordChangeReleaseLocks',
+  'syncListUndecryptable',
   'syncFormatStatus',
   'syncOnFormatStatusChanged',
   'syncExecute',

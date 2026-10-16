@@ -20,6 +20,7 @@ pub mod auth;
 pub mod data;
 pub mod execute;
 pub mod password;
+pub mod password_change;
 pub mod preflight;
 pub mod result;
 

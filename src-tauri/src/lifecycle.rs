@@ -32,7 +32,7 @@ use std::time::Duration;
 
 use pipette_hid::HidService;
 use pipette_sync_pending::PendingStore;
-use pipette_typing_analytics::Recorder;
+use pipette_typing_analytics::{Recorder, SyncRuntime};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
@@ -55,6 +55,9 @@ use crate::store_commands::sync_pending::{flush_phase, persist_after_quit};
 #[cfg(debug_assertions)]
 const DEV_QUIT_DELAY_MS_ENV: &str = "PIPETTE_DEV_QUIT_DELAY_MS";
 
+/// The passwordChange phase, which stops a running sync password change.
+const PASSWORD_CHANGE_PHASE: usize = 0;
+
 /// The preSyncFinalizers phase, which writes the typing analytics.
 const PRE_SYNC_FINALIZERS_PHASE: usize = 1;
 
@@ -65,9 +68,9 @@ const FLUSH_PENDING_PHASE: usize = 3;
 const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 
 /// The phases of the before-quit handler in src/main/sync/sync-flush.ts, in
-/// its order. Each one other than preSyncFinalizers and flushPending is a
-/// stub that waits for its configured time until the subsystem behind it is
-/// ported.
+/// its order. Each one other than passwordChange, preSyncFinalizers and
+/// flushPending is a stub that waits for its configured time until the
+/// subsystem behind it is ported.
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
@@ -318,8 +321,11 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let durations = phase_durations();
     let pending = app.state::<PendingStore>().inner().clone();
     let recorder = app.state::<Arc<Recorder>>().inner().clone();
+    let runtime = app.state::<SyncRuntime>().inner().clone();
     tauri::async_runtime::spawn(async move {
         let mut phases = stub_phases(durations);
+        phases[PASSWORD_CHANGE_PHASE] =
+            crate::sync_commands::password_change::quit_phase(runtime, QUIT_PHASES[PASSWORD_CHANGE_PHASE]);
         phases[PRE_SYNC_FINALIZERS_PHASE] = analytics_commands::record::quit_phase(
             recorder,
             QUIT_PHASES[PRE_SYNC_FINALIZERS_PHASE],
@@ -476,6 +482,7 @@ mod tests {
     #[test]
     fn the_delay_applies_to_flush_pending() {
         assert_eq!(QUIT_PHASES[DEV_DELAYED_PHASE], "flushPending");
+        assert_eq!(QUIT_PHASES[PASSWORD_CHANGE_PHASE], "passwordChange");
     }
 
     /// Runs the second instance handling on a mock app, counting the
