@@ -911,6 +911,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ef6b89e5b37196644d8796de5268852ff179b44e96276cf4290264843743bb7"
 
 [[package]]
+name = "encoding_rs"
+version = "0.8.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "endi"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2857,6 +2866,18 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "pipette-typing-text"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "encoding_rs",
+ "miniz_oxide 0.8.9",
+ "pipette-entry-store",
+ "pipette-js-json",
  "thiserror 2.0.21",
 ]
 

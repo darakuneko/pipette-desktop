@@ -8,6 +8,8 @@
 //
 // - SNAPSHOT_STORE_LIST / SNAPSHOT_STORE_LOAD of every keyboard;
 // - FAVORITE_STORE_LIST / FAVORITE_STORE_LOAD of every type;
+// - KEY_LABEL_STORE_LIST / KEY_LABEL_STORE_LIST_ALL / KEY_LABEL_STORE_GET of
+//   every live key label;
 // - LIST_STORED_KEYBOARDS, and the keyboard names as keyboard-meta.ts reads
 //   them;
 // - PIPETTE_SETTINGS_GET and PIPETTE_SETTINGS_LIST_ALL_TYPING_RESULTS,
@@ -84,6 +86,7 @@ vi.mock('../../src/tauri-shim/ipc', () => ({
 
 import { setupSnapshotStore } from '../../src/main/snapshot-store'
 import { setupFavoriteStore } from '../../src/main/favorite-store'
+import { setupKeyLabelStore } from '../../src/main/key-label-ipc'
 import { setupPipetteSettingsStore } from '../../src/main/pipette-settings-store'
 import { setupSyncIpc } from '../../src/main/sync/sync-ipc'
 import { getActiveKeyboardMetaMap, readKeyboardMetaIndex } from '../../src/main/sync/keyboard-meta'
@@ -104,6 +107,8 @@ interface Loaded {
 interface Answers {
   snapshots: Record<string, Loaded>
   favorites: Record<string, Loaded>
+  /** The key label answers as JSON text: the lists, and each live label's get by id. */
+  keyLabels: { list: string; listAll: string; gets: Record<string, string> }
   settings: Record<string, { content: string | null; etag: string }>
   /** The `pipette_settings_read_all` answer, as JSON text. */
   settingsReadAll: string
@@ -140,6 +145,7 @@ describe('the userData tree the Rust stores write', () => {
   paths.userData = copy
   setupSnapshotStore()
   setupFavoriteStore()
+  setupKeyLabelStore()
   setupPipetteSettingsStore()
   setupSyncIpc()
 
@@ -166,6 +172,19 @@ describe('the userData tree the Rust stores write', () => {
     // still loads.
     const macro = JSON.parse(answers.favorites.macro.list) as { entries: { id: string }[] }
     expect(macro.entries.map((e) => e.id)).toContain('legacy-1')
+  })
+
+  it('lists and reads the key labels as the crate does, without writing', async () => {
+    notified.length = 0
+    const rust = answers.keyLabels
+    expect(JSON.stringify(await handler(IpcChannels.KEY_LABEL_STORE_LIST)({}))).toBe(rust.list)
+    expect(JSON.stringify(await handler(IpcChannels.KEY_LABEL_STORE_LIST_ALL)({}))).toBe(rust.listAll)
+    expect(Object.keys(rust.gets)).toHaveLength(3)
+    for (const [id, get] of Object.entries(rust.gets)) {
+      expect(JSON.stringify(await handler(IpcChannels.KEY_LABEL_STORE_GET)({}, id))).toBe(get)
+    }
+    // QWERTY already has its author, so the lists wrote nothing.
+    expect(notified).toEqual([])
   })
 
   it('reads the pipette settings and the typing results as the shim does on the crate’s answers', async () => {

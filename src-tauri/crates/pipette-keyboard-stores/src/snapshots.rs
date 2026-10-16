@@ -21,7 +21,7 @@
 
 use std::fs;
 use std::io;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use pipette_entry_store::{
     Entry, EntryError, EntryGroup, EntryList, EntryMutation, EntryStore, MetaGroup, OverwriteOptions,
@@ -31,6 +31,7 @@ use pipette_entry_store::{
 use pipette_js_json::{JsString, Object, Value};
 use pipette_time::{iso_8601_millis, iso_8601_millis_checked};
 
+use crate::entry_files::{BodyPathError, body_path, body_path_of, entry_error_text, read_text};
 use crate::keyboard_meta::{KEYBOARD_META_SYNC_UNIT, MetaOutcome, upsert_keyboard_meta};
 use crate::snapshot_filename::build_snapshot_filename;
 use crate::{StoreContext, StoreError};
@@ -81,10 +82,12 @@ pub enum SnapshotError {
     Meta(StoreError),
 }
 
-fn entry_error_text(err: &EntryError) -> String {
-    match err {
-        EntryError::TimeOutOfRange => format!("RangeError: {err}"),
-        EntryError::UnattendedRevive => format!("Error: {err}"),
+impl From<BodyPathError> for SnapshotError {
+    fn from(err: BodyPathError) -> Self {
+        match err {
+            BodyPathError::Invalid => SnapshotError::InvalidFilename,
+            BodyPathError::NotString => SnapshotError::FilenameNotString,
+        }
     }
 }
 
@@ -168,30 +171,6 @@ fn read_index_locked(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotErr
     Ok(index)
 }
 
-/// `dir` joined with a body filename that is one path segment.
-fn body_path_of(dir: &Path, filename: &str) -> Result<PathBuf, SnapshotError> {
-    let mut components = Path::new(filename).components();
-    let single = matches!((components.next(), components.next()), (Some(Component::Normal(_)), None));
-    if !is_safe_path_segment(filename) || !single {
-        return Err(SnapshotError::InvalidFilename);
-    }
-    Ok(dir.join(filename))
-}
-
-/// The body file of `entry` (`getSafeFilePath`). A filename with a lone
-/// surrogate maps to the file of its lossy form, as Node's file calls do.
-fn body_path(dir: &Path, entry: &Entry) -> Result<PathBuf, SnapshotError> {
-    match entry.get("filename") {
-        Some(Value::String(name)) => body_path_of(dir, &name.to_string_lossy()),
-        Some(value) if value.is_truthy() => Err(SnapshotError::FilenameNotString),
-        _ => Err(SnapshotError::InvalidFilename),
-    }
-}
-
-fn read_body(path: &Path) -> Result<String, SnapshotError> {
-    Ok(String::from_utf8_lossy(&fs::read(path)?).into_owned())
-}
-
 fn find_entry(entries: &[Entry], id: &str) -> Option<usize> {
     entries.iter().position(|entry| entry.id().is_some_and(|own| own.as_str() == Some(id)))
 }
@@ -228,7 +207,10 @@ pub fn save_snapshot(
         let now = ctx.now_ms();
         let id = ctx.new_id();
         let filename = build_snapshot_filename(&sanitize_filename(device_name), &ts_for_filename(now), &id);
-        pipette_fs::write_file_atomic(&body_path_of(&dir, &filename)?, json.as_bytes())?;
+        pipette_fs::write_file_atomic(
+            &body_path_of(&dir, &filename).ok_or(SnapshotError::InvalidFilename)?,
+            json.as_bytes(),
+        )?;
 
         let mut fields = Object::new();
         fields.insert("id", id.into());
@@ -260,7 +242,7 @@ pub fn load_snapshot(ctx: &StoreContext, uid: &str, id: &str) -> Result<String, 
     if entry.is_deleted() {
         return Err(SnapshotError::Deleted);
     }
-    read_body(&body_path(&dir, entry)?)
+    Ok(read_text(&body_path(&dir, entry)?)?)
 }
 
 /// Writes `json` over the body of `uid`'s snapshot `id`
@@ -292,14 +274,14 @@ pub fn update_snapshot(
         }
         // Checked where the handler checks it: after the deleted check of a
         // migration.
-        let path = body_path(&dir, entry);
+        let path = body_path(&dir, entry).map_err(SnapshotError::from);
         let updated = match migrate_from {
             Some(from) => {
                 if entry.is_deleted() {
                     return Err(SnapshotError::Deleted);
                 }
                 let path = path?;
-                if read_body(&path)? != from {
+                if read_text(&path)? != from {
                     return Err(SnapshotError::Changed);
                 }
                 pipette_fs::write_file_atomic(&path, json.as_bytes())?;

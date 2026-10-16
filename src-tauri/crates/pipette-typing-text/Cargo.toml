@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-typing-text"
+description = "The Typing Test text rules with JavaScript's string semantics: the import normalization, the kana-only check, and the Aozora Bunko zip, Shift_JIS and cleaning steps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# The JIS X 0208 index behind the Shift_JIS decoder of src/shift_jis.rs,
+# which follows Electron's TextDecoder('shift_jis') (see the fixtures).
+encoding_rs = "=0.8.35"
+# Raw DEFLATE for the zip entries; the zip container itself is read here.
+miniz_oxide = { version = "=0.8.9", features = ["with-alloc"] }
+# `\s` and `trim()` of JavaScript (`is_js_whitespace`, `trim_js_whitespace`).
+pipette-entry-store = { path = "../pipette-entry-store" }
+thiserror = "=2.0.21"
+
+[dev-dependencies]
+# The zips of the fixtures.
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
+# The fixtures hold JavaScript strings, lone surrogates included.
+pipette-js-json = { path = "../pipette-js-json" }
+
+[lints]
+workspace = true

@@ -68,7 +68,7 @@ describe('implemented', () => {
 
   it('answers the Hub requests of the language packs as failed', async () => {
     const api = createVialApi(implemented)
-    const failed = { success: false, error: 'Hub is not available' }
+    const failed = { success: false }
     await expect(api.i18nPackHubTimestamps(['post-1'])).resolves.toEqual(failed)
     await expect(api.hubListI18nPosts()).resolves.toEqual(failed)
     await expect(api.hubDownloadI18nPost('post-1')).resolves.toEqual(failed)
@@ -78,7 +78,6 @@ describe('implemented', () => {
   it('answers the store calls of connecting a keyboard as a fresh install', async () => {
     const api = createVialApi(implemented)
     await expect(api.typingRunLogList('uid')).resolves.toEqual({ success: true, entries: [] })
-    await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
     await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
   })
 
@@ -87,6 +86,14 @@ describe('implemented', () => {
     const api = createVialApi(implemented)
     await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
     expect(invoke).toHaveBeenCalledWith('app_config_get_all', undefined)
+  })
+
+  it('asks the backend for the key labels and answers the key label Hub as unavailable', async () => {
+    invoke.mockResolvedValueOnce({ success: true, data: [] })
+    const api = createVialApi(implemented)
+    await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
+    expect(invoke).toHaveBeenCalledWith('key_label_store_list', undefined)
+    await expect(api.keyLabelHubTimestamps([])).resolves.toEqual({ success: false })
   })
 
   it('asks the backend for the snapshots of a keyboard', async () => {

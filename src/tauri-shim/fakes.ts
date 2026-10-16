@@ -9,10 +9,11 @@
 
 import type { VialAPI } from '../shared/types/vial-api'
 
-/** A Hub request that failed. */
-function hubUnavailable(): Promise<{ success: false; error: string }> {
-  return Promise.resolve({ success: false, error: 'Hub is not available' })
-}
+/** The answer of a Hub member before the backend reaches the Hub. It has
+ *  no `error`: without one the renderer shows its own localized failure
+ *  message (the search's `keyLabels.errorSearchFailed`, the row actions'
+ *  `keyLabels.errorGeneric` through `translateError`). */
+const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
   // Tray.
@@ -32,18 +33,27 @@ export const fakes = {
   // Hub-linked packs and the Hub tab's list) or after a local change (the
   // sync after renaming a Hub-linked pack), so each answers a failed
   // request.
-  i18nPackHubTimestamps: () => hubUnavailable(),
-  hubListI18nPosts: () => hubUnavailable(),
-  hubDownloadI18nPost: () => hubUnavailable(),
-  hubUploadI18nPost: () => hubUnavailable(),
-  hubUpdateI18nPost: () => hubUnavailable(),
-  hubDeleteI18nPost: () => hubUnavailable(),
+  i18nPackHubTimestamps: hubUnavailable,
+  hubListI18nPosts: hubUnavailable,
+  hubDownloadI18nPost: hubUnavailable,
+  hubUploadI18nPost: hubUnavailable,
+  hubUpdateI18nPost: hubUnavailable,
+  hubDeleteI18nPost: hubUnavailable,
 
   // Theme packs.
   themePackList: () => Promise.resolve({ success: true, data: [] }),
 
-  // Key label store.
-  keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
+  // Key label Hub. The renderer reads the result of each without a guard
+  // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers
+  // a failure rather than nothing. The Hub detail is read in a try block and
+  // stays a stub.
+  keyLabelHubList: hubUnavailable,
+  keyLabelHubDownload: hubUnavailable,
+  keyLabelHubUpload: hubUnavailable,
+  keyLabelHubUpdate: hubUnavailable,
+  keyLabelHubSync: hubUnavailable,
+  keyLabelHubTimestamps: hubUnavailable,
+  keyLabelHubDelete: hubUnavailable,
 
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),

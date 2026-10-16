@@ -10,6 +10,7 @@ import { deviceApi } from './api/device'
 import { favoritesApi } from './api/favorites'
 import { filesApi } from './api/files'
 import { i18nPacksApi } from './api/i18n-packs'
+import { keyLabelsApi } from './api/key-labels'
 import { keyboardDataApi } from './api/keyboard-data'
 import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
@@ -28,6 +29,7 @@ export const real = {
   ...filesApi,
   ...keyboardDataApi,
   ...favoritesApi,
+  ...keyLabelsApi,
   ...snapshotsApi,
   ...settingsApi,
   ...i18nPacksApi,

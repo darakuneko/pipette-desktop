@@ -12,7 +12,7 @@
 //! tree with the real handlers of the Electron build and compares their
 //! answers with these, byte for byte.
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::panic)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -22,12 +22,14 @@ use std::time::Duration;
 use pipette_entry_store::{SystemClock, WriteLocks};
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::{
-    FavoriteImport, FavoriteType, SETTINGS_ETAG_ABSENT, StoreContext, delete_favorite, delete_snapshot,
-    field, import_favorites, keyboard_meta_name_if_missing, keyboard_settings_files_json, list_favorites,
-    list_snapshots, list_stored_keyboards, load_favorite, load_snapshot, read_all_pipette_settings,
-    read_pipette_settings, rename_favorite, rename_snapshot, response_json, save_favorite, save_snapshot,
-    set_favorite_hub_post_id, set_snapshot_hub_private, stored_keyboards_json, update_snapshot,
-    write_pipette_settings,
+    FavoriteImport, FavoriteType, KeyLabelSave, SETTINGS_ETAG_ABSENT, StoreContext, delete_favorite,
+    delete_key_label, delete_snapshot, field, get_key_label, import_favorites, import_key_label_files,
+    key_label_response, keyboard_meta_name_if_missing, keyboard_settings_files_json, list_favorites,
+    list_key_labels, list_snapshots, list_stored_keyboards, load_favorite, load_snapshot,
+    read_all_pipette_settings, read_pipette_settings, rename_favorite, rename_key_label, rename_snapshot,
+    reorder_key_labels, response_json, save_favorite, save_key_label, save_snapshot,
+    set_favorite_hub_post_id, set_key_label_hub_post_id, set_snapshot_hub_private, stored_keyboards_json,
+    update_snapshot, write_pipette_settings,
 };
 use pipette_sync_pending::{PendingStore, Scheduler};
 
@@ -178,6 +180,47 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     )
     .unwrap();
 
+    // Key labels: QWERTY from the first list, two imported files (one with
+    // the Hub download's snake-case fields), a rename, a Hub link, a
+    // reorder and a delete.
+    list_key_labels(&ctx, false).unwrap();
+    let label_files = out.join("key-label-files");
+    let colemak = label_files.join("colemak.json");
+    write(
+        &colemak,
+        r#"{"name":"Colemak","map":{"KC_E":"F"},"composite_labels":{"KC_A":"Å"},"keymap_applicable":true}"#,
+    );
+    let french = label_files.join("french.json");
+    write(&french, r#"{"name":"French 😀","map":{"KC_Q":"A"}}"#);
+    let imported = import_key_label_files(&ctx, &[colemak, french]);
+    let imported_ids: Vec<JsString> = match imported.get("imported") {
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|item| JsString::from(id_of(item.as_object().unwrap().get("meta").unwrap())))
+            .collect(),
+        other => panic!("{other:?}"),
+    };
+    rename_key_label(&ctx, &imported_ids[1], &JsString::from("Français")).unwrap();
+    set_key_label_hub_post_id(&ctx, &imported_ids[0], Some(&JsString::from("hub-colemak")), None, None)
+        .unwrap();
+    reorder_key_labels(&ctx, &[imported_ids[1].clone(), JsString::from("qwerty")]).unwrap();
+    let gone = save_key_label(
+        &ctx,
+        &KeyLabelSave {
+            id: None,
+            name: JsString::from("Gone"),
+            uploader_name: None,
+            map: Value::Object(Object::new()),
+            composite_labels: None,
+            keymap_applicable: false,
+            hub_post_id: None,
+            hub_updated_at: None,
+            keep_current_name: false,
+        },
+    )
+    .unwrap();
+    delete_key_label(&ctx, &gone.id().unwrap().clone()).unwrap();
+
     // What the stores answer on the finished tree. The stored-keyboard list
     // goes last: it may record names.
     let mut answers = Object::new();
@@ -212,6 +255,27 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
         favorites.insert(ty.name(), Value::Object(answer));
     }
     answers.insert("favorites", Value::Object(favorites));
+
+    let live = list_key_labels(&ctx, false).unwrap();
+    let mut gets = Object::new();
+    for entry in &live {
+        let id = id_of(&Value::from(entry.clone()));
+        let record =
+            get_key_label(&ctx, &JsString::from(id.as_str())).map(|record| Some(Value::Object(record)));
+        gets.insert(id, key_label_response(record).into());
+    }
+    let mut key_labels = Object::new();
+    key_labels.insert(
+        "list",
+        key_label_response(Ok(Some(Value::Array(live.into_iter().map(Value::from).collect())))).into(),
+    );
+    let all = list_key_labels(&ctx, true).unwrap();
+    key_labels.insert(
+        "listAll",
+        key_label_response(Ok(Some(Value::Array(all.into_iter().map(Value::from).collect())))).into(),
+    );
+    key_labels.insert("gets", Value::Object(gets));
+    answers.insert("keyLabels", Value::Object(key_labels));
 
     let mut settings_files = Object::new();
     for (uid, _) in &settings {
