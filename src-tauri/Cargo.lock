@@ -2770,6 +2770,7 @@ dependencies = [
  "pipette-pack-stores",
  "pipette-sync-pending",
  "pipette-typing-analytics",
+ "pipette-typing-analytics-db",
  "pipette-typing-datasets",
  "rfd",
  "serde",
@@ -2980,6 +2981,8 @@ dependencies = [
 name = "pipette-typing-analytics-db"
 version = "0.0.0"
 dependencies = [
+ "pipette-js-json",
+ "pipette-time",
  "rusqlite",
  "serde",
  "serde_json",

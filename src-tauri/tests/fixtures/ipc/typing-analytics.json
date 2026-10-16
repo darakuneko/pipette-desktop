@@ -1,0 +1,41 @@
+[
+  {
+    "member": "typingAnalyticsListKeyboards",
+    "args": [],
+    "command": "typing_analytics_list_keyboards",
+    "invokeArgs": {},
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListItems",
+    "args": ["0xA1B2", ["Code"], ["words (english)"], ["run-1"]],
+    "command": "typing_analytics_list_items",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "appScopes": ["Code"],
+      "typingTestScopes": ["words (english)"],
+      "runIdScopes": ["run-1"]
+    },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListItemsLocal",
+    "args": ["0xA1B2"],
+    "command": "typing_analytics_list_items_local",
+    "invokeArgs": { "uid": "0xA1B2", "appScopes": [], "typingTestScopes": [], "runIdScopes": [] },
+    "response": []
+  },
+  {
+    "member": "typingAnalyticsListItemsForHash",
+    "args": ["0xA1B2", "hash-1"],
+    "command": "typing_analytics_list_items_for_hash",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "machineHash": "hash-1",
+      "appScopes": [],
+      "typingTestScopes": [],
+      "runIdScopes": []
+    },
+    "response": []
+  }
+]

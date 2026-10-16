@@ -5,7 +5,7 @@
 //! applies its steps to a fresh database and must end with every table
 //! identical cell by cell (storage class included) and every query row
 //! identical to the bit. The databases are files, so a second connection
-//! can read the tables back.
+//! can read the tables back, and add the trigger that makes a step fail.
 
 #![allow(clippy::unwrap_used)]
 
@@ -71,8 +71,9 @@ pub fn assert_queries(db: &TypingAnalyticsDb, queries: &Value, label: &str) {
         let rows = db
             .minute_stats_in_range(
                 q["uid"].as_str().unwrap(),
-                i64_of(q, "sinceMs"),
-                i64_of(q, "untilMs"),
+                None,
+                q["sinceMs"].as_f64().unwrap(),
+                q["untilMs"].as_f64().unwrap(),
                 &filters,
             )
             .unwrap();
@@ -98,6 +99,11 @@ fn check_scenario(name: &str) {
     for (i, (step, want)) in
         s["steps"].as_array().unwrap().iter().zip(s["applied"].as_array().unwrap()).enumerate()
     {
+        if let Some(sql) = step.get("failSql") {
+            // A trigger made through a second connection: a schema change the
+            // crate's connection picks up on its next statement.
+            rusqlite::Connection::open(&path).unwrap().execute_batch(sql.as_str().unwrap()).unwrap();
+        }
         let got = apply_step(&mut db, step);
         assert_eq!(applied_json(&got), *want, "{name}: step {i} ({got:?})");
     }
@@ -118,6 +124,19 @@ fn reapply_then_rollback() {
 #[test]
 fn day_hiding_ranges() {
     check_scenario("day-hiding-ranges");
+}
+
+/// The tombstones of the ranges fail after the day's rows were applied:
+/// none of them stays.
+#[test]
+fn day_hiding_ranges_failing_tombstone() {
+    check_scenario("day-hiding-ranges-failing-tombstone");
+}
+
+/// Applying the rows fails before the ranges are tombstoned.
+#[test]
+fn orphan_hiding_ranges() {
+    check_scenario("orphan-hiding-ranges");
 }
 
 /// The bundled SQLite next to the one better-sqlite3 ships, for the record;

@@ -21,6 +21,7 @@
     "typing-analytics-keymaps",
     "settings",
     "typing-datasets",
+    "typing-analytics",
     "i18n-packs",
     "theme-packs",
     "core:event:allow-listen",

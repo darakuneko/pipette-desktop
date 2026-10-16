@@ -238,16 +238,167 @@ CREATE TABLE IF NOT EXISTS typing_sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_scope_start ON typing_sessions(scope_id, start_ms);
 "#;
 
-/// One meta value by key (`getMetaStmt`, meta-statements.ts).
+/// `getMetaStmt` of `prepareMetaStatements` (meta-statements.ts).
 pub const GET_META: &str = r#"SELECT value FROM typing_analytics_meta WHERE key = ?"#;
 
-/// Upsert of one meta value (`setMetaStmt`, meta-statements.ts).
+/// `setMetaStmt` of `prepareMetaStatements` (meta-statements.ts).
 pub const SET_META: &str = r#"
       INSERT INTO typing_analytics_meta (key, value) VALUES (@key, @value)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value
     "#;
 
-/// LWW upsert of a scope (`mergeScopeStmt`, merge-statements.ts).
+/// `upsertScopeStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const UPSERT_SCOPE: &str = r#"
+      INSERT INTO typing_scopes (
+        id, machine_hash, os_platform, os_release, os_arch,
+        keyboard_uid, keyboard_vendor_id, keyboard_product_id, keyboard_product_name,
+        updated_at, is_deleted
+      ) VALUES (
+        @id, @machineHash, @osPlatform, @osRelease, @osArch,
+        @keyboardUid, @keyboardVendorId, @keyboardProductId, @keyboardProductName,
+        @updatedAt, 0
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        machine_hash = excluded.machine_hash,
+        os_platform = excluded.os_platform,
+        os_release = excluded.os_release,
+        os_arch = excluded.os_arch,
+        keyboard_uid = excluded.keyboard_uid,
+        keyboard_vendor_id = excluded.keyboard_vendor_id,
+        keyboard_product_id = excluded.keyboard_product_id,
+        keyboard_product_name = excluded.keyboard_product_name,
+        updated_at = excluded.updated_at,
+        is_deleted = 0
+      WHERE excluded.updated_at > typing_scopes.updated_at
+    "#;
+
+/// `upsertCharMinuteStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const UPSERT_CHAR_MINUTE: &str = r#"
+      INSERT INTO typing_char_minute (scope_id, minute_ts, char, count, app_name, typing_test, run_id, updated_at, is_deleted)
+      VALUES (@scopeId, @minuteTs, @char, @count, @appName, @typingTest, @runId, @updatedAt, 0)
+      ON CONFLICT(scope_id, minute_ts, run_id, char) DO UPDATE SET
+        count = typing_char_minute.count + excluded.count,
+        app_name = CASE
+          WHEN typing_char_minute.app_name IS excluded.app_name THEN typing_char_minute.app_name
+          ELSE NULL
+        END,
+        typing_test = CASE
+          WHEN typing_char_minute.typing_test IS excluded.typing_test THEN typing_char_minute.typing_test
+          ELSE NULL
+        END,
+        updated_at = excluded.updated_at,
+        is_deleted = 0
+    "#;
+
+/// `upsertMatrixMinuteStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const UPSERT_MATRIX_MINUTE: &str = r#"
+      INSERT INTO typing_matrix_minute (
+        scope_id, minute_ts, row, col, layer, keycode, count,
+        tap_count, hold_count,
+        app_name, typing_test, run_id,
+        updated_at, is_deleted
+      )
+      VALUES (
+        @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
+        @tapCount, @holdCount,
+        @appName, @typingTest, @runId,
+        @updatedAt, 0
+      )
+      ON CONFLICT(scope_id, minute_ts, run_id, row, col, layer) DO UPDATE SET
+        count = typing_matrix_minute.count + excluded.count,
+        tap_count = typing_matrix_minute.tap_count + excluded.tap_count,
+        hold_count = typing_matrix_minute.hold_count + excluded.hold_count,
+        keycode = excluded.keycode,
+        app_name = CASE
+          WHEN typing_matrix_minute.app_name IS excluded.app_name THEN typing_matrix_minute.app_name
+          ELSE NULL
+        END,
+        typing_test = CASE
+          WHEN typing_matrix_minute.typing_test IS excluded.typing_test THEN typing_matrix_minute.typing_test
+          ELSE NULL
+        END,
+        updated_at = excluded.updated_at,
+        is_deleted = 0
+    "#;
+
+/// `upsertMinuteStatsStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const UPSERT_MINUTE_STATS: &str = r#"
+      INSERT INTO typing_minute_stats (
+        scope_id, minute_ts, keystrokes, active_ms,
+        interval_avg_ms, interval_min_ms,
+        interval_p25_ms, interval_p50_ms, interval_p75_ms, interval_max_ms,
+        app_name, typing_test, run_id,
+        updated_at, is_deleted
+      )
+      VALUES (
+        @scopeId, @minuteTs, @keystrokes, @activeMs,
+        @intervalAvgMs, @intervalMinMs,
+        @intervalP25Ms, @intervalP50Ms, @intervalP75Ms, @intervalMaxMs,
+        @appName, @typingTest, @runId,
+        @updatedAt, 0
+      )
+      ON CONFLICT(scope_id, minute_ts, run_id) DO UPDATE SET
+        keystrokes = typing_minute_stats.keystrokes + excluded.keystrokes,
+        active_ms = typing_minute_stats.active_ms + excluded.active_ms,
+        interval_avg_ms = excluded.interval_avg_ms,
+        interval_min_ms = MIN(typing_minute_stats.interval_min_ms, excluded.interval_min_ms),
+        interval_p25_ms = excluded.interval_p25_ms,
+        interval_p50_ms = excluded.interval_p50_ms,
+        interval_p75_ms = excluded.interval_p75_ms,
+        interval_max_ms = MAX(typing_minute_stats.interval_max_ms, excluded.interval_max_ms),
+        app_name = CASE
+          WHEN typing_minute_stats.app_name IS excluded.app_name THEN typing_minute_stats.app_name
+          ELSE NULL
+        END,
+        typing_test = CASE
+          WHEN typing_minute_stats.typing_test IS excluded.typing_test THEN typing_minute_stats.typing_test
+          ELSE NULL
+        END,
+        updated_at = excluded.updated_at,
+        is_deleted = 0
+    "#;
+
+/// `insertSessionStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const INSERT_SESSION: &str = r#"
+      INSERT INTO typing_sessions (id, scope_id, start_ms, end_ms, updated_at, is_deleted)
+      VALUES (@id, @scopeId, @startMs, @endMs, @updatedAt, 0)
+      ON CONFLICT(id) DO UPDATE SET
+        start_ms = excluded.start_ms,
+        end_ms = excluded.end_ms,
+        updated_at = excluded.updated_at,
+        is_deleted = 0
+      WHERE excluded.updated_at > typing_sessions.updated_at
+    "#;
+
+/// `deleteCharMinuteBeforeStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const DELETE_CHAR_MINUTE_BEFORE: &str = r#"
+      DELETE FROM typing_char_minute
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND minute_ts < @cutoffMs
+    "#;
+
+/// `deleteMatrixMinuteBeforeStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const DELETE_MATRIX_MINUTE_BEFORE: &str = r#"
+      DELETE FROM typing_matrix_minute
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND minute_ts < @cutoffMs
+    "#;
+
+/// `deleteMinuteStatsBeforeStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const DELETE_MINUTE_STATS_BEFORE: &str = r#"
+      DELETE FROM typing_minute_stats
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND minute_ts < @cutoffMs
+    "#;
+
+/// `deleteSessionsBeforeStmt` of `prepareIngestStatements` (ingest-statements.ts).
+pub const DELETE_SESSIONS_BEFORE: &str = r#"
+      DELETE FROM typing_sessions
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND end_ms < @cutoffMs
+    "#;
+
+/// `mergeScopeStmt` of `prepareMergeStatements` (merge-statements.ts).
 pub const MERGE_SCOPE: &str = r#"
       INSERT INTO typing_scopes (
         id, machine_hash, os_platform, os_release, os_arch,
@@ -272,7 +423,7 @@ pub const MERGE_SCOPE: &str = r#"
       WHERE excluded.updated_at > typing_scopes.updated_at
     "#;
 
-/// LWW upsert of a char-minute row (`mergeCharMinuteStmt`, merge-statements.ts).
+/// `mergeCharMinuteStmt` of `prepareMergeStatements` (merge-statements.ts).
 pub const MERGE_CHAR_MINUTE: &str = r#"
       INSERT INTO typing_char_minute (
         scope_id, minute_ts, char, count, app_name, typing_test, run_id, updated_at, is_deleted
@@ -289,7 +440,7 @@ pub const MERGE_CHAR_MINUTE: &str = r#"
       WHERE excluded.updated_at > typing_char_minute.updated_at
     "#;
 
-/// LWW upsert of a matrix-minute row (`mergeMatrixMinuteStmt`, merge-statements.ts).
+/// `mergeMatrixMinuteStmt` of `prepareMergeStatements` (merge-statements.ts).
 pub const MERGE_MATRIX_MINUTE: &str = r#"
       INSERT INTO typing_matrix_minute (
         scope_id, minute_ts, row, col, layer, keycode, count,
@@ -320,7 +471,7 @@ pub const MERGE_MATRIX_MINUTE: &str = r#"
       WHERE excluded.updated_at > typing_matrix_minute.updated_at
     "#;
 
-/// LWW upsert of a minute-stats row (`mergeMinuteStatsStmt`, merge-statements.ts).
+/// `mergeMinuteStatsStmt` of `prepareMergeStatements` (merge-statements.ts).
 pub const MERGE_MINUTE_STATS: &str = r#"
       INSERT INTO typing_minute_stats (
         scope_id, minute_ts, keystrokes, active_ms,
@@ -356,7 +507,7 @@ pub const MERGE_MINUTE_STATS: &str = r#"
       WHERE excluded.updated_at > typing_minute_stats.updated_at
     "#;
 
-/// LWW upsert of a session (`mergeSessionStmt`, merge-statements.ts).
+/// `mergeSessionStmt` of `prepareMergeStatements` (merge-statements.ts).
 pub const MERGE_SESSION: &str = r#"
       INSERT INTO typing_sessions (
         id, scope_id, start_ms, end_ms, updated_at, is_deleted
@@ -373,49 +524,181 @@ pub const MERGE_SESSION: &str = r#"
       WHERE excluded.updated_at > typing_sessions.updated_at
     "#;
 
-/// LWW upsert of one bigram of a bigram-minute row (`merge` of `prepareNgramStatements` for typing_bigram_minute, ngram-statements.ts).
-pub const MERGE_BIGRAM_MINUTE: &str = r#"
-      INSERT INTO typing_bigram_minute (
-        scope_id, minute_ts, bigram_id, count, hist, sum_iki, sumsq_iki, overlap_count, overlap_n, app_name, typing_test, run_id, updated_at, is_deleted
-      )
-      VALUES (
-        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki, @overlapCount, @overlapN, @appName, @typingTest, @runId, @updatedAt, @isDeleted
-      )
-      ON CONFLICT(scope_id, minute_ts, run_id, bigram_id) DO UPDATE SET
-        count = excluded.count,
-        hist = excluded.hist,
-        sum_iki = excluded.sum_iki,
-        sumsq_iki = excluded.sumsq_iki,
-        overlap_count = excluded.overlap_count,
-        overlap_n = excluded.overlap_n,
-        app_name = excluded.app_name,
-        typing_test = excluded.typing_test,
-        updated_at = excluded.updated_at,
-        is_deleted = excluded.is_deleted
-      WHERE excluded.updated_at > typing_bigram_minute.updated_at
+/// `selectScopesForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_SCOPES_FOR_UID: &str = r#"
+      SELECT id, machine_hash AS machineHash,
+             os_platform AS osPlatform, os_release AS osRelease, os_arch AS osArch,
+             keyboard_uid AS keyboardUid,
+             keyboard_vendor_id AS keyboardVendorId,
+             keyboard_product_id AS keyboardProductId,
+             keyboard_product_name AS keyboardProductName,
+             updated_at AS updatedAt,
+             is_deleted AS isDeleted
+        FROM typing_scopes
+       WHERE keyboard_uid = @uid
+         AND (is_deleted = 0 OR updated_at >= @tombstoneSinceMs)
     "#;
 
-/// LWW upsert of one trigram of a trigram-minute row (`merge` of `prepareNgramStatements` for typing_trigram_minute, ngram-statements.ts).
-pub const MERGE_TRIGRAM_MINUTE: &str = r#"
-      INSERT INTO typing_trigram_minute (
-        scope_id, minute_ts, trigram_id, count, hist, sum_iki, sumsq_iki, app_name, typing_test, run_id, updated_at, is_deleted
-      )
-      VALUES (
-        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki, @appName, @typingTest, @runId, @updatedAt, @isDeleted
-      )
-      ON CONFLICT(scope_id, minute_ts, run_id, trigram_id) DO UPDATE SET
-        count = excluded.count,
-        hist = excluded.hist,
-        sum_iki = excluded.sum_iki,
-        sumsq_iki = excluded.sumsq_iki,
-        app_name = excluded.app_name,
-        typing_test = excluded.typing_test,
-        updated_at = excluded.updated_at,
-        is_deleted = excluded.is_deleted
-      WHERE excluded.updated_at > typing_trigram_minute.updated_at
+/// `selectCharMinutesForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_CHAR_MINUTES_FOR_UID: &str = r#"
+      SELECT c.scope_id AS scopeId, c.minute_ts AS minuteTs, c.char AS char,
+             c.count AS count, c.updated_at AS updatedAt, c.is_deleted AS isDeleted
+        FROM typing_char_minute c
+        JOIN typing_scopes s ON s.id = c.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (
+           (c.is_deleted = 0 AND c.minute_ts >= @liveSinceMinuteMs)
+           OR
+           (c.is_deleted = 1 AND c.updated_at >= @tombstoneSinceMs)
+         )
     "#;
 
-/// Tombstones one machine hash's char-minute rows in a deleted range (sync-statements.ts).
+/// `selectMatrixMinutesForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_MATRIX_MINUTES_FOR_UID: &str = r#"
+      SELECT m.scope_id AS scopeId, m.minute_ts AS minuteTs,
+             m.row AS row, m.col AS col, m.layer AS layer,
+             m.keycode AS keycode, m.count AS count,
+             m.tap_count AS tapCount, m.hold_count AS holdCount,
+             m.dur_hist AS dh, m.dur_sum AS ds, m.dur_sumsq AS dq,
+             m.updated_at AS updatedAt, m.is_deleted AS isDeleted
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (
+           (m.is_deleted = 0 AND m.minute_ts >= @liveSinceMinuteMs)
+           OR
+           (m.is_deleted = 1 AND m.updated_at >= @tombstoneSinceMs)
+         )
+    "#;
+
+/// `selectMinuteStatsForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_MINUTE_STATS_FOR_UID: &str = r#"
+      SELECT t.scope_id AS scopeId, t.minute_ts AS minuteTs,
+             t.keystrokes AS keystrokes, t.active_ms AS activeMs,
+             t.interval_avg_ms AS intervalAvgMs,
+             t.interval_min_ms AS intervalMinMs,
+             t.interval_p25_ms AS intervalP25Ms,
+             t.interval_p50_ms AS intervalP50Ms,
+             t.interval_p75_ms AS intervalP75Ms,
+             t.interval_max_ms AS intervalMaxMs,
+             t.poll_p50_ms AS pollP50Ms, t.poll_p95_ms AS pollP95Ms,
+             t.updated_at AS updatedAt, t.is_deleted AS isDeleted
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (
+           (t.is_deleted = 0 AND t.minute_ts >= @liveSinceMinuteMs)
+           OR
+           (t.is_deleted = 1 AND t.updated_at >= @tombstoneSinceMs)
+         )
+    "#;
+
+/// `selectSessionsForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_SESSIONS_FOR_UID: &str = r#"
+      SELECT x.id AS id, x.scope_id AS scopeId,
+             x.start_ms AS startMs, x.end_ms AS endMs,
+             x.updated_at AS updatedAt, x.is_deleted AS isDeleted
+        FROM typing_sessions x
+        JOIN typing_scopes s ON s.id = x.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (
+           (x.is_deleted = 0 AND x.start_ms >= @liveSinceStartMs)
+           OR
+           (x.is_deleted = 1 AND x.updated_at >= @tombstoneSinceMs)
+         )
+    "#;
+
+/// `selectLocalKeyboardUidsStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_LOCAL_KEYBOARD_UIDS: &str = r#"
+      SELECT DISTINCT keyboard_uid AS keyboardUid
+        FROM typing_scopes
+       WHERE machine_hash = @machineHash
+         AND is_deleted = 0
+    "#;
+
+/// `selectRemoteHashesForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_REMOTE_HASHES_FOR_UID: &str = r#"
+      WITH ranked AS (
+        SELECT s.machine_hash AS machineHash,
+               s.os_platform AS osPlatform,
+               s.os_release AS osRelease,
+               ROW_NUMBER() OVER (
+                 PARTITION BY s.machine_hash
+                 ORDER BY s.updated_at DESC, s.id ASC
+               ) AS rn
+          FROM typing_scopes s
+         WHERE s.keyboard_uid = @uid
+           AND s.machine_hash != @ownHash
+           AND s.is_deleted = 0
+           AND EXISTS (
+             SELECT 1 FROM typing_minute_stats t
+              WHERE t.scope_id = s.id AND t.is_deleted = 0
+           )
+      )
+      SELECT machineHash, osPlatform, osRelease
+        FROM ranked
+       WHERE rn = 1
+       ORDER BY machineHash
+    "#;
+
+/// `selectOwnScopeIdsForUidStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_OWN_SCOPE_IDS_FOR_UID: &str = r#"
+      SELECT id FROM typing_scopes
+       WHERE machine_hash = @machineHash
+         AND keyboard_uid = @uid
+         AND is_deleted = 0
+    "#;
+
+/// `selectLiveCharMinutesForScopeStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_LIVE_CHAR_MINUTES_FOR_SCOPE: &str = r#"
+      SELECT scope_id AS scopeId, minute_ts AS minuteTs, char, count
+        FROM typing_char_minute
+       WHERE scope_id = @scopeId
+         AND minute_ts >= @startMs
+         AND minute_ts < @endMs
+         AND is_deleted = 0
+    "#;
+
+/// `selectLiveMatrixMinutesForScopeStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_LIVE_MATRIX_MINUTES_FOR_SCOPE: &str = r#"
+      SELECT scope_id AS scopeId, minute_ts AS minuteTs,
+             row, col, layer, keycode, count,
+             tap_count AS tapCount, hold_count AS holdCount
+        FROM typing_matrix_minute
+       WHERE scope_id = @scopeId
+         AND minute_ts >= @startMs
+         AND minute_ts < @endMs
+         AND is_deleted = 0
+    "#;
+
+/// `selectLiveMinuteStatsForScopeStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_LIVE_MINUTE_STATS_FOR_SCOPE: &str = r#"
+      SELECT scope_id AS scopeId, minute_ts AS minuteTs,
+             keystrokes, active_ms AS activeMs,
+             interval_avg_ms AS intervalAvgMs,
+             interval_min_ms AS intervalMinMs,
+             interval_p25_ms AS intervalP25Ms,
+             interval_p50_ms AS intervalP50Ms,
+             interval_p75_ms AS intervalP75Ms,
+             interval_max_ms AS intervalMaxMs
+        FROM typing_minute_stats
+       WHERE scope_id = @scopeId
+         AND minute_ts >= @startMs
+         AND minute_ts < @endMs
+         AND is_deleted = 0
+    "#;
+
+/// `selectLiveSessionsForScopeStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const SELECT_LIVE_SESSIONS_FOR_SCOPE: &str = r#"
+      SELECT id, scope_id AS scopeId, start_ms AS startMs, end_ms AS endMs
+        FROM typing_sessions
+       WHERE scope_id = @scopeId
+         AND end_ms > @startMs
+         AND start_ms < @endMs
+         AND is_deleted = 0
+    "#;
+
+/// `tombstoneCharMinutesForHashInRangeStmt` of `prepareSyncStatements` (sync-statements.ts).
 pub const TOMBSTONE_CHAR_MINUTES_FOR_HASH_IN_RANGE: &str = r#"
       UPDATE typing_char_minute
          SET is_deleted = 1, updated_at = @updatedAt
@@ -429,7 +712,7 @@ pub const TOMBSTONE_CHAR_MINUTES_FOR_HASH_IN_RANGE: &str = r#"
          AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     "#;
 
-/// Tombstones one machine hash's matrix-minute rows in a deleted range (sync-statements.ts).
+/// `tombstoneMatrixMinutesForHashInRangeStmt` of `prepareSyncStatements` (sync-statements.ts).
 pub const TOMBSTONE_MATRIX_MINUTES_FOR_HASH_IN_RANGE: &str = r#"
       UPDATE typing_matrix_minute
          SET is_deleted = 1, updated_at = @updatedAt
@@ -443,7 +726,7 @@ pub const TOMBSTONE_MATRIX_MINUTES_FOR_HASH_IN_RANGE: &str = r#"
          AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     "#;
 
-/// Tombstones one machine hash's minute-stats rows in a deleted range (sync-statements.ts).
+/// `tombstoneMinuteStatsForHashInRangeStmt` of `prepareSyncStatements` (sync-statements.ts).
 pub const TOMBSTONE_MINUTE_STATS_FOR_HASH_IN_RANGE: &str = r#"
       UPDATE typing_minute_stats
          SET is_deleted = 1, updated_at = @updatedAt
@@ -457,35 +740,7 @@ pub const TOMBSTONE_MINUTE_STATS_FOR_HASH_IN_RANGE: &str = r#"
          AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     "#;
 
-/// Tombstones one machine hash's bigram rows in a deleted range (`tombstoneForHashInRange`, ngram-statements.ts).
-pub const TOMBSTONE_BIGRAM_MINUTES_FOR_HASH_IN_RANGE: &str = r#"
-      UPDATE typing_bigram_minute
-         SET is_deleted = 1, updated_at = @updatedAt
-       WHERE 
-  scope_id IN (
-    SELECT id FROM typing_scopes
-     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
-  )
-    AND is_deleted = 0
-
-         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
-    "#;
-
-/// Tombstones one machine hash's trigram rows in a deleted range (`tombstoneForHashInRange`, ngram-statements.ts).
-pub const TOMBSTONE_TRIGRAM_MINUTES_FOR_HASH_IN_RANGE: &str = r#"
-      UPDATE typing_trigram_minute
-         SET is_deleted = 1, updated_at = @updatedAt
-       WHERE 
-  scope_id IN (
-    SELECT id FROM typing_scopes
-     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
-  )
-    AND is_deleted = 0
-
-         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
-    "#;
-
-/// Tombstones one machine hash's sessions that start in a deleted range (sync-statements.ts).
+/// `tombstoneSessionsForHashInRangeStmt` of `prepareSyncStatements` (sync-statements.ts).
 pub const TOMBSTONE_SESSIONS_FOR_HASH_IN_RANGE: &str = r#"
       UPDATE typing_sessions
          SET is_deleted = 1, updated_at = @updatedAt
@@ -499,7 +754,440 @@ pub const TOMBSTONE_SESSIONS_FOR_HASH_IN_RANGE: &str = r#"
          AND start_ms >= @startMs AND start_ms < @endMs AND start_ms <= @cutoffMs
     "#;
 
-/// Minute-raw stats of a keyboard for the Analyze WPM / Interval charts (`selectMinuteStatsInRangeForUidStmt`, range-query-statements.ts).
+/// `tombstoneAllCharMinutesStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_CHAR_MINUTES: &str = r#"
+      UPDATE typing_char_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllMatrixMinutesStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_MATRIX_MINUTES: &str = r#"
+      UPDATE typing_matrix_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllMinuteStatsStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_MINUTE_STATS: &str = r#"
+      UPDATE typing_minute_stats
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllSessionsStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_SESSIONS: &str = r#"
+      UPDATE typing_sessions
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllCharMinutesForHashStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_CHAR_MINUTES_FOR_HASH: &str = r#"
+      UPDATE typing_char_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllMatrixMinutesForHashStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_MATRIX_MINUTES_FOR_HASH: &str = r#"
+      UPDATE typing_matrix_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllMinuteStatsForHashStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_MINUTE_STATS_FOR_HASH: &str = r#"
+      UPDATE typing_minute_stats
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllSessionsForHashStmt` of `prepareSyncStatements` (sync-statements.ts).
+pub const TOMBSTONE_ALL_SESSIONS_FOR_HASH: &str = r#"
+      UPDATE typing_sessions
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+    "#;
+
+/// `selectMatrixHeatmapStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_HEATMAP: &str = r#"
+      SELECT m.row AS row, m.col AS col,
+             SUM(m.count) AS total,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.layer = @layer
+         AND m.minute_ts >= @sinceMinuteMs
+       GROUP BY m.row, m.col
+    "#;
+
+/// `selectMatrixHeatmapInRangeStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_HEATMAP_IN_RANGE: &str = r#"
+      SELECT m.row AS row, m.col AS col,
+             SUM(m.count) AS total,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.layer = @layer
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY m.row, m.col
+    "#;
+
+/// `selectMatrixHeatmapInRangeForHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_HEATMAP_IN_RANGE_FOR_HASH: &str = r#"
+      SELECT m.row AS row, m.col AS col,
+             SUM(m.count) AS total,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.layer = @layer
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY m.row, m.col
+    "#;
+
+/// `selectKeyboardsWithTypingDataStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_KEYBOARDS_WITH_TYPING_DATA: &str = r#"
+      SELECT keyboard_uid AS uid,
+             MAX(keyboard_product_name) AS productName,
+             MAX(keyboard_vendor_id) AS vendorId,
+             MAX(keyboard_product_id) AS productId
+        FROM typing_scopes s
+       WHERE s.is_deleted = 0
+         AND EXISTS (
+           SELECT 1 FROM typing_minute_stats t
+            WHERE t.scope_id = s.id AND t.is_deleted = 0
+         )
+       GROUP BY keyboard_uid
+       ORDER BY MAX(keyboard_product_name) COLLATE NOCASE
+    "#;
+
+/// `selectDailySummariesForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_DAILY_SUMMARIES_FOR_UID: &str = r#"
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY date
+       ORDER BY date DESC
+    "#;
+
+/// `selectDailySummariesForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_DAILY_SUMMARIES_FOR_UID_AND_HASH: &str = r#"
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY date
+       ORDER BY date DESC
+    "#;
+
+/// `selectIntervalSummariesForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_INTERVAL_SUMMARIES_FOR_UID: &str = r#"
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.interval_p50_ms IS NOT NULL
+       GROUP BY date
+       ORDER BY date DESC
+    "#;
+
+/// `selectIntervalSummariesForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_INTERVAL_SUMMARIES_FOR_UID_AND_HASH: &str = r#"
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.interval_p50_ms IS NOT NULL
+       GROUP BY date
+       ORDER BY date DESC
+    "#;
+
+/// `selectActivityGridForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_ACTIVITY_GRID_FOR_UID: &str = r#"
+      SELECT CAST(strftime('%w', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS dow,
+             CAST(strftime('%H', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+             SUM(t.keystrokes) AS keystrokes
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY dow, hour
+    "#;
+
+/// `selectActivityGridForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_ACTIVITY_GRID_FOR_UID_AND_HASH: &str = r#"
+      SELECT CAST(strftime('%w', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS dow,
+             CAST(strftime('%H', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+             SUM(t.keystrokes) AS keystrokes
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY dow, hour
+    "#;
+
+/// `selectLayerUsageForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_LAYER_USAGE_FOR_UID: &str = r#"
+      SELECT m.layer AS layer,
+             SUM(m.count) AS keystrokes
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY m.layer
+       ORDER BY m.layer ASC
+    "#;
+
+/// `selectLayerUsageForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_LAYER_USAGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT m.layer AS layer,
+             SUM(m.count) AS keystrokes
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY m.layer
+       ORDER BY m.layer ASC
+    "#;
+
+/// `selectMatrixCellsForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_CELLS_FOR_UID: &str = r#"
+      SELECT m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY m.layer, m.row, m.col
+    "#;
+
+/// `selectMatrixCellsForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_CELLS_FOR_UID_AND_HASH: &str = r#"
+      SELECT m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY m.layer, m.row, m.col
+    "#;
+
+/// `selectMatrixDurationForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_DURATION_FOR_UID: &str = r#"
+      SELECT m.row AS row,
+             m.col AS col,
+             m.layer AS layer,
+             m.minute_ts AS minuteTs,
+             m.dur_hist AS durHist,
+             m.dur_sum AS durSum,
+             m.dur_sumsq AS durSumSq
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         -- dh/ds/dq are written as an all-or-nothing triple by the
+         -- validator (isValidDurationTriple in jsonl-row.ts), three
+         -- modules away from this query — checking both columns here
+         -- rather than trusting that invariant blindly means a future
+         -- bug in that validator (or a hand-edited JSONL master) can't
+         -- feed the mapper/aggregate a hist with no matching sum.
+         AND m.dur_hist IS NOT NULL
+         AND m.dur_sum IS NOT NULL
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+    "#;
+
+/// `selectMatrixDurationForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_DURATION_FOR_UID_AND_HASH: &str = r#"
+      SELECT m.row AS row,
+             m.col AS col,
+             m.layer AS layer,
+             m.minute_ts AS minuteTs,
+             m.dur_hist AS durHist,
+             m.dur_sum AS durSum,
+             m.dur_sumsq AS durSumSq
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         -- dh/ds/dq are written as an all-or-nothing triple by the
+         -- validator (isValidDurationTriple in jsonl-row.ts), three
+         -- modules away from this query — checking both columns here
+         -- rather than trusting that invariant blindly means a future
+         -- bug in that validator (or a hand-edited JSONL master) can't
+         -- feed the mapper/aggregate a hist with no matching sum.
+         AND m.dur_hist IS NOT NULL
+         AND m.dur_sum IS NOT NULL
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+    "#;
+
+/// `selectMatrixCellsByDayForUidStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_CELLS_BY_DAY_FOR_UID: &str = r#"
+      SELECT strftime('%Y-%m-%d', m.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY date, m.layer, m.row, m.col
+       ORDER BY date ASC
+    "#;
+
+/// `selectMatrixCellsByDayForUidAndHashStmt` of `prepareSummaryStatements` (summary-query-statements.ts).
+pub const SELECT_MATRIX_CELLS_BY_DAY_FOR_UID_AND_HASH: &str = r#"
+      SELECT strftime('%Y-%m-%d', m.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR m.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR m.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY date, m.layer, m.row, m.col
+       ORDER BY date ASC
+    "#;
+
+/// `selectMinuteStatsInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
 pub const SELECT_MINUTE_STATS_IN_RANGE_FOR_UID: &str = r#"
       SELECT t.minute_ts AS minuteMs,
              SUM(t.keystrokes) AS keystrokes,
@@ -521,4 +1209,629 @@ pub const SELECT_MINUTE_STATS_IN_RANGE_FOR_UID: &str = r#"
          AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
+    "#;
+
+/// `selectMinuteStatsInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_MINUTE_STATS_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT t.minute_ts AS minuteMs,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs,
+             AVG(t.poll_p50_ms) AS pollP50Ms,
+             AVG(t.poll_p95_ms) AS pollP95Ms
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY t.minute_ts
+       ORDER BY t.minute_ts ASC
+    "#;
+
+/// `selectRolloverMinutesStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_ROLLOVER_MINUTES: &str = r#"
+      SELECT t.minute_ts AS minuteTs,
+             SUM(t.overlap_count) AS oc,
+             SUM(t.overlap_n) AS "on"
+        FROM typing_bigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.overlap_n IS NOT NULL
+         AND t.overlap_count IS NOT NULL
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY t.minute_ts
+       ORDER BY t.minute_ts ASC
+    "#;
+
+/// `selectAppsForUidInRangeStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_APPS_FOR_UID_IN_RANGE: &str = r#"
+      SELECT t.app_name AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.app_name IS NOT NULL
+       GROUP BY t.app_name
+       ORDER BY keystrokes DESC
+    "#;
+
+/// `selectTypingTestsForUidInRangeStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_TYPING_TESTS_FOR_UID_IN_RANGE: &str = r#"
+      SELECT t.typing_test AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.typing_test IS NOT NULL
+       GROUP BY t.typing_test
+       ORDER BY keystrokes DESC
+    "#;
+
+/// `selectTypingTestRunsForUidInRangeStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_TYPING_TEST_RUNS_FOR_UID_IN_RANGE: &str = r#"
+      SELECT t.run_id AS runId,
+             SUM(t.keystrokes) AS keystrokes,
+             MIN(t.minute_ts) AS firstMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.run_id != ''
+         AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson)))
+       GROUP BY t.run_id
+       ORDER BY firstMs DESC
+    "#;
+
+/// `selectAppUsageForUidInRangeStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_APP_USAGE_FOR_UID_IN_RANGE: &str = r#"
+      SELECT COALESCE(t.app_name, '__unknown__') AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY name
+       ORDER BY keystrokes DESC
+    "#;
+
+/// `selectWpmByAppForUidInRangeStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_WPM_BY_APP_FOR_UID_IN_RANGE: &str = r#"
+      SELECT t.app_name AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.app_name IS NOT NULL
+         AND t.active_ms > 0
+       GROUP BY t.app_name
+       ORDER BY keystrokes DESC
+    "#;
+
+/// `selectSessionsInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_SESSIONS_IN_RANGE_FOR_UID: &str = r#"
+      SELECT t.id AS id,
+             t.start_ms AS startMs,
+             t.end_ms AS endMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY t.start_ms ASC
+    "#;
+
+/// `selectSessionsInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_SESSIONS_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT t.id AS id,
+             t.start_ms AS startMs,
+             t.end_ms AS endMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY t.start_ms ASC
+    "#;
+
+/// `selectBksMinuteInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_BKS_MINUTE_IN_RANGE_FOR_UID: &str = r#"
+      SELECT t.minute_ts AS minuteMs,
+             SUM(CASE
+               WHEN t.keycode = 42 THEN t.count
+               WHEN (t.keycode & 255) = 42
+                 AND ((t.keycode & 57344) = 16384 OR (t.keycode & 57344) = 8192)
+               THEN t.tap_count
+               ELSE 0
+             END) AS backspaceCount
+        FROM typing_matrix_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY t.minute_ts
+       HAVING backspaceCount > 0
+       ORDER BY t.minute_ts ASC
+    "#;
+
+/// `selectBksMinuteInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_BKS_MINUTE_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT t.minute_ts AS minuteMs,
+             SUM(CASE
+               WHEN t.keycode = 42 THEN t.count
+               WHEN (t.keycode & 255) = 42
+                 AND ((t.keycode & 57344) = 16384 OR (t.keycode & 57344) = 8192)
+               THEN t.tap_count
+               ELSE 0
+             END) AS backspaceCount
+        FROM typing_matrix_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY t.minute_ts
+       HAVING backspaceCount > 0
+       ORDER BY t.minute_ts ASC
+    "#;
+
+/// `selectPeakWpmInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_PEAK_WPM_IN_RANGE_FOR_UID: &str = r#"
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+       ORDER BY value DESC
+       LIMIT 1
+    "#;
+
+/// `selectPeakWpmInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_PEAK_WPM_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.machine_hash = @machineHash
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+       ORDER BY value DESC
+       LIMIT 1
+    "#;
+
+/// `selectLowestWpmInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_LOWEST_WPM_IN_RANGE_FOR_UID: &str = r#"
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+         AND total.keystrokes > 0
+       ORDER BY value ASC
+       LIMIT 1
+    "#;
+
+/// `selectLowestWpmInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_LOWEST_WPM_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.machine_hash = @machineHash
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+         AND total.keystrokes > 0
+       ORDER BY value ASC
+       LIMIT 1
+    "#;
+
+/// `selectPeakKpmInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_PEAK_KPM_IN_RANGE_FOR_UID: &str = r#"
+      SELECT SUM(t.keystrokes) AS value, t.minute_ts AS atMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY t.minute_ts
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    "#;
+
+/// `selectPeakKpmInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_PEAK_KPM_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT SUM(t.keystrokes) AS value, t.minute_ts AS atMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY t.minute_ts
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    "#;
+
+/// `selectPeakKpdInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_PEAK_KPD_IN_RANGE_FOR_UID: &str = r#"
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS day,
+             SUM(t.keystrokes) AS value
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY day
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    "#;
+
+/// `selectPeakKpdInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_PEAK_KPD_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS day,
+             SUM(t.keystrokes) AS value
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       GROUP BY day
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    "#;
+
+/// `selectLongestSessionInRangeForUidStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_LONGEST_SESSION_IN_RANGE_FOR_UID: &str = r#"
+      SELECT (t.end_ms - t.start_ms) AS durationMs,
+             t.start_ms AS startedAtMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY durationMs DESC
+       LIMIT 1
+    "#;
+
+/// `selectLongestSessionInRangeForUidAndHashStmt` of `prepareRangeStatements` (range-query-statements.ts).
+pub const SELECT_LONGEST_SESSION_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT (t.end_ms - t.start_ms) AS durationMs,
+             t.start_ms AS startedAtMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY durationMs DESC
+       LIMIT 1
+    "#;
+
+/// `merge` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_MERGE: &str = r#"
+      INSERT INTO typing_bigram_minute (
+        scope_id, minute_ts, bigram_id, count, hist, sum_iki, sumsq_iki, overlap_count, overlap_n, app_name, typing_test, run_id, updated_at, is_deleted
+      )
+      VALUES (
+        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki, @overlapCount, @overlapN, @appName, @typingTest, @runId, @updatedAt, @isDeleted
+      )
+      ON CONFLICT(scope_id, minute_ts, run_id, bigram_id) DO UPDATE SET
+        count = excluded.count,
+        hist = excluded.hist,
+        sum_iki = excluded.sum_iki,
+        sumsq_iki = excluded.sumsq_iki,
+        overlap_count = excluded.overlap_count,
+        overlap_n = excluded.overlap_n,
+        app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
+        updated_at = excluded.updated_at,
+        is_deleted = excluded.is_deleted
+      WHERE excluded.updated_at > typing_bigram_minute.updated_at
+    "#;
+
+/// `selectInRangeForUid` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_SELECT_IN_RANGE_FOR_UID: &str = r#"
+      SELECT t.bigram_id AS ngramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist,
+             t.sum_iki AS sumIki,
+             t.sumsq_iki AS sumSqIki,
+             t.overlap_count AS overlapCount,
+             t.overlap_n AS overlapN
+        FROM typing_bigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       ORDER BY t.bigram_id ASC, t.minute_ts ASC
+    "#;
+
+/// `selectInRangeForUidAndHash` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_SELECT_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT t.bigram_id AS ngramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist,
+             t.sum_iki AS sumIki,
+             t.sumsq_iki AS sumSqIki,
+             t.overlap_count AS overlapCount,
+             t.overlap_n AS overlapN
+        FROM typing_bigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       ORDER BY t.bigram_id ASC, t.minute_ts ASC
+    "#;
+
+/// `tombstoneForHashInRange` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_TOMBSTONE_FOR_HASH_IN_RANGE: &str = r#"
+      UPDATE typing_bigram_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
+    "#;
+
+/// `tombstoneAll` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_TOMBSTONE_ALL: &str = r#"
+      UPDATE typing_bigram_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllForHash` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_TOMBSTONE_ALL_FOR_HASH: &str = r#"
+      UPDATE typing_bigram_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+    "#;
+
+/// `deleteBefore` of `prepareNgramStatements` for typing_bigram_minute (ngram-statements.ts).
+pub const BIGRAM_DELETE_BEFORE: &str = r#"
+      DELETE FROM typing_bigram_minute
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND minute_ts < @cutoffMs
+    "#;
+
+/// `merge` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_MERGE: &str = r#"
+      INSERT INTO typing_trigram_minute (
+        scope_id, minute_ts, trigram_id, count, hist, sum_iki, sumsq_iki, app_name, typing_test, run_id, updated_at, is_deleted
+      )
+      VALUES (
+        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki, @appName, @typingTest, @runId, @updatedAt, @isDeleted
+      )
+      ON CONFLICT(scope_id, minute_ts, run_id, trigram_id) DO UPDATE SET
+        count = excluded.count,
+        hist = excluded.hist,
+        sum_iki = excluded.sum_iki,
+        sumsq_iki = excluded.sumsq_iki,
+        app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
+        updated_at = excluded.updated_at,
+        is_deleted = excluded.is_deleted
+      WHERE excluded.updated_at > typing_trigram_minute.updated_at
+    "#;
+
+/// `selectInRangeForUid` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_SELECT_IN_RANGE_FOR_UID: &str = r#"
+      SELECT t.trigram_id AS ngramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist,
+             t.sum_iki AS sumIki,
+             t.sumsq_iki AS sumSqIki
+        FROM typing_trigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       ORDER BY t.trigram_id ASC, t.minute_ts ASC
+    "#;
+
+/// `selectInRangeForUidAndHash` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_SELECT_IN_RANGE_FOR_UID_AND_HASH: &str = r#"
+      SELECT t.trigram_id AS ngramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist,
+             t.sum_iki AS sumIki,
+             t.sumsq_iki AS sumSqIki
+        FROM typing_trigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson))) AND (json_array_length(@typingTestsJson) = 0 OR t.typing_test IN (SELECT value FROM json_each(@typingTestsJson))) AND (json_array_length(@runIdsJson) = 0 OR t.run_id IN (SELECT value FROM json_each(@runIdsJson)))
+       ORDER BY t.trigram_id ASC, t.minute_ts ASC
+    "#;
+
+/// `tombstoneForHashInRange` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_TOMBSTONE_FOR_HASH_IN_RANGE: &str = r#"
+      UPDATE typing_trigram_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
+    "#;
+
+/// `tombstoneAll` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_TOMBSTONE_ALL: &str = r#"
+      UPDATE typing_trigram_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+
+    "#;
+
+/// `tombstoneAllForHash` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_TOMBSTONE_ALL_FOR_HASH: &str = r#"
+      UPDATE typing_trigram_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE 
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+
+    "#;
+
+/// `deleteBefore` of `prepareNgramStatements` for typing_trigram_minute (ngram-statements.ts).
+pub const TRIGRAM_DELETE_BEFORE: &str = r#"
+      DELETE FROM typing_trigram_minute
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND minute_ts < @cutoffMs
     "#;

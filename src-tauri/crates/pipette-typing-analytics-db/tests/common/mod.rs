@@ -9,7 +9,11 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use pipette_typing_analytics_db::{DATA_TABLE_NAMES, MinuteStatsRow};
+use pipette_js_json::{Value as JsValue, write_number};
+use pipette_typing_analytics_db::{
+    AppAggregate, CharMinuteInput, DATA_TABLE_NAMES, DeleteRange, Gram, MatrixCounts, MatrixMinuteInput,
+    MinuteStatsInput, MinuteStatsRow, ScopeFilters, ScopeInput, SessionInput, ToJs, TypingAnalyticsDb,
+};
 use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OpenFlags};
 use serde_json::{Map, Value, json};
@@ -140,4 +144,212 @@ pub fn strings(value: &Value) -> Vec<String> {
 
 pub fn object(value: &Value) -> &Map<String, Value> {
     value.as_object().unwrap()
+}
+
+/// A returned JavaScript value in the canonical form of the method
+/// fixtures (scripts/analytics-db-fixtures/db-methods.ts): a number as
+/// `r:<bits>`, a string as `s:<text>`.
+pub fn canonical(value: &JsValue) -> Value {
+    match value {
+        JsValue::Null => Value::Null,
+        JsValue::Bool(b) => Value::Bool(*b),
+        JsValue::Number(n) => Value::String(real_cell(*n)),
+        JsValue::String(s) => Value::String(format!("s:{}", s.to_string_lossy())),
+        JsValue::Array(items) => Value::Array(items.iter().map(canonical).collect()),
+        JsValue::Object(object) => Value::Object(
+            object.iter().map(|(k, v)| (k.to_string_lossy().into_owned(), canonical(v))).collect(),
+        ),
+    }
+}
+
+/// A heatmap aggregate as the TypeScript side returns it: a Map keyed
+/// `${row},${col}`, in canonical form the array of its entries.
+fn matrix_counts(cells: &[MatrixCounts]) -> Value {
+    Value::Array(
+        cells
+            .iter()
+            .map(|cell| {
+                let mut key = String::from("s:");
+                write_number(&mut key, cell.row);
+                key.push(',');
+                write_number(&mut key, cell.col);
+                let counts = json!({
+                    "total": real_cell(cell.total),
+                    "tap": real_cell(cell.tap),
+                    "hold": real_cell(cell.hold),
+                });
+                json!([key, counts])
+            })
+            .collect(),
+    )
+}
+
+/// The positional arguments of a recorded call.
+struct Args<'a>(&'a [Value]);
+
+impl Args<'_> {
+    fn str(&self, i: usize) -> &str {
+        self.0[i].as_str().unwrap_or_else(|| panic!("argument {i} is not a string"))
+    }
+    fn num(&self, i: usize) -> f64 {
+        self.0[i].as_f64().unwrap_or_else(|| panic!("argument {i} is not a number"))
+    }
+    fn int(&self, i: usize) -> i64 {
+        self.0[i].as_i64().unwrap_or_else(|| panic!("argument {i} is not an integer"))
+    }
+    /// A string, or `None` for null or a missing argument.
+    fn opt_str(&self, i: usize) -> Option<&str> {
+        self.0.get(i).and_then(Value::as_str)
+    }
+    /// A list of strings; a missing argument is the empty list.
+    fn strings(&self, i: usize) -> Vec<String> {
+        self.0.get(i).filter(|v| !v.is_null()).map(strings).unwrap_or_default()
+    }
+    fn filters(&self, from: usize) -> ScopeFilters {
+        ScopeFilters {
+            app_names: self.strings(from),
+            typing_tests: self.strings(from + 1),
+            run_ids: self.strings(from + 2),
+        }
+    }
+    fn parse<T: serde::de::DeserializeOwned>(&self, i: usize) -> T {
+        serde_json::from_value(self.0[i].clone()).unwrap()
+    }
+}
+
+/// Runs a call recorded by the method fixtures on `db`, by its TypeScript
+/// method name and arguments, and returns its answer in canonical form.
+pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Value {
+    let a = Args(args);
+    // `…ForUidAndHash` takes the hash after the uid; `…ForUid` reads every
+    // device.
+    let (hash, rest) = if method.ends_with("AndHash") { (Some(a.str(1).to_owned()), 2) } else { (None, 1) };
+    let hash = hash.as_deref();
+    let base = method.trim_end_matches("AndHash");
+    let js = match base {
+        "listLocalKeyboardUids" => db.local_keyboard_uids(a.str(0)).unwrap().to_js(),
+        "listKeyboardsWithTypingData" => db.keyboards_with_typing_data().unwrap().to_js(),
+        "listRemoteDeviceInfosForUid" => db.remote_device_infos(a.str(0), a.str(1)).unwrap().to_js(),
+        "aggregateMatrixCountsForUid" => {
+            return matrix_counts(&db.matrix_counts_since(a.str(0), a.str(1), a.num(2), a.num(3)).unwrap());
+        }
+        "aggregateMatrixCountsForUidInRange" => {
+            let cells = db
+                .matrix_counts_in_range(a.str(0), a.opt_str(4), a.num(1), a.num(2), a.num(3), &a.filters(5))
+                .unwrap();
+            return matrix_counts(&cells);
+        }
+        "listDailySummariesForUid" => db.daily_summaries(a.str(0), hash, &a.filters(rest)).unwrap().to_js(),
+        "listIntervalSummariesForUid" => db.interval_summaries(a.str(0), hash).unwrap().to_js(),
+        "listActivityGridForUid" => db
+            .activity_grid(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listLayerUsageForUid" => db
+            .layer_usage(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listMatrixCellsForUid" => db
+            .matrix_cells(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listMatrixDurationCellsForUid" => db
+            .matrix_duration_cells(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listMatrixCellsByDayForUid" => db
+            .matrix_cells_by_day(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listMinuteStatsInRangeForUid" => db
+            .minute_stats_in_range(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listSessionsInRangeForUid" => {
+            db.sessions_in_range(a.str(0), hash, a.num(rest), a.num(rest + 1)).unwrap().to_js()
+        }
+        "listBksMinuteInRangeForUid" => db
+            .backspace_minutes(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "getPeakRecordsInRangeForUid" => db
+            .peak_records(a.str(0), hash, a.num(rest), a.num(rest + 1), &a.filters(rest + 2))
+            .unwrap()
+            .to_js(),
+        "listNgramMinutesInRangeForUid" => {
+            // The gram comes first, so the uid and hash move one along.
+            let gram = if a.num(0) == 2.0 { Gram::Bigram } else { Gram::Trigram };
+            let (hash, rest) = if method.ends_with("AndHash") { (Some(a.str(2)), 3) } else { (None, 2) };
+            db.ngram_minutes_in_range(
+                gram,
+                a.str(1),
+                hash,
+                a.num(rest),
+                a.num(rest + 1),
+                &a.filters(rest + 2),
+            )
+            .unwrap()
+            .to_js()
+        }
+        "listRolloverMinutesInRange" => {
+            db.rollover_minutes(a.str(0), a.opt_str(1), a.num(2), a.num(3), &a.filters(4)).unwrap().to_js()
+        }
+        "listAppsForUidInRange"
+        | "listTypingTestsForUidInRange"
+        | "getAppUsageForUidInRange"
+        | "getWpmByAppForUidInRange" => {
+            let aggregate = match base {
+                "listAppsForUidInRange" => AppAggregate::Apps,
+                "listTypingTestsForUidInRange" => AppAggregate::TypingTests,
+                "getAppUsageForUidInRange" => AppAggregate::AppUsage,
+                _ => AppAggregate::WpmByApp,
+            };
+            db.app_aggregate(aggregate, a.str(0), a.opt_str(1), a.num(2), a.num(3)).unwrap().to_js()
+        }
+        "listTypingTestRunsForUidInRange" => {
+            db.typing_test_runs(a.str(0), a.opt_str(1), a.num(2), a.num(3), &a.strings(4)).unwrap().to_js()
+        }
+        "upsertScope" => {
+            db.upsert_scope(&a.parse::<ScopeInput>(0)).unwrap();
+            JsValue::Null
+        }
+        "writeMinute" => {
+            let stats: MinuteStatsInput = a.parse(0);
+            let chars: Vec<CharMinuteInput> = a.parse(1);
+            let matrix: Vec<MatrixMinuteInput> = a.parse(2);
+            db.write_minute(&stats, &chars, &matrix, a.num(3)).unwrap();
+            JsValue::Null
+        }
+        "insertSession" => {
+            db.insert_session(&a.parse::<SessionInput>(0), a.num(1)).unwrap();
+            JsValue::Null
+        }
+        "retainOwnData" => {
+            db.retain_own_data(a.str(0), a.num(1)).unwrap();
+            JsValue::Null
+        }
+        "tombstoneRowsForUidHashInRanges" => {
+            let ranges: Vec<DeleteRange> = a.0[2]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| DeleteRange {
+                    start_ms: r["startMs"].as_i64().unwrap(),
+                    end_ms: r["endMs"].as_i64().unwrap(),
+                    cutoff_ms: r["cutoffMs"].as_i64().unwrap(),
+                })
+                .collect();
+            db.tombstone_ranges_for_uid_hash(a.str(0), a.str(1), &ranges, a.int(3)).unwrap().to_js()
+        }
+        "tombstoneAllRowsForUidHash" => {
+            db.tombstone_all_for_uid_hash(a.str(0), a.str(1), a.int(2)).unwrap().to_js()
+        }
+        "tombstoneAllRowsForUid" => db.tombstone_all_for_uid(a.str(0), a.int(1)).unwrap().to_js(),
+        "truncateCache" => {
+            db.truncate_cache().unwrap();
+            JsValue::Null
+        }
+        other => panic!("no Rust call for {other}"),
+    };
+    canonical(&js)
 }

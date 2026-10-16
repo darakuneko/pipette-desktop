@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Applying JSONL rows to the cache with the authoritative LWW merges
 //! (`applyRowsToCache`, apply-to-cache.ts, and the `merge*` methods of
-//! typing-analytics-db-writes.ts), and tombstoning a device's deleted ranges
-//! (`tombstoneRowsForUidHashInRanges`). Every function here runs inside a
-//! transaction its caller in lib.rs owns.
+//! typing-analytics-db-writes.ts): a row replaces the cached one only when
+//! its `updated_at` is newer, tombstone flag included. Every function here
+//! runs inside the transaction of its caller.
 
-use rusqlite::{Connection, named_params};
+use rusqlite::{CachedStatement, Savepoint, named_params};
 use serde::Serialize;
 
 use crate::Error;
-use crate::jsonl::{HIST_BUCKETS, JsonlRow, MinuteTags, NgramMinutePayload, RowCommon, RowPayload};
+use crate::jsonl::{JsonlRow, MinuteTags, NgramMinutePayload, RowCommon, RowPayload};
+use crate::row_codec::encode_hist;
 use crate::sql;
 
 /// Rows applied per kind (`ApplyRowsResult`). An n-gram row counts once
@@ -26,41 +27,15 @@ pub struct ApplyRowsResult {
     pub trigram_minutes: u64,
 }
 
-/// One deleted range of a device (`DeleteRange`, deleted-ranges.ts), already
-/// clipped to the day file being replayed. A row is hidden when its time is
-/// in `[start_ms, end_ms)` and at or before `cutoff_ms`.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct DeleteRange {
-    pub start_ms: i64,
-    pub end_ms: i64,
-    pub cutoff_ms: i64,
-}
-
-/// Pack a histogram into 8 little-endian u32 (`encodeHistBuffer`,
-/// typing-analytics-row-codec.ts): a negative bucket becomes 0 and a
-/// fractional one is truncated, as Buffer.writeUInt32LE stores it. A bucket
-/// above u32::MAX makes writeUInt32LE throw, which aborts the whole apply;
-/// here it is an error with the same effect.
-fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<[u8; HIST_BUCKETS * 4], Error> {
-    let mut out = [0u8; HIST_BUCKETS * 4];
-    for (&value, slot) in hist.iter().zip(out.chunks_exact_mut(4)) {
-        let clamped = if value.is_finite() && value >= 0.0 { value } else { 0.0 };
-        if clamped > f64::from(u32::MAX) {
-            return Err(Error::HistogramBucketOutOfRange(value));
-        }
-        // In range and non-negative, so the cast only drops the fraction.
-        slot.copy_from_slice(&(clamped as u32).to_le_bytes());
-    }
-    Ok(out)
-}
-
 /// Scopes first so the per-minute rows' foreign keys resolve, then every
 /// other row in file order.
-pub(crate) fn apply_rows(tx: &Connection, rows: &[JsonlRow]) -> Result<ApplyRowsResult, Error> {
+/// Each statement is taken from the cache once per call, not once per row.
+pub(crate) fn apply_rows(tx: &Savepoint<'_>, rows: &[JsonlRow]) -> Result<ApplyRowsResult, Error> {
     let mut result = ApplyRowsResult::default();
+    let mut scope = tx.prepare_cached(sql::MERGE_SCOPE)?;
     for row in rows {
         if let RowPayload::Scope(p) = &row.payload {
-            tx.prepare_cached(sql::MERGE_SCOPE)?.execute(named_params! {
+            scope.execute(named_params! {
                 "@id": p.id, "@machineHash": p.machine_hash, "@osPlatform": p.os_platform,
                 "@osRelease": p.os_release, "@osArch": p.os_arch, "@keyboardUid": p.keyboard_uid,
                 "@keyboardVendorId": p.keyboard_vendor_id, "@keyboardProductId": p.keyboard_product_id,
@@ -70,12 +45,18 @@ pub(crate) fn apply_rows(tx: &Connection, rows: &[JsonlRow]) -> Result<ApplyRows
             result.scopes += 1;
         }
     }
+    let mut char_minute = tx.prepare_cached(sql::MERGE_CHAR_MINUTE)?;
+    let mut matrix_minute = tx.prepare_cached(sql::MERGE_MATRIX_MINUTE)?;
+    let mut minute_stats = tx.prepare_cached(sql::MERGE_MINUTE_STATS)?;
+    let mut session = tx.prepare_cached(sql::MERGE_SESSION)?;
+    let mut bigram = tx.prepare_cached(sql::BIGRAM_MERGE)?;
+    let mut trigram = tx.prepare_cached(sql::TRIGRAM_MERGE)?;
     for row in rows {
         let common = &row.common;
         match &row.payload {
             RowPayload::Scope(_) => {}
             RowPayload::CharMinute(p) => {
-                tx.prepare_cached(sql::MERGE_CHAR_MINUTE)?.execute(named_params! {
+                char_minute.execute(named_params! {
                     "@scopeId": p.scope_id, "@minuteTs": p.minute_ts, "@char": p.char, "@count": p.count,
                     "@appName": p.tags.app_name, "@typingTest": p.tags.typing_test, "@runId": p.tags.run_id,
                     "@updatedAt": common.updated_at, "@isDeleted": deleted(common),
@@ -84,7 +65,7 @@ pub(crate) fn apply_rows(tx: &Connection, rows: &[JsonlRow]) -> Result<ApplyRows
             }
             RowPayload::MatrixMinute(p) => {
                 let dur_hist = p.duration.as_ref().map(|d| encode_hist(&d.hist)).transpose()?;
-                tx.prepare_cached(sql::MERGE_MATRIX_MINUTE)?.execute(named_params! {
+                matrix_minute.execute(named_params! {
                     "@scopeId": p.scope_id, "@minuteTs": p.minute_ts, "@row": p.row, "@col": p.col,
                     "@layer": p.layer, "@keycode": p.keycode, "@count": p.count,
                     "@tapCount": p.tap_count, "@holdCount": p.hold_count,
@@ -97,7 +78,7 @@ pub(crate) fn apply_rows(tx: &Connection, rows: &[JsonlRow]) -> Result<ApplyRows
             }
             RowPayload::MinuteStats(p) => {
                 let [avg, min, p25, p50, p75, max] = p.intervals;
-                tx.prepare_cached(sql::MERGE_MINUTE_STATS)?.execute(named_params! {
+                minute_stats.execute(named_params! {
                     "@scopeId": p.scope_id, "@minuteTs": p.minute_ts, "@keystrokes": p.keystrokes,
                     "@activeMs": p.active_ms, "@intervalAvgMs": avg, "@intervalMinMs": min,
                     "@intervalP25Ms": p25, "@intervalP50Ms": p50, "@intervalP75Ms": p75, "@intervalMaxMs": max,
@@ -108,18 +89,18 @@ pub(crate) fn apply_rows(tx: &Connection, rows: &[JsonlRow]) -> Result<ApplyRows
                 result.minute_stats += 1;
             }
             RowPayload::Session(p) => {
-                tx.prepare_cached(sql::MERGE_SESSION)?.execute(named_params! {
+                session.execute(named_params! {
                     "@id": p.id, "@scopeId": p.scope_id, "@startMs": p.start_ms, "@endMs": p.end_ms,
                     "@updatedAt": common.updated_at, "@isDeleted": deleted(common),
                 })?;
                 result.sessions += 1;
             }
             RowPayload::BigramMinute(p) => {
-                merge_ngrams(tx, sql::MERGE_BIGRAM_MINUTE, true, p, common)?;
+                merge_ngrams(&mut bigram, true, p, common)?;
                 result.bigram_minutes += 1;
             }
             RowPayload::TrigramMinute(p) => {
-                merge_ngrams(tx, sql::MERGE_TRIGRAM_MINUTE, false, p, common)?;
+                merge_ngrams(&mut trigram, false, p, common)?;
                 result.trigram_minutes += 1;
             }
         }
@@ -134,14 +115,12 @@ fn deleted(common: &RowCommon) -> i64 {
 /// One upsert per id of the minute (`mergeBigramMinute` /
 /// `mergeTrigramMinute`). Only the bigram table has the overlap columns.
 fn merge_ngrams(
-    tx: &Connection,
-    sql_text: &str,
+    stmt: &mut CachedStatement<'_>,
     with_overlap: bool,
     p: &NgramMinutePayload,
     common: &RowCommon,
 ) -> Result<(), Error> {
     let MinuteTags { app_name, typing_test, run_id } = &p.tags;
-    let mut stmt = tx.prepare_cached(sql_text)?;
     for (id, entry) in &p.entries {
         let hist = encode_hist(&entry.hist)?;
         let (sum, sum_sq) = entry.sums.unzip();
@@ -164,46 +143,4 @@ fn merge_ngrams(
         }
     }
     Ok(())
-}
-
-/// Tombstone every live row of `machine_hash` for `uid` inside any of
-/// `ranges`, bumping `updated_at`. Returns the rows changed.
-pub(crate) fn tombstone_ranges(
-    tx: &Connection,
-    uid: &str,
-    machine_hash: &str,
-    ranges: &[DeleteRange],
-    updated_at: i64,
-) -> Result<u64, Error> {
-    const STATEMENTS: [&str; 6] = [
-        sql::TOMBSTONE_CHAR_MINUTES_FOR_HASH_IN_RANGE,
-        sql::TOMBSTONE_MATRIX_MINUTES_FOR_HASH_IN_RANGE,
-        sql::TOMBSTONE_MINUTE_STATS_FOR_HASH_IN_RANGE,
-        sql::TOMBSTONE_BIGRAM_MINUTES_FOR_HASH_IN_RANGE,
-        sql::TOMBSTONE_TRIGRAM_MINUTES_FOR_HASH_IN_RANGE,
-        sql::TOMBSTONE_SESSIONS_FOR_HASH_IN_RANGE,
-    ];
-    let mut changed = 0u64;
-    for range in ranges {
-        for text in STATEMENTS {
-            changed += tx.prepare_cached(text)?.execute(named_params! {
-                "@uid": uid, "@machineHash": machine_hash, "@startMs": range.start_ms,
-                "@endMs": range.end_ms, "@cutoffMs": range.cutoff_ms, "@updatedAt": updated_at,
-            })? as u64;
-        }
-    }
-    Ok(changed)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hist_buckets_truncate_clamp_and_reject_overflow() {
-        let bytes = encode_hist(&[1.0, 2.9, -3.0, 0.0, 0.0, 0.0, 0.0, f64::from(u32::MAX)]).unwrap();
-        assert_eq!(&bytes[..12], &[1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(&bytes[28..], &[0xff; 4]);
-        assert!(encode_hist(&[f64::from(u32::MAX) + 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).is_err());
-    }
 }

@@ -5,8 +5,9 @@
 // below, so adding or replacing one is a deliberate change here too. The
 // keyboard members (HID probe, file dialogs, snapshot, favorite and
 // pipette settings stores, stored keyboards, pending sync units), the run
-// log and Analyze filter members, the typing analytics' keymap snapshot
-// members, and the pack and label members (key labels, typing test texts, language and
+// log and Analyze filter members, the typing analytics members that read
+// the cache, the typing analytics' keymap snapshot members, and the pack
+// and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs.
 
@@ -102,6 +103,14 @@ const RUN_LOG_AND_FILTER_MEMBERS = [
   'analyzeFilterStoreDelete',
   'analyzeFilterStoreSetHubPostId',
   'analyzeFilterStoreSetHubPrivate',
+]
+
+/** The typing analytics members that read the cache directly, all real. */
+const TYPING_ANALYTICS_CACHE_MEMBERS = [
+  'typingAnalyticsListKeyboards',
+  'typingAnalyticsListItems',
+  'typingAnalyticsListItemsLocal',
+  'typingAnalyticsListItemsForHash',
 ]
 
 /** The typing analytics' keymap snapshot members, all real. */
@@ -214,6 +223,11 @@ describe('shim coverage', () => {
     expect(new Set(KEYBOARD_MEMBERS).size).toBe(36)
     expect(KEYBOARD_MEMBERS.filter((name) => !(name in real))).toEqual([])
     expect(KEYBOARD_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
+  it('backs the typing analytics members that read the cache with backend commands', () => {
+    expect(TYPING_ANALYTICS_CACHE_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(TYPING_ANALYTICS_CACHE_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })
 
   it('backs every run log and Analyze filter member with backend commands', () => {

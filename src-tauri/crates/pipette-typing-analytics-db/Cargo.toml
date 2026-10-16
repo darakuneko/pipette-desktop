@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-typing-analytics-db"
-description = "SQLite cache of the typing-analytics JSONL masters: schema, JSONL day apply and the Analyze minute-stats query"
+description = "SQLite cache of the typing-analytics JSONL masters: schema, JSONL day apply, the other writes and every Analyze query"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,10 @@ publish.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# The JavaScript values the reads answer (src/js.rs).
+pipette-js-json = { path = "../pipette-js-json" }
+# The local midnight of a `localtime` day (src/row_codec.rs).
+pipette-time = { path = "../pipette-time" }
 # `bundled` compiles SQLite into the binary so the cache never depends on
 # the system library's version or compile options.
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
@@ -19,6 +23,8 @@ serde_json = { version = "=1.0.154", features = ["float_roundtrip"] }
 thiserror = "=2.0.21"
 
 [dev-dependencies]
+# Runs the local-day tests once per time zone.
+pipette-time = { path = "../pipette-time", features = ["test-util"] }
 sha2 = { version = "=0.10.9", default-features = false }
 tempfile = { workspace = true }
 

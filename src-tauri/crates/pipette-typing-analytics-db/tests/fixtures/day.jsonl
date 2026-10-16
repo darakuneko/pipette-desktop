@@ -760,6 +760,9 @@
 {"id":"bigram|fixture-scope-2|1789304460000","kind":"bigram-minute","updated_at":1790895600000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789304460000,"bigrams":[{"c":2,"h":[2,0,0,0,0,0,0,0]}]}}
 {"id":"trigram|fixture-scope-2|1789304400000","kind":"trigram-minute","updated_at":1790895600000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789304400000,"trigrams":{"4_5_6":{"c":1,"h":[0,0,1,0,0,0,0,0],"s":100,"sq":10000}}}}
 {"id":"session|fixture-session-2","kind":"session","updated_at":1790895600000,"payload":{"id":"fixture-session-2","scopeId":"fixture-scope-2","startMs":1789304400000,"endMs":1789304520000}}
+{"id":"char|doc-ta-scope-1|1789304460000|\ud800","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"\ud800","count":9,"appName":"App\udfff"}}
+{"id":"bigram|fixture-scope-2|1789304460000|lone","kind":"bigram-minute","updated_at":1790895600000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789304460000,"runId":"lone","bigrams":{"x\ud83d":{"c":4,"h":[4,0,0,0,0,0,0,0]}}}}
+{"id":"dup","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"q","count":1,"count":3}}
 not json
 {"id":"x","kind":"future-kind","updated_at":1,"payload":{}}
 {"id":"x","kind":"bigram-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304400000,"bigrams":{"1_2":{"c":1,"h":[1,0,0,0,0,0,0,0],"s":1}}}}
@@ -774,6 +777,16 @@ not json
 {"id":"x","kind":"scope","updated_at":1,"payload":{"id":"s"}}
 {"id":"x","kind":"session","updated_at":"1","payload":{"id":"s","scopeId":"doc-ta-scope-1","startMs":1,"endMs":2}}
 [1,2,3]
+{"id":"stats|doc-ta-scope-1|1789304400000|","kind":"minute-stats","updated_at":1e400,"is_deleted":true,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304400000,"keystrokes":0,"activeMs":0,"intervalAvgMs":null,"intervalMinMs":null,"intervalP25Ms":null,"intervalP50Ms":null,"intervalP75Ms":null,"intervalMaxMs":null}}
+{"id":"inf-1","kind":"char-minute","updated_at":-1e400,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304400000,"char":"i","count":1}}
+{"id":"inf-2","kind":"char-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304400000,"char":"j","count":1e400}}
+{"id":"inf-3","kind":"minute-stats","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304520000,"keystrokes":1,"activeMs":1,"intervalAvgMs":-1e400,"intervalMinMs":null,"intervalP25Ms":null,"intervalP50Ms":null,"intervalP75Ms":null,"intervalMaxMs":null,"pollP50Ms":null,"pollP95Ms":1e400}}
+{"id":"inf-4","kind":"matrix-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"row":5,"col":5,"layer":0,"keycode":1,"count":1,"tapCount":1,"holdCount":0,"dh":[1,-1e400,0,0,0,0,0,0],"ds":1,"dq":1}}
+{"id":"inf-5","kind":"matrix-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"row":5,"col":6,"layer":0,"keycode":1,"count":1,"tapCount":1,"holdCount":0,"dh":[1,0,0,0,0,0,0,0],"ds":1e400,"dq":1}}
+{"id":"inf-6","kind":"bigram-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"runId":"inf","bigrams":{"7_8":{"c":1,"h":[1,0,0,0,0,0,0,0],"s":1,"sq":1e400}}}}
+{"id":"inf-7","kind":"trigram-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"runId":"inf","trigrams":{"7_8_9":{"c":-1e400,"h":[1,0,0,0,0,0,0,0]}}}}
+{"id":"inf-8","kind":"session","updated_at":1,"payload":{"id":"inf-session","scopeId":"doc-ta-scope-1","startMs":1789304400000,"endMs":1e400}}
+{"id":"scope|inf-scope","kind":"scope","updated_at":1,"payload":{"id":"inf-scope","machineHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","osPlatform":"linux","osRelease":"1","osArch":"x64","keyboardUid":"doc-ta-keyboard-1","keyboardVendorId":1e400,"keyboardProductId":1,"keyboardProductName":"x"}}
 
 {"id":"char|doc-ta-scope-1|1789304460000|b","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"b","count":4}}
 {"id":"char|doc-ta-scope-1|1789304460000|c","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"c","count":5}}{"id":"char|doc-ta-scope-1|1789304460000|d","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"d","count":6}}
