@@ -115,6 +115,12 @@ describe('shim coverage', () => {
     expect(members.filter((name) => !(name in real))).toEqual([])
   })
 
+  it('backs every typing test text store member with backend commands', () => {
+    const members = Object.keys(implemented).filter((name) => name.startsWith('typingTestTextStore'))
+    expect(members).toHaveLength(6)
+    expect(members.filter((name) => !(name in real))).toEqual([])
+  })
+
   it('leaves syncOnUnitApplied to the stub', () => {
     expect('syncOnUnitApplied' in implemented).toBe(false)
   })

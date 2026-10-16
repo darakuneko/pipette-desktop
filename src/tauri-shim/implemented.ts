@@ -16,6 +16,7 @@ import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
 import { snapshotsApi } from './api/snapshots'
 import { syncPendingApi } from './api/sync-pending'
+import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
 import { fakes } from './fakes'
 
@@ -30,6 +31,7 @@ export const real = {
   ...keyboardDataApi,
   ...favoritesApi,
   ...keyLabelsApi,
+  ...typingTextsApi,
   ...snapshotsApi,
   ...settingsApi,
   ...i18nPacksApi,
