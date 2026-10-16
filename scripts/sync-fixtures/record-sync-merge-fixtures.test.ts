@@ -348,6 +348,52 @@ const SCENARIOS: Scenario[] = [
     ],
   },
   {
+    name: 'packs: waiting metas, tombstones and v1 bodies',
+    tree: {
+      'sync/i18n/index.json': json({ metas: [
+        pack('wait', { body: '1970-01-01T00:00:00.000Z' }, { version: '2', coverage: 80 }),
+        pack('tomb', {}, { deletedAt: D(1), updatedAt: D(1) }),
+        pack('fresh', { body: '1970-01-01T00:00:00.000Z' }, { version: '3', coverage: 70, matchedBaseVersion: 'b' }),
+        pack('fresh2', { body: '1970-01-01T00:00:00.000Z' }, { version: '3', coverage: 70 }),
+        pack('same', { body: D(5) }, { version: '1', coverage: 60 }),
+        { id: 'v1', name: 'Old', version: '1', enabled: true, savedAt: D(30), updatedAt: D(20), filename: 'packs/v1.json' },
+      ] }),
+      'sync/i18n/packs/wait.json': packBody('0'),
+      'sync/i18n/packs/tomb.json': packBody('1'),
+      'sync/i18n/packs/same.json': packBody('1'),
+      'sync/i18n/packs/v1.json': packBody('1'),
+    },
+    mtimes: { 'sync/i18n/packs/wait.json': FIXED_NOW - 100 * DAY, 'sync/i18n/packs/v1.json': FIXED_NOW - 25 * DAY },
+    steps: [
+      { bundle: ['i18n/index', 'i18n/packs/wait', 'i18n/packs/tomb', 'i18n/packs/v1'] },
+      merge('i18n/packs/tomb', { files: { 'tomb.json': packBody('9') }, body: { clock: D(0), fields: { version: '9' } } }),
+      merge('i18n/packs/fresh', { files: { 'fresh.json': packBody('3') } }, D(2)),
+      merge('i18n/packs/fresh2', { files: { 'fresh2.json': packBody('4') } }, D(2)),
+      merge('i18n/packs/same', { files: { 'same.json': packBody('1') } }, D(1)),
+      merge('i18n/packs/wait', { files: { 'wait.json': packBody('2') }, body: { clock: 'not a time', fields: { version: '2' } } }),
+      merge('i18n/index', { index: { metas: [
+        pack('fresh', { body: D(9) }, { version: '3' }),
+        { id: 'v1', name: 'Old', version: '1', enabled: true, savedAt: D(30), filename: 'packs/v1.json',
+          clocks: { created: D(30), body: new Date(FIXED_NOW - 25 * DAY).toISOString(), name: D(20), hub: D(20), enabled: D(20) }, updatedAt: D(20) },
+      ] } }),
+      { bundle: ['i18n/index'] },
+    ],
+  },
+  {
+    name: 'notifications: only a merge that wrote reports the unit',
+    tree: {
+      'sync/favorites/macro/index.json': json({ type: 'macro', entries: [fav('a')] }),
+      'sync/favorites/macro/macro_t_a.json': '{"a":1}',
+    },
+    steps: [
+      merge('favorites/macro', { index: { type: 'macro', entries: [fav('a')] }, files: { 'macro_t_a.json': '{"a":1}' } }),
+      merge('favorites/macro', { index: { type: 'macro', entries: [fav('a', {}, { deletedAt: D(1), updatedAt: D(1) })] }, files: {} }),
+      merge('favorites/macro', { index: { type: 'macro', entries: [fav('a', {}, { deletedAt: D(1), updatedAt: D(1) })] }, files: {} }),
+      merge('favorites/macro', { index: { type: 'macro', entries: [fav('a', { created: D(0), body: D(0) }, { updatedAt: D(0), filename: 'new_a.json' })] }, files: { 'new_a.json': '{"a":2}' } }),
+      { bundle: ['favorites/macro'] },
+    ],
+  },
+  {
     name: 'packs: the GC after a pass',
     tree: {
       'sync/i18n/index.json': json({ metas: [

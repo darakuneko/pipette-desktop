@@ -1648,6 +1648,400 @@
     ]
   },
   {
+    "name": "packs: waiting metas, tombstones and v1 bodies",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"version\": \"2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 80\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\"\n    }\n  ]\n}",
+      "sync/i18n/packs/wait.json": "{\n  \"version\": \"0\",\n  \"name\": \"P\"\n}",
+      "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+      "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+      "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}"
+    },
+    "mtimes": {
+      "sync/i18n/packs/wait.json": 1783468800000,
+      "sync/i18n/packs/v1.json": 1789948800000
+    },
+    "typingUids": [],
+    "ownHash": "ownhash0",
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "bundle": [
+            "i18n/index",
+            "i18n/packs/wait",
+            "i18n/packs/tomb",
+            "i18n/packs/v1"
+          ]
+        },
+        "result": {
+          "bundles": [
+            {
+              "unit": "i18n/index",
+              "plaintext": "{\"type\":\"i18n-index\",\"key\":\"i18n-index\",\"index\":{\"metas\":[{\"id\":\"wait\",\"name\":\"Pack wait\",\"version\":\"2\",\"enabled\":true,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"filename\":\"packs/wait.json\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\",\"coverage\":80},{\"id\":\"tomb\",\"name\":\"Pack tomb\",\"version\":\"1.0\",\"enabled\":true,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"filename\":\"packs/tomb.json\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-06T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-15T00:00:00.000Z\",\"deletedAt\":\"2026-10-15T00:00:00.000Z\"},{\"id\":\"fresh\",\"name\":\"Pack fresh\",\"version\":\"3\",\"enabled\":true,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"filename\":\"packs/fresh.json\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\",\"coverage\":70,\"matchedBaseVersion\":\"b\"},{\"id\":\"fresh2\",\"name\":\"Pack fresh2\",\"version\":\"3\",\"enabled\":true,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"filename\":\"packs/fresh2.json\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\",\"coverage\":70},{\"id\":\"same\",\"name\":\"Pack same\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"filename\":\"packs/same.json\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-11T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-11T00:00:00.000Z\",\"coverage\":60},{\"id\":\"v1\",\"name\":\"Old\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-09-16T00:00:00.000Z\",\"updatedAt\":\"2026-09-26T00:00:00.000Z\",\"filename\":\"packs/v1.json\",\"clocks\":{\"created\":\"2026-09-16T00:00:00.000Z\",\"body\":\"2026-09-21T00:00:00.000Z\",\"name\":\"2026-09-26T00:00:00.000Z\",\"hub\":\"2026-09-26T00:00:00.000Z\",\"enabled\":\"2026-09-26T00:00:00.000Z\"}}]},\"files\":{}}"
+            },
+            {
+              "unit": "i18n/packs/wait",
+              "plaintext": "{\"type\":\"i18n-pack\",\"key\":\"wait\",\"index\":{\"metas\":[]},\"files\":{\"wait.json\":\"{\\n  \\\"version\\\": \\\"0\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"},\"body\":{\"clock\":\"1970-01-01T00:00:00.000Z\",\"fields\":{\"version\":\"2\",\"coverage\":80}}}"
+            },
+            {
+              "unit": "i18n/packs/tomb",
+              "plaintext": null
+            },
+            {
+              "unit": "i18n/packs/v1",
+              "plaintext": "{\"type\":\"i18n-pack\",\"key\":\"v1\",\"index\":{\"metas\":[]},\"files\":{\"v1.json\":\"{\\n  \\\"version\\\": \\\"1\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"},\"body\":{\"clock\":\"2026-09-21T00:00:00.000Z\",\"fields\":{\"version\":\"1\"}}}"
+            }
+          ],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"version\": \"2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 80\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\"\n    }\n  ]\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"0\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "i18n/packs/tomb",
+            "plaintext": "{\"files\":{\"tomb.json\":\"{\\n  \\\"version\\\": \\\"9\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"},\"body\":{\"clock\":\"2026-10-16T00:00:00.000Z\",\"fields\":{\"version\":\"9\"}}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"version\": \"2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 80\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\"\n    }\n  ]\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"0\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "i18n/packs/fresh",
+            "plaintext": "{\"files\":{\"fresh.json\":\"{\\n  \\\"version\\\": \\\"3\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"}}",
+            "modifiedTime": "2026-10-14T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "i18n-pack:changed",
+              null
+            ]
+          ],
+          "pending": [
+            "i18n/index"
+          ],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"version\": \"2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 80\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"3\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"version\": \"3\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 70\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-11T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\",\n      \"clocks\": {\n        \"created\": \"2026-09-16T00:00:00.000Z\",\n        \"body\": \"2026-09-21T00:00:00.000Z\",\n        \"name\": \"2026-09-26T00:00:00.000Z\",\n        \"hub\": \"2026-09-26T00:00:00.000Z\",\n        \"enabled\": \"2026-09-26T00:00:00.000Z\"\n      }\n    }\n  ]\n}",
+            "sync/i18n/packs/fresh.json": "{\n  \"version\": \"3\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"0\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "i18n/packs/fresh2",
+            "plaintext": "{\"files\":{\"fresh2.json\":\"{\\n  \\\"version\\\": \\\"4\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"}}",
+            "modifiedTime": "2026-10-14T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "i18n-pack:changed",
+              null
+            ]
+          ],
+          "pending": [
+            "i18n/index"
+          ],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"version\": \"2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 80\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"3\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"4\"\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-11T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\",\n      \"clocks\": {\n        \"created\": \"2026-09-16T00:00:00.000Z\",\n        \"body\": \"2026-09-21T00:00:00.000Z\",\n        \"name\": \"2026-09-26T00:00:00.000Z\",\n        \"hub\": \"2026-09-26T00:00:00.000Z\",\n        \"enabled\": \"2026-09-26T00:00:00.000Z\"\n      }\n    }\n  ]\n}",
+            "sync/i18n/packs/fresh.json": "{\n  \"version\": \"3\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/fresh2.json": "{\n  \"version\": \"4\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"0\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "i18n/packs/same",
+            "plaintext": "{\"files\":{\"same.json\":\"{\\n  \\\"version\\\": \\\"1\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"}}",
+            "modifiedTime": "2026-10-15T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"version\": \"2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"coverage\": 80\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"3\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"4\"\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-11T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\",\n      \"clocks\": {\n        \"created\": \"2026-09-16T00:00:00.000Z\",\n        \"body\": \"2026-09-21T00:00:00.000Z\",\n        \"name\": \"2026-09-26T00:00:00.000Z\",\n        \"hub\": \"2026-09-26T00:00:00.000Z\",\n        \"enabled\": \"2026-09-26T00:00:00.000Z\"\n      }\n    }\n  ]\n}",
+            "sync/i18n/packs/fresh.json": "{\n  \"version\": \"3\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/fresh2.json": "{\n  \"version\": \"4\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"0\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "i18n/packs/wait",
+            "plaintext": "{\"files\":{\"wait.json\":\"{\\n  \\\"version\\\": \\\"2\\\",\\n  \\\"name\\\": \\\"P\\\"\\n}\"},\"body\":{\"clock\":\"not a time\",\"fields\":{\"version\":\"2\"}}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "i18n-pack:changed",
+              null
+            ]
+          ],
+          "pending": [
+            "i18n/index"
+          ],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"name\": \"Pack wait\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/wait.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"version\": \"2\"\n    },\n    {\n      \"id\": \"tomb\",\n      \"name\": \"Pack tomb\",\n      \"version\": \"1.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/tomb.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"name\": \"Pack fresh\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"3\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"name\": \"Pack fresh2\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/fresh2.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\",\n      \"version\": \"4\"\n    },\n    {\n      \"id\": \"same\",\n      \"name\": \"Pack same\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"filename\": \"packs/same.json\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-11T00:00:00.000Z\",\n      \"coverage\": 60\n    },\n    {\n      \"id\": \"v1\",\n      \"name\": \"Old\",\n      \"version\": \"1\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\",\n      \"filename\": \"packs/v1.json\",\n      \"clocks\": {\n        \"created\": \"2026-09-16T00:00:00.000Z\",\n        \"body\": \"2026-09-21T00:00:00.000Z\",\n        \"name\": \"2026-09-26T00:00:00.000Z\",\n        \"hub\": \"2026-09-26T00:00:00.000Z\",\n        \"enabled\": \"2026-09-26T00:00:00.000Z\"\n      }\n    }\n  ]\n}",
+            "sync/i18n/packs/fresh.json": "{\n  \"version\": \"3\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/fresh2.json": "{\n  \"version\": \"4\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"2\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "i18n/index",
+            "plaintext": "{\"index\":{\"metas\":[{\"id\":\"fresh\",\"name\":\"Pack fresh\",\"version\":\"3\",\"enabled\":true,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"filename\":\"packs/fresh.json\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-07T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\"},{\"id\":\"v1\",\"name\":\"Old\",\"version\":\"1\",\"enabled\":true,\"savedAt\":\"2026-09-16T00:00:00.000Z\",\"filename\":\"packs/v1.json\",\"clocks\":{\"created\":\"2026-09-16T00:00:00.000Z\",\"body\":\"2026-09-21T00:00:00.000Z\",\"name\":\"2026-09-26T00:00:00.000Z\",\"hub\":\"2026-09-26T00:00:00.000Z\",\"enabled\":\"2026-09-26T00:00:00.000Z\"},\"updatedAt\":\"2026-09-26T00:00:00.000Z\"}]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": true,
+          "uploaded": "{\"type\":\"i18n-index\",\"key\":\"i18n-index\",\"index\":{\"metas\":[{\"id\":\"wait\",\"filename\":\"packs/wait.json\",\"version\":\"2\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack wait\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\"},{\"id\":\"fresh\",\"filename\":\"packs/fresh.json\",\"version\":\"3\",\"coverage\":70,\"matchedBaseVersion\":\"b\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack fresh\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-14T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-14T00:00:00.000Z\"},{\"id\":\"fresh2\",\"filename\":\"packs/fresh2.json\",\"version\":\"4\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack fresh2\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-14T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-14T00:00:00.000Z\"},{\"id\":\"same\",\"version\":\"1\",\"filename\":\"packs/same.json\",\"coverage\":60,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack same\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-11T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-11T00:00:00.000Z\"},{\"id\":\"v1\",\"version\":\"1\",\"filename\":\"packs/v1.json\",\"savedAt\":\"2026-09-16T00:00:00.000Z\",\"name\":\"Old\",\"enabled\":true,\"clocks\":{\"created\":\"2026-09-16T00:00:00.000Z\",\"body\":\"2026-09-21T00:00:00.000Z\",\"name\":\"2026-09-26T00:00:00.000Z\",\"hub\":\"2026-09-26T00:00:00.000Z\",\"enabled\":\"2026-09-26T00:00:00.000Z\"},\"updatedAt\":\"2026-09-26T00:00:00.000Z\"},{\"id\":\"tomb\",\"version\":\"1.0\",\"filename\":\"packs/tomb.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack tomb\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-06T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"deletedAt\":\"2026-10-15T00:00:00.000Z\",\"updatedAt\":\"2026-10-15T00:00:00.000Z\"}]},\"files\":{}}",
+          "events": [
+            [
+              "i18n-pack:changed",
+              null
+            ]
+          ],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"filename\": \"packs/wait.json\",\n      \"version\": \"2\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack wait\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"filename\": \"packs/fresh.json\",\n      \"version\": \"3\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack fresh\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"filename\": \"packs/fresh2.json\",\n      \"version\": \"4\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack fresh2\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"same\",\n      \"version\": \"1\",\n      \"filename\": \"packs/same.json\",\n      \"coverage\": 60,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack same\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-11T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"v1\",\n      \"version\": \"1\",\n      \"filename\": \"packs/v1.json\",\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"name\": \"Old\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-09-16T00:00:00.000Z\",\n        \"body\": \"2026-09-21T00:00:00.000Z\",\n        \"name\": \"2026-09-26T00:00:00.000Z\",\n        \"hub\": \"2026-09-26T00:00:00.000Z\",\n        \"enabled\": \"2026-09-26T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"tomb\",\n      \"version\": \"1.0\",\n      \"filename\": \"packs/tomb.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack tomb\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/i18n/packs/fresh.json": "{\n  \"version\": \"3\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/fresh2.json": "{\n  \"version\": \"4\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"2\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      },
+      {
+        "step": {
+          "bundle": [
+            "i18n/index"
+          ]
+        },
+        "result": {
+          "bundles": [
+            {
+              "unit": "i18n/index",
+              "plaintext": "{\"type\":\"i18n-index\",\"key\":\"i18n-index\",\"index\":{\"metas\":[{\"id\":\"wait\",\"filename\":\"packs/wait.json\",\"version\":\"2\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack wait\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\"},{\"id\":\"fresh\",\"filename\":\"packs/fresh.json\",\"version\":\"3\",\"coverage\":70,\"matchedBaseVersion\":\"b\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack fresh\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-14T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-14T00:00:00.000Z\"},{\"id\":\"fresh2\",\"filename\":\"packs/fresh2.json\",\"version\":\"4\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack fresh2\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-14T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-14T00:00:00.000Z\"},{\"id\":\"same\",\"version\":\"1\",\"filename\":\"packs/same.json\",\"coverage\":60,\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack same\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-11T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-11T00:00:00.000Z\"},{\"id\":\"v1\",\"version\":\"1\",\"filename\":\"packs/v1.json\",\"savedAt\":\"2026-09-16T00:00:00.000Z\",\"name\":\"Old\",\"enabled\":true,\"clocks\":{\"created\":\"2026-09-16T00:00:00.000Z\",\"body\":\"2026-09-21T00:00:00.000Z\",\"name\":\"2026-09-26T00:00:00.000Z\",\"hub\":\"2026-09-26T00:00:00.000Z\",\"enabled\":\"2026-09-26T00:00:00.000Z\"},\"updatedAt\":\"2026-09-26T00:00:00.000Z\"},{\"id\":\"tomb\",\"version\":\"1.0\",\"filename\":\"packs/tomb.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"name\":\"Pack tomb\",\"enabled\":true,\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-06T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\",\"enabled\":\"2026-10-06T00:00:00.000Z\"},\"deletedAt\":\"2026-10-15T00:00:00.000Z\",\"updatedAt\":\"2026-10-15T00:00:00.000Z\"}]},\"files\":{}}"
+            }
+          ],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"wait\",\n      \"filename\": \"packs/wait.json\",\n      \"version\": \"2\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack wait\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh\",\n      \"filename\": \"packs/fresh.json\",\n      \"version\": \"3\",\n      \"coverage\": 70,\n      \"matchedBaseVersion\": \"b\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack fresh\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"fresh2\",\n      \"filename\": \"packs/fresh2.json\",\n      \"version\": \"4\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack fresh2\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-14T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-14T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"same\",\n      \"version\": \"1\",\n      \"filename\": \"packs/same.json\",\n      \"coverage\": 60,\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack same\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-11T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-11T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"v1\",\n      \"version\": \"1\",\n      \"filename\": \"packs/v1.json\",\n      \"savedAt\": \"2026-09-16T00:00:00.000Z\",\n      \"name\": \"Old\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-09-16T00:00:00.000Z\",\n        \"body\": \"2026-09-21T00:00:00.000Z\",\n        \"name\": \"2026-09-26T00:00:00.000Z\",\n        \"hub\": \"2026-09-26T00:00:00.000Z\",\n        \"enabled\": \"2026-09-26T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-09-26T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"tomb\",\n      \"version\": \"1.0\",\n      \"filename\": \"packs/tomb.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"name\": \"Pack tomb\",\n      \"enabled\": true,\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\",\n        \"enabled\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/i18n/packs/fresh.json": "{\n  \"version\": \"3\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/fresh2.json": "{\n  \"version\": \"4\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/same.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/tomb.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/v1.json": "{\n  \"version\": \"1\",\n  \"name\": \"P\"\n}",
+            "sync/i18n/packs/wait.json": "{\n  \"version\": \"2\",\n  \"name\": \"P\"\n}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "notifications: only a merge that wrote reports the unit",
+    "tree": {
+      "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+      "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"Fav a\",\n      \"filename\": \"macro_t_a.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/macro/macro_t_a.json": "{\"a\":1}"
+    },
+    "mtimes": {},
+    "typingUids": [],
+    "ownHash": "ownhash0",
+    "now": 1792108800000,
+    "steps": [
+      {
+        "step": {
+          "merge": {
+            "unit": "favorites/macro",
+            "plaintext": "{\"index\":{\"type\":\"macro\",\"entries\":[{\"id\":\"a\",\"label\":\"Fav a\",\"filename\":\"macro_t_a.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-06T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-06T00:00:00.000Z\"}]},\"files\":{\"macro_t_a.json\":\"{\\\"a\\\":1}\"}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"Fav a\",\n      \"filename\": \"macro_t_a.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-06T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/favorites/macro/macro_t_a.json": "{\"a\":1}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "favorites/macro",
+            "plaintext": "{\"index\":{\"type\":\"macro\",\"entries\":[{\"id\":\"a\",\"label\":\"Fav a\",\"filename\":\"macro_t_a.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-06T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-15T00:00:00.000Z\",\"deletedAt\":\"2026-10-15T00:00:00.000Z\"}]},\"files\":{}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "sync:unit-applied",
+              {
+                "syncUnit": "favorites/macro"
+              }
+            ]
+          ],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"filename\": \"macro_t_a.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"label\": \"Fav a\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/favorites/macro/macro_t_a.json": "{\"a\":1}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "favorites/macro",
+            "plaintext": "{\"index\":{\"type\":\"macro\",\"entries\":[{\"id\":\"a\",\"label\":\"Fav a\",\"filename\":\"macro_t_a.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-06T00:00:00.000Z\",\"body\":\"2026-10-06T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-15T00:00:00.000Z\",\"deletedAt\":\"2026-10-15T00:00:00.000Z\"}]},\"files\":{}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"filename\": \"macro_t_a.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"label\": \"Fav a\",\n      \"clocks\": {\n        \"created\": \"2026-10-06T00:00:00.000Z\",\n        \"body\": \"2026-10-06T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"deletedAt\": \"2026-10-15T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-15T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/favorites/macro/macro_t_a.json": "{\"a\":1}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "favorites/macro",
+            "plaintext": "{\"index\":{\"type\":\"macro\",\"entries\":[{\"id\":\"a\",\"label\":\"Fav a\",\"filename\":\"new_a.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T00:00:00.000Z\",\"body\":\"2026-10-16T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-16T00:00:00.000Z\"}]},\"files\":{\"new_a.json\":\"{\\\"a\\\":2}\"}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "sync:unit-applied",
+              {
+                "syncUnit": "favorites/macro"
+              }
+            ]
+          ],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"filename\": \"new_a.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"label\": \"Fav a\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/favorites/macro/new_a.json": "{\"a\":2}"
+          }
+        }
+      },
+      {
+        "step": {
+          "bundle": [
+            "favorites/macro"
+          ]
+        },
+        "result": {
+          "bundles": [
+            {
+              "unit": "favorites/macro",
+              "plaintext": "{\"type\":\"favorite\",\"key\":\"macro\",\"index\":{\"type\":\"macro\",\"entries\":[{\"id\":\"a\",\"filename\":\"new_a.json\",\"savedAt\":\"2026-10-06T00:00:00.000Z\",\"label\":\"Fav a\",\"clocks\":{\"created\":\"2026-10-16T00:00:00.000Z\",\"body\":\"2026-10-16T00:00:00.000Z\",\"name\":\"2026-10-06T00:00:00.000Z\",\"hub\":\"2026-10-06T00:00:00.000Z\"},\"updatedAt\":\"2026-10-16T00:00:00.000Z\"}]},\"files\":{\"new_a.json\":\"{\\\"a\\\":2}\",\"index.json\":\"{\\n  \\\"type\\\": \\\"macro\\\",\\n  \\\"entries\\\": [\\n    {\\n      \\\"id\\\": \\\"a\\\",\\n      \\\"filename\\\": \\\"new_a.json\\\",\\n      \\\"savedAt\\\": \\\"2026-10-06T00:00:00.000Z\\\",\\n      \\\"label\\\": \\\"Fav a\\\",\\n      \\\"clocks\\\": {\\n        \\\"created\\\": \\\"2026-10-16T00:00:00.000Z\\\",\\n        \\\"body\\\": \\\"2026-10-16T00:00:00.000Z\\\",\\n        \\\"name\\\": \\\"2026-10-06T00:00:00.000Z\\\",\\n        \\\"hub\\\": \\\"2026-10-06T00:00:00.000Z\\\"\\n      },\\n      \\\"updatedAt\\\": \\\"2026-10-16T00:00:00.000Z\\\"\\n    }\\n  ]\\n}\"}}"
+            }
+          ],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"filename\": \"new_a.json\",\n      \"savedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"label\": \"Fav a\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-06T00:00:00.000Z\",\n        \"hub\": \"2026-10-06T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}",
+            "sync/favorites/macro/new_a.json": "{\"a\":2}"
+          }
+        }
+      }
+    ]
+  },
+  {
     "name": "packs: the GC after a pass",
     "tree": {
       "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
