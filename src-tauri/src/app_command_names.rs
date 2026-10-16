@@ -84,6 +84,13 @@ pub const APP_COMMANDS: &[&str] = &[
     "pipette_settings_write",
     "pipette_settings_ensure_dir",
     "pipette_settings_read_all",
+    // src/typing_dataset_commands.rs
+    "lang_list",
+    "lang_get",
+    "lang_download",
+    "lang_delete",
+    "typing_dataset_check",
+    "typing_dataset_update",
     // src/store_commands/i18n_packs.rs
     "i18n_pack_store_list",
     "i18n_pack_store_get",

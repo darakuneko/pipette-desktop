@@ -2676,6 +2676,7 @@ dependencies = [
  "pipette-net",
  "pipette-pack-stores",
  "pipette-sync-pending",
+ "pipette-typing-datasets",
  "rfd",
  "serde",
  "serde_json",
@@ -2867,6 +2868,20 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "pipette-typing-datasets"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-net",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]

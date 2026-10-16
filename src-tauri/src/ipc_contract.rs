@@ -15,7 +15,7 @@
 //! and nothing else.
 //!
 //! Every file dialog is cancelled, so the file commands answer without
-//! touching the disk.
+//! touching the disk, and every HTTP request fails as offline.
 //!
 //! The HID service lists only the virtual keyboard. The virtual keyboard
 //! cannot be probed, so behind it sits one scripted hardware keyboard
@@ -35,7 +35,7 @@ use serde_json::{Value, json};
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder};
 use tauri::webview::InvokeRequest;
-use tauri::{App, WebviewWindow};
+use tauri::{App, Manager, WebviewWindow};
 use tempfile::TempDir;
 
 use crate::dialog::Dialogs;
@@ -158,6 +158,8 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
         .unwrap();
     crate::store_commands::sync_pending::manage_without_delayed_writes(app.handle(), user_data);
     crate::store_commands::keyboard_data::manage(app.handle(), user_data);
+    app.manage(pipette_net::Http::new(|_: &str| Err(pipette_net::HttpError::Network("offline".into()))));
+    crate::typing_dataset_commands::manage(app.handle(), user_data);
     app
 }
 

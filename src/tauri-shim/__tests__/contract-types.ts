@@ -33,6 +33,8 @@ import type { DeviceInfo as GeneratedDeviceInfo } from '../generated/DeviceInfo'
 import type { DeviceType as GeneratedDeviceType } from '../generated/DeviceType'
 import type { FileOpenResult } from '../generated/FileOpenResult'
 import type { FileSaveResult } from '../generated/FileSaveResult'
+import type { LanguageActionResult } from '../generated/LanguageActionResult'
+import type { TypingDatasetCheckResult } from '../generated/TypingDatasetCheckResult'
 import type { PackImportFileRead } from '../generated/PackImportFileRead'
 import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
@@ -55,6 +57,10 @@ export type ContractChecks = [
   Assert<MutuallyAssignable<FileSaveResult, Awaited<ReturnType<VialAPI['exportPdf']>>>>,
   Assert<MutuallyAssignable<FileOpenResult, Awaited<ReturnType<VialAPI['loadLayout']>>>>,
   Assert<MutuallyAssignable<CsvBundleResult, Awaited<ReturnType<VialAPI['exportCsvBundle']>>>>,
+  // src-tauri/src/typing_dataset_commands.rs
+  Assert<MutuallyAssignable<LanguageActionResult, Awaited<ReturnType<VialAPI['langDownload']>>>>,
+  Assert<MutuallyAssignable<LanguageActionResult, Awaited<ReturnType<VialAPI['langDelete']>>>>,
+  Assert<MutuallyAssignable<TypingDatasetCheckResult, Awaited<ReturnType<VialAPI['checkTypingDatasetUpdate']>>>>,
   // src-tauri/src/store_commands/pack_import.rs (the shim parses each
   // file's text into the PackImportFile the renderer gets)
   Assert<MutuallyAssignable<PackImportFileRead['filePath'], PackImportFile['filePath']>>,

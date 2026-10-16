@@ -16,6 +16,7 @@ import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
 import { snapshotsApi } from './api/snapshots'
 import { syncPendingApi } from './api/sync-pending'
+import { typingDatasetsApi } from './api/typing-datasets'
 import { windowApi } from './api/window'
 import { fakes } from './fakes'
 
@@ -32,6 +33,7 @@ export const real = {
   ...keyLabelsApi,
   ...snapshotsApi,
   ...settingsApi,
+  ...typingDatasetsApi,
   ...i18nPacksApi,
 } satisfies Partial<VialAPI>
 
