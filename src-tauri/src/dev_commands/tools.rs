@@ -5,20 +5,22 @@
 //! `globalThis.__pipetteVirtualDevice`), a log sink, window
 //! screenshots (Linux), and a script hook that runs a local file in the
 //! window once the first page has loaded, so the UI can be driven without a
-//! WebDriver, and a queue of answers for the file dialogs, so the e2e tests
-//! can save and open files without the native dialog.
+//! WebDriver, a queue of answers for the file dialogs, so the e2e tests
+//! can save and open files without the native dialog, and recorded
+//! responses for the HTTP requests, so they need no network.
 //!
 //! `install` is the only entry point, called through
 //! `dev_commands::install_or_passthrough`. The permissions of these commands are
 //! generated and granted only in these builds (see build.rs and
 //! capabilities/dev/).
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use pipette_hid::ControllerState;
+use pipette_net::{Http, HttpClient, HttpFuture, HttpResponse};
 use serde::Serialize;
 use tauri::ipc::Invoke;
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
@@ -190,6 +192,71 @@ pub fn dev_dialog_queued(queue: State<'_, Arc<DialogQueue>>) -> usize {
     queue.len()
 }
 
+/// Recorded responses for the next requests, by URL and in order for each
+/// URL. Each is used once.
+#[derive(Default)]
+pub struct ResponseQueue(Mutex<HashMap<String, VecDeque<HttpResponse>>>);
+
+impl ResponseQueue {
+    fn push(&self, url: String, response: HttpResponse) {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).entry(url).or_default().push_back(response);
+    }
+
+    fn len(&self) -> usize {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).values().map(VecDeque::len).sum()
+    }
+
+    fn pop(&self, url: &str) -> Option<HttpResponse> {
+        let mut queues = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let queue = queues.get_mut(url)?;
+        let response = queue.pop_front();
+        if queue.is_empty() {
+            queues.remove(url);
+        }
+        response
+    }
+}
+
+/// The recorded response for the URL, or `fallback`'s request when none is
+/// queued for it, so a build with these tools still reaches the network
+/// when nothing is recorded.
+struct QueuedHttp<F> {
+    queue: Arc<ResponseQueue>,
+    fallback: F,
+}
+
+impl<F: HttpClient> HttpClient for QueuedHttp<F> {
+    fn get_bytes<'a>(&'a self, url: &'a str) -> HttpFuture<'a> {
+        match self.queue.pop(url) {
+            Some(response) => {
+                log::info!("[dev] answered GET {url} from the recorded responses: {}", response.status);
+                Box::pin(std::future::ready(Ok(response)))
+            }
+            None => self.fallback.get_bytes(url),
+        }
+    }
+}
+
+/// Manages the HTTP client as the recorded responses of `dev_http_respond`
+/// in front of `real`.
+pub fn manage_queued_http(app: &AppHandle<Wry>, real: impl HttpClient + 'static) {
+    let queue = Arc::new(ResponseQueue::default());
+    app.manage(Http::new(QueuedHttp { queue: Arc::clone(&queue), fallback: real }));
+    app.manage(queue);
+}
+
+/// Records the response of the next GET of `url`: `status` and `body`.
+#[tauri::command]
+pub fn dev_http_respond(queue: State<'_, Arc<ResponseQueue>>, url: String, status: u16, body: Vec<u8>) {
+    queue.push(url, HttpResponse { status, body });
+}
+
+/// How many recorded responses no request has taken yet.
+#[tauri::command]
+pub fn dev_http_queued(queue: State<'_, Arc<ResponseQueue>>) -> usize {
+    queue.len()
+}
+
 /// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
 /// letters, digits and dashes so it cannot leave the directory.
 #[cfg(target_os = "linux")]
@@ -287,6 +354,8 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         dev_log,
         dev_dialog_respond,
         dev_dialog_queued,
+        dev_http_respond,
+        dev_http_queued,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]
@@ -406,6 +475,33 @@ mod tests {
         assert_eq!(dialog_answer(None, Some(vec![path("/a"), path("/b")])), Ok(vec![path("/a"), path("/b")]));
         assert_eq!(dialog_answer(None, Some(Vec::new())), Ok(Vec::new()));
         assert!(dialog_answer(Some(path("/a")), Some(vec![path("/b")])).is_err());
+    }
+
+    #[test]
+    fn recorded_responses_answer_their_url_in_order_then_the_fallback_answers() {
+        let queue = Arc::new(ResponseQueue::default());
+        let fallback_urls = Arc::new(Mutex::new(Vec::new()));
+        let record = Arc::clone(&fallback_urls);
+        let http = QueuedHttp {
+            queue: Arc::clone(&queue),
+            fallback: move |url: &str| {
+                record.lock().unwrap().push(url.to_owned());
+                Ok(HttpResponse { status: 503, body: Vec::new() })
+            },
+        };
+        let response = |status, body: &[u8]| HttpResponse { status, body: body.to_vec() };
+        queue.push("https://a/x".to_owned(), response(200, b"first"));
+        queue.push("https://b/y".to_owned(), response(404, b""));
+        queue.push("https://a/x".to_owned(), response(200, b"second"));
+        let get = |url| tauri::async_runtime::block_on(http.get_bytes(url)).unwrap();
+
+        assert_eq!(queue.len(), 3);
+        assert_eq!(get("https://a/x"), response(200, b"first"));
+        assert_eq!(get("https://a/x"), response(200, b"second"));
+        assert_eq!(get("https://a/x"), response(503, b""));
+        assert_eq!(get("https://b/y"), response(404, b""));
+        assert_eq!(queue.len(), 0);
+        assert_eq!(*fallback_urls.lock().unwrap(), ["https://a/x"]);
     }
 
     #[test]
