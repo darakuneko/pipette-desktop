@@ -10,6 +10,7 @@
     "shell",
     "window",
     "sync-pending",
+    "sync-auth",
     "files",
     "keyboard-data",
     "favorites",

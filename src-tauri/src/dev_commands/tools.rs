@@ -371,6 +371,7 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         dev_http_respond,
         dev_http_queued,
         dev_typing_analytics_machine_hash,
+        super::sync_auth::dev_sync_last_auth_url,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]

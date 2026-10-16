@@ -45,6 +45,10 @@ pipette-typing-analytics = { path = "crates/pipette-typing-analytics" }
 pipette-active-window = { path = "crates/pipette-active-window" }
 # The rows and filters of the analytics queries (src/analytics_commands/).
 pipette-typing-analytics-db = { path = "crates/pipette-typing-analytics-db" }
+# The sync's secrets and its Google sign-in (src/sync_commands.rs).
+pipette-secret-store = { path = "crates/pipette-secret-store" }
+pipette-google-auth = { path = "crates/pipette-google-auth" }
+pipette-time = { path = "crates/pipette-time" }
 log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).
@@ -93,10 +97,13 @@ cairo-rs = { version = "0.18", features = ["png"], optional = true }
 [features]
 # The development tools of src/dev_commands/tools.rs, and the Google endpoint
 # variables that point the sync at fake servers on the loopback interface
-# (pipette-net's url-override). build.rs rejects the feature in the release
-# profile, so a bundled binary never has these commands, never reads those
-# variables, and does not link WebKitGTK's bindings or cairo.
-dev-tools = ["dep:webkit2gtk", "dep:cairo-rs", "pipette-net/url-override"]
+# (pipette-net's url-override), the plain-text key file of
+# PIPETTE_DEV_KEYSTORE=file (pipette-secret-store's dev-keystore) and the
+# browserless sign-in of PIPETTE_DEV_SUPPRESS_BROWSER=1
+# (src/dev_commands/sync_auth.rs). build.rs rejects the feature in the
+# release profile, so a bundled binary never has these commands, never reads
+# those variables, and does not link WebKitGTK's bindings or cairo.
+dev-tools = ["dep:webkit2gtk", "dep:cairo-rs", "pipette-net/url-override", "pipette-secret-store/dev-keystore"]
 
 [dev-dependencies]
 # A scripted hardware keyboard behind the IPC contract tests' HID service
@@ -109,7 +116,9 @@ hex = "=0.4.3"
 # The permission sets (permissions/*.toml) the capability tests read.
 toml = "=1.1.8"
 # Paused time for the quit sequence tests.
-tokio = { version = "=1.53.3", features = ["rt", "test-util"] }
+tokio = { version = "=1.53.3", features = ["rt", "macros", "test-util"] }
+# The in-memory key store of the sync command tests.
+pipette-secret-store = { path = "crates/pipette-secret-store", features = ["test-util"] }
 # The mock runtime the IPC contract tests (src/ipc_contract.rs) run the app
 # commands on. Same version as the tauri dependency.
 tauri = { version = "=2.12.1", features = ["tray-icon", "test"] }

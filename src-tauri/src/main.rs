@@ -31,6 +31,7 @@ mod navigation;
 mod shell;
 mod shutdown;
 mod store_commands;
+mod sync_commands;
 mod typing_dataset_commands;
 mod window_bounds;
 mod window_commands;
@@ -214,6 +215,8 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         store_commands::theme_packs::theme_pack_import,
         store_commands::theme_packs::theme_pack_import_apply,
         store_commands::theme_packs::theme_pack_export,
+        sync_commands::auth::sync_auth_status,
+        sync_commands::password::sync_password_status,
     ]
 }
 
@@ -260,6 +263,8 @@ fn main() {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             dev_commands::manage_dialogs(app.handle());
             dev_commands::manage_http(app.handle());
+            sync_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
+            dev_commands::manage_auth_browser(app.handle());
             typing_dataset_commands::manage(app.handle(), &app.state::<UserDataDir>().0);
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             analytics_commands::manage(app.handle(), &app.state::<UserDataDir>().0);

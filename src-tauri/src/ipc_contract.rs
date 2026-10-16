@@ -159,6 +159,7 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
         .unwrap();
     crate::store_commands::sync_pending::manage_without_delayed_writes(app.handle(), user_data);
     crate::store_commands::keyboard_data::manage(app.handle(), user_data);
+    crate::sync_commands::manage_for_tests(app.handle(), user_data);
     app.manage(pipette_net::Http::new(|_: &str| Err(pipette_net::HttpError::Network("offline".into()))));
     crate::typing_dataset_commands::manage(app.handle(), user_data);
     crate::analytics_commands::mark_cache_fresh(user_data, "machine");

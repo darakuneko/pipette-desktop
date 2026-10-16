@@ -1,0 +1,16 @@
+[
+  {
+    "member": "syncAuthStatus",
+    "args": [],
+    "command": "sync_auth_status",
+    "invokeArgs": {},
+    "response": { "authenticated": false }
+  },
+  {
+    "member": "syncPasswordStatus",
+    "args": [],
+    "command": "sync_password_status",
+    "invokeArgs": {},
+    "response": "noPasswordFile"
+  }
+]
