@@ -54,7 +54,11 @@ vi.mock('../../src/tauri-shim/ipc', () => ({
 }))
 
 import { setupPipetteSettingsStore } from '../../src/main/pipette-settings-store'
-import { getActiveKeyboardMetaMap, readKeyboardMetaIndex, resolveKeyboardDisplayName } from '../../src/main/sync/keyboard-meta'
+import {
+  getActiveKeyboardMetaMap,
+  readKeyboardMetaIndex,
+  resolveDeviceNameFromLocalSnapshots,
+} from '../../src/main/sync/keyboard-meta'
 import { IpcChannels } from '../../src/shared/ipc/channels'
 import { isSafePathSegment } from '../../src/shared/utils/safe-filename'
 import { settingsApi } from '../../src/tauri-shim/api/settings'
@@ -406,7 +410,12 @@ function crateBackend(dir: string, commands: Command[]): (cmd: string, args?: Re
           if (!entry.isDirectory() || !isSafePathSegment(entry.name)) continue
           const { content } = readSettings(dir, entry.name)
           if (content === null) continue
-          files.push({ uid: entry.name, name: await resolveKeyboardDisplayName(entry.name, metaMap), content })
+          // The crate's name is resolveKeyboardDisplayName's (keyboard-meta.ts)
+          // up to its last two steps, the typing analytics and the uid: it
+          // answers null there and the shim takes those steps.
+          const metaName = metaMap.get(entry.name)
+          const name = metaName && metaName !== entry.name ? metaName : await resolveDeviceNameFromLocalSnapshots(entry.name)
+          files.push({ uid: entry.name, name, content })
         }
         return files
       }

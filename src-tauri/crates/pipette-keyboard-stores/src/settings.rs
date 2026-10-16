@@ -127,7 +127,8 @@ pub struct KeyboardSettingsFile {
     pub uid: String,
     /// The keyboard's display name: its active name in the keyboard names
     /// unless that is its uid; failing that, the device name of its first
-    /// live snapshot; failing that, its uid. Nothing is recorded.
+    /// live snapshot; failing that, `null`, which the caller names from the
+    /// typing analytics or by the uid. Nothing is recorded.
     pub name: Value,
     pub content: String,
 }
@@ -148,7 +149,7 @@ pub fn read_all_pipette_settings(ctx: &StoreContext) -> Result<Vec<KeyboardSetti
         let uid_value = Value::from(uid.as_str());
         let name = match names.get(&uid) {
             Some(name) if *name != uid_value => name.clone(),
-            _ => snapshot_device_name(&dir).map_or(uid_value, Value::String),
+            _ => snapshot_device_name(&dir).map_or(Value::Null, Value::String),
         };
         files.push(KeyboardSettingsFile { uid, name, content });
     }

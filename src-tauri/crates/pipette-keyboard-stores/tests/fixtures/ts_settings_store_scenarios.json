@@ -1561,17 +1561,17 @@
         "response": [
           {
             "uid": "a b",
-            "name": "a b",
+            "name": null,
             "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":8,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":18,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"a b\"}]}"
           },
           {
             "uid": "bare",
-            "name": "bare",
+            "name": null,
             "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":7,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":17,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"bare\"}]}"
           },
           {
             "uid": "empty",
-            "name": "empty",
+            "name": null,
             "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":5,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30},{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":15,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30,\"name\":\"empty\"}]}"
           },
           {
@@ -1581,7 +1581,7 @@
           },
           {
             "uid": "invalid",
-            "name": "invalid",
+            "name": null,
             "content": "{\"keyboardLayout\":1,\"typingTestResults\":[{\"date\":\"2026-01-01T00:00:00.000Z\",\"wpm\":50,\"accuracy\":95,\"wordCount\":30,\"correctChars\":100,\"incorrectChars\":5,\"durationSeconds\":30}]}"
           },
           {
@@ -1591,7 +1591,7 @@
           },
           {
             "uid": "no-results",
-            "name": "no-results",
+            "name": null,
             "content": "{\"keyboardLayout\":\"qwerty\",\"autoAdvance\":true,\"typingTestResults\":[]}"
           },
           {

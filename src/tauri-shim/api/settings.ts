@@ -41,7 +41,8 @@ export interface SettingsFile {
 /** A stored keyboard's settings file and display name. */
 export interface KeyboardSettingsFile {
   uid: string
-  name: string
+  /** null when neither the keyboard names nor a snapshot name it. */
+  name: string | null
   content: string
 }
 
@@ -131,12 +132,11 @@ export const settingsApi = {
     for (const file of await readAllSettingsFiles()) {
       const prefs = parsePipetteSettings(file.content)
       if (!prefs?.typingTestResults?.length) continue
-      // The backend names a keyboard by its meta name, else its snapshots,
-      // else its uid; for the uid, the Electron handler takes the product
-      // name the typing analytics recorded, when there is one
-      // (resolveKeyboardDisplayName, keyboard-meta.ts).
+      // The backend names a keyboard by its meta name, else its snapshots;
+      // failing both, the product name the typing analytics recorded, else
+      // the uid, as resolveKeyboardDisplayName (keyboard-meta.ts) does.
       let keyboardName = file.name
-      if (keyboardName === file.uid) {
+      if (keyboardName === null) {
         analyticsNames ??= readAnalyticsNames()
         keyboardName = (await analyticsNames).get(file.uid) || file.uid
       }

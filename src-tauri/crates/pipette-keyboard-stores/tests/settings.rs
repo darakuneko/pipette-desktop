@@ -192,7 +192,7 @@ fn read_all_without_a_keyboards_directory_is_empty() {
 }
 
 #[test]
-fn read_all_names_a_keyboard_by_its_name_then_its_snapshots_then_its_uid() {
+fn read_all_names_a_keyboard_by_its_name_then_its_snapshots_else_null() {
     let h = Harness::new();
     for uid in ["named", "self", "gone", "snap", "bare"] {
         h.write(&format!("sync/keyboards/{uid}/pipette_settings.json"), "{}");
@@ -218,7 +218,7 @@ fn read_all_names_a_keyboard_by_its_name_then_its_snapshots_then_its_uid() {
     assert_eq!(
         names,
         [
-            ("bare", Value::from("bare")),
+            ("bare", Value::Null),
             ("gone", Value::from("Snap Board")),
             ("named", Value::from("Named Board")),
             ("self", Value::from("Snap Board")),
