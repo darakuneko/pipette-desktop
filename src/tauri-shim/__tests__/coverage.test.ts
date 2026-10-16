@@ -11,7 +11,8 @@
 // and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs, and so are
-// the Cloud Sync members, each listed with the module that holds it.
+// the Cloud Sync members (each listed with the module that holds it) but
+// the sign-in and password statuses and the password strength check.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -29,8 +30,6 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
 const EXPECTED_FAKES = [
   'trayStatusUpdate',
-  'syncAuthStatus',
-  'syncPasswordStatus',
   'syncFormatStatus',
   'notificationFetch',
   'i18nPackHubTimestamps',
@@ -250,9 +249,9 @@ const TYPING_DATASET_MEMBERS = [
   'aozoraImport',
 ]
 
-/** The Cloud Sync members, by the shim module that holds them. None is
- *  real yet: each is a fake of EXPECTED_FAKES or a stub until its module
- *  backs it with a backend command. */
+/** The Cloud Sync members, by the shim module that holds them. Those of
+ *  SYNC_REAL are real; each other one is a fake of EXPECTED_FAKES or a stub
+ *  until its module backs it with a backend command. */
 const SYNC_MEMBERS = [
   { module: syncAuthApi, members: ['syncAuthStart', 'syncAuthStatus', 'syncAuthSignOut'] },
   {
@@ -302,10 +301,13 @@ const SYNC_MEMBERS = [
   },
 ]
 
+/** The Cloud Sync members that are real: the sign-in and password
+ *  statuses (backend commands) and the password strength check (in the
+ *  shim). */
+const SYNC_REAL = ['syncAuthStatus', 'syncPasswordStatus', 'syncValidatePassword']
+
 /** The fakes the Cloud Sync members replace: the signed-out answers. */
 const SYNC_FAKES = [
-  'syncAuthStatus',
-  'syncPasswordStatus',
   'syncFormatStatus',
   'syncAnalyticsNow',
   'typingAnalyticsHasRemote',
@@ -398,7 +400,7 @@ describe('shim coverage', () => {
     expect('syncOnUnitApplied' in implemented).toBe(false)
   })
 
-  it('lists the Cloud Sync members, each in one module and none real yet', () => {
+  it('lists the Cloud Sync members, each in one module, and the real ones', () => {
     const members = SYNC_MEMBERS.flatMap(({ members }) => members)
     expect(new Set(members).size).toBe(38)
     expect(members.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
@@ -407,7 +409,7 @@ describe('shim coverage', () => {
     for (const { module, members: own } of SYNC_MEMBERS) {
       expect(Object.keys(module).filter((name) => !own.includes(name))).toEqual([])
     }
-    expect(members.filter((name) => name in real)).toEqual([])
+    expect(members.filter((name) => name in real).sort()).toEqual([...SYNC_REAL].sort())
     expect(SYNC_FAKES.filter((name) => !members.includes(name) || !EXPECTED_FAKES.includes(name))).toEqual([])
     expect(members.filter((name) => name in fakes).sort()).toEqual([...SYNC_FAKES].sort())
   })

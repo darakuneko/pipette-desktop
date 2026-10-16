@@ -59,6 +59,8 @@ interface Shim {
   typingAnalyticsRecord: typeof import('../api/typing-analytics-record')
   typingTexts: typeof import('../api/typing-texts')
   syncPending: typeof import('../api/sync-pending')
+  syncAuth: typeof import('../api/sync-auth')
+  syncPassword: typeof import('../api/sync-password')
   themePacks: typeof import('../api/theme-packs')
   typingAnalytics: typeof import('../api/typing-analytics')
   typingAnalyticsRange: typeof import('../api/typing-analytics-range')
@@ -88,6 +90,8 @@ async function load(): Promise<Shim> {
     typingAnalyticsRecord: await import('../api/typing-analytics-record'),
     typingTexts: await import('../api/typing-texts'),
     syncPending: await import('../api/sync-pending'),
+    syncAuth: await import('../api/sync-auth'),
+    syncPassword: await import('../api/sync-password'),
     themePacks: await import('../api/theme-packs'),
     typingAnalytics: await import('../api/typing-analytics'),
     typingAnalyticsRange: await import('../api/typing-analytics-range'),
@@ -162,6 +166,8 @@ const CALLERS: Record<string, Caller> = {
   windowStartedHidden: { run: ({ window }) => window.windowApi.windowStartedHidden() },
   windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
   syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
+  syncAuthStatus: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStatus() },
+  syncPasswordStatus: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncPasswordStatus() },
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
   loadLayout: {
     run: ({ files }, [title, extensions]) => files.filesApi.loadLayout(title as string, extensions as string[]),
