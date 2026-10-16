@@ -68,6 +68,7 @@ interface Shim {
   typingAnalytics: typeof import('../api/typing-analytics')
   typingAnalyticsRange: typeof import('../api/typing-analytics-range')
   typingAnalyticsData: typeof import('../api/typing-analytics-data')
+  typingAnalyticsRemote: typeof import('../api/typing-analytics-remote')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
@@ -101,6 +102,7 @@ async function load(): Promise<Shim> {
     typingAnalytics: await import('../api/typing-analytics'),
     typingAnalyticsRange: await import('../api/typing-analytics-range'),
     typingAnalyticsData: await import('../api/typing-analytics-data'),
+    typingAnalyticsRemote: await import('../api/typing-analytics-remote'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
@@ -181,6 +183,26 @@ const CALLERS: Record<string, Caller> = {
   },
   syncCheckPasswordExists: { run: ({ syncPassword }) => syncPassword.syncPasswordApi.syncCheckPasswordExists() },
   syncFormatStatus: { run: ({ syncExecute }) => syncExecute.syncExecuteApi.syncFormatStatus() },
+  syncAnalyticsNow: { run: ({ syncExecute }, [uid]) => syncExecute.syncExecuteApi.syncAnalyticsNow(uid as string) },
+  typingAnalyticsHasRemote: {
+    run: ({ typingAnalyticsRemote }) => typingAnalyticsRemote.typingAnalyticsRemoteApi.typingAnalyticsHasRemote(),
+  },
+  typingAnalyticsListRemoteCloudHashes: {
+    run: ({ typingAnalyticsRemote }, [uid]) =>
+      typingAnalyticsRemote.typingAnalyticsRemoteApi.typingAnalyticsListRemoteCloudHashes(uid as string),
+  },
+  typingAnalyticsListRemoteCloudDays: {
+    run: ({ typingAnalyticsRemote }, [uid, machineHash]) =>
+      typingAnalyticsRemote.typingAnalyticsRemoteApi.typingAnalyticsListRemoteCloudDays(uid as string, machineHash as string),
+  },
+  typingAnalyticsFetchRemoteDay: {
+    run: ({ typingAnalyticsRemote }, [uid, machineHash, utcDay]) =>
+      typingAnalyticsRemote.typingAnalyticsRemoteApi.typingAnalyticsFetchRemoteDay(
+        uid as string,
+        machineHash as string,
+        utcDay as string,
+      ),
+  },
   syncExecute: {
     run: ({ syncExecute }, [direction, scope]) =>
       syncExecute.syncExecuteApi.syncExecute(direction as 'download' | 'upload', scope as SyncScope | undefined),
