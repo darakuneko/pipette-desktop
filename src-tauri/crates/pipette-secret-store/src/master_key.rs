@@ -5,9 +5,8 @@
 //!
 //! Every operation on the entry (read, create, delete) runs one at a time
 //! under one lock per account name in the process, and "missing, so
-//! create" happens inside it: two creations
-//! at once would otherwise store two keys, and the files written with the
-//! first would no longer open. A key read in time is kept in memory for the
+//! create" happens inside it: two creations at once would otherwise store
+//! two keys, and the files written with the first would no longer open. A key read in time is kept in memory for the
 //! rest of the process (zeroed when dropped). A key store that fails is not
 //! remembered: the next call asks it again.
 //!
@@ -126,7 +125,7 @@ impl MasterKey {
         let key = self
             .call(|keystore, account| match read_entry(keystore, account)? {
                 Stored::Key(key) => Ok(key),
-                found @ (Stored::Missing | Stored::Malformed) => {
+                found => {
                     if matches!(found, Stored::Malformed) {
                         log::warn!("[secret-store] the key store entry holds no key; replacing it");
                     }

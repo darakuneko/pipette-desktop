@@ -6,8 +6,9 @@
 //! The session generation advances with every sign-in and sign-out. A write
 //! checks it before and after writing, so a refresh that started under
 //! another session stores nothing, and tokens written while a sign-out came
-//! are not kept; a read under another session keeps what the cache holds. The queue is a fair lock, so the file
-//! work runs one at a time in call order (`queueTokenFileWork`).
+//! are not kept; a read under another session keeps what the cache holds.
+//! The queue is a fair lock, so the file work runs one at a time in call
+//! order (`queueTokenFileWork`).
 
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
