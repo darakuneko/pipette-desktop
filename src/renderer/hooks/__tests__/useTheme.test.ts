@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { applyPackColors, clearPackColors } from '../useTheme'
-import { THEME_COLOR_KEYS, type ThemePackColors } from '../../../shared/types/theme-store'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { act, waitFor } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
+import { applyPackColors, clearPackColors, useTheme } from '../useTheme'
+import { THEME_COLOR_KEYS, type ThemeColorScheme, type ThemePackColors } from '../../../shared/types/theme-store'
 import { DEFAULT_SIMULATED_COLOR } from '../../utils/simulated-color'
+import { renderHookWithConfig, setupAppConfigMock } from './test-helpers'
+import { themePackBackends } from './theme-pack-backends'
 
 function baseColors(overrides: Partial<ThemePackColors> = {}): ThemePackColors {
   const colors = {} as ThemePackColors
@@ -85,5 +89,61 @@ describe('applyPackColors / clearPackColors', () => {
     const root = document.documentElement
     expect(root.style.getPropertyValue('--wire-row')).toBe('')
     expect(root.style.getPropertyValue('--wire-col')).toBe('')
+  })
+})
+
+// The hook reads a pack theme through `themePackGet` and reads it again on
+// each theme pack change broadcast. Runs on both vialAPI implementations
+// (theme-pack-backends.ts).
+const mockGet = vi.fn()
+
+function record(accent: string, colorScheme: ThemeColorScheme) {
+  return {
+    success: true,
+    data: {
+      meta: { id: 'p1', filename: 'packs/p1.json', name: 'Pack', version: '1.0.0', savedAt: 'now', updatedAt: 'now' },
+      pack: { name: 'Pack', version: '1.0.0', colorScheme, colors: baseColors({ accent }) },
+    },
+  }
+}
+
+describe.each(themePackBackends({ themePackGet: mockGet }))('useTheme with a pack theme ($name)', (backend) => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    document.documentElement.removeAttribute('style')
+    Object.defineProperty(window, 'matchMedia', {
+      value: () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }),
+      writable: true,
+      configurable: true,
+    })
+    Object.defineProperty(window, 'vialAPI', { value: backend.install(), writable: true, configurable: true })
+  })
+
+  afterEach(() => {
+    clearMocks()
+  })
+
+  it('applies the pack and applies it again after a change broadcast', async () => {
+    setupAppConfigMock({ theme: 'pack:p1' })
+    mockGet.mockResolvedValueOnce(record('#111111', 'dark'))
+    const { result } = renderHookWithConfig(() => useTheme())
+    const accent = (): string => document.documentElement.style.getPropertyValue('--accent')
+    await waitFor(() => expect(accent()).toBe('#111111'))
+    expect(result.current.effectiveTheme).toBe('dark')
+    expect(mockGet).toHaveBeenCalledWith('p1')
+
+    mockGet.mockResolvedValueOnce(record('#222222', 'light'))
+    // The shim's listener is registered asynchronously.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+    await act(async () => { await backend.broadcast() })
+    await waitFor(() => expect(accent()).toBe('#222222'))
+    expect(result.current.effectiveTheme).toBe('light')
+  })
+
+  it('falls back to the system theme when the pack cannot be read', async () => {
+    const { mockAppConfigSet } = setupAppConfigMock({ theme: 'pack:p1' })
+    mockGet.mockResolvedValue({ success: false, errorCode: 'NOT_FOUND', error: 'Theme pack not found' })
+    renderHookWithConfig(() => useTheme())
+    await waitFor(() => expect(mockAppConfigSet).toHaveBeenCalledWith('theme', 'system'))
   })
 })

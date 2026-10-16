@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-pack-stores"
-description = "The pack stores under the userData directory: the language packs (sync/i18n) on the pack layer they share with the theme packs (sync/themes)"
+description = "The pack stores under the userData directory: the language packs (sync/i18n) and the theme packs (sync/themes) on the pack layer they share"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -7,19 +7,16 @@
 // write queue. A read of one pack or of a name goes without waiting, as in
 // Electron, and so does a dialog: the backend locks each save itself.
 //
-// The pack JSON and the import options cross as the text of
-// JSON.stringify, so the backend keeps their key order. The import dialog
-// answers the text of each chosen file, parsed here with JSON.parse into
-// the `{ filePath, raw, fileSizeBytes }` or `{ …, parseError }` the
-// Electron handler answers (src/main/pack-import-dialog.ts).
+// The pack JSON and the import options cross as JSON text, and the import
+// dialog's file texts are parsed here (api/pack-import.ts).
 
 import { IpcChannels } from '../../shared/ipc/channels'
 import type { I18nPackMeta, I18nPackRecord, I18nPackStoreResult } from '../../shared/types/i18n-store'
-import type { PackImportDialogResult, PackImportFile } from '../../shared/types/pack-import'
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { PackImportRead } from '../generated/PackImportRead'
 import { call, subscribe } from '../ipc'
 import { enqueue } from '../key-queue'
+import { jsonText, parseImportFiles } from './pack-import'
 
 /** The write-lock key of the language packs, the name of their index's
  *  sync unit. */
@@ -28,27 +25,6 @@ const KEY = 'i18n/index'
 /** The text of the files chosen in the import dialog. */
 export function openImport(): Promise<PackImportRead> {
   return call('i18n_pack_import')
-}
-
-/** The import dialog's answer as the renderer gets it, each file parsed on
- *  its own. */
-export function parseImportFiles(read: PackImportRead): PackImportDialogResult {
-  const files = read.files.map((file): PackImportFile => {
-    const { filePath, text, fileSizeBytes } = file
-    if (text === undefined) return { filePath, parseError: file.readError }
-    try {
-      const raw: unknown = JSON.parse(text)
-      return { filePath, raw, fileSizeBytes }
-    } catch (err) {
-      return { filePath, fileSizeBytes, parseError: String(err) }
-    }
-  })
-  return { canceled: read.canceled, files }
-}
-
-/** `value` as JSON text, or undefined when it has none (`undefined`). */
-function jsonText(value: unknown): string | undefined {
-  return JSON.stringify(value) as string | undefined
 }
 
 export const i18nPacksApi = {

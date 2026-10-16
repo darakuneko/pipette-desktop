@@ -16,10 +16,12 @@ pub mod favorites;
 pub mod i18n_packs;
 pub mod key_labels;
 pub mod keyboard_data;
+mod pack_commands;
 mod pack_import;
 pub mod settings;
 pub mod snapshots;
 pub mod sync_pending;
+pub mod theme_packs;
 pub mod typing_texts;
 
 /// Runs `io` on a blocking-task thread (a store waits for its write lock

@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/theme_packs.rs: the theme packs.
+
+[[set]]
+identifier = "theme-packs"
+description = "Lists, reads, renames, deletes and reorders the theme packs, stores their Hub links, and imports and exports them through file dialogs."
+permissions = [
+  "allow-theme-pack-store-list",
+  "allow-theme-pack-store-get",
+  "allow-theme-pack-store-rename",
+  "allow-theme-pack-store-delete",
+  "allow-theme-pack-store-set-hub-post-id",
+  "allow-theme-pack-store-has-name",
+  "allow-theme-pack-store-reorder",
+  "allow-theme-pack-import",
+  "allow-theme-pack-import-apply",
+  "allow-theme-pack-export",
+]

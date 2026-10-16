@@ -111,4 +111,15 @@ pub const APP_COMMANDS: &[&str] = &[
     "i18n_pack_import",
     "i18n_pack_import_apply",
     "i18n_pack_export",
+    // src/store_commands/theme_packs.rs
+    "theme_pack_store_list",
+    "theme_pack_store_get",
+    "theme_pack_store_rename",
+    "theme_pack_store_delete",
+    "theme_pack_store_set_hub_post_id",
+    "theme_pack_store_has_name",
+    "theme_pack_store_reorder",
+    "theme_pack_import",
+    "theme_pack_import_apply",
+    "theme_pack_export",
 ];
