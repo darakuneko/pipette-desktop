@@ -8,5 +8,26 @@ license.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+# The entry merge, the body filename rules and the store write locks.
+pipette-entry-store = { path = "../pipette-entry-store" }
+pipette-fs = { path = "../pipette-fs" }
+pipette-js-json = { path = "../pipette-js-json" }
+# The stores whose units the bundles read and the merges write.
+pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
+pipette-pack-stores = { path = "../pipette-pack-stores" }
+# The Drive file name of a unit, whose remembered revision a roster merge forgets.
+pipette-sync-format = { path = "../pipette-sync-format" }
+pipette-sync-runtime = { path = "../pipette-sync-runtime" }
+pipette-time = { path = "../pipette-time" }
+# The day files and deleted-ranges files of the typing analytics.
+pipette-typing-analytics = { path = "../pipette-typing-analytics" }
+log = "=0.4.34"
+thiserror = "=2.0.21"
+
+[dev-dependencies]
+pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+tempfile = { workspace = true }
+
 [lints]
 workspace = true
