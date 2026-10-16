@@ -130,9 +130,7 @@ impl PendingStore {
         {
             let mut state = lock(&self.shared.state);
             for (unit, generation) in &copy.generations {
-                if !state.units.contains_key(unit) {
-                    state.units.insert(unit.clone(), *generation);
-                }
+                state.units.entry(unit.clone()).or_insert(*generation);
             }
             for (sub, units) in &copy.held {
                 state.held.entry(sub.clone()).or_default().extend(units.iter().cloned());
