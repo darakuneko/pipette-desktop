@@ -11,15 +11,15 @@
 //! its owner removes the rows from its own files.
 
 use pipette_entry_store::Clock;
-use pipette_typing_analytics_db::{ApplyRowsResult, DeleteRange, TypingAnalyticsDb};
+use pipette_typing_analytics_db::{ApplyRowsResult, DayRows, DeleteRange, TypingAnalyticsDb};
 
-/// Apply `text`, the day file of `machine_hash` for `uid`. For another
+/// Apply `rows`, the day file of `machine_hash` for `uid`. For another
 /// device, `deleted_ranges` gives that device's deleted ranges clipped to
 /// the file's UTC day (an unreadable ranges file gives none), and the rows
 /// in them are tombstoned at the clock's time.
 pub fn replay_day_hiding_deleted_ranges(
     db: &mut TypingAnalyticsDb,
-    text: &str,
+    rows: &DayRows,
     uid: &str,
     machine_hash: &str,
     own_hash: &str,
@@ -27,10 +27,10 @@ pub fn replay_day_hiding_deleted_ranges(
     deleted_ranges: impl FnOnce() -> Vec<DeleteRange>,
 ) -> Result<ApplyRowsResult, pipette_typing_analytics_db::Error> {
     if machine_hash == own_hash {
-        return db.apply_day_jsonl(text);
+        return db.apply_day_rows(rows);
     }
     let ranges = deleted_ranges();
-    db.apply_day_jsonl_hiding_ranges(text, uid, machine_hash, &ranges, clock.now_ms())
+    db.apply_day_rows_hiding_ranges(rows, uid, machine_hash, &ranges, clock.now_ms())
 }
 
 #[cfg(test)]
@@ -38,7 +38,7 @@ mod tests {
     use std::cell::Cell;
 
     use pipette_entry_store::FixedClock;
-    use pipette_typing_analytics_db::{ScopeFilters, TypingAnalyticsDb};
+    use pipette_typing_analytics_db::{DayRows, ScopeFilters, TypingAnalyticsDb};
 
     use super::*;
 
@@ -67,11 +67,16 @@ mod tests {
     fn hides_another_devices_ranges_in_the_same_replay() {
         let mut db = TypingAnalyticsDb::open_in_memory().unwrap();
         let clock = FixedClock::new(5);
-        let applied =
-            replay_day_hiding_deleted_ranges(&mut db, &day("remote"), "uid", "remote", "own", &clock, || {
-                vec![RANGE]
-            })
-            .unwrap();
+        let applied = replay_day_hiding_deleted_ranges(
+            &mut db,
+            &DayRows::parse(&day("remote")),
+            "uid",
+            "remote",
+            "own",
+            &clock,
+            || vec![RANGE],
+        )
+        .unwrap();
         assert_eq!(applied.minute_stats, 3);
         assert_eq!(live_minutes(&db, "remote"), 1);
     }
@@ -82,7 +87,7 @@ mod tests {
         let read = Cell::new(false);
         replay_day_hiding_deleted_ranges(
             &mut db,
-            &day("own"),
+            &DayRows::parse(&day("own")),
             "uid",
             "own",
             "own",

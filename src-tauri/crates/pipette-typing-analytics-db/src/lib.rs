@@ -151,12 +151,16 @@ impl TypingAnalyticsDb {
     /// Apply one day file's text. On any error nothing of the file stays
     /// applied.
     pub fn apply_day_jsonl(&mut self, text: &str) -> Result<ApplyRowsResult, Error> {
-        let rows = jsonl::read_rows(text);
+        self.apply_day_rows(&DayRows::parse(text))
+    }
+
+    /// [`Self::apply_day_jsonl`] for a file already parsed.
+    pub fn apply_day_rows(&mut self, rows: &DayRows) -> Result<ApplyRowsResult, Error> {
         if rows.is_empty() {
             return Ok(ApplyRowsResult::default());
         }
         let tx = self.conn.savepoint()?;
-        let result = apply::apply_rows(&tx, &rows)?;
+        let result = apply::apply_rows(&tx, &rows.0)?;
         tx.commit()?;
         Ok(result)
     }
@@ -174,13 +178,24 @@ impl TypingAnalyticsDb {
         ranges: &[DeleteRange],
         updated_at: i64,
     ) -> Result<ApplyRowsResult, Error> {
+        self.apply_day_rows_hiding_ranges(&DayRows::parse(text), uid, machine_hash, ranges, updated_at)
+    }
+
+    /// [`Self::apply_day_jsonl_hiding_ranges`] for a file already parsed.
+    pub fn apply_day_rows_hiding_ranges(
+        &mut self,
+        rows: &DayRows,
+        uid: &str,
+        machine_hash: &str,
+        ranges: &[DeleteRange],
+        updated_at: i64,
+    ) -> Result<ApplyRowsResult, Error> {
         if ranges.is_empty() {
-            return self.apply_day_jsonl(text);
+            return self.apply_day_rows(rows);
         }
-        let rows = jsonl::read_rows(text);
         let tx = self.conn.savepoint()?;
         let result =
-            if rows.is_empty() { ApplyRowsResult::default() } else { apply::apply_rows(&tx, &rows)? };
+            if rows.is_empty() { ApplyRowsResult::default() } else { apply::apply_rows(&tx, &rows.0)? };
         tombstone::tombstone_ranges(&tx, uid, machine_hash, ranges, updated_at)?;
         tx.commit()?;
         Ok(result)
@@ -215,6 +230,22 @@ pub struct PragmaReport {
     pub sqlite_version: String,
     pub journal_mode: String,
     pub synchronous: i64,
+}
+
+/// The rows of one day file, read as `readRows` reads it (blank, invalid
+/// and crash-truncated lines dropped), for a caller that looks at them
+/// before applying them.
+#[derive(Debug, Clone, Default)]
+pub struct DayRows(Vec<jsonl::JsonlRow>);
+
+impl DayRows {
+    pub fn parse(text: &str) -> Self {
+        Self(jsonl::read_rows(text))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[cfg(test)]

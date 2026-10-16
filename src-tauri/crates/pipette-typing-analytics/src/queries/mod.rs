@@ -164,6 +164,9 @@ pub struct Context<'a> {
     /// `os.platform()` and `os.release()` of this device.
     pub os_platform: &'a str,
     pub os_release: &'a str,
+    /// The recorder whose minutes not written yet `GetMatrixHeatmap` adds;
+    /// none adds nothing.
+    pub recorder: Option<&'a crate::pipeline::Recorder>,
 }
 
 fn js(value: impl pipette_typing_analytics_db::ToJs) -> Value {

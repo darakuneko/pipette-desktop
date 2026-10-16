@@ -7,14 +7,16 @@
 //!
 //! The commands wait for [`TypingAnalytics::ready`]. One initialization
 //! runs at a time and every caller waiting for it gets its outcome; after
-//! a failure the next call starts again.
+//! a failure the next call starts again. Each initialization that succeeds
+//! runs the hook of [`TypingAnalytics::on_initialized`], which starts what
+//! `setupTypingAnalytics` starts without waiting for it (the apply of this
+//! device's own deleted ranges).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use pipette_entry_store::Clock;
-use pipette_typing_analytics_db::TypingAnalyticsDb;
 use tokio::sync::watch;
 
 use crate::Error;
@@ -23,9 +25,13 @@ use crate::db_actor::{DbActor, db_path};
 use crate::identity::{IdentityError, MachineIdentity};
 use crate::sync_state::TypingSyncState;
 
-/// Rebuilds the cache from the JSONL masters on the database thread:
-/// `(db, userData, ownHash)`.
-pub type RebuildCache = Arc<dyn Fn(&mut TypingAnalyticsDb, &Path, &str) -> Result<(), Error> + Send + Sync>;
+/// Rebuilds the cache from the JSONL masters through the database thread:
+/// `(db, userData, ownHash)`. Called on a thread that may block.
+pub type RebuildCache = Arc<dyn Fn(&DbActor, &Path, &str) -> Result<(), Error> + Send + Sync>;
+
+/// Runs after each initialization that succeeds, on the thread that ran
+/// it; it must not block.
+pub type InitializedHook = Box<dyn Fn() + Send + Sync>;
 
 /// What a finished initialization holds.
 pub struct Ready {
@@ -51,6 +57,7 @@ pub struct TypingAnalytics {
     clock: Arc<dyn Clock>,
     rebuild: RebuildCache,
     init: Mutex<Init>,
+    initialized: OnceLock<InitializedHook>,
 }
 
 impl TypingAnalytics {
@@ -60,7 +67,20 @@ impl TypingAnalytics {
         clock: Arc<dyn Clock>,
         rebuild: RebuildCache,
     ) -> Self {
-        Self { user_data: user_data.to_path_buf(), identity, clock, rebuild, init: Mutex::new(Init::Idle) }
+        Self {
+            user_data: user_data.to_path_buf(),
+            identity,
+            clock,
+            rebuild,
+            init: Mutex::new(Init::Idle),
+            initialized: OnceLock::new(),
+        }
+    }
+
+    /// Sets the hook run after each initialization that succeeds; a second
+    /// hook is ignored.
+    pub fn on_initialized(&self, hook: InitializedHook) {
+        let _ = self.initialized.set(hook);
     }
 
     /// The userData directory the analytics read and write.
@@ -78,6 +98,11 @@ impl TypingAnalytics {
     /// `Date.now()` of the analytics' clock.
     pub fn now_ms(&self) -> i64 {
         self.clock.now_ms()
+    }
+
+    /// The analytics' clock.
+    pub fn clock(&self) -> &Arc<dyn Clock> {
+        &self.clock
     }
 
     fn lock(&self) -> MutexGuard<'_, Init> {
@@ -106,6 +131,11 @@ impl TypingAnalytics {
                             Ok(ready) => Init::Ready(ready.clone()),
                             Err(_) => Init::Idle,
                         };
+                        if result.is_ok()
+                            && let Some(hook) = this.initialized.get()
+                        {
+                            hook();
+                        }
                         finish.send_replace(Some(result));
                     });
                     outcome
@@ -126,12 +156,8 @@ impl TypingAnalytics {
         // never reaches the file without the rebuild and stays due.
         let freshness =
             ensure_cache_is_fresh(&self.user_data, &machine_hash, force, self.clock.as_ref(), || {
-                let (rebuild, user_data, hash) =
-                    (self.rebuild.clone(), self.user_data.clone(), machine_hash.clone());
-                db.call_blocking(move |db| {
-                    rebuild(db, &user_data, &hash)?;
-                    Ok(db.commit_migration()?)
-                })?
+                (self.rebuild)(&db, &self.user_data, &machine_hash)?;
+                Ok(db.call_blocking(|db| db.commit_migration())??)
             });
         let freshness = match freshness {
             Ok(freshness) => freshness,
@@ -146,6 +172,19 @@ impl TypingAnalytics {
         };
         Ok(Ready { machine_hash, db, sync_state: Mutex::new(freshness.state) })
     }
+
+    /// `ensureCacheIsFresh(…, { force: true })` on the initialized
+    /// analytics: rebuilds the cache and writes a new `sync_state.json`.
+    /// The state the flush keeps in memory is left as it is, as the
+    /// Electron import leaves `taState.syncState`, so the next flush writes
+    /// it back with its `last_synced_at`. Blocks; the queries and the flush
+    /// go on between the days it replays.
+    pub fn rebuild_now(&self, ready: &Ready) -> Result<(), Error> {
+        ensure_cache_is_fresh(&self.user_data, &ready.machine_hash, true, self.clock.as_ref(), || {
+            (self.rebuild)(&ready.db, &self.user_data, &ready.machine_hash)
+        })
+        .map(drop)
+    }
 }
 
 #[cfg(test)]
@@ -154,7 +193,7 @@ mod tests {
 
     use pipette_entry_store::{FixedClock, SequenceIds};
     use pipette_sync_format::{MachineIdError, machine_hash};
-    use pipette_typing_analytics_db::SCHEMA_VERSION;
+    use pipette_typing_analytics_db::{SCHEMA_VERSION, TypingAnalyticsDb};
 
     use super::*;
     use crate::sync_state::{load_sync_state, save_sync_state};

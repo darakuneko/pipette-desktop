@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Reading the fixtures the TypeScript generators recorded
 //! (scripts/analytics-db-fixtures): values with the parts JSON cannot carry
-//! (tagged.ts) and userData trees, path → content
-//! (scripts/keyboard-store-fixtures/fixture-tree.ts).
+//! (tagged.ts), userData trees, path → content
+//! (scripts/keyboard-store-fixtures/fixture-tree.ts), and the cache tables
+//! in the canonical text of canonical.ts; and the flush timer the
+//! recording scenarios drive.
 
 #![allow(dead_code, clippy::unwrap_used, clippy::panic)]
 
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use pipette_entry_store::{Clock, FixedClock};
+use pipette_typing_analytics::FlushTimer;
+use rusqlite::types::ValueRef;
 
 use pipette_js_json::{JsString, Object, Value};
 
@@ -130,4 +139,78 @@ fn record_into(dir: &Path, prefix: &str, tree: &mut BTreeMap<String, Node>) {
             tree.insert(path, Node::File(std::fs::read(entry.path()).unwrap()));
         }
     }
+}
+
+type Task = Box<dyn FnOnce() + Send>;
+
+/// A timer driven by the test: its tasks run when [`ManualTimer::advance`]
+/// moves the clock past their time.
+pub struct ManualTimer {
+    clock: Arc<FixedClock>,
+    tasks: Mutex<Vec<(i64, Task)>>,
+}
+
+impl FlushTimer for ManualTimer {
+    fn schedule(&self, delay: Duration, task: Task) {
+        let due = self.clock.now_ms() + delay.as_millis() as i64;
+        self.tasks.lock().unwrap().push((due, task));
+    }
+}
+
+impl ManualTimer {
+    pub fn new(clock: Arc<FixedClock>) -> Self {
+        Self { clock, tasks: Mutex::new(Vec::new()) }
+    }
+
+    /// Moves the clock by `ms` and runs the tasks due by then, in the order
+    /// they are due.
+    pub fn advance(&self, ms: i64) {
+        let now = self.clock.now_ms() + ms;
+        self.clock.set(now);
+        let mut due: Vec<_> = {
+            let mut tasks = self.tasks.lock().unwrap();
+            let (due, later) = tasks.drain(..).partition(|(at, _)| *at <= now);
+            *tasks = later;
+            due
+        };
+        due.sort_by_key(|(at, _)| *at);
+        for (_, task) in due {
+            task();
+        }
+    }
+}
+
+pub fn hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(String::new(), |mut s, b| {
+        write!(s, "{b:02x}").unwrap();
+        s
+    })
+}
+
+fn cell(value: ValueRef<'_>) -> String {
+    match value {
+        ValueRef::Null => "n".to_owned(),
+        ValueRef::Integer(i) => format!("i:{i}"),
+        ValueRef::Real(r) => format!("r:{:016x}", r.to_bits()),
+        ValueRef::Text(t) => format!("t:{}", hex(t)),
+        ValueRef::Blob(b) => format!("b:{}", hex(b)),
+    }
+}
+
+/// The rows of `table` ordered by its primary key, in the canonical text
+/// of canonical.ts.
+pub fn table_rows(conn: &rusqlite::Connection, table: &str) -> Vec<String> {
+    let mut info = conn.prepare(&format!("PRAGMA table_info({table})")).unwrap();
+    let mut columns: Vec<(String, i64)> =
+        info.query_map([], |r| Ok((r.get("name")?, r.get("pk")?))).unwrap().map(Result::unwrap).collect();
+    let names = columns.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join(", ");
+    columns.retain(|(_, pk)| *pk > 0);
+    columns.sort_by_key(|(_, pk)| *pk);
+    let order = columns.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join(", ");
+    let mut stmt = conn.prepare(&format!("SELECT {names} FROM {table} ORDER BY {order}")).unwrap();
+    let width = stmt.column_count();
+    stmt.query_map([], |r| Ok((0..width).map(|i| cell(r.get_ref(i).unwrap())).collect::<Vec<_>>().join("|")))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
 }

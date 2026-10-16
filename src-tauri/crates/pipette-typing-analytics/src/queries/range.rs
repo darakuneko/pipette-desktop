@@ -7,7 +7,7 @@
 use pipette_js_json::{Object, Value};
 use pipette_typing_analytics_db::{AppAggregate, Gram, ScopeFilters};
 
-use super::analyze::heatmap;
+use super::analyze::{heatmap, heatmap_cells};
 use super::{Args, Context, DeviceScope, Query, ceil_minute, empty_list, floor_minute, js};
 use crate::bigram_aggregate::{
     aggregate_duration_totals, aggregate_pair_totals, duration_cell, observed_rollover_ratio, rank_by_count,
@@ -78,7 +78,7 @@ pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, 
         ceil_minute(r.until),
         &args.filters(5),
     )?;
-    Ok(heatmap(&cells))
+    Ok(heatmap(heatmap_cells(&cells)))
 }
 
 /// The window and the layer of `GetMatrixHeatmapForRange`; an empty

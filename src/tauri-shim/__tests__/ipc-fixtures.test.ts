@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { APP_COMMANDS } from '../generated/app-command-names'
 import { typingAnalyticsApi } from '../api/typing-analytics'
+import { typingAnalyticsDataApi } from '../api/typing-analytics-data'
 import { typingAnalyticsRangeApi } from '../api/typing-analytics-range'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
@@ -61,6 +62,7 @@ interface Shim {
   themePacks: typeof import('../api/theme-packs')
   typingAnalytics: typeof import('../api/typing-analytics')
   typingAnalyticsRange: typeof import('../api/typing-analytics-range')
+  typingAnalyticsData: typeof import('../api/typing-analytics-data')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
   transport: typeof import('../hid-transport')
@@ -89,6 +91,7 @@ async function load(): Promise<Shim> {
     themePacks: await import('../api/theme-packs'),
     typingAnalytics: await import('../api/typing-analytics'),
     typingAnalyticsRange: await import('../api/typing-analytics-range'),
+    typingAnalyticsData: await import('../api/typing-analytics-data'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
     transport: await import('../hid-transport'),
@@ -307,6 +310,7 @@ const CALLERS: Record<string, Caller> = {
   },
   ...queryCallers((shim) => shim.typingAnalytics.typingAnalyticsApi, typingAnalyticsApi),
   ...queryCallers((shim) => shim.typingAnalyticsRange.typingAnalyticsRangeApi, typingAnalyticsRangeApi),
+  ...queryCallers((shim) => shim.typingAnalyticsData.typingAnalyticsDataApi, typingAnalyticsDataApi),
   typingRunLogList: { run: ({ runLogs }, [uid]) => runLogs.runLogsApi.typingRunLogList(uid as string) },
   typingRunLogGet: {
     run: ({ runLogs }, [uid, runId]) => runLogs.runLogsApi.typingRunLogGet(uid as string, runId as string),

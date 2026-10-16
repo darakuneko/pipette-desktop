@@ -6,7 +6,8 @@
 // keyboard members (HID probe, file dialogs, snapshot, favorite and
 // pipette settings stores, stored keyboards, pending sync units), the run
 // log and Analyze filter members, the typing analytics members that read
-// the cache, the typing analytics' keymap snapshot and recording members, and the pack
+// the cache, the typing analytics' keymap snapshot, recording and Data
+// modal members (every typing analytics member but the Drive ones), and the pack
 // and label members (key labels, typing test texts, language and
 // theme packs, word lists, datasets and the Aozora Bunko import) are all
 // real; the members named after the Hub are fakes or stubs.
@@ -164,6 +165,15 @@ const TYPING_ANALYTICS_KEYMAP_MEMBERS = [
 /** The typing analytics' recording members, all real. */
 const TYPING_ANALYTICS_RECORD_MEMBERS = ['typingAnalyticsEvent', 'typingAnalyticsFlush']
 
+/** The Data modal's operations on the typing analytics, all real. */
+const TYPING_ANALYTICS_DATA_MEMBERS = [
+  'typingAnalyticsDeleteItems',
+  'typingAnalyticsDeleteAll',
+  'typingAnalyticsDeleteDeviceData',
+  'typingAnalyticsExport',
+  'typingAnalyticsImport',
+]
+
 /** The language pack members, all real. */
 const LANGUAGE_PACK_MEMBERS = [
   'i18nPackList',
@@ -293,6 +303,21 @@ describe('shim coverage', () => {
   it('backs the recording members with backend commands', () => {
     expect(TYPING_ANALYTICS_RECORD_MEMBERS.filter((name) => !(name in real))).toEqual([])
     expect(TYPING_ANALYTICS_RECORD_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
+  it('backs every typing analytics member but the Drive ones with backend commands', () => {
+    expect(TYPING_ANALYTICS_DATA_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    const analytics = VIAL_API_MEMBER_NAMES.filter((name) => name.startsWith('typingAnalytics'))
+    const local = [
+      ...TYPING_ANALYTICS_CACHE_MEMBERS,
+      ...TYPING_ANALYTICS_KEYMAP_MEMBERS,
+      ...TYPING_ANALYTICS_RECORD_MEMBERS,
+      ...TYPING_ANALYTICS_DATA_MEMBERS,
+    ]
+    expect(new Set(local).size).toBe(54)
+    expect(analytics.filter((name) => !local.includes(name)).sort()).toEqual(
+      EXPECTED_FAKES.filter((name) => name.startsWith('typingAnalytics')).sort(),
+    )
   })
 
   // Applied sync units come from the sync service, which the backend does
