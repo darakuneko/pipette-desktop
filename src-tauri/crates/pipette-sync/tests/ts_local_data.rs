@@ -103,6 +103,16 @@ fn set_read_only(dir: &Path, read_only: bool) {
     std::fs::set_permissions(dir, permissions).unwrap();
 }
 
+/// Whether a file can still be created in `dir`.
+fn writes_into(dir: &Path) -> bool {
+    let probe = dir.join(".write-probe");
+    let wrote = std::fs::write(&probe, b"").is_ok();
+    if wrote {
+        std::fs::remove_file(&probe).unwrap();
+    }
+    wrote
+}
+
 #[test]
 fn imports_as_the_typescript_handler_does() {
     let fixture = fixture();
@@ -126,6 +136,15 @@ fn imports_as_the_typescript_handler_does() {
         let read_only = strings(get(scenario, "readOnly"));
         for dir in &read_only {
             set_read_only(&root.path().join(dir), true);
+        }
+        if let Some(dir) = read_only.iter().find(|dir| writes_into(&root.path().join(dir))) {
+            // Root (or CAP_DAC_OVERRIDE) writes into any directory, so the
+            // failure the scenario needs cannot happen.
+            eprintln!("SKIPPED imports_as_the_typescript_handler_does: {name}: {dir} is writable (root)");
+            for dir in &read_only {
+                set_read_only(&root.path().join(dir), false);
+            }
+            continue;
         }
         let outcome =
             parse(file_text).map_err(|_| None).and_then(|file| import_local_data(&ctx, &file).map_err(Some));
