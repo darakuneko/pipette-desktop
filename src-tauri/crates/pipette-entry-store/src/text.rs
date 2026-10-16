@@ -70,7 +70,7 @@ pub fn trim_js_whitespace(units: &[u16]) -> &[u16] {
 
 /// Whether `unit` matches `\s` of a JavaScript regular expression: the
 /// ECMAScript WhiteSpace and LineTerminator code points (all in the BMP).
-fn is_js_whitespace(unit: u16) -> bool {
+pub fn is_js_whitespace(unit: u16) -> bool {
     matches!(
         unit,
         0x09..=0x0d | 0x20 | 0xa0 | 0x1680 | 0x2000..=0x200a | 0x2028 | 0x2029 | 0x202f | 0x205f | 0x3000 | 0xfeff
