@@ -336,6 +336,18 @@ pub fn list_key_labels(ctx: &StoreContext, include_deleted: bool) -> Result<Vec<
     Ok(entries.into_iter().filter(|entry| include_deleted || !entry.is_deleted()).collect())
 }
 
+/// The JSON of a body or an imported file, as `JSON.parse(readFile(…))`
+/// reads it.
+fn read_json(path: &Path) -> Result<Value, KeyLabelError> {
+    pipette_js_json::parse(&read_text(path)?).map_err(|err| {
+        if err.is_nesting_too_deep() {
+            KeyLabelError::TooDeep(path.to_path_buf())
+        } else {
+            KeyLabelError::Syntax(err.to_string())
+        }
+    })
+}
+
 /// The live entry `id` and its body (`KEY_LABEL_STORE_GET`): `{meta,
 /// data}`, the body as [`normalize_file`] reads it with the entry's name,
 /// which a rename changes in the index only.
@@ -345,15 +357,8 @@ pub fn get_key_label(ctx: &StoreContext, id: &JsString) -> Result<Object, KeyLab
     let meta = index.entries.into_iter().find(|entry| has_id(entry, id));
     let meta = meta.filter(|meta| !meta.is_deleted()).ok_or_else(KeyLabelError::not_found)?;
     let path = body_path(&dir, &meta)?;
-    let parsed = pipette_js_json::parse(&read_text(&path)?).map_err(|err| {
-        if err.is_nesting_too_deep() {
-            KeyLabelError::TooDeep(path.clone())
-        } else {
-            KeyLabelError::Syntax(err.to_string())
-        }
-    })?;
-    let mut data =
-        normalize_file(&parsed).ok_or_else(|| KeyLabelError::invalid_file("Stored file is malformed"))?;
+    let mut data = normalize_file(&read_json(&path)?)
+        .ok_or_else(|| KeyLabelError::invalid_file("Stored file is malformed"))?;
     match meta.get("name") {
         // `{...parsed, name: undefined}`, which JSON leaves out.
         None => {
