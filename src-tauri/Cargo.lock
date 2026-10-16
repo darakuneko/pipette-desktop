@@ -2818,6 +2818,7 @@ dependencies = [
 name = "pipette-entry-store"
 version = "0.0.0"
 dependencies = [
+ "indexmap 2.14.2",
  "pipette-entry-store",
  "pipette-fifo",
  "pipette-fs",
