@@ -19,7 +19,7 @@ use base64::Engine;
 use pipette_drive::client::DriveClient;
 use pipette_drive::fake::{DriveOp, Fault, InMemoryDrive};
 use pipette_drive::retry::{RetryEnv, SleepFuture};
-use pipette_drive::{DriveApi, DriveFile, DriveFuture, FileList, ListQuery, UploadedFile};
+use pipette_drive::{DriveApi, DriveError, DriveFile, DriveFuture, FileList, ListQuery, UploadedFile};
 use pipette_secret_store::{MemoryKeystore, SecretStore};
 use pipette_sync::codec::{CodecFuture, EnvelopeCodec};
 use pipette_sync::password::change::{PasswordChange, PasswordChangeDeps, PasswordChangeTuning};
@@ -59,12 +59,23 @@ impl RetryEnv for NoWaits {
 }
 
 /// What happens after a number of updates.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Action {
     /// The machine that sent the update starts quitting.
     Quit,
     /// Every lock file goes (another machine released them).
     DeleteLocks,
+    /// Another machine writes `content` into the file `id`.
+    Rewrite(String, String),
+}
+
+/// How the write that [`TestDrive::fail_write`] picks fails.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WriteFailure {
+    /// Drive refuses it (a 400); nothing changes.
+    Refused,
+    /// Drive does it, then the answer is lost (a network error).
+    AnswerLost,
 }
 
 /// The in-memory Drive with a request log, listing lag, failures and an
@@ -78,6 +89,10 @@ pub struct TestDrive {
     after_updates: Mutex<Option<(u32, Action)>>,
     /// The runtime an `Action::Quit` stops.
     quitting: Mutex<Option<SyncRuntime>>,
+    /// The writes (create, update, rename, delete) left before one fails.
+    fail_write: Mutex<Option<(u32, WriteFailure)>>,
+    writes: AtomicU64,
+    yield_downloads: AtomicBool,
 }
 
 impl TestDrive {
@@ -103,6 +118,59 @@ impl TestDrive {
 
     pub fn after_updates(&self, count: u32, action: Action) {
         *self.after_updates.lock().unwrap() = Some((count, action));
+    }
+
+    /// Makes the `nth` write from now (1 for the next) fail as `failure`.
+    pub fn fail_write(&self, nth: u32, failure: WriteFailure) {
+        *self.fail_write.lock().unwrap() = Some((nth, failure));
+    }
+
+    /// While on, every download waits a turn of the runtime first.
+    pub fn yield_downloads(&self, on: bool) {
+        self.yield_downloads.store(on, Ordering::SeqCst);
+    }
+
+    /// Whether the last [`TestDrive::fail_write`] has not happened yet.
+    pub fn write_failure_pending(&self) -> bool {
+        self.fail_write.lock().unwrap().is_some()
+    }
+
+    /// How many writes were sent.
+    pub fn writes(&self) -> u64 {
+        self.writes.load(Ordering::SeqCst)
+    }
+
+    /// Counts a write; the failure it is to get, if due.
+    fn write_failure(&self) -> Option<WriteFailure> {
+        self.writes.fetch_add(1, Ordering::SeqCst);
+        let mut due = self.fail_write.lock().unwrap();
+        let (count, failure) = due.as_mut()?;
+        *count -= 1;
+        if *count > 0 {
+            return None;
+        }
+        let failure = *failure;
+        *due = None;
+        Some(failure)
+    }
+
+    /// Sends a write through `write`, failing it when due.
+    fn write<'a, T: Send + 'a>(&'a self, write: DriveFuture<'a, T>) -> DriveFuture<'a, T> {
+        let failure = self.write_failure();
+        Box::pin(async move {
+            match failure {
+                None => write.await,
+                Some(WriteFailure::Refused) => Err(DriveError::Status {
+                    status: 400,
+                    body: "{\"error\":{\"code\":400,\"message\":\"Injected failure\"}}".to_owned(),
+                    retry_after: None,
+                }),
+                Some(WriteFailure::AnswerLost) => {
+                    let _ = write.await;
+                    Err(DriveError::Network(pipette_drive::fake::LOST_ANSWER.to_owned()))
+                }
+            }
+        })
     }
 
     pub fn set_quit_target(&self, runtime: SyncRuntime) {
@@ -139,7 +207,7 @@ impl TestDrive {
             if *count > 0 {
                 return;
             }
-            let action = *action;
+            let action = action.clone();
             *due = None;
             action
         };
@@ -149,6 +217,7 @@ impl TestDrive {
                     runtime.set_quitting();
                 }
             }
+            Action::Rewrite(id, content) => self.rewrite(&id, &content).await,
             Action::DeleteLocks => {
                 for stored in self.inner.files() {
                     if stored.file.name == "password-change-lock.json" {
@@ -173,44 +242,50 @@ impl DriveApi for TestDrive {
 
     fn download(&self, id: String) -> DriveFuture<'_, Vec<u8>> {
         self.log(format!("download:{id}"));
-        self.inner.download(id)
+        let wait = self.yield_downloads.load(Ordering::SeqCst);
+        Box::pin(async move {
+            if wait {
+                tokio::task::yield_now().await;
+            }
+            self.inner.download(id).await
+        })
     }
 
     fn create(&self, name: String, content: String) -> DriveFuture<'_, UploadedFile> {
         self.log(format!("create:{name}"));
-        Box::pin(async move {
+        self.write(Box::pin(async move {
             let file = self.inner.create(name, content).await?;
             self.created(&file.id);
             Ok(file)
-        })
+        }))
     }
 
     fn create_raw(&self, name: String, content: String) -> DriveFuture<'_, String> {
         self.log(format!("createRaw:{name} {content}"));
-        Box::pin(async move {
+        self.write(Box::pin(async move {
             let id = self.inner.create_raw(name, content).await?;
             self.created(&id);
             Ok(id)
-        })
+        }))
     }
 
     fn update(&self, id: String, content: String) -> DriveFuture<'_, UploadedFile> {
         self.log(format!("update:{id}"));
-        Box::pin(async move {
+        self.write(Box::pin(async move {
             let file = self.inner.update(id, content).await?;
             self.run_after_update().await;
             Ok(file)
-        })
+        }))
     }
 
     fn rename(&self, id: String, name: String) -> DriveFuture<'_, DriveFile> {
         self.log(format!("rename:{id} {name}"));
-        self.inner.rename(id, name)
+        self.write(Box::pin(async move { self.inner.rename(id, name).await }))
     }
 
     fn delete(&self, id: String) -> DriveFuture<'_, ()> {
         self.log(format!("delete:{id}"));
-        self.inner.delete(id)
+        self.write(Box::pin(async move { self.inner.delete(id).await }))
     }
 }
 
@@ -331,6 +406,9 @@ pub struct Machine {
 #[derive(Clone)]
 pub struct MachineOptions {
     pub machine_hash: String,
+    /// The number in this machine's first lock id; machines on one Drive
+    /// take apart ones, as random ids are.
+    pub first_lock_id: u64,
     pub tuning: PasswordChangeTuning,
 }
 
@@ -338,6 +416,7 @@ impl Default for MachineOptions {
     fn default() -> Self {
         Self {
             machine_hash: MACHINE_HASH.to_owned(),
+            first_lock_id: 1,
             tuning: PasswordChangeTuning { concurrency: 1, ..PasswordChangeTuning::default() },
         }
     }
@@ -366,7 +445,8 @@ impl World {
         let secrets = Arc::new(SecretStore::new(&user_data, keystore.clone()));
         let passwords = Arc::new(FakePasswords::default());
         let sign_in = Arc::new(FakeSignIn(AtomicBool::new(true)));
-        self.build(user_data, keystore, secrets, passwords, sign_in, Arc::new(AtomicU64::new(1)), options)
+        let next_lock_id = Arc::new(AtomicU64::new(options.first_lock_id));
+        self.build(user_data, keystore, secrets, passwords, sign_in, next_lock_id, options)
     }
 
     /// `machine` after a restart: the same userData, key store, stored
