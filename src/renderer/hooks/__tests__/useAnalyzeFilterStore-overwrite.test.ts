@@ -6,10 +6,12 @@
 // behaviour: delete the existing entry, save a fresh one with the same
 // label, and re-stamp the prior `hubPostId` so the Hub link survives.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useAnalyzeFilterStore } from '../useAnalyzeFilterStore'
 import type { AnalyzeFilterSnapshotPayload } from '../useAnalyzeFilterStore'
+import { analyzeFilterBackends } from './analyze-filter-backends'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -38,22 +40,29 @@ const mockSave = vi.fn()
 const mockDelete = vi.fn()
 const mockSetHubPostId = vi.fn()
 
-beforeEach(() => {
-  vi.clearAllMocks()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(window as any).vialAPI = {
-    ...((window as { vialAPI?: object }).vialAPI ?? {}),
+const backends = analyzeFilterBackends(
+  {
     analyzeFilterStoreList: mockList,
     analyzeFilterStoreSave: mockSave,
-    analyzeFilterStoreLoad: vi.fn(),
-    analyzeFilterStoreUpdate: vi.fn(),
-    analyzeFilterStoreRename: vi.fn(),
     analyzeFilterStoreDelete: mockDelete,
     analyzeFilterStoreSetHubPostId: mockSetHubPostId,
-  }
+  },
+  { syncOnUnitApplied: () => () => {} },
+)
+
+beforeEach(() => {
+  vi.clearAllMocks()
 })
 
-describe('useAnalyzeFilterStore.overwriteSnapshot', () => {
+afterEach(() => {
+  clearMocks()
+})
+
+describe.each(backends)('useAnalyzeFilterStore.overwriteSnapshot ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   it('deletes the existing entry then saves a fresh one with the same label', async () => {
     mockList.mockResolvedValue({
       success: true,

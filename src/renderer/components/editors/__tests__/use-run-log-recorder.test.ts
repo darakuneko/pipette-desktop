@@ -10,22 +10,32 @@
 // by `typing-test/__tests__/run-log-recorder.test.ts`; this file only
 // exercises the hook's own passthrough.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useRunLogRecorder } from '../use-run-log-recorder'
 import { deserialize } from '../../../../shared/keycodes/keycodes'
 import type { WordResult } from '../../../typing-test/run-state'
+import { runLogBackends } from '../../../hooks/__tests__/run-log-backends'
 
 const KC_A = deserialize('KC_A')
 const mockTypingRunLogSave = vi.fn<(uid: string, log: unknown) => Promise<{ success: boolean }>>()
 
+const backends = runLogBackends({ typingRunLogSave: mockTypingRunLogSave })
+
 beforeEach(() => {
   mockTypingRunLogSave.mockReset().mockResolvedValue({ success: true })
-  window.vialAPI = {
-    ...window.vialAPI,
-    typingRunLogSave: mockTypingRunLogSave,
-  } as typeof window.vialAPI
+  backends[0].install()
 })
+
+afterEach(() => {
+  clearMocks()
+})
+
+/** Lets a save the shim queued reach the backend. */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 10; i++) await Promise.resolve()
+}
 
 function renderRecorder(recordingConsentAccepted = true) {
   const typingTestLabelRef = { current: 'words (english)' as string | null }
@@ -48,8 +58,12 @@ function driveOneKeystroke(result: ReturnType<typeof renderRecorder>['result'], 
 
 const wordResults: WordResult[] = [{ word: 'a', typed: 'a', correct: true }]
 
-describe('useRunLogRecorder — finishAndSave return value', () => {
-  it('returns null (and never saves) when there is no active keyboard uid', () => {
+describe.each(backends)('useRunLogRecorder — finishAndSave return value ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
+  it('returns null (and never saves) when there is no active keyboard uid', async () => {
     const { result } = renderRecorder(true)
     driveOneKeystroke(result, 'run-1', 0)
 
@@ -59,10 +73,11 @@ describe('useRunLogRecorder — finishAndSave return value', () => {
     })
 
     expect(log).toBeNull()
+    await settle()
     expect(mockTypingRunLogSave).not.toHaveBeenCalled()
   })
 
-  it('returns the finished log — the same object handed to typingRunLogSave — when a real run was recorded', () => {
+  it('returns the finished log — the same object handed to typingRunLogSave — when a real run was recorded', async () => {
     const { result } = renderRecorder(true)
     driveOneKeystroke(result, 'run-1', 0)
 
@@ -74,11 +89,12 @@ describe('useRunLogRecorder — finishAndSave return value', () => {
     expect(log).not.toBeNull()
     expect(log?.runId).toBe('run-1')
     expect(log?.uid).toBe('kb-1')
+    await settle()
     expect(mockTypingRunLogSave).toHaveBeenCalledTimes(1)
     expect(mockTypingRunLogSave).toHaveBeenCalledWith('kb-1', log)
   })
 
-  it('returns null (and never saves) when nothing was ever buffered (e.g. consent was off throughout)', () => {
+  it('returns null (and never saves) when nothing was ever buffered (e.g. consent was off throughout)', async () => {
     const { result } = renderRecorder(false)
     // No noteRegistration/record calls succeed while consent is off — see
     // the module's own gate — so the buffer stays empty.
@@ -89,10 +105,11 @@ describe('useRunLogRecorder — finishAndSave return value', () => {
     })
 
     expect(log).toBeNull()
+    await settle()
     expect(mockTypingRunLogSave).not.toHaveBeenCalled()
   })
 
-  it('returns null when meta.runId does not match the buffered run (stale buffer)', () => {
+  it('returns null when meta.runId does not match the buffered run (stale buffer)', async () => {
     const { result } = renderRecorder(true)
     driveOneKeystroke(result, 'run-1', 0)
 
@@ -102,6 +119,7 @@ describe('useRunLogRecorder — finishAndSave return value', () => {
     })
 
     expect(log).toBeNull()
+    await settle()
     expect(mockTypingRunLogSave).not.toHaveBeenCalled()
   })
 })
