@@ -144,8 +144,9 @@ pub(crate) fn probe_keyboard_service() -> HidService {
 /// A fresh app with the app commands, the state they use, `opener` as the
 /// browser, file dialogs the user always cancels, `user_data` as its
 /// userData directory (the pending sync units restored from it, with no
-/// delayed writes, and the stores on it), and the access control the app's
-/// build generates.
+/// delayed writes, and the stores and the typing analytics on it, the
+/// latter with a fixed machine id), and the access control the app's build
+/// generates.
 fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     let app = mock_builder()
@@ -160,6 +161,7 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     crate::store_commands::keyboard_data::manage(app.handle(), user_data);
     app.manage(pipette_net::Http::new(|_: &str| Err(pipette_net::HttpError::Network("offline".into()))));
     crate::typing_dataset_commands::manage(app.handle(), user_data);
+    crate::analytics_commands::manage_with_machine_id(app.handle(), user_data, "machine");
     app
 }
 

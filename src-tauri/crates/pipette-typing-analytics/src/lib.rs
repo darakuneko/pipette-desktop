@@ -3,15 +3,22 @@
 //! above the SQLite layer (`pipette-typing-analytics-db`): who recorded
 //! the data ([`identity`]), the sync bookkeeping file ([`sync_state`]),
 //! when the cache is rebuilt ([`cache_rebuild`]), the database thread
-//! ([`db_actor`]), startup ([`service`]) and the lock the resets and
-//! deletes hold against the sync passes ([`reset_lock`]).
+//! ([`db_actor`]), startup ([`service`]), the lock the resets and
+//! deletes hold against the sync passes ([`reset_lock`]), the per-day
+//! JSONL masters ([`jsonl`]), the deleted ranges of a device's data
+//! ([`deleted_ranges`]) and the record-start keymap snapshots
+//! ([`keymap_snapshots`]).
 
 pub mod cache_rebuild;
 pub mod db_actor;
+pub mod deleted_ranges;
 pub mod identity;
+pub mod jsonl;
+pub mod keymap_snapshots;
 pub mod reset_lock;
 pub mod service;
 pub mod sync_state;
+pub mod sync_units;
 
 pub use cache_rebuild::{Freshness, ensure_cache_is_fresh};
 pub use db_actor::DbActor;

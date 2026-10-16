@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The typing analytics (crates/pipette-typing-analytics) in the app: the
 //! analytics service and the sync lock the resets, deletes and imports
-//! hold.
+//! hold, and the commands of each area ([`keymaps`]).
 //!
 //! The initialization is not started at launch, unlike
 //! `setupTypingAnalytics` in the Electron main process: this build cannot
@@ -16,10 +16,28 @@ use pipette_entry_store::{RandomUuid, SystemClock};
 use pipette_typing_analytics::{Error, MachineIdentity, RebuildCache, SyncRuntime, TypingAnalytics};
 use tauri::{AppHandle, Manager, Runtime};
 
+pub mod keymaps;
+
 /// Manages the analytics of `user_data` and the sync lock. The analytics
 /// initialize when a command first waits for them.
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
-    let identity = MachineIdentity::system(user_data, Arc::new(RandomUuid));
+    manage_with_identity(app, user_data, MachineIdentity::system(user_data, Arc::new(RandomUuid)));
+}
+
+/// [`manage`] with a fixed machine id, so the machine hash of a test does
+/// not depend on the machine it runs on.
+#[cfg(test)]
+pub(crate) fn manage_with_machine_id<R: Runtime>(
+    app: &AppHandle<R>,
+    user_data: &Path,
+    machine_id: &'static str,
+) {
+    let identity =
+        MachineIdentity::new(user_data, Arc::new(RandomUuid), Box::new(move || Ok(machine_id.into())));
+    manage_with_identity(app, user_data, identity);
+}
+
+fn manage_with_identity<R: Runtime>(app: &AppHandle<R>, user_data: &Path, identity: MachineIdentity) {
     let analytics =
         Arc::new(TypingAnalytics::new(user_data, identity, Arc::new(SystemClock), rebuild_unavailable()));
     app.manage(SyncRuntime::new());

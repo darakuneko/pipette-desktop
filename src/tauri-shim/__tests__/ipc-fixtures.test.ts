@@ -20,6 +20,7 @@ import type { HubPrivateLink } from '../../shared/types/hub-private'
 import type { I18nPackImportApplyOptions } from '../../shared/types/i18n-store'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store'
+import type { TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { VialAPI } from '../../shared/types/vial-api'
 
@@ -51,6 +52,7 @@ interface Shim {
   settings: typeof import('../api/settings')
   shell: typeof import('../api/shell')
   snapshots: typeof import('../api/snapshots')
+  typingAnalyticsKeymaps: typeof import('../api/typing-analytics-keymaps')
   typingTexts: typeof import('../api/typing-texts')
   syncPending: typeof import('../api/sync-pending')
   themePacks: typeof import('../api/theme-packs')
@@ -75,6 +77,7 @@ async function load(): Promise<Shim> {
     settings: await import('../api/settings'),
     shell: await import('../api/shell'),
     snapshots: await import('../api/snapshots'),
+    typingAnalyticsKeymaps: await import('../api/typing-analytics-keymaps'),
     typingTexts: await import('../api/typing-texts'),
     syncPending: await import('../api/sync-pending'),
     themePacks: await import('../api/theme-packs'),
@@ -282,6 +285,24 @@ const CALLERS: Record<string, Caller> = {
   typingRunLogList: { run: ({ runLogs }, [uid]) => runLogs.runLogsApi.typingRunLogList(uid as string) },
   typingRunLogGet: {
     run: ({ runLogs }, [uid, runId]) => runLogs.runLogsApi.typingRunLogGet(uid as string, runId as string),
+  },
+  typingAnalyticsSaveKeymapSnapshot: {
+    run: ({ typingAnalyticsKeymaps }, [snapshot]) =>
+      typingAnalyticsKeymaps.typingAnalyticsKeymapsApi.typingAnalyticsSaveKeymapSnapshot(
+        snapshot as Omit<TypingKeymapSnapshot, 'machineHash'>,
+      ),
+  },
+  typingAnalyticsGetKeymapSnapshotForRange: {
+    run: ({ typingAnalyticsKeymaps }, [uid, fromMs, toMs]) =>
+      typingAnalyticsKeymaps.typingAnalyticsKeymapsApi.typingAnalyticsGetKeymapSnapshotForRange(
+        uid as string,
+        fromMs as number,
+        toMs as number,
+      ),
+  },
+  typingAnalyticsListKeymapSnapshots: {
+    run: ({ typingAnalyticsKeymaps }, [uid]) =>
+      typingAnalyticsKeymaps.typingAnalyticsKeymapsApi.typingAnalyticsListKeymapSnapshots(uid as string),
   },
   'settings.readSettingsFile': { run: ({ settings }, [uid]) => settings.readSettingsFile(uid as string) },
   'settings.writeSettingsFile': {

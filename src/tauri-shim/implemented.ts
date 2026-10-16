@@ -19,6 +19,7 @@ import { shellApi } from './api/shell'
 import { snapshotsApi } from './api/snapshots'
 import { syncPendingApi } from './api/sync-pending'
 import { themePacksApi } from './api/theme-packs'
+import { typingAnalyticsKeymapsApi } from './api/typing-analytics-keymaps'
 import { typingDatasetsApi } from './api/typing-datasets'
 import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
@@ -39,6 +40,7 @@ export const real = {
   ...snapshotsApi,
   ...analyzeFiltersApi,
   ...runLogsApi,
+  ...typingAnalyticsKeymapsApi,
   ...settingsApi,
   ...typingDatasetsApi,
   ...i18nPacksApi,
