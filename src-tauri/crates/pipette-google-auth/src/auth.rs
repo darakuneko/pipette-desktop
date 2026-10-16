@@ -22,7 +22,7 @@ use crate::jwt::{self, ID_TOKEN_MAX_AGE_SECS};
 use crate::loopback::{Callback, Loopback, READ_TIMEOUT};
 use crate::pkce::new_auth_request;
 use crate::token_endpoint::{TokenResponse, exchange_form, post_form, refresh_form};
-use crate::tokens::{StoredTokens, TokenFile};
+use crate::tokens::{Loaded, StoredTokens, TokenFile};
 use crate::{AuthError, BrowserOpener, StoreTokens, TokenSwitch};
 
 /// How early before its expiry an access token is refreshed.
@@ -234,31 +234,32 @@ impl GoogleAuth {
     /// The access token, refreshed first when it expires within 5 minutes
     /// (`getAccessToken`); `None` when signed out or when the refresh fails.
     pub async fn access_token(&self) -> Option<Zeroizing<String>> {
-        let generation = self.tokens.session();
-        let tokens = self.tokens.load().await?;
-        if self.now() >= tokens.expires_at.saturating_sub(REFRESH_MARGIN_MS) {
-            return self.refresh(&tokens.refresh_token, generation).await.ok();
+        let loaded = self.tokens.load().await?;
+        if self.now() >= loaded.tokens.expires_at.saturating_sub(REFRESH_MARGIN_MS) {
+            return self.refresh(&loaded).await.ok();
         }
-        Some(Zeroizing::new(tokens.access_token.clone()))
+        Some(Zeroizing::new(loaded.tokens.access_token.clone()))
     }
 
-    /// Refreshes the access token with `refresh_token` and stores the new
-    /// tokens, keeping the stored id_token when the response has none
-    /// (`refreshAccessToken`). `generation` is the session taken before
-    /// `refresh_token` was read; the refresh stores nothing when a sign-in
-    /// or sign-out came since.
-    async fn refresh(&self, refresh_token: &str, generation: u64) -> Result<Zeroizing<String>, AuthError> {
+    /// Refreshes the access token of `loaded` and stores the new tokens,
+    /// keeping the stored id_token when the response has none
+    /// (`refreshAccessToken`). The new tokens are stored only while the
+    /// stamp of `loaded` is the current one.
+    async fn refresh(&self, loaded: &Loaded) -> Result<Zeroizing<String>, AuthError> {
+        let refresh_token = loaded.tokens.refresh_token.as_str();
         let response = self.token_request(refresh_form(refresh_token), "Token refresh").await?;
-        let existing = self.tokens.load().await;
-        let id_token =
-            response.id_token.clone().or_else(|| existing.and_then(|tokens| tokens.id_token.clone()));
+        let existing = self.tokens.load().await.filter(|existing| existing.stamp == loaded.stamp);
+        let id_token = response
+            .id_token
+            .clone()
+            .or_else(|| existing.and_then(|existing| existing.tokens.id_token.clone()));
         let tokens = StoredTokens {
             access_token: response.access_token.clone(),
             refresh_token: refresh_token.to_owned(),
             expires_at: response.expires_at(self.now()),
             id_token,
         };
-        self.tokens.store_refresh(tokens, generation).await?;
+        self.tokens.store_refresh(tokens, loaded.stamp).await?;
         Ok(Zeroizing::new(response.access_token.clone()))
     }
 
@@ -269,17 +270,17 @@ impl GoogleAuth {
         if let Some(account) = (self.config.hub_test_account)() {
             return Some(Zeroizing::new(format!("test:{account}")));
         }
-        let generation = self.tokens.session();
-        let tokens = self.tokens.load().await?;
-        if let Some(id_token) = tokens.id_token.as_deref().filter(|token| self.is_fresh(token)) {
+        let loaded = self.tokens.load().await?;
+        if let Some(id_token) = loaded.tokens.id_token.as_deref().filter(|token| self.is_fresh(token)) {
             return Some(Zeroizing::new(id_token.to_owned()));
         }
-        if tokens.refresh_token.is_empty() {
+        if loaded.tokens.refresh_token.is_empty() {
             return None;
         }
-        self.refresh(&tokens.refresh_token, generation).await.ok()?;
+        self.refresh(&loaded).await.ok()?;
         let refreshed = self.tokens.load().await?;
         refreshed
+            .tokens
             .id_token
             .as_deref()
             .filter(|token| self.is_fresh(token))
@@ -297,6 +298,6 @@ impl GoogleAuth {
     /// `None` when signed out or without one. The Hub test account is not
     /// a Drive sign-in and has none.
     pub async fn account_sub(&self) -> Option<String> {
-        jwt::account_sub(self.tokens.load().await?.id_token.as_deref())
+        jwt::account_sub(self.tokens.load().await?.tokens.id_token.as_deref())
     }
 }

@@ -1,14 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The stored Google tokens (src/main/sync/google-auth.ts): the token file
-//! of the secret store, its cache in memory, the session generation and the
-//! queue every read, write and removal of the file goes through.
+//! of the secret store, its cache in memory, the session [`Stamp`] and the
+//! queue every read, write and removal of the file goes through. The queue
+//! is a fair lock, so the file work runs one at a time in call order
+//! (`queueTokenFileWork`).
 //!
-//! The session generation advances with every sign-in and sign-out. A write
-//! checks it before and after writing, so a refresh that started under
-//! another session stores nothing, and tokens written while a sign-out came
-//! are not kept; a read under another session keeps what the cache holds.
-//! The queue is a fair lock, so the file work runs one at a time in call
-//! order (`queueTokenFileWork`).
+//! Electron's one session generation is two counters here. The sign-outs
+//! asked for advance when `signOut` is called, as Electron's generation
+//! does, so a write under way or queued by then fails as it does there.
+//! The session advances inside the queue only, at the store of a sign-in
+//! and at the turn of a sign-out: Electron's single-threaded main process
+//! leaves no room between advancing its generation and queueing the work,
+//! but other threads would, and a read queued there would cache the file a
+//! sign-out is about to remove. Every change of either counter empties the
+//! cache under the cache lock, so the cache only holds tokens of the
+//! current stamp, and [`Loaded`] gives them with it. A refresh stores its
+//! tokens only while the stamp of the tokens it refreshed is the current
+//! one.
 
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -47,11 +55,30 @@ impl fmt::Debug for StoredTokens {
     }
 }
 
+/// Which sign-in tokens belong to: the session and the sign-outs asked
+/// for (see the module comment).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Stamp {
+    session: u64,
+    sign_outs: u64,
+}
+
+/// Tokens with the stamp they were read or written under.
+#[derive(Clone)]
+pub(crate) struct Loaded {
+    pub(crate) stamp: Stamp,
+    pub(crate) tokens: Arc<StoredTokens>,
+}
+
 pub(crate) struct TokenFile {
     secrets: Arc<SecretStore>,
     queue: tokio::sync::Mutex<()>,
+    /// Advanced in the queue only.
     session: AtomicU64,
-    cached: Mutex<Option<Arc<StoredTokens>>>,
+    /// Advanced when a sign-out is asked for, before it waits for the queue.
+    sign_outs: AtomicU64,
+    /// Tokens of the current stamp only (see the module comment).
+    cached: Mutex<Option<Loaded>>,
 }
 
 impl TokenFile {
@@ -60,35 +87,46 @@ impl TokenFile {
             secrets,
             queue: tokio::sync::Mutex::new(()),
             session: AtomicU64::new(0),
+            sign_outs: AtomicU64::new(0),
             cached: Mutex::new(None),
         }
     }
 
-    pub(crate) fn session(&self) -> u64 {
-        self.session.load(Ordering::SeqCst)
+    fn stamp(&self) -> Stamp {
+        Stamp {
+            session: self.session.load(Ordering::SeqCst),
+            sign_outs: self.sign_outs.load(Ordering::SeqCst),
+        }
     }
 
-    fn cache(&self) -> std::sync::MutexGuard<'_, Option<Arc<StoredTokens>>> {
+    fn cache(&self) -> std::sync::MutexGuard<'_, Option<Loaded>> {
         self.cached.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Stores the tokens of a refresh that started under `generation`,
-    /// unless a sign-in or sign-out came since, checked before and after the
-    /// write (`storeTokens`).
-    pub(crate) async fn store_refresh(&self, tokens: StoredTokens, generation: u64) -> Result<(), AuthError> {
+    /// Starts a new session with nothing cached; runs in the queue.
+    fn next_session(&self) -> Stamp {
+        let mut cache = self.cache();
+        *cache = None;
+        self.session.fetch_add(1, Ordering::SeqCst);
+        self.stamp()
+    }
+
+    /// Stores the tokens of a refresh of tokens of `stamp`, unless a
+    /// sign-in or sign-out came since, checked before and after the write
+    /// (`storeTokens`).
+    pub(crate) async fn store_refresh(&self, tokens: StoredTokens, stamp: Stamp) -> Result<(), AuthError> {
         let _queue = self.queue.lock().await;
-        if generation != self.session() {
+        if stamp != self.stamp() {
             return Err(AuthError::SignInChanged);
         }
-        self.write_and_keep(tokens, generation).await
+        self.write_and_keep(tokens, stamp).await
     }
 
     /// Stores the tokens of a sign-in as a new session, if `still_wanted`
     /// says so when its turn in the queue comes. The check and the new
     /// session come before the write, together under the queue, so a
     /// cancelled sign-in neither writes nor ends the session of a later
-    /// one; once written, only a sign-out (a later session) keeps the
-    /// tokens from being kept.
+    /// one; once written, only a sign-out keeps the tokens from being kept.
     pub(crate) async fn store_new_session(
         &self,
         tokens: StoredTokens,
@@ -98,16 +136,15 @@ impl TokenFile {
         if !still_wanted() {
             return Err(AuthError::SignInChanged);
         }
-        let generation = self.session.fetch_add(1, Ordering::SeqCst) + 1;
-        self.write_and_keep(tokens, generation).await
+        let stamp = self.next_session();
+        self.write_and_keep(tokens, stamp).await
     }
 
-    /// Writes `tokens` and caches them if the session is still
-    /// `generation`. Runs in the queue. A sign-out during the write removes
-    /// the file next (it is queued after this), so the tokens are not
-    /// cached then either; the check and the cache update hold the cache
-    /// lock, under which a sign-out ends the session.
-    async fn write_and_keep(&self, tokens: StoredTokens, generation: u64) -> Result<(), AuthError> {
+    /// Writes `tokens` and caches them if the stamp is still `stamp`. Runs
+    /// in the queue, so only a sign-out asked for during the write changes
+    /// it; that sign-out removes the file next (it is queued after this),
+    /// so the tokens are not cached then.
+    async fn write_and_keep(&self, tokens: StoredTokens, stamp: Stamp) -> Result<(), AuthError> {
         let json =
             Zeroizing::new(serde_json::to_vec(&tokens).map_err(|err| AuthError::Other(err.to_string()))?);
         self.secrets.store(SecretKind::OauthTokens, &json).await.map_err(|err| match err {
@@ -115,20 +152,23 @@ impl TokenFile {
             StoreError::Io(err) => AuthError::Other(err.to_string()),
         })?;
         let mut cache = self.cache();
-        if generation != self.session() {
+        if stamp != self.stamp() {
             return Err(AuthError::SignInChanged);
         }
-        *cache = Some(Arc::new(tokens));
+        *cache = Some(Loaded { stamp, tokens: Arc::new(tokens) });
         Ok(())
     }
 
-    /// The stored tokens, from memory or the file (`loadTokens`); `None`
-    /// when there are none or they cannot be read.
-    pub(crate) async fn load(&self) -> Option<Arc<StoredTokens>> {
-        if let Some(tokens) = self.cache().clone() {
-            return Some(tokens);
-        }
-        let generation = self.session();
+    /// The stored tokens with their stamp, from memory or the file
+    /// (`loadTokens`); `None` when there are none or they cannot be read.
+    pub(crate) async fn load(&self) -> Option<Loaded> {
+        let stamp = {
+            let cache = self.cache();
+            if let Some(loaded) = cache.clone() {
+                return Some(loaded);
+            }
+            self.stamp()
+        };
         // Queued after any write or removal under way, so a read never sees
         // a file a sign-out is about to remove.
         let _queue = self.queue.lock().await;
@@ -149,23 +189,33 @@ impl TokenFile {
         };
         let mut cache = self.cache();
         // A sign-in or sign-out during the read decides what is signed in.
-        if generation != self.session() {
+        if stamp != self.stamp() {
             return cache.clone();
         }
-        let tokens = Arc::new(tokens);
-        *cache = Some(Arc::clone(&tokens));
-        Some(tokens)
+        let loaded = Loaded { stamp, tokens: Arc::new(tokens) };
+        *cache = Some(loaded.clone());
+        Some(loaded)
     }
 
     /// Ends the session, forgets the cached tokens and removes the file,
-    /// ignoring every failure (`signOut`).
+    /// ignoring every failure (`signOut`). The sign-out counts as asked for
+    /// at once; the new session, the emptied cache and the removal come at
+    /// its turn in the queue, so whatever a read queued before it cached is
+    /// dropped there, and a read queued after it finds no file.
     pub(crate) async fn clear(&self) {
-        {
-            let mut cache = self.cache();
-            self.session.fetch_add(1, Ordering::SeqCst);
-            *cache = None;
-        }
+        self.ask_sign_out();
+        self.sign_out_in_turn().await;
+    }
+
+    fn ask_sign_out(&self) {
+        let mut cache = self.cache();
+        self.sign_outs.fetch_add(1, Ordering::SeqCst);
+        *cache = None;
+    }
+
+    async fn sign_out_in_turn(&self) {
         let _queue = self.queue.lock().await;
+        self.next_session();
         if let Err(err) = self.secrets.clear(SecretKind::OauthTokens).await {
             log::warn!("[google-auth] the token file could not be removed: {err}");
         }
@@ -189,5 +239,31 @@ mod tests {
             r#"{"accessToken":"a","refreshToken":"r","expiresAt":1700000000000,"idToken":null}"#
         );
         assert_eq!(format!("{tokens:?}"), "StoredTokens { expires_at: 1700000000000, .. }");
+    }
+
+    fn tokens(access_token: &str) -> StoredTokens {
+        StoredTokens {
+            access_token: access_token.into(),
+            refresh_token: "r".into(),
+            expires_at: i64::MAX,
+            id_token: None,
+        }
+    }
+
+    /// A read can take its place in the queue after a sign-out was asked
+    /// for and before the sign-out takes its own (another thread can run in
+    /// between): what it reads and caches is dropped at the sign-out's turn.
+    #[tokio::test]
+    async fn a_read_between_a_sign_out_and_its_turn_keeps_nothing_past_the_sign_out() {
+        let dir = tempfile::tempdir().unwrap();
+        let keystore = Arc::new(pipette_secret_store::MemoryKeystore::default());
+        let file = TokenFile::new(Arc::new(SecretStore::new(dir.path(), keystore)));
+        file.store_new_session(tokens("a"), || true).await.unwrap();
+        file.ask_sign_out();
+        let read = file.load().await.unwrap();
+        assert_eq!(read.tokens.access_token, "a");
+        file.sign_out_in_turn().await;
+        assert!(file.load().await.is_none());
+        assert!(!file.secrets.path(SecretKind::OauthTokens).exists());
     }
 }
