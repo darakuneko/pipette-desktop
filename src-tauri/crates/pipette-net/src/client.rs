@@ -173,13 +173,13 @@ impl ReqwestClient {
         let limit = self.limits.max_body_bytes;
         let declared = response.content_length();
         if declared.is_some_and(|length| length > limit) {
-            return Err(too_large(url, limit));
+            return Err(HttpError::TooLarge { limit });
         }
         let capacity = declared.unwrap_or(0).min(MAX_INITIAL_CAPACITY);
         let mut body = Vec::with_capacity(usize::try_from(capacity).unwrap_or(0));
         while let Some(chunk) = response.chunk().await.map_err(request_error)? {
             if (body.len() + chunk.len()) as u64 > limit {
-                return Err(too_large(url, limit));
+                return Err(HttpError::TooLarge { limit });
             }
             body.extend_from_slice(&chunk);
         }
@@ -191,18 +191,12 @@ impl HttpClient for ReqwestClient {
     fn get_bytes<'a>(&'a self, url: &'a str) -> HttpFuture<'a> {
         Box::pin(async move {
             let result = self.get(url).await;
-            if let Err(err @ HttpError::Timeout) = &result {
+            if let Err(err @ (HttpError::Timeout | HttpError::TooLarge { .. })) = &result {
                 log::warn!("GET {url}: {err}");
             }
             result
         })
     }
-}
-
-fn too_large(url: &str, limit: u64) -> HttpError {
-    let err = HttpError::TooLarge { limit };
-    log::warn!("GET {url}: {err}");
-    err
 }
 
 fn request_error(err: reqwest::Error) -> HttpError {
