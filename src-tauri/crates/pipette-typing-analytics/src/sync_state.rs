@@ -18,9 +18,6 @@ use pipette_time::is_utc_day;
 /// The revision this build writes (`SYNC_STATE_REV`).
 pub const SYNC_STATE_REV: f64 = 3.0;
 
-/// Where the file is, under the userData directory.
-const SYNC_STATE_FILE: [&str; 3] = ["local", "typing-analytics", "sync_state.json"];
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypingSyncState {
     pub my_device_id: JsString,
@@ -35,8 +32,9 @@ pub struct TypingSyncState {
     pub last_synced_at: f64,
 }
 
+/// `local/typing-analytics/sync_state.json` under the userData directory.
 pub fn sync_state_path(user_data: &Path) -> PathBuf {
-    SYNC_STATE_FILE.iter().fold(user_data.to_path_buf(), |path, part| path.join(part))
+    user_data.join("local").join("typing-analytics").join("sync_state.json")
 }
 
 impl TypingSyncState {

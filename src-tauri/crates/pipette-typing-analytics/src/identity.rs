@@ -17,9 +17,6 @@ use std::sync::{Arc, Mutex, PoisonError};
 use pipette_entry_store::{IdGen, is_js_whitespace};
 use pipette_sync_format::{MachineIdError, machine_hash};
 
-/// Where the installation id is kept, under the userData directory.
-const INSTALLATION_ID_FILE: [&str; 2] = ["local", "installation-id"];
-
 #[derive(Debug, thiserror::Error)]
 pub enum IdentityError {
     #[error("installation id: {0}")]
@@ -28,8 +25,9 @@ pub enum IdentityError {
     MachineId(#[from] MachineIdError),
 }
 
+/// `local/installation-id` under the userData directory.
 pub fn installation_id_path(user_data: &Path) -> PathBuf {
-    INSTALLATION_ID_FILE.iter().fold(user_data.to_path_buf(), |path, part| path.join(part))
+    user_data.join("local").join("installation-id")
 }
 
 /// `INSTALLATION_ID_PATTERN`: a lowercase hyphenated UUID.
