@@ -2,12 +2,15 @@
 // @vitest-environment jsdom
 //
 // Focused hook-level coverage for `useI18nPackStore`'s `reorder`. Mirrors
-// the `reorder` describe block already covering `useKeyLabels`.
+// the `reorder` describe block already covering `useKeyLabels`. Runs on
+// both vialAPI implementations (i18n-pack-backends.ts).
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, waitFor } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 import { useI18nPackStore } from '../useI18nPackStore'
+import { i18nPackBackends } from './i18n-pack-backends'
 
 vi.mock('../../i18n', () => ({
   default: { changeLanguage: vi.fn().mockResolvedValue(undefined), language: 'builtin:en' },
@@ -38,19 +41,20 @@ function meta(overrides: Partial<{ id: string; name: string }> = {}) {
   }
 }
 
-describe('useI18nPackStore reorder', () => {
+const backends = i18nPackBackends({ i18nPackList: mockList, i18nPackReorder: mockReorder })
+
+afterEach(() => {
+  clearMocks()
+})
+
+describe.each(backends)('useI18nPackStore reorder ($name)', (backend) => {
   beforeEach(() => {
     vi.clearAllMocks()
     setupAppConfigMock({ language: 'builtin:en' })
     mockList.mockResolvedValue({ success: true, data: [meta({ id: 'a', name: 'A' }), meta({ id: 'b', name: 'B' })] })
     mockReorder.mockResolvedValue({ success: true })
     Object.defineProperty(window, 'vialAPI', {
-      value: {
-        ...vialAPIMock(),
-        i18nPackList: mockList,
-        i18nPackReorder: mockReorder,
-        i18nPackOnChanged: () => () => undefined,
-      },
+      value: { ...vialAPIMock(), ...backend.install() },
       writable: true,
       configurable: true,
     })
