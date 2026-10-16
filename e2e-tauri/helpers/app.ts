@@ -275,6 +275,36 @@ export async function clickIntoFileDialog(selector: string, path: string): Promi
   })
 }
 
+/** Queues `paths` as the answer of the next file dialog that picks several
+ *  files, and otherwise does what {@link clickIntoFileDialog} does. */
+export async function clickIntoFilesDialog(selector: string, paths: string[]): Promise<void> {
+  const queued = () => invokeCommand<number>('dev_dialog_queued')
+  if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
+  await invokeCommand('dev_dialog_respond', { paths })
+  await $(selector).click()
+  await browser.waitUntil(async () => (await queued()) === 0, {
+    timeoutMsg: `clicking ${selector} opened no file dialog`,
+  })
+}
+
+/** Records `body` (UTF-8 text, or bytes) with `status` as the response of
+ *  the next GET of `url` (`dev_http_respond` of the development tools), so
+ *  the request never reaches the network. */
+export async function respondHttp(url: string, body: string | Uint8Array, status = 200): Promise<void> {
+  const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : body
+  await invokeCommand('dev_http_respond', { url, status, body: [...bytes] })
+}
+
+/** How many recorded responses no request has taken yet. */
+export function queuedHttpResponses(): Promise<number> {
+  return invokeCommand<number>('dev_http_queued')
+}
+
+/** Waits until every recorded response has been taken. */
+export async function waitForHttpResponsesTaken(timeoutMsg: string): Promise<void> {
+  await browser.waitUntil(async () => (await queuedHttpResponses()) === 0, { timeoutMsg })
+}
+
 /** Quits the app and starts it again in a new WebDriver session, with the
  *  same userData directory. Linux only, as {@link quitApp}. */
 export async function restartApp(): Promise<void> {
