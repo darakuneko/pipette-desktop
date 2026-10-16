@@ -128,10 +128,20 @@ export async function quitApp(timeoutMs: number): Promise<void> {
   }
 }
 
+/** A Hub address nothing listens on: the Hub requests a test records no
+ *  response for (`dev_http_respond`) fail at once instead of reaching the
+ *  real Hub. The development tools' build reads PIPETTE_HUB_URL. */
+export const E2E_HUB_URL = 'http://127.0.0.1:9'
+
 /** The environment the app of a session runs with: the virtual keyboard
- *  only, and the session's userData directory. */
+ *  only, the session's userData directory, and a Hub that is not there. */
 function appEnv(userDataDir: string): NodeJS.ProcessEnv {
-  return { ...process.env, PIPETTE_VIRTUAL_DEVICE: 'only', PIPETTE_USER_DATA_DIR: userDataDir }
+  return {
+    ...process.env,
+    PIPETTE_VIRTUAL_DEVICE: 'only',
+    PIPETTE_USER_DATA_DIR: userDataDir,
+    PIPETTE_HUB_URL: E2E_HUB_URL,
+  }
 }
 
 export interface LaunchResult {
