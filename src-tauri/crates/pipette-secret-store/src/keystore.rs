@@ -32,6 +32,13 @@ pub trait Keystore: Send + Sync {
     fn write(&self, account: &str, secret: &[u8]) -> Result<(), KeystoreError>;
     /// Removes the secret of `account`; one that is not there is no error.
     fn delete(&self, account: &str) -> Result<(), KeystoreError>;
+    /// What names the store behind this instance, when other instances can
+    /// reach the same one: instances with the same identity share the key
+    /// in memory ([`crate::MasterKey`]), so a delete through one is seen by
+    /// all. `None` (the default) when this instance is a store of its own.
+    fn identity(&self) -> Option<String> {
+        None
+    }
 }
 
 /// The OS key store through the `keyring` crate: the Keychain on macOS,
@@ -68,6 +75,11 @@ impl Keystore for OsKeystore {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(err) => Err(unavailable(err)),
         }
+    }
+
+    /// Every instance of one service reaches the same entries.
+    fn identity(&self) -> Option<String> {
+        Some(format!("os/{}", self.service))
     }
 }
 
@@ -220,5 +232,21 @@ mod memory {
             self.map().remove(account);
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Only the identity is asked: no call reaches the OS key store.
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    #[test]
+    fn os_key_stores_of_one_service_have_one_identity() {
+        let identity = |service: &str| OsKeystore::new(service).identity();
+        assert_eq!(identity("a.service"), identity("a.service"));
+        assert!(identity("a.service").is_some());
+        assert_ne!(identity("a.service"), identity("b.service"));
+        assert_eq!(UnavailableKeystore.identity(), None);
     }
 }

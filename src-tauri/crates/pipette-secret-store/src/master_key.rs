@@ -10,7 +10,7 @@
 //!
 //! A key that was read or created is kept in memory for the rest of the
 //! process (zeroed when dropped), shared by every [`MasterKey`] of the same
-//! key store and account. The memory changes only behind the gate: a read
+//! account on the same key store ([`Keystore::identity`]). The memory changes only behind the gate: a read
 //! keeps what it found there, and a delete empties it after removing the
 //! entry, so no read keeps a key a delete removed. A delete also empties it
 //! before waiting for the gate, so no call made after it began answers
@@ -99,14 +99,26 @@ fn entry_gate(account: &str) -> Arc<tokio::sync::Mutex<()>> {
 /// The key in memory.
 type KeyCache = Mutex<Option<Arc<Key>>>;
 
+/// Which key store a key in memory came from ([`Keystore::identity`]).
+#[derive(PartialEq, Eq, Hash)]
+enum StoreId {
+    /// Every instance of this identity reaches the same entries.
+    Shared(String),
+    /// This instance only, by its address. Each [`MasterKey`] holds its key
+    /// store, so the address names no other key store while the memory is
+    /// in use.
+    Instance(usize),
+}
+
 /// The memory of the key of `account` in `keystore`, shared by every
-/// [`MasterKey`] of that key store and account in the process. Each one
-/// holds `keystore`, so its address names no other key store while the
-/// memory is in use.
+/// [`MasterKey`] of that account on the same key store in the process.
 fn key_cache(keystore: &Arc<dyn Keystore>, account: &str) -> Arc<KeyCache> {
-    static CACHES: Registry<(usize, String), KeyCache> = OnceLock::new();
-    let keystore = Arc::as_ptr(keystore).cast::<()>().addr();
-    shared(&CACHES, (keystore, account.to_owned()))
+    static CACHES: Registry<(StoreId, String), KeyCache> = OnceLock::new();
+    let store = match keystore.identity() {
+        Some(identity) => StoreId::Shared(identity),
+        None => StoreId::Instance(Arc::as_ptr(keystore).cast::<()>().addr()),
+    };
+    shared(&CACHES, (store, account.to_owned()))
 }
 
 /// The master key of one userData directory.
@@ -404,6 +416,49 @@ mod tests {
         let new = first.read_or_create().await.unwrap();
         assert_ne!(*new, *old);
         assert_eq!(*second.read_or_create().await.unwrap(), *new);
+    }
+
+    /// A key store instance that reaches the store of `inner` under
+    /// `identity`, as two `OsKeystore`s of one service do.
+    struct SameStore {
+        inner: Arc<MemoryKeystore>,
+        identity: &'static str,
+    }
+
+    impl Keystore for SameStore {
+        fn read(&self, account: &str) -> Result<Option<Zeroizing<Vec<u8>>>, KeystoreError> {
+            self.inner.read(account)
+        }
+
+        fn write(&self, account: &str, secret: &[u8]) -> Result<(), KeystoreError> {
+            self.inner.write(account, secret)
+        }
+
+        fn delete(&self, account: &str) -> Result<(), KeystoreError> {
+            self.inner.delete(account)
+        }
+
+        fn identity(&self) -> Option<String> {
+            Some(self.identity.to_owned())
+        }
+    }
+
+    #[tokio::test]
+    async fn instances_of_one_key_store_identity_share_a_delete() {
+        let store = Arc::new(MemoryKeystore::default());
+        let test = "instances_of_one_key_store_identity_share_a_delete";
+        let instance = || -> Arc<dyn Keystore> {
+            Arc::new(SameStore { inner: store.clone(), identity: "test/instances_of_one_identity" })
+        };
+        let first = MasterKey::with_timeout(instance(), account(test), Duration::from_secs(5));
+        let second = MasterKey::with_timeout(instance(), account(test), Duration::from_secs(5));
+        let old = first.read_or_create().await.unwrap();
+        let calls = store.calls();
+        assert_eq!(*second.read().await.unwrap().unwrap(), *old);
+        assert_eq!(store.calls(), calls, "the second instance reads the shared memory");
+        second.delete().await.unwrap();
+        assert!(first.read().await.unwrap().is_none());
+        assert_ne!(*first.read_or_create().await.unwrap(), *old);
     }
 
     #[tokio::test]

@@ -103,6 +103,11 @@ impl Keystore for FileKeystore {
             entries.remove(account);
         })
     }
+
+    /// Every instance on one file reaches the same entries.
+    fn identity(&self) -> Option<String> {
+        Some(format!("file/{}", self.path.display()))
+    }
 }
 
 #[cfg(test)]

@@ -96,10 +96,11 @@ async fn a_secret_file_keeps_its_secret_through_the_os_key_store() {
                 Some(SecretFailure::NoPasswordFile)
             );
             store.store(SecretKind::SyncPassword, b"hunter2").await.unwrap();
-            // Another key store instance has a memory of its own, so the
-            // key comes from the OS key store, as in a new process.
-            let fresh: Arc<OsKeystore> = Arc::new(OsKeystore::new(SERVICE));
-            let again = SecretStore::with_timeout(user_data.path(), fresh, Duration::from_secs(30));
+            // Without the key in memory, as in a new process, it comes from
+            // the OS key store.
+            let again =
+                SecretStore::with_timeout(user_data.path(), keystore.clone(), Duration::from_secs(30));
+            again.master_key().forget();
             assert_eq!(
                 again.retrieve_string(SecretKind::SyncPassword).await.as_deref().map(String::as_str),
                 Ok("hunter2")
