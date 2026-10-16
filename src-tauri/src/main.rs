@@ -147,6 +147,7 @@ fn main() {
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             dev_commands::manage_dialogs(app.handle());
+            dev_commands::manage_http(app.handle());
             store_commands::keyboard_data::manage(app.handle(), &app.state::<UserDataDir>().0);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());

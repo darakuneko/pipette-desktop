@@ -7,6 +7,8 @@ use tauri::ipc::Invoke;
 use tauri::webview::PageLoadPayload;
 use tauri::{AppHandle, Builder, Webview, Wry};
 
+use pipette_net::{Limits, ReqwestClient};
+
 use crate::dialog::SystemDialogs;
 
 #[cfg(feature = "dev-tools")]
@@ -36,4 +38,16 @@ pub fn manage_dialogs(app: &AppHandle<Wry>) {
     tools::manage_queued_dialogs(app, system);
     #[cfg(not(feature = "dev-tools"))]
     tauri::Manager::manage(app, crate::dialog::Dialogs::new(system));
+}
+
+/// Manages the HTTP client every request goes through: the real one, with
+/// the dev-tools feature behind the recorded responses of
+/// `dev_http_respond`.
+pub fn manage_http(app: &AppHandle<Wry>) {
+    let user_agent = format!("Pipette/{}", app.package_info().version);
+    let real = ReqwestClient::new(Limits::DEFAULT, user_agent);
+    #[cfg(feature = "dev-tools")]
+    tools::manage_queued_http(app, real);
+    #[cfg(not(feature = "dev-tools"))]
+    tauri::Manager::manage(app, pipette_net::Http::new(real));
 }

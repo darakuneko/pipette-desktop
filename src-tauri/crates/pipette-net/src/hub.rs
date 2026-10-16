@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+//! The Hub API base URL, as `getHubApiBase` of src/main/hub/hub-base.ts:
+//! the production Hub, or the `PIPETTE_HUB_URL` override where it is
+//! allowed. The environment is read on every call, as Electron does.
+
+/// `HUB_API_DEFAULT` of src/main/hub/hub-base.ts.
+pub const HUB_API_DEFAULT: &str = "https://pipette-hub-worker.keymaps.workers.dev";
+
+/// The base URL that replaces [`HUB_API_DEFAULT`] where an override is
+/// allowed.
+pub const HUB_URL_ENV: &str = "PIPETTE_HUB_URL";
+
+/// Set to `1`, allows the [`HUB_URL_ENV`] override in any build (the e2e
+/// and screenshot runs of a production build).
+pub const HUB_TEST_ENV: &str = "PIPETTE_HUB_TEST";
+
+/// The Hub API base URL for this process. The override is allowed in
+/// builds with the development tools (`dev_tools_build`; Electron allows it
+/// in its development runs) and wherever [`HUB_TEST_ENV`] is `1`. A
+/// variable that is not valid UTF-8 counts as unset.
+pub fn hub_api_base(dev_tools_build: bool) -> String {
+    let override_url = std::env::var(HUB_URL_ENV).ok();
+    let allowed = dev_tools_build || std::env::var(HUB_TEST_ENV).is_ok_and(|value| value == "1");
+    resolve_hub_api_base(override_url.as_deref(), allowed)
+}
+
+/// [`hub_api_base`] for given values: a non-empty `override_url` when
+/// `override_allowed`, its trailing slashes stripped, else the default.
+pub fn resolve_hub_api_base(override_url: Option<&str>, override_allowed: bool) -> String {
+    match override_url {
+        Some(url) if !url.is_empty() && override_allowed => url.trim_end_matches('/').to_owned(),
+        _ => HUB_API_DEFAULT.to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uses_the_production_hub_without_an_allowed_override() {
+        assert_eq!(resolve_hub_api_base(None, true), HUB_API_DEFAULT);
+        assert_eq!(resolve_hub_api_base(Some("http://localhost:8787"), false), HUB_API_DEFAULT);
+        // An empty variable is falsy in `if (override && …)`.
+        assert_eq!(resolve_hub_api_base(Some(""), true), HUB_API_DEFAULT);
+    }
+
+    #[test]
+    fn uses_an_allowed_override_without_its_trailing_slashes() {
+        assert_eq!(resolve_hub_api_base(Some("http://localhost:8787"), true), "http://localhost:8787");
+        assert_eq!(resolve_hub_api_base(Some("http://localhost:8787///"), true), "http://localhost:8787");
+        assert_eq!(resolve_hub_api_base(Some("http://h/a/"), true), "http://h/a");
+        // `'/'.replace(/\/+$/, '')` is the empty string, and so is this.
+        assert_eq!(resolve_hub_api_base(Some("//"), true), "");
+    }
+}

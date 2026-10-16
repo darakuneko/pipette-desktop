@@ -17,6 +17,8 @@ pub const DEV_COMMANDS: &[&str] = &[
     "dev_log",
     "dev_dialog_respond",
     "dev_dialog_queued",
+    "dev_http_respond",
+    "dev_http_queued",
 ];
 
 /// The development commands that exist on Linux only.

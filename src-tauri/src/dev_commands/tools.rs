@@ -5,20 +5,24 @@
 //! `globalThis.__pipetteVirtualDevice`), a log sink, window
 //! screenshots (Linux), and a script hook that runs a local file in the
 //! window once the first page has loaded, so the UI can be driven without a
-//! WebDriver, and a queue of answers for the file dialogs, so the e2e tests
-//! can save and open files without the native dialog.
+//! WebDriver, a queue of answers for the file dialogs, so the e2e tests
+//! can save and open files without the native dialog, and recorded
+//! responses for the HTTP requests, so they need no network.
 //!
 //! `install` is the only entry point, called through
 //! `dev_commands::install_or_passthrough`. The permissions of these commands are
 //! generated and granted only in these builds (see build.rs and
 //! capabilities/dev/).
 
-use std::collections::VecDeque;
+use std::borrow::Borrow;
+use std::collections::{HashMap, VecDeque};
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use pipette_hid::ControllerState;
+use pipette_net::{Http, HttpClient, HttpFuture, HttpResponse};
 use serde::Serialize;
 use tauri::ipc::Invoke;
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
@@ -115,25 +119,43 @@ pub fn dev_log(message: String) {
     log::info!("[webview] {message}");
 }
 
-/// Answers for the next file dialogs, in order: the path the user would
-/// choose, or `None` for a dialog the user cancels. Each answer is used
-/// once.
-#[derive(Default)]
-pub struct DialogQueue(Mutex<VecDeque<Option<PathBuf>>>);
+/// Answers queued for what will ask for them, in order for each key. Each
+/// answer is used once.
+pub struct AnswerQueue<K, V>(Mutex<HashMap<K, VecDeque<V>>>);
 
-impl DialogQueue {
-    fn push(&self, answer: Option<PathBuf>) {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).push_back(answer);
-    }
-
-    fn len(&self) -> usize {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).len()
-    }
-
-    fn pop(&self) -> Option<Option<PathBuf>> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).pop_front()
+impl<K, V> Default for AnswerQueue<K, V> {
+    fn default() -> Self {
+        Self(Mutex::new(HashMap::new()))
     }
 }
+
+impl<K: Eq + Hash, V> AnswerQueue<K, V> {
+    fn push(&self, key: K, answer: V) {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).entry(key).or_default().push_back(answer);
+    }
+
+    /// How many answers are queued under all keys.
+    fn len(&self) -> usize {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).values().map(VecDeque::len).sum()
+    }
+
+    fn pop<Q: Eq + Hash + ?Sized>(&self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+    {
+        let mut queues = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let queue = queues.get_mut(key)?;
+        let answer = queue.pop_front();
+        if queue.is_empty() {
+            queues.remove(key);
+        }
+        answer
+    }
+}
+
+/// Answers for the next file dialogs, in order: the paths the user would
+/// choose, none for a dialog the user cancels.
+pub type DialogQueue = AnswerQueue<(), Vec<PathBuf>>;
 
 /// The queue's next answer, or `fallback`'s dialog when the queue is empty,
 /// so a build with these tools still shows the native dialogs when nothing
@@ -144,8 +166,8 @@ struct QueuedDialogs<F> {
 }
 
 impl<F: DialogProvider> DialogProvider for QueuedDialogs<F> {
-    fn show(&self, request: DialogRequest) -> Option<PathBuf> {
-        match self.queue.pop() {
+    fn show(&self, request: DialogRequest) -> Vec<PathBuf> {
+        match self.queue.pop(&()) {
             Some(answer) => {
                 log::info!("[dev] answered the file dialog {:?} from the queue: {answer:?}", request.title);
                 answer
@@ -163,16 +185,75 @@ pub fn manage_queued_dialogs(app: &AppHandle<Wry>, system: SystemDialogs) {
     app.manage(queue);
 }
 
-/// Queues the answer of the next file dialog: `path`, or a cancel for null.
+/// Queues the answer of the next file dialog: `path` for a dialog of one
+/// file or `paths` for one of several, a cancel for a null `path` or empty
+/// `paths`.
 #[tauri::command]
-pub fn dev_dialog_respond(queue: State<'_, Arc<DialogQueue>>, path: Option<PathBuf>) {
-    queue.push(path);
+pub fn dev_dialog_respond(
+    queue: State<'_, Arc<DialogQueue>>,
+    path: Option<PathBuf>,
+    paths: Option<Vec<PathBuf>>,
+) -> Result<(), CommandError> {
+    queue.push((), dialog_answer(path, paths)?);
+    Ok(())
+}
+
+fn dialog_answer(path: Option<PathBuf>, paths: Option<Vec<PathBuf>>) -> Result<Vec<PathBuf>, CommandError> {
+    match (path, paths) {
+        (Some(_), Some(_)) => Err(CommandError::new("give either path or paths, not both")),
+        (path, None) => Ok(path.into_iter().collect()),
+        (None, Some(paths)) => Ok(paths),
+    }
 }
 
 /// How many queued answers no file dialog has taken yet: a step that should
 /// open a dialog has done so once this is back to 0.
 #[tauri::command]
 pub fn dev_dialog_queued(queue: State<'_, Arc<DialogQueue>>) -> usize {
+    queue.len()
+}
+
+/// Recorded responses for the next requests, by URL and in order for each
+/// URL.
+pub type ResponseQueue = AnswerQueue<String, HttpResponse>;
+
+/// The recorded response for the URL, or `fallback`'s request when none is
+/// queued for it, so a build with these tools still reaches the network
+/// when nothing is recorded.
+struct QueuedHttp<F> {
+    queue: Arc<ResponseQueue>,
+    fallback: F,
+}
+
+impl<F: HttpClient> HttpClient for QueuedHttp<F> {
+    fn get_bytes<'a>(&'a self, url: &'a str) -> HttpFuture<'a> {
+        match self.queue.pop(url) {
+            Some(response) => {
+                log::info!("[dev] answered GET {url} from the recorded responses: {}", response.status);
+                Box::pin(std::future::ready(Ok(response)))
+            }
+            None => self.fallback.get_bytes(url),
+        }
+    }
+}
+
+/// Manages the HTTP client as the recorded responses of `dev_http_respond`
+/// in front of `real`.
+pub fn manage_queued_http(app: &AppHandle<Wry>, real: impl HttpClient + 'static) {
+    let queue = Arc::new(ResponseQueue::default());
+    app.manage(Http::new(QueuedHttp { queue: Arc::clone(&queue), fallback: real }));
+    app.manage(queue);
+}
+
+/// Records the response of the next GET of `url`: `status` and `body`.
+#[tauri::command]
+pub fn dev_http_respond(queue: State<'_, Arc<ResponseQueue>>, url: String, status: u16, body: Vec<u8>) {
+    queue.push(url, HttpResponse { status, body });
+}
+
+/// How many recorded responses no request has taken yet.
+#[tauri::command]
+pub fn dev_http_queued(queue: State<'_, Arc<ResponseQueue>>) -> usize {
     queue.len()
 }
 
@@ -273,6 +354,8 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         dev_log,
         dev_dialog_respond,
         dev_dialog_queued,
+        dev_http_respond,
+        dev_http_queued,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]
@@ -368,15 +451,57 @@ mod tests {
             title: title.to_owned(),
             filters: Vec::new(),
         };
-        queue.push(Some(PathBuf::from("/tmp/a.vil")));
-        queue.push(None);
+        queue.push((), vec![PathBuf::from("/tmp/a.vil")]);
+        queue.push((), Vec::new());
+        queue.push((), vec![PathBuf::from("/tmp/b.json"), PathBuf::from("/tmp/c.json")]);
 
-        assert_eq!(queue.len(), 2);
-        assert_eq!(dialogs.show(request("first")), Some(PathBuf::from("/tmp/a.vil")));
-        assert_eq!(dialogs.show(request("second")), None);
+        assert_eq!(queue.len(), 3);
+        assert_eq!(dialogs.show(request("first")), [PathBuf::from("/tmp/a.vil")]);
+        assert_eq!(dialogs.show(request("second")), Vec::<PathBuf>::new());
+        assert_eq!(
+            dialogs.show(request("third")),
+            [PathBuf::from("/tmp/b.json"), PathBuf::from("/tmp/c.json")]
+        );
         assert_eq!(queue.len(), 0);
-        assert_eq!(dialogs.show(request("third")), Some(PathBuf::from("/from/the/fallback")));
-        assert_eq!(*fallback_titles.lock().unwrap(), ["third"]);
+        assert_eq!(dialogs.show(request("fourth")), [PathBuf::from("/from/the/fallback")]);
+        assert_eq!(*fallback_titles.lock().unwrap(), ["fourth"]);
+    }
+
+    #[test]
+    fn a_dialog_answer_is_a_path_or_paths_and_null_or_empty_cancels() {
+        let path = |p: &str| PathBuf::from(p);
+        assert_eq!(dialog_answer(Some(path("/a")), None), Ok(vec![path("/a")]));
+        assert_eq!(dialog_answer(None, None), Ok(Vec::new()));
+        assert_eq!(dialog_answer(None, Some(vec![path("/a"), path("/b")])), Ok(vec![path("/a"), path("/b")]));
+        assert_eq!(dialog_answer(None, Some(Vec::new())), Ok(Vec::new()));
+        assert!(dialog_answer(Some(path("/a")), Some(vec![path("/b")])).is_err());
+    }
+
+    #[test]
+    fn recorded_responses_answer_their_url_in_order_then_the_fallback_answers() {
+        let queue = Arc::new(ResponseQueue::default());
+        let fallback_urls = Arc::new(Mutex::new(Vec::new()));
+        let record = Arc::clone(&fallback_urls);
+        let http = QueuedHttp {
+            queue: Arc::clone(&queue),
+            fallback: move |url: &str| {
+                record.lock().unwrap().push(url.to_owned());
+                Ok(HttpResponse { status: 503, body: Vec::new() })
+            },
+        };
+        let response = |status, body: &[u8]| HttpResponse { status, body: body.to_vec() };
+        queue.push("https://a/x".to_owned(), response(200, b"first"));
+        queue.push("https://b/y".to_owned(), response(404, b""));
+        queue.push("https://a/x".to_owned(), response(200, b"second"));
+        let get = |url| tauri::async_runtime::block_on(http.get_bytes(url)).unwrap();
+
+        assert_eq!(queue.len(), 3);
+        assert_eq!(get("https://a/x"), response(200, b"first"));
+        assert_eq!(get("https://a/x"), response(200, b"second"));
+        assert_eq!(get("https://a/x"), response(503, b""));
+        assert_eq!(get("https://b/y"), response(404, b""));
+        assert_eq!(queue.len(), 0);
+        assert_eq!(*fallback_urls.lock().unwrap(), ["https://a/x"]);
     }
 
     #[test]

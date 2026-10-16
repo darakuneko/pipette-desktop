@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-http",
+  "description": "Builds with the dev-tools feature only: answers the next HTTP requests from recorded responses, and tells how many are still recorded, so the e2e tests need no network.",
+  "windows": ["main"],
+  "permissions": ["allow-dev-http-respond", "allow-dev-http-queued"]
+}
