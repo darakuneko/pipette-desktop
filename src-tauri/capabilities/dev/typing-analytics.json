@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-typing-analytics",
+  "description": "Builds with the dev-tools feature only: tells the machine hash the typing analytics record this device's data under, so the e2e tests can seed day files under it.",
+  "windows": ["main"],
+  "permissions": ["allow-dev-typing-analytics-machine-hash"]
+}

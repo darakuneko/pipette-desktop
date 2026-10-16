@@ -243,7 +243,7 @@ export function extractKeyboardUidsFromDriveFiles(driveFiles: DriveFile[]): stri
   return Array.from(uids)
 }
 
-async function resolveDeviceNameFromLocalSnapshots(uid: string): Promise<string | null> {
+export async function resolveDeviceNameFromLocalSnapshots(uid: string): Promise<string | null> {
   const snapshotIndexPath = join(
     app.getPath('userData'),
     'sync',

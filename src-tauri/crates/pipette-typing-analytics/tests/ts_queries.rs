@@ -39,7 +39,7 @@ fn answer(member: &str, args: &[Value], cx: &Context<'_>) -> Option<String> {
         return Some(pipette_js_json::stringify(&local_device_days(cx.user_data, &arg(0), &arg(1))));
     }
     let query = Query::from_member(member).unwrap_or_else(|| panic!("no query for {member}"));
-    query.answer(args, cx).ok().map(|value| pipette_js_json::stringify(&value))
+    query.answer(args, cx).ok()
 }
 
 fn assert_calls(calls: &[Value], user_data: &Path, label: &str) {

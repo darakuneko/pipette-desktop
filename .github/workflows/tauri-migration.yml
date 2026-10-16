@@ -63,12 +63,15 @@ jobs:
       # tests/rust_user_data.rs of pipette-keyboard-stores,
       # pipette-pack-stores and pipette-typing-datasets); the Electron
       # build's handlers must read them, answer as the crates do and write
-      # nothing.
+      # nothing. The tree of pipette-typing-analytics (its
+      # tests/rust_user_data.rs) must give the same machine hash, keep or
+      # rebuild the same cache and answer every query member the same.
       - name: Read the Rust stores' userData with the Electron handlers
         run: |
           pnpm run verify:keyboard-store-rust-user-data
           pnpm run verify:pack-store-rust-user-data
           pnpm run verify:typing-dataset-rust-user-data
+          pnpm run verify:analytics-rust-user-data
 
       # --intent-to-add makes a new file show up in the diff too;
       # comparing with HEAD keeps a deleted one in it even when the add

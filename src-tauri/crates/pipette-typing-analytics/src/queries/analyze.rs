@@ -52,10 +52,10 @@ pub(super) fn family(
     devices: Devices,
     args: Args<'_>,
     cx: &Context<'_>,
-) -> Result<Value, crate::Error> {
+) -> Result<String, crate::Error> {
     let (uid, named_hash, rest) = match family_target(family, devices, args) {
         Ok(target) => target,
-        Err(rejected) => return Ok(rejected),
+        Err(rejected) => return Ok(pipette_js_json::stringify(&rejected)),
     };
     let hash = match devices {
         Devices::Own => Some(cx.own_hash),
@@ -76,7 +76,7 @@ pub(super) fn family(
         Family::MinuteStats => js(db.minute_stats_in_range(uid, hash, since, until, &filters)?),
         Family::Sessions => js(db.sessions_in_range(uid, hash, since, until)?),
         Family::BksMinute => js(db.backspace_minutes(uid, hash, since, until, &filters)?),
-        Family::PeakRecords => db.peak_records(uid, hash, since, until, &filters)?.to_js(),
+        Family::PeakRecords => js(db.peak_records(uid, hash, since, until, &filters)?),
     })
 }
 

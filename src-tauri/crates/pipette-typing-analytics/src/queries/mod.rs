@@ -134,25 +134,27 @@ impl Query {
         }
     }
 
-    /// The handler's answer to `args` on the cache of `cx`.
-    pub fn answer(self, args: &[Value], cx: &Context<'_>) -> Result<Value, crate::Error> {
+    /// The handler's answer to `args` on the cache of `cx`, as the JSON
+    /// text `JSON.stringify` writes.
+    pub fn answer(self, args: &[Value], cx: &Context<'_>) -> Result<String, crate::Error> {
         let args = Args(args);
-        match self {
-            Self::ListKeyboards => Ok(js(cx.db.keyboards_with_typing_data()?)),
-            Self::Analyze(family, devices) => analyze::family(family, devices, args, cx),
-            Self::GetMatrixHeatmap => analyze::matrix_heatmap(args, cx),
-            Self::ListDeviceInfos => analyze::device_infos(args, cx),
+        let value = match self {
+            Self::ListKeyboards => return Ok(js(cx.db.keyboards_with_typing_data()?)),
+            Self::Analyze(family, devices) => return analyze::family(family, devices, args, cx),
+            Self::GetMatrixHeatmap => analyze::matrix_heatmap(args, cx)?,
+            Self::ListDeviceInfos => analyze::device_infos(args, cx)?,
             Self::ListAppsForRange
             | Self::ListTypingTestsForRange
             | Self::GetAppUsageForRange
             | Self::GetWpmByAppForRange
-            | Self::ListTypingTestRunsForRange => range::app_range(self, args, cx),
-            Self::GetMatrixHeatmapForRange => range::matrix_heatmap(args, cx),
-            Self::GetBigramAggregateForRange => range::bigram_aggregate(args, cx),
-            Self::ListRolloverMinutes => range::rollover_minutes(args, cx),
-            Self::ListDurationCells => range::duration_cells(args, cx),
-            Self::GetLayoutComparisonForRange => range::layout_comparison(args, cx),
-        }
+            | Self::ListTypingTestRunsForRange => return range::app_range(self, args, cx),
+            Self::GetMatrixHeatmapForRange => range::matrix_heatmap(args, cx)?,
+            Self::GetBigramAggregateForRange => range::bigram_aggregate(args, cx)?,
+            Self::ListRolloverMinutes => return range::rollover_minutes(args, cx),
+            Self::ListDurationCells => range::duration_cells(args, cx)?,
+            Self::GetLayoutComparisonForRange => range::layout_comparison(args, cx)?,
+        };
+        Ok(pipette_js_json::stringify(&value))
     }
 }
 
@@ -169,8 +171,11 @@ pub struct Context<'a> {
     pub recorder: Option<&'a crate::pipeline::Recorder>,
 }
 
-fn js(value: impl pipette_typing_analytics_db::ToJs) -> Value {
-    value.to_js()
+/// The JSON text of rows read from the cache, written straight from them.
+fn js(value: impl pipette_typing_analytics_db::ToJs) -> String {
+    let mut out = String::new();
+    value.write_json(&mut out);
+    out
 }
 
 const MINUTE_MS: f64 = 60_000.0;

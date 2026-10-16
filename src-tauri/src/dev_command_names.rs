@@ -19,6 +19,7 @@ pub const DEV_COMMANDS: &[&str] = &[
     "dev_dialog_queued",
     "dev_http_respond",
     "dev_http_queued",
+    "dev_typing_analytics_machine_hash",
 ];
 
 /// The development commands that exist on Linux only.

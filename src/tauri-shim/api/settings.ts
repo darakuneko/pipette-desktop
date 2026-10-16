@@ -18,6 +18,7 @@
 
 import type { AppConfig } from '../../shared/types/app-config'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../../shared/types/pipette-settings'
+import type { TypingKeyboardSummary } from '../../shared/types/typing-analytics'
 import type { VialAPI } from '../../shared/types/vial-api'
 import {
   mergeDefined,
@@ -40,7 +41,8 @@ export interface SettingsFile {
 /** A stored keyboard's settings file and display name. */
 export interface KeyboardSettingsFile {
   uid: string
-  name: string
+  /** null when neither the keyboard names nor a snapshot name it. */
+  name: string | null
   content: string
 }
 
@@ -53,6 +55,18 @@ export const readSettingsFile = (uid: string): Promise<SettingsFile> => call<Set
 
 export const writeSettingsFile = (uid: string, content: string, etag: string): Promise<'written' | 'conflict'> =>
   call<'written' | 'conflict'>('pipette_settings_write', { uid, content, etag })
+
+/** Uid → product name of the keyboards with typing data; none when the
+ *  analytics cannot answer, as the Electron handler skips a cache it
+ *  cannot open. */
+async function readAnalyticsNames(): Promise<Map<string, string>> {
+  try {
+    const keyboards = await call<TypingKeyboardSummary[]>('typing_analytics_list_keyboards')
+    return new Map(keyboards.map((k) => [k.uid, k.productName]))
+  } catch {
+    return new Map()
+  }
+}
 
 export async function ensureSettingsDir(uid: string): Promise<void> {
   await call<null>('pipette_settings_ensure_dir', { uid })
@@ -114,10 +128,19 @@ export const settingsApi = {
   },
   pipetteSettingsListAllTypingResults: async () => {
     const all: PooledTypingTestResult[] = []
+    let analyticsNames: Promise<Map<string, string>> | undefined
     for (const file of await readAllSettingsFiles()) {
       const prefs = parsePipetteSettings(file.content)
       if (!prefs?.typingTestResults?.length) continue
-      for (const r of prefs.typingTestResults) all.push({ ...r, keyboardName: file.name })
+      // The backend names a keyboard by its meta name, else its snapshots;
+      // failing both, the product name the typing analytics recorded, else
+      // the uid, as resolveKeyboardDisplayName (keyboard-meta.ts) does.
+      let keyboardName = file.name
+      if (keyboardName === null) {
+        analyticsNames ??= readAnalyticsNames()
+        keyboardName = (await analyticsNames).get(file.uid) || file.uid
+      }
+      for (const r of prefs.typingTestResults) all.push({ ...r, keyboardName })
     }
     return all
   },
