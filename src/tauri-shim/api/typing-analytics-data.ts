@@ -4,8 +4,9 @@
 // device's days or all of its data, the delete of another device's data,
 // the export and the import. Each passes its arguments as they are; the
 // backend checks them as the Electron handlers do and answers as they do
-// (`{ success, error? }` for the deletes and the import). The import works
-// offline: a file matches a local day file only.
+// (`{ success, error? }` for the deletes and the import). The import
+// matches a file with a local day file, or with a data file on Drive when
+// the sync can read Drive (signed in, with the password, not blocked).
 
 import type { TypingAnalyticsImportResult } from '../../shared/types/typing-analytics'
 import type { VialAPI } from '../../shared/types/vial-api'

@@ -220,4 +220,10 @@ pub const APP_COMMANDS: &[&str] = &[
     "sync_password_change_lock_status",
     "sync_password_change_release_locks",
     "sync_list_undecryptable",
+    // src/sync_commands/analytics_remote.rs
+    "sync_analytics_now",
+    "typing_analytics_has_remote",
+    "typing_analytics_list_remote_cloud_hashes",
+    "typing_analytics_list_remote_cloud_days",
+    "typing_analytics_fetch_remote_day",
 ];

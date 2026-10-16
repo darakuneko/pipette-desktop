@@ -36,7 +36,8 @@ use zeroize::Zeroizing;
 use crate::bundle::{BundleError, bundle_plaintext, bundle_sync_unit};
 use crate::codec::EnvelopeCodec;
 use crate::merge::{
-    AnalyticsEnv, MergeEnv, MergeError, MergeEvents, PackRosters, merge_analytics_unit, merge_sync_unit,
+    AnalyticsEnv, MergeEnv, MergeError, MergeEvents, PackRosters, merge_analytics_unit,
+    merge_device_day_bundle, merge_sync_unit,
 };
 use crate::typing_remote::{pointer_key, set, uploaded_days};
 use crate::unit_locks::UnitLocks;
@@ -317,6 +318,25 @@ impl UnitSync {
             }
             merged => Ok(merged?),
         }
+    }
+
+    /// Downloads another device's day file `file` of `day` and merges it
+    /// (`mergeDeviceDayBundle`), as the lazy fetch of a remote day does:
+    /// without the unit's locks, recording no revision and uploading
+    /// nothing (a day is never written back from here).
+    pub async fn merge_remote_day(
+        &self,
+        file: &DriveFile,
+        day: DeviceDayUnit<'_>,
+        password: &str,
+    ) -> Result<(), UnitError> {
+        let content = self.drive.download(&file.id).await?;
+        let plaintext =
+            self.codec.open(content, Zeroizing::new(password.to_owned())).await.map_err(UnitError::Other)?;
+        let bundle = pipette_js_json::parse(&plaintext).map_err(other)?;
+        let own = self.own_hash()?;
+        let env = AnalyticsEnv { ctx: &self.ctx, ops: &self.ops, holds: self.holds() };
+        Ok(merge_device_day_bundle(&env, &bundle, day, &own).await?)
     }
 
     /// `syncOrUpload`: merges `unit` with its Drive file in `listing` when

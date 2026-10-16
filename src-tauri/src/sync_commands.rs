@@ -16,6 +16,7 @@ use pipette_sync_pending::PendingStore;
 use pipette_typing_analytics::SyncRuntime;
 use tauri::{AppHandle, Manager, Runtime};
 
+pub mod analytics_remote;
 pub mod auth;
 pub mod data;
 pub mod execute;

@@ -6,11 +6,14 @@
 //!
 //! - [`units`]: what a unit name says (its store, its lock, its shape);
 //! - [`account`]: the sign-in and sign-out around the pending units;
+//! - [`analytics`]: the Analyze panel's sync of one keyboard's typing
+//!   analytics;
 //! - [`bundle`]: the bundle a unit is uploaded as, and the units a pass
 //!   sends;
 //! - [`merge`]: the merge of a downloaded bundle into the local files;
 //! - [`typing_remote`]: this device's typing days on Drive and their
-//!   reconcile with the local files before an upload pass;
+//!   reconcile with the local files before an upload pass, and the Data
+//!   modal's reads of other devices' days;
 //! - [`unit_locks`]: the locks a whole sync of one unit holds;
 //! - [`dispatch`]: the sync of one unit (its merge or upload) and the
 //!   Drive revisions it records, with the envelope of [`codec`];
@@ -25,6 +28,7 @@
 //! - [`meta_backfill`]: the keyboard names a full download fills in.
 
 pub mod account;
+pub mod analytics;
 pub mod bundle;
 pub mod codec;
 pub mod crypto;

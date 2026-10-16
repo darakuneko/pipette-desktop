@@ -6,15 +6,16 @@
 // keyboard members (HID probe, file dialogs, snapshot, favorite and
 // pipette settings stores, stored keyboards, pending sync units), the run
 // log and Analyze filter members, the typing analytics members that read
-// the cache, the typing analytics' keymap snapshot, recording and Data
-// modal members (every typing analytics member but the Drive ones), and the pack
-// and label members (key labels, typing test texts, language and
-// theme packs, word lists, datasets and the Aozora Bunko import) are all
-// real; the members named after the Hub are fakes or stubs, and so are
-// the Cloud Sync members (each listed with the module that holds it) but
-// the sign-in status, the password members, the password change members,
-// the sync of a scope with its progress and applied-unit events, the sync
-// format status and the export and import of the local data.
+// the cache, the typing analytics' keymap snapshot, recording, Data modal
+// and Drive members (every typing analytics member), and the pack and
+// label members (key labels, typing test texts, language and theme packs,
+// word lists, datasets and the Aozora Bunko import) are all real; the
+// members named after the Hub are fakes or stubs. The Cloud Sync members
+// (each listed with the module that holds it) are stubs but the sign-in
+// status, the password members, the password change members, the sync of
+// a scope with its progress and applied-unit events, the Analyze sync, the
+// sync format status, the export and import of the local data and the
+// typing analytics on Drive.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -52,11 +53,6 @@ const EXPECTED_FAKES = [
   'keyLabelHubSync',
   'keyLabelHubTimestamps',
   'keyLabelHubDelete',
-  'typingAnalyticsHasRemote',
-  'typingAnalyticsListRemoteCloudHashes',
-  'typingAnalyticsListRemoteCloudDays',
-  'typingAnalyticsFetchRemoteDay',
-  'syncAnalyticsNow',
 ]
 
 /** The members the keyboard editor needs from the backend, all real. */
@@ -251,8 +247,8 @@ const TYPING_DATASET_MEMBERS = [
 ]
 
 /** The Cloud Sync members, by the shim module that holds them. Those of
- *  SYNC_REAL are real; each other one is a fake of EXPECTED_FAKES or a stub
- *  until its module backs it with a backend command. */
+ *  SYNC_REAL are real; each other one is a stub until its module backs it
+ *  with a backend command. */
 const SYNC_MEMBERS = [
   { module: syncAuthApi, members: ['syncAuthStart', 'syncAuthStatus', 'syncAuthSignOut'] },
   {
@@ -306,9 +302,9 @@ const SYNC_MEMBERS = [
  *  sign-in and password statuses, setting and re-entering the password,
  *  whether Drive has a password-check, the password change with its Drive
  *  lock and the files no password opens, the sync of a scope with its progress
- *  and applied-unit events, the sync format status and its event, the export
- *  and import of the local data (backend commands) and the password strength
- *  check (in the shim). */
+ *  and applied-unit events, the Analyze sync, the sync format status and its
+ *  event, the export and import of the local data, the typing analytics on
+ *  Drive (backend commands) and the password strength check (in the shim). */
 const SYNC_REAL = [
   'syncAuthStart',
   'syncAuthStatus',
@@ -334,10 +330,6 @@ const SYNC_REAL = [
   'syncOnUnitApplied',
   'exportLocalData',
   'importLocalData',
-]
-
-/** The fakes the Cloud Sync members replace: the signed-out answers. */
-const SYNC_FAKES = [
   'syncAnalyticsNow',
   'typingAnalyticsHasRemote',
   'typingAnalyticsListRemoteCloudHashes',
@@ -408,7 +400,7 @@ describe('shim coverage', () => {
     expect(TYPING_ANALYTICS_RECORD_MEMBERS.filter((name) => name in fakes)).toEqual([])
   })
 
-  it('backs every typing analytics member but the Drive ones with backend commands', () => {
+  it('backs every typing analytics member with backend commands', () => {
     expect(TYPING_ANALYTICS_DATA_MEMBERS.filter((name) => !(name in real))).toEqual([])
     const analytics = VIAL_API_MEMBER_NAMES.filter((name) => name.startsWith('typingAnalytics'))
     const local = [
@@ -418,9 +410,10 @@ describe('shim coverage', () => {
       ...TYPING_ANALYTICS_DATA_MEMBERS,
     ]
     expect(new Set(local).size).toBe(54)
-    expect(analytics.filter((name) => !local.includes(name)).sort()).toEqual(
-      EXPECTED_FAKES.filter((name) => name.startsWith('typingAnalytics')).sort(),
-    )
+    const drive = Object.keys(typingAnalyticsRemoteApi)
+    expect(analytics.filter((name) => !local.includes(name)).sort()).toEqual(drive.sort())
+    expect(analytics.filter((name) => !(name in real))).toEqual([])
+    expect(analytics.filter((name) => name in fakes)).toEqual([])
   })
 
   it('lists the Cloud Sync members, each in one module, and the real ones', () => {
@@ -433,8 +426,7 @@ describe('shim coverage', () => {
       expect(Object.keys(module).filter((name) => !own.includes(name))).toEqual([])
     }
     expect(members.filter((name) => name in real).sort()).toEqual([...SYNC_REAL].sort())
-    expect(SYNC_FAKES.filter((name) => !members.includes(name) || !EXPECTED_FAKES.includes(name))).toEqual([])
-    expect(members.filter((name) => name in fakes).sort()).toEqual([...SYNC_FAKES].sort())
+    expect(members.filter((name) => name in fakes)).toEqual([])
   })
 
   it('fakes exactly the expected members', () => {
