@@ -1044,6 +1044,191 @@
       {
         "step": {
           "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[1]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/": null
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "error": "TypeError",
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/": null
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[\"null\"]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "error": "TypeError",
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/": null
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[{}]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "error": "TypeError",
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/": null
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[\"{\\\"_updatedAt\\\":\\\"2026-10-07T00:00:00.000Z\\\"}\"]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "sync:unit-applied",
+              {
+                "syncUnit": "keyboards/kb7/settings"
+              }
+            ]
+          ],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/pipette_settings.json": "{\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":{}}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "error": "TypeError",
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/pipette_settings.json": "{\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[\"{\\\"a\\\":[0\",1,\"2],\\\"_updatedAt\\\":\\\"2026-10-08T00:00:00.000Z\\\"}\"]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "error": "TypeError",
+          "events": [],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/pipette_settings.json": "{\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
+            "unit": "keyboards/kb7/settings",
+            "plaintext": "{\"files\":{\"pipette_settings.json\":[\"{\\\"a\\\":[0\",\"1\",\"2],\\\"_updatedAt\\\":\\\"2026-10-08T00:00:00.000Z\\\"}\"]}}",
+            "modifiedTime": "2026-10-16T00:00:00.000Z"
+          }
+        },
+        "result": {
+          "needsUpload": false,
+          "uploaded": null,
+          "events": [
+            [
+              "sync:unit-applied",
+              {
+                "syncUnit": "keyboards/kb7/settings"
+              }
+            ]
+          ],
+          "pending": [],
+          "forgotten": [],
+          "tree": {
+            "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+            "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
+            "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
+            "sync/keyboards/kb7/pipette_settings.json": "{\"a\":[012],\"_updatedAt\":\"2026-10-08T00:00:00.000Z\"}"
+          }
+        }
+      },
+      {
+        "step": {
+          "merge": {
             "unit": "keyboards/kb8/settings",
             "plaintext": "{}",
             "modifiedTime": "2026-10-16T00:00:00.000Z"
@@ -1058,7 +1243,7 @@
             "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
             "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
             "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
-            "sync/keyboards/kb7/": null,
+            "sync/keyboards/kb7/pipette_settings.json": "{\"a\":[012],\"_updatedAt\":\"2026-10-08T00:00:00.000Z\"}",
             "sync/keyboards/kb8/": null
           }
         }
@@ -1084,7 +1269,7 @@
             },
             {
               "unit": "keyboards/kb7/settings",
-              "plaintext": null
+              "plaintext": "{\"type\":\"settings\",\"key\":\"kb7\",\"index\":{\"uid\":\"kb7\",\"entries\":[]},\"files\":{\"pipette_settings.json\":\"{\\\"a\\\":[012],\\\"_updatedAt\\\":\\\"2026-10-08T00:00:00.000Z\\\"}\"}}"
             },
             {
               "unit": "keyboards/kb9/settings",
@@ -1095,7 +1280,7 @@
             "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
             "sync/keyboards/kb5/pipette_settings.json": "{\"keyboardLayout\":\"colemak\",\"_updatedAt\":\"2026-10-15T00:00:00.000Z\"}",
             "sync/keyboards/kb6/pipette_settings.json": "{\"keyboardLayout\":\"y\",\"_updatedAt\":\"2026-10-07T00:00:00.000Z\"}",
-            "sync/keyboards/kb7/": null,
+            "sync/keyboards/kb7/pipette_settings.json": "{\"a\":[012],\"_updatedAt\":\"2026-10-08T00:00:00.000Z\"}",
             "sync/keyboards/kb8/": null
           }
         }
