@@ -1,0 +1,64 @@
+{
+  "about": "The cases both fake Drives pass: the in-memory one of src-tauri/crates/pipette-drive (tests/conformance.rs) and the Node server of server.ts (conformance.test.ts). Each case starts on an empty Drive. An id argument names a file saved by an earlier step ('missing' is an id no file has); a step without an expected status must succeed.",
+  "cases": [
+    {
+      "name": "list pages and nameContains",
+      "steps": [
+        { "op": "create", "name": "favorites_macro.enc", "content": "m", "save": "macro" },
+        { "op": "create", "name": "favorites_combo.enc", "content": "c", "save": "combo" },
+        { "op": "createRaw", "name": "sync-format-v2.json", "content": "{}", "save": "marker" },
+        { "op": "listPages", "pageSize": 2, "expect": { "pageSizes": [2, 1], "names": ["favorites_combo.enc", "favorites_macro.enc", "sync-format-v2.json"] } },
+        { "op": "listPages", "nameContains": "favorites_", "expect": { "pageSizes": [2], "names": ["favorites_combo.enc", "favorites_macro.enc"] } },
+        { "op": "listPages", "nameContains": "sync-format-v", "expect": { "pageSizes": [1], "names": ["sync-format-v2.json"] } },
+        { "op": "listPages", "nameContains": "absent", "expect": { "pageSizes": [0], "names": [] } }
+      ]
+    },
+    {
+      "name": "create and update",
+      "steps": [
+        { "op": "create", "name": "key-labels.enc", "content": "v1", "save": "labels" },
+        { "op": "download", "id": "labels", "expect": { "content": "v1" } },
+        { "op": "update", "id": "labels", "content": "v2", "save": "labels", "expect": { "newer": true } },
+        { "op": "download", "id": "labels", "expect": { "content": "v2" } },
+        { "op": "createRaw", "name": "password-change-lock.json", "content": "{\"lockId\":\"x\"}", "save": "lock" },
+        { "op": "download", "id": "lock", "expect": { "content": "{\"lockId\":\"x\"}" } },
+        { "op": "update", "id": "missing", "content": "v3", "expect": { "status": 404 } },
+        { "op": "listPages", "expect": { "pageSizes": [2], "names": ["key-labels.enc", "password-change-lock.json"] } }
+      ]
+    },
+    {
+      "name": "rename",
+      "steps": [
+        { "op": "create", "name": "themes_index.enc", "content": "t", "save": "themes" },
+        { "op": "rename", "id": "themes", "name": "themes_index.enc.trash.1767225600000.1767225600000.x", "save": "themes", "expect": { "name": "themes_index.enc.trash.1767225600000.1767225600000.x", "sameIdAs": "themes", "newer": true } },
+        { "op": "listPages", "nameContains": "themes_", "expect": { "pageSizes": [1], "names": ["themes_index.enc.trash.1767225600000.1767225600000.x"] } },
+        { "op": "download", "id": "themes", "expect": { "content": "t" } },
+        { "op": "rename", "id": "missing", "name": "x.enc", "expect": { "status": 404 } }
+      ]
+    },
+    {
+      "name": "delete",
+      "steps": [
+        { "op": "create", "name": "favorites_macro.enc", "content": "m", "save": "macro" },
+        { "op": "delete", "id": "macro" },
+        { "op": "listPages", "expect": { "pageSizes": [0], "names": [] } },
+        { "op": "delete", "id": "macro", "expect": { "status": 404 } },
+        { "op": "download", "id": "macro", "expect": { "status": 404 } }
+      ]
+    },
+    {
+      "name": "429 and Retry-After",
+      "steps": [
+        { "op": "create", "name": "favorites_macro.enc", "content": "m", "save": "macro" },
+        { "op": "fault", "status": 429, "retryAfter": "3", "count": 1 },
+        { "op": "listPages", "expect": { "status": 429, "retryAfter": "3", "reason": "rateLimitExceeded" } },
+        { "op": "listPages", "expect": { "pageSizes": [1], "names": ["favorites_macro.enc"] } },
+        { "op": "fault", "status": 429, "count": 2, "only": "download" },
+        { "op": "listPages", "expect": { "pageSizes": [1], "names": ["favorites_macro.enc"] } },
+        { "op": "download", "id": "macro", "expect": { "status": 429, "retryAfter": null, "reason": "rateLimitExceeded" } },
+        { "op": "download", "id": "macro", "expect": { "status": 429 } },
+        { "op": "download", "id": "macro", "expect": { "content": "m" } }
+      ]
+    }
+  ]
+}

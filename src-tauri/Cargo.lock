@@ -2804,6 +2804,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-drive"
+version = "0.0.0"
+dependencies = [
+ "pipette-drive",
+ "pipette-time",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "pipette-entry-store"
 version = "0.0.0"
 dependencies = [
@@ -2835,6 +2846,10 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
 ]
+
+[[package]]
+name = "pipette-google-auth"
+version = "0.0.0"
 
 [[package]]
 name = "pipette-hid"
@@ -2917,6 +2932,14 @@ dependencies = [
 
 [[package]]
 name = "pipette-protocol"
+version = "0.0.0"
+
+[[package]]
+name = "pipette-secret-store"
+version = "0.0.0"
+
+[[package]]
+name = "pipette-sync"
 version = "0.0.0"
 
 [[package]]
