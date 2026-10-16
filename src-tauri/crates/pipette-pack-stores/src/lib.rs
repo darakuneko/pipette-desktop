@@ -13,7 +13,10 @@
 //!   (`handlers`: the arguments and the export);
 //! - the language packs (`sync/i18n`, [`i18n`]) of
 //!   src/main/i18n-pack-store*.ts, and their handlers
-//!   ([`i18n_handlers`]) of src/main/i18n-pack-ipc.ts.
+//!   ([`i18n_handlers`]) of src/main/i18n-pack-ipc.ts;
+//! - the theme packs (`sync/themes`, [`theme`]) of
+//!   src/main/theme-pack-store.ts, and their handlers ([`theme_handlers`])
+//!   of src/main/theme-pack-ipc.ts.
 //!
 //! The stores work through the [`StoreContext`] every store of the app
 //! shares: the userData directory, the clock, the ids of new packs, the
@@ -29,6 +32,8 @@ mod js_text;
 mod pack_meta;
 mod pack_store;
 mod result;
+pub mod theme;
+pub mod theme_handlers;
 
 pub use import_file::{ImportFileRead, read_import_file};
 pub use pack_meta::{Cached, MAX_NAME_LENGTH};
