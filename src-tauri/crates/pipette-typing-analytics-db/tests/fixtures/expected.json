@@ -11,24 +11,26 @@
       "applied": [
         {
           "scopes": 2,
-          "charMinutes": 7,
+          "charMinutes": 9,
           "matrixMinutes": 674,
           "minuteStats": 29,
           "sessions": 2,
-          "bigramMinutes": 26,
+          "bigramMinutes": 27,
           "trigramMinutes": 25
         }
       ],
       "tables": {
         "typing_char_minute": {
-          "count": 6,
-          "sha256": "5b43b2dad2e253cb90606e7b2528f38ed66035dfe2e046f1d6c8ae59cb2de43f",
+          "count": 8,
+          "sha256": "25c92d77d9036f95f9c298d5611f778d1a859ceb868279f0f883c3d879053ee8",
           "rows": [
             "t:646f632d74612d73636f70652d31|i:1789304400000|t:61|i:7|t:e697a5e69cace8aa9ee382a8e38387e382a3e382bf|n|t:|i:1790895600000|i:0",
             "t:646f632d74612d73636f70652d31|i:1789304400000|t:f09f9880|i:2|n|t:e38386e382b9e38388|t:72756e2f776974682073706163657325|i:1790895600000|i:0",
             "t:646f632d74612d73636f70652d31|i:1789304460000|t:62|i:4|n|n|t:|i:1790895600000|i:0",
             "t:646f632d74612d73636f70652d31|i:1789304460000|t:63|i:5|n|n|t:|i:1790895600000|i:0",
             "t:646f632d74612d73636f70652d31|i:1789304460000|t:64|i:6|n|n|t:|i:1790895600000|i:0",
+            "t:646f632d74612d73636f70652d31|i:1789304460000|t:71|i:3|n|n|t:|i:1790895600000|i:0",
+            "t:646f632d74612d73636f70652d31|i:1789304460000|t:efbfbd|i:9|t:417070efbfbd|n|t:|i:1790895600000|i:0",
             "t:666978747572652d73636f70652d32|i:1789304400000|t:e697a5|i:3|n|n|t:|i:1790895600000|i:0"
           ]
         },
@@ -744,8 +746,8 @@
           ]
         },
         "typing_bigram_minute": {
-          "count": 675,
-          "sha256": "3a5aab5cccf4e0bf34814963b204882e091573ac19d94d66c96a240ed1c51fc9",
+          "count": 676,
+          "sha256": "d5ec205214674e571b377bd5771bece4d9de7affa34c610a9530fdb33fe3edb3",
           "rows": [
             "t:646f632d74612d73636f70652d31|i:1789290000000|t:31335f3134|i:5|b:0100000002000000020000000000000000000000000000000000000000000000|r:407b800000000000|r:40e5f2c000000000|i:1|i:4|n|t:7461746f6562612d6a6170616e657365|t:646f632d72756e2d7461746f6562612d31|i:1790895600000|i:0",
             "t:646f632d74612d73636f70652d31|i:1789290000000|t:31335f34|i:6|b:0100000003000000020000000000000000000000000000000000000000000000|r:4080400000000000|r:40e912c000000000|i:2|i:5|n|t:7461746f6562612d6a6170616e657365|t:646f632d72756e2d7461746f6562612d31|i:1790895600000|i:0",
@@ -1421,7 +1423,8 @@
             "t:646f632d74612d73636f70652d31|i:1789333500000|t:395f37|i:2|b:0000000000000000000000000000000000000000010000000100000000000000|r:4091f80000000000|r:41260c8800000000|i:0|i:2|t:4368726f6d65|n|t:|i:1790895600000|i:0",
             "t:666978747572652d73636f70652d32|i:1789304400000|t:345f35|i:3|b:0100000000000000020000000000000000000000000000000000000000000000|r:4072c80000000000|r:40dd651000000000|i:1|i:2|t:436f6465|n|t:|i:1790895600000|i:0",
             "t:666978747572652d73636f70652d32|i:1789304400000|t:355f36|i:1|b:0000000001000000000000000000000000000000000000000000000000000000|n|n|n|n|t:436f6465|n|t:|i:1790895600000|i:0",
-            "t:666978747572652d73636f70652d32|i:1789304460000|t:30|i:2|b:0200000000000000000000000000000000000000000000000000000000000000|n|n|n|n|n|n|t:|i:1790895600000|i:0"
+            "t:666978747572652d73636f70652d32|i:1789304460000|t:30|i:2|b:0200000000000000000000000000000000000000000000000000000000000000|n|n|n|n|n|n|t:|i:1790895600000|i:0",
+            "t:666978747572652d73636f70652d32|i:1789304460000|t:78efbfbd|i:4|b:0400000000000000000000000000000000000000000000000000000000000000|n|n|n|n|n|n|t:6c6f6e65|i:1790895600000|i:0"
           ]
         },
         "typing_trigram_minute": {
@@ -2562,20 +2565,20 @@
       "applied": [
         {
           "scopes": 2,
-          "charMinutes": 7,
+          "charMinutes": 9,
           "matrixMinutes": 674,
           "minuteStats": 29,
           "sessions": 2,
-          "bigramMinutes": 26,
+          "bigramMinutes": 27,
           "trigramMinutes": 25
         },
         {
           "scopes": 2,
-          "charMinutes": 7,
+          "charMinutes": 9,
           "matrixMinutes": 674,
           "minuteStats": 29,
           "sessions": 2,
-          "bigramMinutes": 26,
+          "bigramMinutes": 27,
           "trigramMinutes": 25
         },
         {
@@ -2584,8 +2587,8 @@
       ],
       "tables": {
         "typing_char_minute": {
-          "count": 6,
-          "sha256": "5b43b2dad2e253cb90606e7b2528f38ed66035dfe2e046f1d6c8ae59cb2de43f"
+          "count": 8,
+          "sha256": "25c92d77d9036f95f9c298d5611f778d1a859ceb868279f0f883c3d879053ee8"
         },
         "typing_matrix_minute": {
           "count": 673,
@@ -2596,8 +2599,8 @@
           "sha256": "fca226297c923e6dfffd47bcc7ba458b7316146b5c1d5eee273f1199a390b5d1"
         },
         "typing_bigram_minute": {
-          "count": 675,
-          "sha256": "3a5aab5cccf4e0bf34814963b204882e091573ac19d94d66c96a240ed1c51fc9"
+          "count": 676,
+          "sha256": "d5ec205214674e571b377bd5771bece4d9de7affa34c610a9530fdb33fe3edb3"
         },
         "typing_trigram_minute": {
           "count": 97,
@@ -3642,18 +3645,18 @@
       "applied": [
         {
           "scopes": 2,
-          "charMinutes": 7,
+          "charMinutes": 9,
           "matrixMinutes": 674,
           "minuteStats": 29,
           "sessions": 2,
-          "bigramMinutes": 26,
+          "bigramMinutes": 27,
           "trigramMinutes": 25
         }
       ],
       "tables": {
         "typing_char_minute": {
-          "count": 6,
-          "sha256": "e8b806c6e797ed10fa574ef7fc8b81230681e9d7d7d1364f790aacea6575b89c"
+          "count": 8,
+          "sha256": "cae76a1438a5fcf2450aa9b25174789d89f88bbc3d3967584278cf4068581fed"
         },
         "typing_matrix_minute": {
           "count": 673,
@@ -3664,8 +3667,8 @@
           "sha256": "64cbb517eed67fb2e1cb01612ecc40460fe8a583ae56dfec67e71231963f92e2"
         },
         "typing_bigram_minute": {
-          "count": 675,
-          "sha256": "f53f99902bb80ced0e7b2f2beadfcd978c7344bb273f030d4e9708dfabc8bc00"
+          "count": 676,
+          "sha256": "3c7bb05f1fafcc388313bce1071983c46d07bddaa78f5c144a26d3d59b48d6ea"
         },
         "typing_trigram_minute": {
           "count": 97,
@@ -4631,11 +4634,11 @@
       "applied": [
         {
           "scopes": 2,
-          "charMinutes": 7,
+          "charMinutes": 9,
           "matrixMinutes": 674,
           "minuteStats": 29,
           "sessions": 2,
-          "bigramMinutes": 26,
+          "bigramMinutes": 27,
           "trigramMinutes": 25
         },
         {
@@ -4644,8 +4647,8 @@
       ],
       "tables": {
         "typing_char_minute": {
-          "count": 6,
-          "sha256": "5b43b2dad2e253cb90606e7b2528f38ed66035dfe2e046f1d6c8ae59cb2de43f"
+          "count": 8,
+          "sha256": "25c92d77d9036f95f9c298d5611f778d1a859ceb868279f0f883c3d879053ee8"
         },
         "typing_matrix_minute": {
           "count": 673,
@@ -4656,8 +4659,8 @@
           "sha256": "fca226297c923e6dfffd47bcc7ba458b7316146b5c1d5eee273f1199a390b5d1"
         },
         "typing_bigram_minute": {
-          "count": 675,
-          "sha256": "3a5aab5cccf4e0bf34814963b204882e091573ac19d94d66c96a240ed1c51fc9"
+          "count": 676,
+          "sha256": "d5ec205214674e571b377bd5771bece4d9de7affa34c610a9530fdb33fe3edb3"
         },
         "typing_trigram_minute": {
           "count": 97,

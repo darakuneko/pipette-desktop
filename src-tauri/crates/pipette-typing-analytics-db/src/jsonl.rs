@@ -3,13 +3,19 @@
 //! (`parseRow`, jsonl-row.ts). A line that fails validation is dropped, not
 //! an error, so rows of a newer build's kinds never stop a replay.
 //!
+//! Lines are read with `pipette_js_json`, as `JSON.parse` reads them: a
+//! repeated key takes its last value, and a string may hold a lone
+//! surrogate (a `\udxxx` escape). Such a string reaches SQLite with U+FFFD
+//! in place of the surrogate, as better-sqlite3 writes a JavaScript string
+//! as UTF-8.
+//!
 //! Numbers stay `f64` all the way to SQLite: the TypeScript side holds them
 //! as JavaScript numbers and better-sqlite3 binds every number as a double,
 //! so an INTEGER column stores a whole value as INTEGER (column affinity)
 //! and a fractional one as REAL. Binding the same doubles keeps both sides
 //! storing the same storage class.
 
-use serde_json::{Map, Value};
+use pipette_js_json::{JsString, Object, Value};
 
 /// `BIGRAM_HIST_BUCKETS` (jsonl-row.ts).
 pub const HIST_BUCKETS: usize = 8;
@@ -177,17 +183,18 @@ fn parse_row(line: &str) -> Option<JsonlRow> {
     if line.is_empty() {
         return None;
     }
-    let value: Value = serde_json::from_str(line).ok()?;
+    let value = pipette_js_json::parse(line).ok()?;
     let obj = value.as_object()?;
-    obj.get("id")?.as_str()?;
-    let kind = obj.get("kind")?.as_str()?;
-    let updated_at = obj.get("updated_at")?.as_f64()?;
+    text(obj.get("id")?)?;
+    let kind = text(obj.get("kind")?)?;
+    let updated_at = num(obj.get("updated_at")?)?;
     let is_deleted = match obj.get("is_deleted") {
         None => false,
-        Some(v) => v.as_bool()?,
+        Some(Value::Bool(b)) => *b,
+        Some(_) => return None,
     };
     let p = obj.get("payload")?.as_object()?;
-    let payload = match kind {
+    let payload = match kind.as_str() {
         "scope" => RowPayload::Scope(scope(p)?),
         "char-minute" => RowPayload::CharMinute(char_minute(p)?),
         "matrix-minute" => RowPayload::MatrixMinute(matrix_minute(p)?),
@@ -200,21 +207,41 @@ fn parse_row(line: &str) -> Option<JsonlRow> {
     Some(JsonlRow { common: RowCommon { updated_at, is_deleted }, payload })
 }
 
-type Obj = Map<String, Value>;
+type Obj = Object;
+
+fn lossy(s: &JsString) -> String {
+    s.to_string_lossy().into_owned()
+}
+
+/// A string value, `typeof v === 'string'`.
+fn text(v: &Value) -> Option<String> {
+    match v {
+        Value::String(s) => Some(lossy(s)),
+        _ => None,
+    }
+}
+
+/// A number value, `typeof v === 'number'`.
+fn num(v: &Value) -> Option<f64> {
+    match v {
+        Value::Number(n) => Some(*n),
+        _ => None,
+    }
+}
 
 fn string(p: &Obj, key: &str) -> Option<String> {
-    p.get(key)?.as_str().map(str::to_owned)
+    text(p.get(key)?)
 }
 
 fn number(p: &Obj, key: &str) -> Option<f64> {
-    p.get(key)?.as_f64()
+    num(p.get(key)?)
 }
 
 /// Present and null, or a number (`isNumericOrNull`). Absent fails.
 fn number_or_null(p: &Obj, key: &str) -> Option<Option<f64>> {
     match p.get(key)? {
         Value::Null => Some(None),
-        v => v.as_f64().map(Some),
+        v => num(v).map(Some),
     }
 }
 
@@ -223,7 +250,7 @@ fn number_or_null(p: &Obj, key: &str) -> Option<Option<f64>> {
 fn optional_string(p: &Obj, key: &str) -> Option<Option<String>> {
     match p.get(key) {
         None | Some(Value::Null) => Some(None),
-        Some(Value::String(s)) => Some(Some(s.clone())),
+        Some(Value::String(s)) => Some(Some(lossy(s))),
         Some(_) => None,
     }
 }
@@ -231,7 +258,7 @@ fn optional_string(p: &Obj, key: &str) -> Option<Option<String>> {
 fn tags(p: &Obj) -> Option<MinuteTags> {
     let run_id = match p.get("runId") {
         None => String::new(),
-        Some(v) => v.as_str()?.to_owned(),
+        Some(v) => text(v)?,
     };
     Some(MinuteTags {
         app_name: optional_string(p, "appName")?,
@@ -243,7 +270,7 @@ fn tags(p: &Obj) -> Option<MinuteTags> {
 /// The all-or-nothing gate of `allOrNone`: `Some(false)` when none of
 /// `keys` is present, `Some(true)` when all are, `None` (reject) otherwise.
 fn all_or_none(p: &Obj, keys: &[&str]) -> Option<bool> {
-    let present = keys.iter().filter(|k| p.contains_key(**k)).count();
+    let present = keys.iter().filter(|k| p.contains_key(k)).count();
     match present {
         0 => Some(false),
         n if n == keys.len() => Some(true),
@@ -252,13 +279,13 @@ fn all_or_none(p: &Obj, keys: &[&str]) -> Option<bool> {
 }
 
 fn hist(value: &Value) -> Option<[f64; HIST_BUCKETS]> {
-    let items = value.as_array()?;
+    let Value::Array(items) = value else { return None };
     if items.len() != HIST_BUCKETS {
         return None;
     }
     let mut out = [0.0; HIST_BUCKETS];
     for (slot, item) in out.iter_mut().zip(items) {
-        *slot = item.as_f64()?;
+        *slot = num(item)?;
     }
     Some(out)
 }
@@ -343,7 +370,7 @@ fn session(p: &Obj) -> Option<SessionPayload> {
 }
 
 fn non_negative_integer(value: &Value) -> Option<f64> {
-    let n = value.as_f64()?;
+    let n = num(value)?;
     (n.fract() == 0.0 && n >= 0.0).then_some(n)
 }
 
@@ -371,7 +398,7 @@ fn ngram_minute(p: &Obj, field: &str) -> Option<NgramMinutePayload> {
     let tags = tags(p)?;
     let entries = match p.get(field)? {
         Value::Object(map) => {
-            map.iter().map(|(k, v)| Some((k.clone(), ngram_entry(v)?))).collect::<Option<Vec<_>>>()?
+            map.iter().map(|(k, v)| Some((lossy(k), ngram_entry(v)?))).collect::<Option<Vec<_>>>()?
         }
         Value::Array(items) => items
             .iter()

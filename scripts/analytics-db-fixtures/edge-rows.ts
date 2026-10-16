@@ -3,7 +3,8 @@
 // what the seed never produces: LWW replacement and rejection inside one
 // file, a tombstone row, a second scope sharing minutes with the first,
 // char-minute rows with non-ASCII text, REAL values in INTEGER columns,
-// out-of-range histogram buckets, n-gram entries given as an array, lines
+// out-of-range histogram buckets, n-gram entries given as an array, strings
+// with a lone surrogate, a repeated key (JSON.parse keeps the last), lines
 // the parser rejects, CRLF / lone CR line breaks and a final line without a
 // newline (skipped as partial).
 
@@ -103,6 +104,14 @@ export function buildEdgeLines(ctx: EdgeContext): string {
       id: 'session|fixture-session-2', kind: 'session', updated_at: seededAt,
       payload: { id: 'fixture-session-2', scopeId: SECOND_SCOPE_ID, startMs: t13, endMs: t13b + MINUTE_MS },
     }),
+    // Lone surrogates in a value and in an n-gram id (better-sqlite3 writes
+    // each as U+FFFD), and a repeated key.
+    char(scopeId, t13b, '\ud800', 9, seededAt, { appName: 'App\udfff' }),
+    line({
+      id: `bigram|${SECOND_SCOPE_ID}|${t13b}|lone`, kind: 'bigram-minute', updated_at: seededAt,
+      payload: { scopeId: SECOND_SCOPE_ID, minuteTs: t13b, runId: 'lone', bigrams: { 'x\ud83d': { c: 4, h: hist(4) } } },
+    }),
+    `{"id":"dup","kind":"char-minute","updated_at":${seededAt},"payload":{"scopeId":"${scopeId}","minuteTs":${t13b},"char":"q","count":1,"count":3}}`,
     // Lines the parser rejects.
     'not json',
     line({ id: 'x', kind: 'future-kind', updated_at: 1, payload: {} }),

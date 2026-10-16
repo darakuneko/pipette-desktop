@@ -760,6 +760,9 @@
 {"id":"bigram|fixture-scope-2|1789304460000","kind":"bigram-minute","updated_at":1790895600000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789304460000,"bigrams":[{"c":2,"h":[2,0,0,0,0,0,0,0]}]}}
 {"id":"trigram|fixture-scope-2|1789304400000","kind":"trigram-minute","updated_at":1790895600000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789304400000,"trigrams":{"4_5_6":{"c":1,"h":[0,0,1,0,0,0,0,0],"s":100,"sq":10000}}}}
 {"id":"session|fixture-session-2","kind":"session","updated_at":1790895600000,"payload":{"id":"fixture-session-2","scopeId":"fixture-scope-2","startMs":1789304400000,"endMs":1789304520000}}
+{"id":"char|doc-ta-scope-1|1789304460000|\ud800","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"\ud800","count":9,"appName":"App\udfff"}}
+{"id":"bigram|fixture-scope-2|1789304460000|lone","kind":"bigram-minute","updated_at":1790895600000,"payload":{"scopeId":"fixture-scope-2","minuteTs":1789304460000,"runId":"lone","bigrams":{"x\ud83d":{"c":4,"h":[4,0,0,0,0,0,0,0]}}}}
+{"id":"dup","kind":"char-minute","updated_at":1790895600000,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304460000,"char":"q","count":1,"count":3}}
 not json
 {"id":"x","kind":"future-kind","updated_at":1,"payload":{}}
 {"id":"x","kind":"bigram-minute","updated_at":1,"payload":{"scopeId":"doc-ta-scope-1","minuteTs":1789304400000,"bigrams":{"1_2":{"c":1,"h":[1,0,0,0,0,0,0,0],"s":1}}}}
