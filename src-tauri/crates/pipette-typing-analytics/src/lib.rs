@@ -9,8 +9,10 @@
 //! ([`deleted_ranges`]), the record-start keymap snapshots
 //! ([`keymap_snapshots`]), the replay of a device's day file with its
 //! deleted ranges hidden ([`deleted_ranges_cache`]), and the query layer
-//! the commands read through ([`queries`]).
+//! the commands read through ([`queries`]) with the aggregates it builds
+//! ([`bigram_aggregate`], [`layout_resolver`], [`layout_comparison`]).
 
+pub mod bigram_aggregate;
 pub mod cache_rebuild;
 pub mod db_actor;
 pub mod deleted_ranges;
@@ -18,6 +20,8 @@ pub mod deleted_ranges_cache;
 pub mod identity;
 pub mod jsonl;
 pub mod keymap_snapshots;
+pub mod layout_comparison;
+pub mod layout_resolver;
 pub mod queries;
 pub mod reset_lock;
 pub mod service;
@@ -46,4 +50,6 @@ pub enum Error {
     CacheRebuild(String),
     #[error("the typing-analytics initialization stopped before it finished")]
     InitializationLost,
+    #[error(transparent)]
+    LayoutEntry(#[from] layout_resolver::BadLayoutEntry),
 }
