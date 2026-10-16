@@ -23,6 +23,7 @@
 
 import type { DecompressDefinition } from '../../preload/protocol-members'
 import type { VirtualDeviceControllerState } from '../../main/virtual-device/index'
+import type { PackImportFile } from '../../shared/types/pack-import'
 import type { DeviceInfo, DeviceType } from '../../shared/types/protocol'
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { CompressedDefinition } from '../generated/CompressedDefinition'
@@ -32,6 +33,7 @@ import type { DeviceInfo as GeneratedDeviceInfo } from '../generated/DeviceInfo'
 import type { DeviceType as GeneratedDeviceType } from '../generated/DeviceType'
 import type { FileOpenResult } from '../generated/FileOpenResult'
 import type { FileSaveResult } from '../generated/FileSaveResult'
+import type { PackImportFileRead } from '../generated/PackImportFileRead'
 import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
 /** `true` when each type is assignable to the other. The tuples stop the
@@ -53,6 +55,10 @@ export type ContractChecks = [
   Assert<MutuallyAssignable<FileSaveResult, Awaited<ReturnType<VialAPI['exportPdf']>>>>,
   Assert<MutuallyAssignable<FileOpenResult, Awaited<ReturnType<VialAPI['loadLayout']>>>>,
   Assert<MutuallyAssignable<CsvBundleResult, Awaited<ReturnType<VialAPI['exportCsvBundle']>>>>,
+  // src-tauri/src/store_commands/pack_import.rs (the shim parses each
+  // file's text into the PackImportFile the renderer gets)
+  Assert<MutuallyAssignable<PackImportFileRead['filePath'], PackImportFile['filePath']>>,
+  Assert<MutuallyAssignable<PackImportFileRead['fileSizeBytes'], PackImportFile['fileSizeBytes']>>,
   // src-tauri/src/dev_commands/tools.rs
   Assert<MutuallyAssignable<GeneratedControllerState, VirtualDeviceControllerState>>,
 ]

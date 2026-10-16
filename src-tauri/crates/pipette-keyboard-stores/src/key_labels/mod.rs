@@ -39,7 +39,7 @@ use std::path::{Path, PathBuf};
 use pipette_entry_store::{
     EPOCH_ISO, Entry, EntryError, EntryGroup, EntryList, EntryStore, OverwriteOptions, builtin_entry,
     id_body_filename, mark_deleted, migrate_body_filenames, normalize_entries, overwrite_entry, set_clock,
-    touch_clock, trim_js_whitespace, ts_for_filename,
+    touch_clock, ts_for_filename,
 };
 use pipette_js_json::{JsString, Object, Value};
 use pipette_time::iso_8601_millis;
@@ -160,24 +160,9 @@ impl From<BodyPathError> for KeyLabelError {
     }
 }
 
-/// The handler's answer as JSON text: `{"success":true}` with `data` when
-/// there is one, or `{"success":false,"errorCode":…,"error":…}`.
+/// The handler's answer as JSON text ([`crate::coded_response`]).
 pub fn key_label_response(result: Result<Option<Value>, KeyLabelError>) -> String {
-    let mut response = Object::new();
-    match result {
-        Ok(data) => {
-            response.insert("success", true.into());
-            if let Some(data) = data {
-                response.insert("data", data);
-            }
-        }
-        Err(err) => {
-            response.insert("success", false.into());
-            response.insert("errorCode", err.code().into());
-            response.insert("error", err.to_string().into());
-        }
-    }
-    pipette_js_json::stringify(&Value::Object(response))
+    crate::coded_response_json(result.map_err(|err| (err.code(), err.to_string())))
 }
 
 /// The index file: its top-level object, whose `entries` holds the place of
@@ -525,17 +510,6 @@ pub fn delete_key_label(ctx: &StoreContext, id: &JsString) -> Result<(), KeyLabe
     })
 }
 
-/// A string field set to its trimmed value, or removed when that is empty
-/// or the value is `None` (null).
-fn set_trimmed(entry: &mut Entry, key: &str, value: Option<&JsString>) {
-    let trimmed = value.map(|value| trim_js_whitespace(&value.utf16_units()).to_vec()).unwrap_or_default();
-    if trimmed.is_empty() {
-        entry.remove(key);
-    } else {
-        entry.set(key, Value::String(JsString::from_utf16(trimmed)));
-    }
-}
-
 /// Links the entry `id` (live or not) to a Hub post (`setHubPostId`). A
 /// post id that is `None` or blank once trimmed clears the link and the
 /// cached Hub time. `uploader_name` and `hub_updated_at` change their field
@@ -553,15 +527,15 @@ pub fn set_key_label_hub_post_id(
         let mut index = read_index_locked(&dir)?;
         let at = position_of(&index.entries, id).ok_or_else(KeyLabelError::not_found)?;
         let meta = &mut index.entries[at];
-        set_trimmed(meta, "hubPostId", hub_post_id);
+        meta.set_trimmed("hubPostId", hub_post_id);
         if meta.get("hubPostId").is_none() {
             meta.remove("hubUpdatedAt");
         }
         if let Some(uploader_name) = uploader_name {
-            set_trimmed(meta, "uploaderName", uploader_name);
+            meta.set_trimmed("uploaderName", uploader_name);
         }
         if let Some(hub_updated_at) = hub_updated_at {
-            set_trimmed(meta, "hubUpdatedAt", hub_updated_at);
+            meta.set_trimmed("hubUpdatedAt", hub_updated_at);
         }
         touch_clock(meta, EntryGroup::Hub, ctx.now_ms())?;
         let meta = meta.clone();

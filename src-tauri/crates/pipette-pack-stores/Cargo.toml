@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-pack-stores"
+description = "The pack stores under the userData directory: the language packs (sync/i18n) on the pack layer they share with the theme packs (sync/themes)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# The clocks, the write helpers and the pack id check of the entries.
+pipette-entry-store = { path = "../pipette-entry-store" }
+pipette-fs = { path = "../pipette-fs" }
+pipette-js-json = { path = "../pipette-js-json" }
+# The store context (userData, clock, ids, write locks, change notifier)
+# every store of the app shares.
+pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
+pipette-time = { path = "../pipette-time" }
+
+[dev-dependencies]
+pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

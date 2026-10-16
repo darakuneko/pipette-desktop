@@ -54,7 +54,8 @@ pub use safe_filename::{
 };
 pub use store_groups::{EntryStore, FilenameIdRule, RESERVED_FIELDS, StoreGroupDef, V1BodyClockRule};
 pub use text::{
-    is_js_whitespace, trim_js_whitespace, truncate_utf8, truncate_utf8_name_part, utf8_byte_length,
+    is_js_whitespace, js_to_lower_case, js_trim, trim_js_whitespace, truncate_utf8, truncate_utf8_name_part,
+    utf8_byte_length, utf16_len,
 };
 pub use write::{
     EntryMutation, OverwriteOptions, apply_entry_mutation, builtin_entry, create_entry, overwrite_entry,

@@ -84,4 +84,17 @@ pub const APP_COMMANDS: &[&str] = &[
     "pipette_settings_write",
     "pipette_settings_ensure_dir",
     "pipette_settings_read_all",
+    // src/store_commands/i18n_packs.rs
+    "i18n_pack_store_list",
+    "i18n_pack_store_get",
+    "i18n_pack_store_rename",
+    "i18n_pack_store_set_enabled",
+    "i18n_pack_store_refresh_coverage",
+    "i18n_pack_store_delete",
+    "i18n_pack_store_set_hub_post_id",
+    "i18n_pack_store_has_name",
+    "i18n_pack_store_reorder",
+    "i18n_pack_import",
+    "i18n_pack_import_apply",
+    "i18n_pack_export",
 ];

@@ -39,6 +39,7 @@
     "generate:entry-store-fixtures": "vitest run --config scripts/entry-store-fixtures/vitest.config.ts",
     "generate:sync-pending-fixtures": "vitest run --config scripts/sync-pending-fixtures/vitest.config.ts",
     "generate:keyboard-store-fixtures": "vitest run --config scripts/keyboard-store-fixtures/vitest.config.ts record-",
+    "generate:pack-store-fixtures": "vitest run --config scripts/pack-store-fixtures/vitest.config.ts record-",
     "verify:keyboard-store-rust-user-data": "vitest run --config scripts/keyboard-store-fixtures/vitest.config.ts verify-rust-stores",
     "generate:hid-fixtures": "vitest run --config scripts/hid-fixtures/vitest.config.ts",
     "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts",

@@ -16,6 +16,7 @@
     "key-labels",
     "snapshots",
     "settings",
+    "i18n-packs",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

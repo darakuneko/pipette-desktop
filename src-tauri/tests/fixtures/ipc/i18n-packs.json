@@ -1,0 +1,222 @@
+[
+  {
+    "member": "i18nPackList",
+    "args": [],
+    "command": "i18n_pack_store_list",
+    "invokeArgs": {},
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "id": "builtin-english",
+          "filename": "packs/builtin-english.json",
+          "name": "English",
+          "version": "0.0.0",
+          "enabled": true,
+          "uploaderName": "pipette",
+          "savedAt": "1970-01-01T00:00:00.000Z",
+          "clocks": {
+            "created": "1970-01-01T00:00:00.000Z",
+            "body": "1970-01-01T00:00:00.000Z"
+          },
+          "updatedAt": "1970-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "member": "i18nPackGet",
+    "args": [
+      "missing"
+    ],
+    "command": "i18n_pack_store_get",
+    "invokeArgs": {
+      "id": "missing"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Language pack not found"
+    }
+  },
+  {
+    "member": "i18nPackRename",
+    "args": [
+      "missing",
+      "New name"
+    ],
+    "command": "i18n_pack_store_rename",
+    "invokeArgs": {
+      "id": "missing",
+      "newName": "New name"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Language pack not found"
+    }
+  },
+  {
+    "member": "i18nPackSetEnabled",
+    "args": [
+      "missing",
+      false
+    ],
+    "command": "i18n_pack_store_set_enabled",
+    "invokeArgs": {
+      "id": "missing",
+      "enabled": false
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Language pack not found"
+    }
+  },
+  {
+    "member": "i18nPackRefreshCoverage",
+    "args": [
+      "missing",
+      {
+        "matchedBaseVersion": "0.1.0",
+        "coverage": {
+          "totalKeys": 2,
+          "coveredKeys": 1
+        },
+        "measuredBodyClock": "2026-10-16T12:00:00.000Z"
+      }
+    ],
+    "command": "i18n_pack_store_refresh_coverage",
+    "invokeArgs": {
+      "id": "missing",
+      "values": {
+        "matchedBaseVersion": "0.1.0",
+        "coverage": {
+          "totalKeys": 2,
+          "coveredKeys": 1
+        },
+        "measuredBodyClock": "2026-10-16T12:00:00.000Z"
+      }
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Language pack not found"
+    }
+  },
+  {
+    "member": "i18nPackDelete",
+    "args": [
+      "builtin-english"
+    ],
+    "command": "i18n_pack_store_delete",
+    "invokeArgs": {
+      "id": "builtin-english"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "INVALID_NAME",
+      "error": "English cannot be deleted"
+    }
+  },
+  {
+    "member": "i18nPackSetHubPostId",
+    "args": [
+      "missing",
+      "post-1",
+      "alice",
+      "2026-05-01T00:00:00.000Z"
+    ],
+    "command": "i18n_pack_store_set_hub_post_id",
+    "invokeArgs": {
+      "id": "missing",
+      "hubPostId": "post-1",
+      "uploaderName": "alice",
+      "hubUpdatedAt": "2026-05-01T00:00:00.000Z"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Language pack not found"
+    }
+  },
+  {
+    "member": "i18nPackHasName",
+    "args": [
+      "English"
+    ],
+    "command": "i18n_pack_store_has_name",
+    "invokeArgs": {
+      "name": "English"
+    },
+    "response": {
+      "success": true,
+      "data": false
+    }
+  },
+  {
+    "member": "i18nPackReorder",
+    "args": [
+      [
+        "b",
+        "a"
+      ]
+    ],
+    "command": "i18n_pack_store_reorder",
+    "invokeArgs": {
+      "orderedIds": [
+        "b",
+        "a"
+      ]
+    },
+    "response": {
+      "success": true
+    }
+  },
+  {
+    "member": "i18n-packs.openImport",
+    "args": [],
+    "command": "i18n_pack_import",
+    "invokeArgs": {},
+    "response": {
+      "canceled": true,
+      "files": []
+    }
+  },
+  {
+    "member": "i18nPackImportApply",
+    "args": [
+      {
+        "name": "Japanese"
+      },
+      {
+        "enabled": true
+      }
+    ],
+    "command": "i18n_pack_import_apply",
+    "invokeArgs": {
+      "raw": "{\"name\":\"Japanese\"}",
+      "options": "{\"enabled\":true}"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "INVALID_FILE",
+      "error": "Pack JSON missing required name/version fields"
+    }
+  },
+  {
+    "member": "i18nPackExport",
+    "args": [
+      "missing"
+    ],
+    "command": "i18n_pack_export",
+    "invokeArgs": {
+      "id": "missing"
+    },
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Language pack not found"
+    }
+  }
+]

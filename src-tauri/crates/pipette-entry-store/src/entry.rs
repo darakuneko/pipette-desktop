@@ -94,6 +94,17 @@ impl Entry {
         self.0.remove(key)
     }
 
+    /// Sets the string field `key` to `value` trimmed (`String.prototype.trim`),
+    /// or removes it when `value` is `None` or blank.
+    pub fn set_trimmed(&mut self, key: &str, value: Option<&JsString>) {
+        match value.map(crate::text::js_trim).filter(|value| !value.is_empty()) {
+            Some(value) => self.set(key, Value::String(value)),
+            None => {
+                self.remove(key);
+            }
+        }
+    }
+
     /// The id, when it is a string.
     pub fn id(&self) -> Option<&JsString> {
         self.string("id")

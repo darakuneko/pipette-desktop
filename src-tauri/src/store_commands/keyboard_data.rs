@@ -17,7 +17,8 @@ use tauri::{AppHandle, Manager, Runtime, State};
 use crate::command_error::CommandError;
 use crate::store_commands::blocking;
 
-/// Manages the stores of `user_data`, reporting their changes to the
+/// Manages the stores of `user_data` (the context every store command
+/// shares, the pack stores' included), reporting their changes to the
 /// pending sync units, which must be managed already.
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
     let pending = app.state::<PendingStore>().inner().clone();
