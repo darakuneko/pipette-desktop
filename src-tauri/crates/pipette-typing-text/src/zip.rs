@@ -12,6 +12,10 @@
 //! Every entry is unpacked, so one broken entry fails the whole archive, and
 //! a stored (0) or DEFLATE (8) method is required of each.
 //!
+//! The container is read here by hand rather than with a zip crate, which
+//! would open and reject different archives (local headers, CRCs, zip64
+//! rules); miniz_oxide only unpacks the DEFLATE data.
+//!
 //! Where it differs from fflate:
 //! - DEFLATE data is unpacked by miniz_oxide. A corrupt stream fails with
 //!   [`ZipError::Inflate`] instead of fflate's own messages (`invalid block
@@ -19,9 +23,12 @@
 //!   fails is rejected (fflate does not check it). Output past the declared
 //!   size is cut off unchecked, where fflate keeps decoding (and throws on
 //!   a stored block that overruns).
-//! - Declared sizes of DEFLATE entries adding up past
-//!   [`MAX_UNPACKED_BYTES`] fail with [`ZipError::TooLarge`]; fflate
-//!   allocates them (or throws a RangeError on a huge one).
+//! - Entries adding up past [`MAX_UNPACKED_BYTES`] (stored by length,
+//!   DEFLATE by declared size) fail with [`ZipError::TooLarge`]; fflate
+//!   allocates them all (or throws a RangeError on a huge one). Only one
+//!   entry is unpacked at a time and only the chosen one is kept, so
+//!   central directory entries that all point at one large local record
+//!   cannot multiply the memory.
 
 use std::collections::HashMap;
 
@@ -39,8 +46,10 @@ const ZIP64_EXTRA_ID: u32 = 1;
 const STORED: u32 = 0;
 const DEFLATE: u32 = 8;
 
-/// The most the DEFLATE entries of one archive may declare in total.
-pub const MAX_UNPACKED_BYTES: usize = 256 << 20;
+/// The most the entries of one archive may hold in total: the stored ones
+/// by their length, the DEFLATE ones by their declared size. Aozora texts
+/// are a few MB, and the decode and the cleaning take several times that.
+pub const MAX_UNPACKED_BYTES: usize = 64 << 20;
 
 /// Why a zip did not open. The messages are fflate's, except for
 /// [`ZipError::Inflate`] and [`ZipError::TooLarge`] (see the module docs).
@@ -171,6 +180,26 @@ fn is_text_entry(name: &str) -> bool {
     lower_end && !name.contains("__MACOSX")
 }
 
+/// Where the bytes of an entry are, so only the chosen one is copied or
+/// unpacked a second time.
+enum Source<'a> {
+    Stored(&'a [u8]),
+    /// The DEFLATE data and the declared size.
+    Deflate(&'a [u8], usize),
+}
+
+struct TextEntry<'a> {
+    /// The length fflate's entry has.
+    len: usize,
+    source: Source<'a>,
+}
+
+/// Takes `bytes` from what the archive may still unpack.
+fn charge(budget: &mut usize, bytes: usize) -> Result<(), ZipError> {
+    *budget = budget.checked_sub(bytes).ok_or(ZipError::TooLarge)?;
+    Ok(())
+}
+
 /// The data of the largest `.txt` entry (the first one of that size, in
 /// the order of the object fflate returns: a repeated name keeps its first
 /// place and takes the last data), or `None` when there is none.
@@ -193,7 +222,7 @@ pub fn largest_text_entry(zip: &[u8]) -> Result<Option<Vec<u8>>, ZipError> {
     }
 
     // The `.txt` entries in fflate's object order, and where each name is.
-    let mut texts: Vec<Vec<u8>> = Vec::new();
+    let mut texts: Vec<TextEntry<'_>> = Vec::new();
     let mut places: HashMap<String, usize> = HashMap::new();
     let mut budget = MAX_UNPACKED_BYTES;
     for _ in 0..count {
@@ -214,38 +243,44 @@ pub fn largest_text_entry(zip: &[u8]) -> Result<Option<Vec<u8>>, ZipError> {
 
         let start = local + 30 + i128::from(data.b2(local + 26)) + i128::from(data.b2(local + 28));
         let raw = data.slice(start, start + compressed);
-        let is_text = is_text_entry(&name);
-        let bytes = match method {
-            STORED if is_text => raw.to_vec(),
-            STORED => continue,
+        let entry = match method {
+            STORED => {
+                charge(&mut budget, raw.len())?;
+                TextEntry { len: raw.len(), source: Source::Stored(raw) }
+            }
             DEFLATE => {
-                let size =
-                    usize::try_from(size).ok().filter(|&size| size <= budget).ok_or(ZipError::TooLarge)?;
-                budget -= size;
-                let bytes = inflate(raw, size)?;
-                if !is_text {
-                    continue;
-                }
-                bytes
+                let size = usize::try_from(size).map_err(|_| ZipError::TooLarge)?;
+                charge(&mut budget, size)?;
+                // Unpacked here to fail as fflate does on a broken entry;
+                // only the length is kept.
+                let len = inflate(raw, size)?.len();
+                TextEntry { len, source: Source::Deflate(raw, size) }
             }
             other => return Err(ZipError::UnknownCompression(other)),
         };
+        if !is_text_entry(&name) {
+            continue;
+        }
         match places.get(&name) {
-            Some(&place) => texts[place] = bytes,
+            Some(&place) => texts[place] = entry,
             None => {
                 places.insert(name, texts.len());
-                texts.push(bytes);
+                texts.push(entry);
             }
         }
     }
 
-    let mut best: Option<Vec<u8>> = None;
-    for bytes in texts {
-        if best.as_ref().is_none_or(|best| bytes.len() > best.len()) {
-            best = Some(bytes);
+    let mut best: Option<&TextEntry<'_>> = None;
+    for entry in &texts {
+        if best.is_none_or(|best| entry.len > best.len) {
+            best = Some(entry);
         }
     }
-    Ok(best)
+    best.map(|entry| match entry.source {
+        Source::Stored(raw) => Ok(raw.to_vec()),
+        Source::Deflate(raw, size) => inflate(raw, size),
+    })
+    .transpose()
 }
 
 #[cfg(test)]

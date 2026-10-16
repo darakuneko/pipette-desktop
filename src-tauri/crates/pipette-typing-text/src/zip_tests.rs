@@ -229,3 +229,38 @@ fn rejects_deflate_entries_declaring_too_much() {
     let entry = Entry { size: u32::MAX, ..deflated("a.txt", b"a") };
     assert_eq!(pick(&[entry]), Err(ZipError::TooLarge));
 }
+
+/// `zip` (one entry) with its central directory entry repeated `times`, so
+/// every copy points at the same local record.
+fn aliased(zip: &[u8], times: u16) -> Vec<u8> {
+    let end = zip.len() - 22;
+    let directory = u32::from_le_bytes([zip[end + 16], zip[end + 17], zip[end + 18], zip[end + 19]]) as usize;
+    let entry = &zip[directory..end];
+    let mut out = zip[..directory].to_vec();
+    for _ in 0..times {
+        out.extend_from_slice(entry);
+    }
+    let mut record = zip[end..].to_vec();
+    record[8..10].copy_from_slice(&times.to_le_bytes());
+    record[10..12].copy_from_slice(&times.to_le_bytes());
+    record[12..16].copy_from_slice(&((entry.len() * usize::from(times)) as u32).to_le_bytes());
+    out.extend_from_slice(&record);
+    out
+}
+
+#[test]
+fn entries_aliasing_one_record_count_against_the_limit() {
+    let one_mib = vec![b'a'; 1 << 20];
+    let stored_zip = build(&[stored("a.txt", &one_mib)], b"", false);
+    assert_eq!(largest_text_entry(&aliased(&stored_zip, 64)), Ok(Some(one_mib.clone())));
+    assert_eq!(largest_text_entry(&aliased(&stored_zip, 65)), Err(ZipError::TooLarge));
+    let deflated_zip = build(&[deflated("a.txt", &one_mib)], b"", false);
+    assert_eq!(largest_text_entry(&aliased(&deflated_zip, 64)), Ok(Some(one_mib)));
+    assert_eq!(largest_text_entry(&aliased(&deflated_zip, 65)), Err(ZipError::TooLarge));
+}
+
+#[test]
+fn a_repeated_name_with_a_shorter_last_data_loses_its_place_to_a_longer_entry() {
+    let entries = [stored("a.txt", b"xxxx"), stored("b.txt", b"yyy"), stored("a.txt", b"zz")];
+    assert_eq!(pick(&entries), Ok(Some(b"yyy".to_vec())));
+}
