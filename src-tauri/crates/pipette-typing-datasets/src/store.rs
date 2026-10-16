@@ -206,6 +206,14 @@ fn migrate_legacy_downloads(root: &Path) {
     }
 }
 
+/// Runs `f` on the runtime's blocking pool; a task that does not finish is
+/// [`DatasetError::Task`].
+pub(crate) async fn run_blocking<T: Send + 'static>(
+    f: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, DatasetError> {
+    tokio::task::spawn_blocking(f).await.map_err(|err| DatasetError::Task(err.to_string()))
+}
+
 /// `{...overrides}`: an array's elements under their index keys.
 fn spread(overrides: &Value) -> Object {
     match overrides {
@@ -321,15 +329,13 @@ impl LanguageStore {
         }))
     }
 
-    /// Runs `f` on the runtime's blocking pool.
+    /// Runs `f` on the store's state on the runtime's blocking pool.
     async fn blocking<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Inner) -> Result<T, DatasetError> + Send + 'static,
     ) -> Result<T, DatasetError> {
         let inner = Arc::clone(&self.0);
-        tokio::task::spawn_blocking(move || f(&inner))
-            .await
-            .map_err(|err| DatasetError::Task(err.to_string()))?
+        run_blocking(move || f(&inner)).await?
     }
 
     /// Moves the legacy downloads the first time it is called; later calls

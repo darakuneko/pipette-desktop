@@ -15,7 +15,7 @@ use pipette_typing_text::{AozoraTextError, aozora_text_from_zip};
 
 use crate::dataset::{Dataset, Model, file_size};
 use crate::download::{FetchFailure, fetch_verified_bytes, number_text};
-use crate::store::{DatasetError, LanguageStore};
+use crate::store::{DatasetError, LanguageStore, run_blocking};
 
 const AOZORA_PROVIDER: &str = "aozora";
 
@@ -25,15 +25,13 @@ const NOT_IN_CATALOG: &str = "NOT_IN_CATALOG";
 /// (the IPC call rejects with the message).
 #[derive(Debug, thiserror::Error)]
 pub enum AozoraImportError {
+    /// The overrides could not be read, or a blocking task did not finish.
     #[error(transparent)]
     Dataset(#[from] DatasetError),
     /// A gaiji note naming a code point past U+10FFFF, which
     /// `String.fromCodePoint` throws on.
     #[error(transparent)]
     Text(AozoraTextError),
-    /// The blocking task of a step did not finish.
-    #[error("{0}")]
-    Task(String),
 }
 
 /// Where an import stopped: a failure answer (`errorCode`, `error`), or an
@@ -117,11 +115,6 @@ fn download_failure(work_id: &str, failure: FetchFailure) -> Stop {
     Stop::Answer("DOWNLOAD_FAILED", detail)
 }
 
-/// Runs `f` on the runtime's blocking pool.
-async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> Result<T, Stop> {
-    tokio::task::spawn_blocking(f).await.map_err(|err| AozoraImportError::Task(err.to_string()).into())
-}
-
 async fn import(
     languages: &LanguageStore,
     ctx: &StoreContext,
@@ -134,7 +127,7 @@ async fn import(
         .await
         .map_err(|failure| download_failure(work_id, failure))?;
     let text =
-        blocking(move || aozora_text_from_zip(&bytes)).await?.map_err(|err| match err.error_code() {
+        run_blocking(move || aozora_text_from_zip(&bytes)).await?.map_err(|err| match err.error_code() {
             Some(code) => Stop::Answer(code, err.to_string()),
             None => AozoraImportError::Text(err).into(),
         })?;
@@ -144,7 +137,7 @@ async fn import(
         ..TypingTextSave::new(work.name, JsString::from_utf16(text))
     };
     let (ctx, texts) = (ctx.clone(), texts.clone());
-    let meta = blocking(move || texts.save(&ctx, &input))
+    let meta = run_blocking(move || texts.save(&ctx, &input))
         .await?
         .map_err(|err| Stop::Answer(err.code(), err.to_string()))?;
     let id = meta.id().map(JsString::to_string_lossy).unwrap_or_default();
