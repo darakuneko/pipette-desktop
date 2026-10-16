@@ -1,18 +1,33 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Google Drive v3 operations the sync uses on `appDataFolder`
-//! (src/main/sync/google-drive.ts), one attempt each, behind
-//! [`DriveApi`]: a listing page, a download, the two creates, a content
-//! update, a rename and a delete. A failed attempt is a [`DriveError`]
-//! with what the retries above it need: the status, the start of the body
-//! and `Retry-After`.
+//! The Google Drive v3 client of the sync on `appDataFolder`
+//! (src/main/sync/google-drive.ts, drive-retry.ts, drive-canonical.ts and
+//! drive-trash.ts):
+//!
+//! - [`DriveApi`]: one attempt of each operation (a listing page, a
+//!   download, the two creates, a content update, a rename and a delete).
+//!   A failed attempt is a [`DriveError`] with what the retries need: the
+//!   status, the start of the body and `Retry-After`. [`http::HttpDrive`]
+//!   sends the requests google-drive.ts sends;
+//! - [`retry`]: the retries around each attempt (drive-retry.ts);
+//! - [`client::DriveClient`]: the operations the sync calls, with their
+//!   retries, the 404s they accept and the bulk deletes and renames;
+//! - [`canonical`]: the copy every lookup by name uses when Drive lists
+//!   several files with the same name (drive-canonical.ts);
+//! - [`trash_names`]: the names copies are renamed to instead of being
+//!   deleted (drive-trash.ts).
 //!
 //! With the `test-util` feature, [`fake::InMemoryDrive`] is a Drive in
 //! memory. Every Rust test of the sync runs on it; the Node fake Drive
 //! (scripts/fake-drive/server.ts) passes the same conformance cases
 //! (scripts/fake-drive/conformance-cases.json).
 
+pub mod canonical;
+pub mod client;
 #[cfg(feature = "test-util")]
 pub mod fake;
+pub mod http;
+pub mod retry;
+pub mod trash_names;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -71,6 +86,10 @@ pub enum DriveError {
     /// A 2xx answer whose body is not what the operation returns.
     #[error("unexpected Drive response: {0}")]
     BadResponse(String),
+    /// No access token for the request: not signed in, or the token could
+    /// not be had. Never retried.
+    #[error("{0}")]
+    Auth(String),
 }
 
 impl DriveError {
