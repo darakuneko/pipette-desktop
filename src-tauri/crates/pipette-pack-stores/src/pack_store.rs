@@ -70,6 +70,14 @@ impl PackIndex {
         self.position(id).map(|at| &self.metas[at])
     }
 
+    /// The index as one object: the file's top-level object with `metas`
+    /// in its place, as a write stores it.
+    pub fn to_object(&self) -> Object {
+        let mut root = self.root.clone();
+        root.insert("metas", Value::Array(self.metas.iter().cloned().map(Value::from).collect()));
+        root
+    }
+
     /// The meta at `at` replaced, or appended when `at` is `None`.
     pub fn put(&mut self, at: Option<usize>, meta: Entry) {
         match at {
@@ -200,9 +208,7 @@ impl PackStore {
     pub fn write_index(&self, ctx: &StoreContext, index: &PackIndex) -> PackResult<()> {
         let dir = self.store_dir(ctx);
         fs::create_dir_all(&dir)?;
-        let mut root = index.root.clone();
-        root.insert("metas", Value::Array(index.metas.iter().cloned().map(Value::from).collect()));
-        let text = pipette_js_json::stringify_with_gap(&Value::Object(root), "  ");
+        let text = pipette_js_json::stringify_with_gap(&Value::Object(index.to_object()), "  ");
         pipette_fs::write_file_atomic(&dir.join("index.json"), text.as_bytes())?;
         Ok(())
     }

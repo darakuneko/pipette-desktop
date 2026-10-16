@@ -105,6 +105,29 @@ impl Writer<'_> {
     }
 }
 
+/// `String(value)` for a JSON value, `"undefined"` for `None`: what a
+/// template literal writes for it. An array is its items' strings joined
+/// with `,` (`null` as empty), an object `[object Object]`.
+pub fn js_string(value: Option<&Value>) -> String {
+    match value {
+        None => "undefined".to_owned(),
+        Some(Value::Null) => "null".to_owned(),
+        Some(Value::Bool(b)) => b.to_string(),
+        Some(Value::Number(n)) => {
+            let mut out = String::new();
+            write_number(&mut out, *n);
+            out
+        }
+        Some(Value::String(s)) => s.to_string_lossy().into_owned(),
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|item| if *item == Value::Null { String::new() } else { js_string(Some(item)) })
+            .collect::<Vec<_>>()
+            .join(","),
+        Some(Value::Object(_)) => "[object Object]".to_owned(),
+    }
+}
+
 /// ECMAScript's Number::toString for a finite number, `null` otherwise.
 pub fn write_number(out: &mut String, n: f64) {
     if n.fract() == 0.0 && n.abs() <= MAX_SAFE_INTEGER {
@@ -204,6 +227,17 @@ fn push_char(out: &mut String, c: char) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn values_as_template_literals_write_them() {
+        assert_eq!(js_string(None), "undefined");
+        assert_eq!(js_string(Some(&Value::Null)), "null");
+        assert_eq!(js_string(Some(&Value::from(5.0))), "5");
+        assert_eq!(js_string(Some(&Value::from(true))), "true");
+        let list = Value::Array(vec![Value::from("a"), Value::Null, Value::Array(vec![Value::from(1.5)])]);
+        assert_eq!(js_string(Some(&list)), "a,,1.5");
+        assert_eq!(js_string(Some(&Value::Object(Object::new()))), "[object Object]");
+    }
     use crate::parse;
 
     #[test]

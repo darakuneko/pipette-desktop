@@ -14,6 +14,9 @@
 //! - the language packs (`sync/i18n`, [`i18n`]) of
 //!   src/main/i18n-pack-store*.ts, and their handlers
 //!   ([`i18n_handlers`]) of src/main/i18n-pack-ipc.ts;
+//! - the sync of both stores ([`sync`]): the bundles of the roster and of
+//!   a body, the merge of a remote roster, applying a remote body and the
+//!   GC after a pass;
 //! - the theme packs (`sync/themes`, [`theme`]) of
 //!   src/main/theme-pack-store.ts, and their handlers ([`theme_handlers`])
 //!   of src/main/theme-pack-ipc.ts.
@@ -32,6 +35,7 @@ mod js_text;
 mod pack_meta;
 mod pack_store;
 mod result;
+pub mod sync;
 pub mod theme;
 pub mod theme_handlers;
 pub mod theme_validate;

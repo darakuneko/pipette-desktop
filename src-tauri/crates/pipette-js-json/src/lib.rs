@@ -23,5 +23,5 @@ mod stringify;
 mod value;
 
 pub use parse::{MAX_DEPTH, ParseError, parse};
-pub use stringify::{stringify, stringify_with_gap, write_number, write_str};
+pub use stringify::{js_string, stringify, stringify_with_gap, write_number, write_str};
 pub use value::{JsString, Object, Value};

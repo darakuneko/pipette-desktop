@@ -2,4 +2,13 @@
 //! The sync engine (src/main/sync/): the bundles, the merges, the passes
 //! and their entry points, the password and its change, the trash and the
 //! resets. It runs on `pipette_drive::DriveApi` and keeps its memory in
-//! `pipette_sync_runtime::SyncRuntime`. Empty until the engine moves here.
+//! `pipette_sync_runtime::SyncRuntime`.
+//!
+//! - [`units`]: what a unit name says (its store, its lock, its shape);
+//! - [`bundle`]: the bundle a unit is uploaded as, and the units a pass
+//!   sends;
+//! - [`merge`]: the merge of a downloaded bundle into the local files.
+
+pub mod bundle;
+pub mod merge;
+pub mod units;

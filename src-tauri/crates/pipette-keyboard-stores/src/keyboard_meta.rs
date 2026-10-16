@@ -40,13 +40,13 @@ pub enum MetaOutcome {
 
 /// The parsed file: the top-level object and its `entries`, written back
 /// in their places.
-struct MetaIndex {
-    root: Object,
-    entries: Vec<Value>,
+pub(crate) struct MetaIndex {
+    pub(crate) root: Object,
+    pub(crate) entries: Vec<Value>,
 }
 
 impl MetaIndex {
-    fn empty() -> Self {
+    pub(crate) fn empty() -> Self {
         let mut root = Object::new();
         root.insert("type", "keyboard-meta".into());
         root.insert("version", 1.0.into());
@@ -62,7 +62,7 @@ pub(crate) fn meta_file_path(ctx: &StoreContext) -> PathBuf {
 /// The index in the file at `path` (`readKeyboardMetaIndex`): empty when
 /// the file is missing, unreadable, not JSON, or not a keyboard-meta index
 /// with an `entries` list. Fails only for a file nested too deeply to read.
-fn read_index(path: &Path) -> Result<MetaIndex, StoreError> {
+pub(crate) fn read_index(path: &Path) -> Result<MetaIndex, StoreError> {
     let Ok(bytes) = std::fs::read(path) else { return Ok(MetaIndex::empty()) };
     // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD.
     let parsed = match pipette_js_json::parse(&String::from_utf8_lossy(&bytes)) {
@@ -82,7 +82,7 @@ fn read_index(path: &Path) -> Result<MetaIndex, StoreError> {
     Ok(MetaIndex { root, entries })
 }
 
-fn write_index(path: &Path, index: MetaIndex) -> Result<(), StoreError> {
+pub(crate) fn write_index(path: &Path, index: MetaIndex) -> Result<(), StoreError> {
     let MetaIndex { mut root, entries } = index;
     root.insert("entries", Value::Array(entries));
     if let Some(dir) = path.parent() {
@@ -95,7 +95,7 @@ fn write_index(path: &Path, index: MetaIndex) -> Result<(), StoreError> {
 
 /// `entry[key]` of an entry; reading a property of `null` throws in
 /// JavaScript, and other values that are not objects have no fields.
-fn field<'a>(entry: &'a Value, key: &'static str) -> Result<Option<&'a Value>, StoreError> {
+pub(crate) fn field<'a>(entry: &'a Value, key: &'static str) -> Result<Option<&'a Value>, StoreError> {
     match entry {
         Value::Null => Err(StoreError::NullEntry(key)),
         Value::Object(object) => Ok(object.get(key)),
@@ -119,7 +119,7 @@ fn find_entry(entries: &[Value], uid: &str) -> Result<Option<usize>, StoreError>
 
 /// The entries without the tombstones deleted 30 days or more before
 /// `now_ms`. A `deletedAt` that is not a time keeps its entry.
-fn drop_expired_tombstones(entries: Vec<Value>, now_ms: i64) -> Result<Vec<Value>, StoreError> {
+pub(crate) fn drop_expired_tombstones(entries: Vec<Value>, now_ms: i64) -> Result<Vec<Value>, StoreError> {
     let mut kept = Vec::with_capacity(entries.len());
     for entry in entries {
         let expired = match field(&entry, "deletedAt")? {

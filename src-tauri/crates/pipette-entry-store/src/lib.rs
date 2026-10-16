@@ -11,6 +11,9 @@
 //! - body filenames that carry the entry id, and the move of legacy names
 //!   to them ([`migrate_body_filenames`]);
 //! - the per-key write locks of the stores ([`WriteLocks`]);
+//! - the sync merge of two sides' entries ([`merge_entries`]), with the
+//!   tombstone GC ([`gc_tombstones`]) and the body order
+//!   ([`compare_bodies`]) it builds on;
 //! - file-name helpers (UTF-8 truncation, path-segment checks).
 //!
 //! Entries are JSON objects with JavaScript's property order
@@ -22,6 +25,7 @@ mod body_filename;
 mod canonical;
 mod clocks;
 mod entry;
+mod merge;
 mod migration;
 mod normalize;
 mod retention;
@@ -41,6 +45,10 @@ pub use clocks::{
     set_clock, touch_clock, valid_clock,
 };
 pub use entry::{Entry, EntryGroup, MetaGroup};
+pub use merge::{
+    BodyHash, BodyPolicy, EntryMergeOutcome, EntryMergeResult, HasBody, MergeOptions, MergeSide,
+    RemoteFileCopy, TOMBSTONE_TTL_MS, compare_bodies, gc_tombstones, is_dead_entry, merge_entries,
+};
 pub use migration::{
     EntryList, IndexDirRead, is_body_file_name, migrate_body_filenames, read_index_dir_migrated,
     read_index_migrated, unlink_unreferenced_body_files,

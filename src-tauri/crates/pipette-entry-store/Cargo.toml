@@ -16,6 +16,8 @@ test-util = []
 # The per-key write locks (src/write_lock.rs).
 pipette-fifo = { path = "../pipette-fifo" }
 pipette-fs = { path = "../pipette-fs" }
+# The JavaScript Map order of the merge's ids (src/merge.rs).
+indexmap = "=2.14.2"
 pipette-js-json = { path = "../pipette-js-json" }
 pipette-time = { path = "../pipette-time" }
 # `\p{L}` and `\p{N}` of safe_filename (src/safe_filename.rs).
