@@ -107,12 +107,8 @@ fn the_import_options_keep_their_key_order_and_a_lone_surrogate() {
         colors()
     );
     let options = r#"{"uploaderName":"\ud800","hubPostId":"post"}"#;
-    let saved = text(block_on(theme_pack_import_apply(
-        handle(&t),
-        t.stores(),
-        Some(raw.into()),
-        Some(options.into()),
-    )));
+    let saved =
+        text(block_on(theme_pack_import_apply(handle(&t), t.stores(), Some(raw), Some(options.into()))));
     assert!(saved.contains(r#""name":"Lone \ud800""#), "{saved}");
     assert!(saved.contains(r#""hubPostId":"post","uploaderName":"\ud800""#), "{saved}");
     let packs = user_data.path().join("sync/themes/packs");
