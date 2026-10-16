@@ -391,13 +391,23 @@ describe('Tauri build typing analytics', () => {
     expect(readFileSync(join(exportDir, exported[0]), 'utf8')).toBe(bytes)
     await $(tid('typing-import-status-dismiss')).click()
 
+    // The import replaces the local day with the file, so an edited file
+    // shows: it drops the day's last minute.
+    const lines = bytes.split('\n').filter((line) => line.length > 0)
+    const dropped = JSON.parse(lines[lines.length - 1]) as { kind: string; payload: { keystrokes: number } }
+    expect(dropped.kind).toBe('minute-stats')
+    const edited = lines.slice(0, -1).join('\n') + '\n'
+    writeFileSync(join(exportDir, exported[0]), edited)
     await clickIntoFilesDialog(tid('typing-import'), [join(exportDir, exported[0])])
     // The banner offers its dismiss button once the import has finished;
     // it lists the files it rejected.
     await $(tid('typing-import-status-dismiss')).waitForDisplayed({ timeoutMsg: 'the import did not finish' })
     expect(await $(tid('typing-import-status')).$$('li').length).toBe(0)
-    expect(readFileSync(dayFile, 'utf8')).toBe(bytes)
-    expect(await localDays(DUMMY_TA_UID)).toEqual(days)
+    expect(readFileSync(dayFile, 'utf8')).toBe(edited)
+    const keystrokesOf = (list: DaySummary[]): number | undefined => list.find((day) => day.date === date)?.keystrokes
+    await browser.waitUntil(async () => keystrokesOf(await localDays(DUMMY_TA_UID)) === (keystrokesOf(days) ?? 0) - dropped.payload.keystrokes, {
+      timeoutMsg: 'the cache does not hold the imported day',
+    })
     await $(tid('typing-import-status-dismiss')).click()
   })
 
