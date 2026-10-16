@@ -128,16 +128,22 @@ describe.each(themePackBackends({ themePackGet: mockGet }))('useTheme with a pac
     mockGet.mockResolvedValueOnce(record('#111111', 'dark'))
     const { result } = renderHookWithConfig(() => useTheme())
     const accent = (): string => document.documentElement.style.getPropertyValue('--accent')
-    await waitFor(() => expect(accent()).toBe('#111111'))
-    expect(result.current.effectiveTheme).toBe('dark')
+    // The colors are set on the document at once, the effective theme on
+    // the hook's next render, so the wait covers both.
+    await waitFor(() => {
+      expect(accent()).toBe('#111111')
+      expect(result.current.effectiveTheme).toBe('dark')
+    })
     expect(mockGet).toHaveBeenCalledWith('p1')
 
     mockGet.mockResolvedValueOnce(record('#222222', 'light'))
     // The shim's listener is registered asynchronously.
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
     await act(async () => { await backend.broadcast() })
-    await waitFor(() => expect(accent()).toBe('#222222'))
-    expect(result.current.effectiveTheme).toBe('light')
+    await waitFor(() => {
+      expect(accent()).toBe('#222222')
+      expect(result.current.effectiveTheme).toBe('light')
+    })
   })
 
   it('falls back to the system theme when the pack cannot be read', async () => {
