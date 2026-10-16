@@ -17,6 +17,9 @@
 //!
 //! Every platform then removes all whitespace (JavaScript's `\s`) and
 //! lowercases. Other targets return [`MachineIdError::UnsupportedPlatform`].
+//!
+//! On Linux, Windows and macOS the result is compared with node-machine-id's
+//! on the same machine by tests/node_identity.rs of pipette-typing-analytics.
 
 use std::sync::OnceLock;
 
@@ -127,7 +130,7 @@ fn run(program: &str, args: &[&str]) -> Result<String, MachineIdError> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-/// Not run on Windows yet. `node-machine-id` runs `REG.exe` from
+/// `node-machine-id` runs `REG.exe` from
 /// `%windir%\System32`, or through `%windir%\sysnative` when a 32-bit Node
 /// runs on 64-bit Windows so the 64-bit registry view is read; `Sysnative`
 /// gives a 32-bit process the same view.
@@ -143,7 +146,6 @@ fn platform_machine_id() -> Result<String, MachineIdError> {
     expose_windows(&output)
 }
 
-/// Not run on macOS yet.
 #[cfg(target_os = "macos")]
 fn platform_machine_id() -> Result<String, MachineIdError> {
     expose_macos(&run("ioreg", &["-rd1", "-c", "IOPlatformExpertDevice"])?)

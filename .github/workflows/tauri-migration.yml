@@ -111,6 +111,49 @@ jobs:
       - name: e2e (Tauri)
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e:tauri
 
+  # The machine hash and the OS strings of the typing-analytics fingerprint
+  # must be the values the Electron build computes on the same machine, or
+  # the same PC shows as another device. Node reports them on each OS and
+  # the Rust test compares its own (tests/node_identity.rs of
+  # pipette-typing-analytics), printing no value.
+  node-identity:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # The toolchain of src-tauri/rust-toolchain.toml; the crate needs none
+      # of the Linux packages setup-rust installs for the app.
+      - name: Install the Rust toolchain
+        working-directory: src-tauri
+        run: |
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri -> target
+
+      - run: pnpm run generate:node-identity
+
+      - name: Compare with Node
+        working-directory: src-tauri
+        env:
+          PIPETTE_REQUIRE_NODE_IDENTITY: "1"
+        run: cargo test -p pipette-typing-analytics --test node_identity
+
   # Kept off the job above so the release build does not lengthen it.
   tauri-lint:
     runs-on: ubuntu-latest
