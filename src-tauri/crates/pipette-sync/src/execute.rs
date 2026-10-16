@@ -25,12 +25,11 @@
 //! ranges. The progress goes out in the shape of `SyncProgress`.
 
 use std::collections::HashMap;
-use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
 use futures_util::StreamExt;
-use futures_util::stream;
+use futures_util::stream::FuturesUnordered;
 use pipette_drive::DriveFile;
 use pipette_drive::canonical::Listing;
 use pipette_google_auth::GoogleAuth;
@@ -135,6 +134,15 @@ pub struct SyncExecutor {
     concurrency: usize,
 }
 
+/// What the sync of one unit of a pass does.
+enum Work<'a> {
+    /// A download: merges the chosen copy of the unit's Drive file.
+    Merge { file: &'a DriveFile, listing: &'a Listing },
+    /// An upload: merges with the unit's Drive file when there is one,
+    /// otherwise creates it.
+    SyncOrUpload { listing: &'a Listing },
+}
+
 /// The units of a pass that synced and that failed, each in the order
 /// they ended.
 #[derive(Default)]
@@ -169,6 +177,21 @@ impl SyncExecutor {
 
     fn emit(&self, progress: SyncProgress) {
         self.preflight.runtime().progress().emit(&progress);
+    }
+
+    fn blocked(&self, direction: SyncDirection, reason: SyncBlockReason) -> SyncExecuteResult {
+        self.preflight.emit_sync_blocked(direction, reason);
+        SyncExecuteResult::Skipped(SkipReason::Blocked(reason))
+    }
+
+    /// The sync of one unit of a pass.
+    async fn sync_unit(&self, unit: &str, work: Work<'_>, password: &str) -> Result<(), UnitError> {
+        match work {
+            Work::Merge { file, listing } => {
+                self.units.merge_with_remote(file, unit, password, Some(listing)).await
+            }
+            Work::SyncOrUpload { listing } => self.units.sync_or_upload(unit, password, listing).await,
+        }
     }
 
     /// Runs a pass of `direction` over `scope`. A failure before the units
@@ -207,12 +230,8 @@ impl SyncExecutor {
         scope: &SyncScope,
     ) -> Result<SyncExecuteResult, PreflightError> {
         let preflight = &self.preflight;
-        let blocked = |reason: SyncBlockReason| {
-            preflight.emit_sync_blocked(direction, reason);
-            Ok(SyncExecuteResult::Skipped(SkipReason::Blocked(reason)))
-        };
         if let Some(reason) = preflight.local_sync_block().await {
-            return blocked(reason);
+            return Ok(self.blocked(direction, reason));
         }
         let password = match preflight.require_sync_credentials().await {
             Ok(password) => password,
@@ -237,7 +256,7 @@ impl SyncExecutor {
         let generation = preflight.sync_format_generation();
         let listing = Listing::new(preflight.drive().list_files(None).await?);
         if let Some(reason) = preflight.remote_sync_block(listing.files(), generation) {
-            return blocked(reason);
+            return Ok(self.blocked(direction, reason));
         }
         preflight.ensure_sync_format_marker(listing.files(), generation).await?;
         // `'all'` always validates again; a scoped pass skips it while the
@@ -304,23 +323,22 @@ impl SyncExecutor {
     /// Syncs `items` (a unit and what its sync needs), the pack rosters to
     /// the end before the other units, [`Self::with_concurrency`] at a
     /// time, reporting each as it starts and each failure as it ends.
-    async fn run_units<'a, T, F, Fut>(
-        &'a self,
+    async fn run_units(
+        &self,
         direction: SyncDirection,
-        items: Vec<(String, T)>,
-        run: F,
-    ) -> Outcomes
-    where
-        F: Fn(String, T) -> Fut,
-        Fut: Future<Output = Result<(), UnitError>> + 'a,
-    {
+        items: Vec<(String, Work<'_>)>,
+        password: &str,
+    ) -> Outcomes {
         let total = u32::try_from(items.len()).unwrap_or(u32::MAX);
         let (rosters, rest) = pack_index_units_first(items, |(unit, _)| unit);
         let mut started = 0u32;
         let mut outcomes = Outcomes::default();
         for group in [rosters, rest] {
-            let ended: Vec<(String, bool)> = stream::iter(group)
-                .map(|(unit, item)| {
+            let mut waiting = group.into_iter();
+            let mut running = FuturesUnordered::new();
+            loop {
+                while running.len() < self.concurrency {
+                    let Some((unit, item)) = waiting.next() else { break };
                     started += 1;
                     self.emit(SyncProgress {
                         sync_unit: Some(unit.clone()),
@@ -328,26 +346,23 @@ impl SyncExecutor {
                         total: Some(total),
                         ..SyncProgress::new(direction, SyncStatus::Syncing)
                     });
-                    let sync = run(unit.clone(), item);
-                    async move {
-                        match sync.await {
-                            Ok(()) => (unit, true),
-                            Err(err) => {
-                                self.emit(SyncProgress {
-                                    sync_unit: Some(unit.clone()),
-                                    message: Some(err.to_string()),
-                                    ..SyncProgress::new(direction, SyncStatus::Error)
-                                });
-                                (unit, false)
-                            }
-                        }
+                    running.push(async move {
+                        let result = self.sync_unit(&unit, item, password).await;
+                        (unit, result)
+                    });
+                }
+                let Some((unit, result)) = running.next().await else { break };
+                match result {
+                    Ok(()) => outcomes.succeeded.push(unit),
+                    Err(err) => {
+                        self.emit(SyncProgress {
+                            sync_unit: Some(unit.clone()),
+                            message: Some(err.to_string()),
+                            ..SyncProgress::new(direction, SyncStatus::Error)
+                        });
+                        outcomes.failed.push(unit);
                     }
-                })
-                .buffer_unordered(self.concurrency)
-                .collect()
-                .await;
-            for (unit, ok) in ended {
-                if ok { outcomes.succeeded.push(unit) } else { outcomes.failed.push(unit) }
+                }
             }
         }
         outcomes
@@ -360,20 +375,16 @@ impl SyncExecutor {
         let local = tokio::task::spawn_blocking(move || list_local_keyboard_uids(&user_data))
             .await
             .unwrap_or_default();
-        let items: Vec<(String, &DriveFile)> = listing
-            .canonical_files()
-            .into_iter()
-            .filter_map(|file| {
-                let unit = sync_unit_from_file_name(&file.name)?;
-                should_download_sync_unit(Some(&unit), scope, &local).then_some((unit, file))
-            })
-            .collect();
+        let mut items = Vec::new();
+        for file in listing.canonical_files() {
+            if let Some(unit) = sync_unit_from_file_name(&file.name)
+                && should_download_sync_unit(Some(&unit), scope, &local)
+            {
+                items.push((unit, Work::Merge { file, listing }));
+            }
+        }
         let attempted: Vec<String> = items.iter().map(|(unit, _)| unit.clone()).collect();
-        let outcomes = self
-            .run_units(SyncDirection::Download, items, |unit, file| async move {
-                self.units.merge_with_remote(file, &unit, password, Some(listing)).await
-            })
-            .await;
+        let outcomes = self.run_units(SyncDirection::Download, items, password).await;
         // After the pass, never from a unit's merge: a store whose unit
         // failed keeps its files.
         let (ctx, failed) = (self.units.ctx().clone(), outcomes.failed.clone());
@@ -439,12 +450,22 @@ impl SyncExecutor {
         }
         let listing =
             if mutated { Listing::new(self.units.drive().list_files(None).await?) } else { listing };
-        let items = units.into_iter().map(|unit| (unit, ())).collect();
-        let listing = &listing;
-        Ok(self
-            .run_units(SyncDirection::Upload, items, |unit, ()| async move {
-                self.units.sync_or_upload(&unit, password, listing).await
-            })
-            .await)
+        let items = units.into_iter().map(|unit| (unit, Work::SyncOrUpload { listing: &listing })).collect();
+        Ok(self.run_units(SyncDirection::Upload, items, password).await)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn send<F: std::future::Future + Send>(_: F) {}
+
+    /// A command's future must be `Send` for every lifetime of its borrows;
+    /// a closure held across an await (a stream's `map`) breaks that, and
+    /// only the app's build would tell.
+    #[expect(dead_code, reason = "checked when it compiles")]
+    fn a_pass_is_send(executor: &SyncExecutor, scope: &SyncScope) {
+        send(executor.execute_sync(SyncDirection::Download, scope));
     }
 }
