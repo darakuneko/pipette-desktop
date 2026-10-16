@@ -50,6 +50,7 @@
     "generate:typing-text-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/typing-text-fixtures/vitest.config.ts",
     "generate:active-window-fixtures": "vitest run --config scripts/active-window-fixtures/vitest.config.ts",
     "generate:typing-dataset-fixtures": "vitest run --config scripts/typing-dataset-fixtures/vitest.config.ts record-",
+    "test:fake-drive": "vitest run --config scripts/fake-drive/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
     "doc:guide": "node docs/build-guide.mjs",
