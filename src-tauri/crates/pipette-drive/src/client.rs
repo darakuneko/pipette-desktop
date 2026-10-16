@@ -132,8 +132,12 @@ impl DriveClient {
     /// Deletes every file of `ids`, 5 at a time. A failed delete does not
     /// stop the others; each is logged.
     pub async fn delete_files_by_id(&self, ids: &[String]) -> BulkOutcome {
+        // The requests are made before the stream runs: a closure the
+        // stream held across its awaits would keep the caller's future from
+        // being `Send` for every lifetime (a command's future must be).
+        let deletes: Vec<_> = ids.iter().map(|id| self.delete_file(id)).collect();
         let results: Vec<Result<(), DriveFailure>> =
-            stream::iter(ids).map(|id| self.delete_file(id)).buffered(BULK_CONCURRENCY).collect().await;
+            stream::iter(deletes).buffered(BULK_CONCURRENCY).collect().await;
         let failures = ids.iter().zip(results).filter_map(|(id, result)| {
             let err = result.err()?;
             log::warn!("[google-drive] delete of {id} failed: {err}");
@@ -169,14 +173,17 @@ impl DriveClient {
             .iter()
             .filter_map(|file| Some((file.id.as_str(), trash_file_name(file, now_ms)?)))
             .collect();
-        let results: Vec<Result<Option<DriveFile>, DriveFailure>> = stream::iter(&moves)
-            .map(|(id, name)| {
+        // Made before the stream runs, as in `delete_files_by_id`; each id
+        // is still forgotten before its rename is sent.
+        let renames: Vec<_> = moves
+            .iter()
+            .map(|(id, name)| async move {
                 forget_created(id);
-                self.rename_file(id, name)
+                self.rename_file(id, name).await
             })
-            .buffered(BULK_CONCURRENCY)
-            .collect()
-            .await;
+            .collect();
+        let results: Vec<Result<Option<DriveFile>, DriveFailure>> =
+            stream::iter(renames).buffered(BULK_CONCURRENCY).collect().await;
         let failures = moves.iter().zip(results).filter_map(|((id, _), result)| {
             let err = result.err()?;
             log::warn!("[drive-trash] rename of {id} failed: {err}");
