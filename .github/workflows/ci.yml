@@ -57,6 +57,7 @@ jobs:
           pnpm generate:entry-store-fixtures
           pnpm generate:sync-pending-fixtures
           pnpm generate:keyboard-store-fixtures
+          pnpm generate:pack-store-fixtures
           pnpm generate:hid-fixtures
           pnpm generate:sync-format-fixtures
           pnpm generate:analytics-db-fixtures
