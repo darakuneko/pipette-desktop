@@ -3,11 +3,14 @@
 //! above the SQLite layer (`pipette-typing-analytics-db`): who recorded
 //! the data ([`identity`]), the sync bookkeeping file ([`sync_state`]),
 //! when the cache is rebuilt ([`cache_rebuild`]), the database thread
-//! ([`db_actor`]), startup ([`service`]) and the lock the resets and
-//! deletes hold against the sync passes ([`reset_lock`]).
+//! ([`db_actor`]), startup ([`service`]), the lock the resets and
+//! deletes hold against the sync passes ([`reset_lock`]), and the replay of
+//! a device's day file with its deleted ranges hidden
+//! ([`deleted_ranges_cache`]).
 
 pub mod cache_rebuild;
 pub mod db_actor;
+pub mod deleted_ranges_cache;
 pub mod identity;
 pub mod reset_lock;
 pub mod service;
@@ -15,6 +18,7 @@ pub mod sync_state;
 
 pub use cache_rebuild::{Freshness, ensure_cache_is_fresh};
 pub use db_actor::DbActor;
+pub use deleted_ranges_cache::replay_day_hiding_deleted_ranges;
 pub use identity::{IdentityError, MachineIdentity};
 pub use reset_lock::{Busy, ResetKeyboards, SyncRuntime};
 pub use service::{Ready, RebuildCache, TypingAnalytics};
