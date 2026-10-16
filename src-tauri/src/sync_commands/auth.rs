@@ -15,6 +15,7 @@ use tauri::State;
 use ts_rs::TS;
 
 use super::SyncSecrets;
+use super::result::SyncOperationResult;
 use crate::command_error::CommandError;
 use crate::shell::AuthBrowser;
 
@@ -24,26 +25,6 @@ use crate::shell::AuthBrowser;
 #[ts(export)]
 pub struct SyncAuthStatus {
     authenticated: bool,
-}
-
-/// `SyncOperationResult` of src/shared/types/sync.ts as `wrapIpc`
-/// (src/main/sync/sync-ipc-wrap.ts) answers it: the failure's message, and
-/// the `reason` of a refusal the renderer shows its own message for.
-#[derive(Debug, PartialEq, Eq, Serialize)]
-pub struct SyncOperationResult {
-    success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reason: Option<&'static str>,
-}
-
-impl SyncOperationResult {
-    const SUCCESS: Self = Self { success: true, error: None, reason: None };
-
-    fn failure(error: String, reason: Option<&'static str>) -> Self {
-        Self { success: false, error: Some(error), reason }
-    }
 }
 
 impl From<Result<(), AuthError>> for SyncOperationResult {
@@ -115,8 +96,38 @@ pub async fn sync_auth_sign_out(
 #[cfg(test)]
 mod tests {
     use pipette_sync::account::{ACCOUNT_SWITCH_BUSY_MESSAGE, SIGN_OUT_PASSWORD_CHANGING};
+    use pipette_sync::preflight::Preflight;
+    use pipette_sync_runtime::ValidatedPasswordCheck;
+    use tauri::Manager;
 
     use super::*;
+
+    /// A sign-out forgets the preflight's caches through the sign-in's
+    /// account listener, bumping the sign-out generation once.
+    #[tokio::test]
+    async fn a_sign_out_forgets_the_preflight_caches_once() {
+        let user_data = tempfile::tempdir().unwrap();
+        let app = tauri::test::mock_app();
+        crate::store_commands::sync_pending::manage_without_delayed_writes(app.handle(), user_data.path());
+        super::super::manage_for_tests(app.handle(), user_data.path());
+        app.manage(SyncRuntime::new());
+        super::super::preflight::manage_for_tests(app.handle());
+        let runtime = app.state::<SyncRuntime>().inner().clone();
+        let preflight = Arc::clone(app.state::<Arc<Preflight>>().inner());
+        runtime.credentials().set_validated_password_check(ValidatedPasswordCheck {
+            id: "check".to_owned(),
+            modified_time: "2026-10-01T00:00:00.000Z".to_owned(),
+            password_fingerprint: [0; 32],
+        });
+        let generation = preflight.sync_format_generation();
+
+        let sync = app.state::<SyncSecrets>();
+        let pending = app.state::<PendingStore>();
+        switcher(&sync, &runtime, &pending).sign_out_keeping_pending().await.unwrap();
+
+        assert!(runtime.credentials().validated_password_check().is_none());
+        assert_eq!(preflight.sync_format_generation(), generation + 1);
+    }
 
     #[test]
     fn answers_as_wrap_ipc_does() {

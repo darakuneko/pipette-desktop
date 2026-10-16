@@ -79,7 +79,10 @@ pub fn manage_with<R: Runtime>(app: &AppHandle<R>, drive: Arc<dyn DriveApi>) {
     preflight
         .set_sync_format_status_listener(move |status| emit_all(&handle, SYNC_FORMAT_STATUS_CHANGED, status));
     // What was learned about one account is not used for the next; its
-    // Drive is checked afresh. Weak: the sign-in outlives nothing here.
+    // Drive is checked afresh. This listener is the one place the
+    // preflight's caches are forgotten on a sign-in or sign-out; it runs
+    // inside the account switch (pipette_sync::account), before the switch
+    // ends. Weak: the sign-in outlives nothing here.
     let weak: Weak<Preflight> = Arc::downgrade(&preflight);
     sync.auth.on_account_changed(move || {
         let Some(preflight) = weak.upgrade() else { return };

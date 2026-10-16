@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! `SyncOperationResult` of src/shared/types/sync.ts as `wrapIpc`
 //! (src/main/sync/sync-ipc-wrap.ts) answers it: success, or the failure's
-//! message with the `reason` of a credential refusal the renderer shows
-//! its own message for.
+//! message with the `reason` of a refusal the renderer shows its own
+//! message for (a credential failure, or `syncBusy` from an account
+//! switch).
 
 use pipette_sync::preflight::PreflightError;
 use serde::Serialize;
