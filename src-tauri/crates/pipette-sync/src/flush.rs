@@ -136,17 +136,19 @@ impl Flusher {
     /// `scheduleFlushIfPending`: a flush after `delay` when units are
     /// pending and the app is not quitting, unless one fires no later.
     pub fn schedule_flush_if_pending(&self, delay: Duration) {
-        if !self.inner.pending.has_pending_changes() || self.inner.preflight.runtime().is_quitting() {
-            return;
+        if self.inner.pending.has_pending_changes() {
+            self.schedule_flush(delay);
         }
-        self.schedule_flush(delay);
     }
 
     /// `scheduleFlush`: a flush after `delay`, unless the timer fires no
-    /// later.
+    /// later or the app quits. The quit is checked holding the timer, so a
+    /// timer the quit clears is never armed again after it.
     fn schedule_flush(&self, delay: Duration) {
         let mut timer = self.timer();
-        if timer.task.is_some() && timer.due.is_some_and(|due| due <= Instant::now() + delay) {
+        if self.inner.preflight.runtime().is_quitting()
+            || timer.task.is_some() && timer.due.is_some_and(|due| due <= Instant::now() + delay)
+        {
             return;
         }
         self.arm(&mut timer, delay);
@@ -321,7 +323,7 @@ impl Flusher {
             self.emit(SyncStatus::Success, "Sync complete");
         }
 
-        if pending.has_pending_changes() && !preflight.runtime().is_quitting() {
+        if pending.has_pending_changes() {
             // A unit changed during the pass goes out after the usual
             // debounce; units that only failed wait a polling interval.
             let changed = pending.snapshot_generations().into_iter().any(|(unit, now)| {

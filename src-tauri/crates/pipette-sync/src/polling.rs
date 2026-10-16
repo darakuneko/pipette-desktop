@@ -27,6 +27,7 @@ use pipette_drive::DriveFile;
 use pipette_drive::canonical::Listing;
 use pipette_pack_stores::sync::run_pack_gc_after_pass;
 use pipette_sync_format::drive_names::sync_unit_from_file_name;
+use pipette_sync_runtime::runtime::SyncLockGuard;
 use pipette_sync_runtime::{RemoteMemory, RemoteRevision, SyncDirection, SyncProgress, SyncStatus};
 use tokio::runtime::Handle;
 use tokio::task::AbortHandle;
@@ -46,6 +47,15 @@ use crate::units::{is_analytics_sync_unit, is_run_log_sync_unit};
 /// and the Google token to become available, and for a connect-time
 /// download to take the lock first.
 pub const STARTUP_POLL_DELAY: Duration = Duration::from_secs(15);
+
+/// What an attempt to start a pass did.
+enum Start {
+    Started,
+    /// The sync lock is held.
+    Held,
+    /// Polling stopped since the timer was set.
+    Stopped,
+}
 
 /// What a [`Poller`] is built from.
 pub struct PollDeps {
@@ -77,6 +87,9 @@ struct Inner {
 struct State {
     interval: Option<AbortHandle>,
     first_pass: Option<AbortHandle>,
+    /// Moved on by each stop: a timer task of an earlier start that runs
+    /// on after its abort starts nothing.
+    epoch: u64,
     /// The pass that has not ended yet, by its number.
     in_flight: Option<u64>,
     passes: u64,
@@ -99,6 +112,7 @@ impl Poller {
         if state.interval.is_some() {
             return;
         }
+        let epoch = state.epoch;
         // The times are taken now, not when the tasks first run.
         let now = Instant::now();
         let poller = self.clone();
@@ -107,7 +121,8 @@ impl Poller {
             ticks.set_missed_tick_behavior(MissedTickBehavior::Delay);
             loop {
                 ticks.tick().await;
-                poller.start_tracked_pass();
+                // A tick while a pass holds the lock starts nothing.
+                poller.try_start_pass(epoch, false);
             }
         });
         state.interval = Some(interval.abort_handle());
@@ -115,7 +130,7 @@ impl Poller {
             let poller = self.clone();
             let first = self.inner.deps.handle.spawn(async move {
                 tokio::time::sleep_until(now + delay).await;
-                poller.run_first_pass().await;
+                poller.run_first_pass(epoch).await;
             });
             state.first_pass = Some(first.abort_handle());
         }
@@ -139,6 +154,7 @@ impl Poller {
     /// `stopPolling`: stops the timers; a pass already running runs on.
     pub fn stop_polling(&self) {
         let mut state = self.state();
+        state.epoch += 1;
         for task in [state.interval.take(), state.first_pass.take()].into_iter().flatten() {
             task.abort();
         }
@@ -150,35 +166,55 @@ impl Poller {
     }
 
     /// The delayed first pass: waits out each holder of the sync lock, then
-    /// starts. Dropped with its task when polling stops.
-    async fn run_first_pass(&self) {
+    /// starts, unless polling stopped meanwhile.
+    async fn run_first_pass(&self, epoch: u64) {
         let runtime = self.inner.deps.preflight.runtime();
-        while let Some(pass) = runtime.in_flight_pass() {
-            pass.released().await;
+        loop {
+            match self.try_start_pass(epoch, true) {
+                Start::Started | Start::Stopped => return,
+                Start::Held => {}
+            }
+            match runtime.in_flight_pass() {
+                Some(pass) => pass.released().await,
+                // The last poll pass let the lock go and is ending.
+                None => tokio::task::yield_now().await,
+            }
         }
-        self.state().first_pass = None;
-        self.start_tracked_pass();
     }
 
-    /// `startTrackedPass`: a pass, unless the last one still runs.
-    fn start_tracked_pass(&self) {
-        let number = {
+    /// `startTrackedPass`: a pass of the polling started at `epoch`, unless
+    /// polling stopped since, or the lock is held (by the last pass too).
+    /// The lock is claimed here, in the same step as the checks, so no other
+    /// sync takes it between the wait and the pass. `first` marks the
+    /// delayed first pass, which ends here.
+    fn try_start_pass(&self, epoch: u64, first: bool) -> Start {
+        let (number, lock) = {
             let mut state = self.state();
+            if state.epoch != epoch {
+                return Start::Stopped;
+            }
             if state.in_flight.is_some() {
-                return;
+                return Start::Held;
+            }
+            let Some(lock) = self.inner.deps.preflight.runtime().try_claim_sync_lock(true) else {
+                return Start::Held;
+            };
+            if first {
+                state.first_pass = None;
             }
             state.passes += 1;
             state.in_flight = Some(state.passes);
-            state.passes
+            (state.passes, lock)
         };
         let poller = self.clone();
         self.inner.deps.handle.spawn(async move {
-            poller.poll_for_remote_changes().await;
+            poller.poll_holding(lock).await;
             let mut state = poller.state();
             if state.in_flight == Some(number) {
                 state.in_flight = None;
             }
         });
+        Start::Started
     }
 
     /// Whether a pass runs.
@@ -186,11 +222,17 @@ impl Poller {
         self.state().in_flight.is_some()
     }
 
-    /// `pollForRemoteChanges`: one poll pass.
+    /// `pollForRemoteChanges`: one poll pass, unless the sync lock is held.
     pub async fn poll_for_remote_changes(&self) {
+        if let Some(lock) = self.inner.deps.preflight.runtime().try_claim_sync_lock(true) {
+            self.poll_holding(lock).await;
+        }
+    }
+
+    /// The poll pass holding `_lock`, the sync lock as a waitable holder.
+    async fn poll_holding(&self, _lock: SyncLockGuard) {
         let deps = &self.inner.deps;
         let (preflight, runtime) = (&deps.preflight, deps.preflight.runtime());
-        let Some(_lock) = runtime.try_claim_sync_lock(true) else { return };
 
         if let Some(reason) = preflight.local_sync_block().await {
             return preflight.emit_sync_blocked(SyncDirection::Download, reason);
