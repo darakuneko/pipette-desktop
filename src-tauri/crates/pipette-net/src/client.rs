@@ -102,6 +102,11 @@ impl Limits {
     };
 }
 
+/// The most of a body's declared length allocated up front; a larger body
+/// grows the buffer as it arrives, so a false `Content-Length` does not
+/// reserve memory for bytes that never come.
+const MAX_INITIAL_CAPACITY: u64 = 8 * 1024 * 1024;
+
 /// As many redirects as reqwest's default policy follows.
 const MAX_REDIRECTS: usize = 10;
 
@@ -170,8 +175,8 @@ impl ReqwestClient {
         if declared.is_some_and(|length| length > limit) {
             return Err(too_large(url, limit));
         }
-        // Up to the declared length, never more than the limit up front.
-        let mut body = Vec::with_capacity(usize::try_from(declared.unwrap_or(0)).unwrap_or(0));
+        let capacity = declared.unwrap_or(0).min(MAX_INITIAL_CAPACITY);
+        let mut body = Vec::with_capacity(usize::try_from(capacity).unwrap_or(0));
         while let Some(chunk) = response.chunk().await.map_err(request_error)? {
             if (body.len() + chunk.len()) as u64 > limit {
                 return Err(too_large(url, limit));
