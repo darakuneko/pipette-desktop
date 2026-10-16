@@ -108,10 +108,30 @@ pub(crate) fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
     out.into()
 }
 
+/// Whether `key` is a name [`js_object!`] can write as it is: ASCII letters,
+/// digits, `_` and `$`, not starting with a digit. Such a key is never an
+/// array index (which JavaScript would order first) and never needs an
+/// escape in JSON text.
+pub(crate) const fn is_plain_key(key: &str) -> bool {
+    let bytes = key.as_bytes();
+    if bytes.is_empty() || bytes[0].is_ascii_digit() {
+        return false;
+    }
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if !(b.is_ascii_alphanumeric() || b == b'_' || b == b'$') {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
 /// A struct whose [`ToJs`] value is an object with the given keys, in the
-/// order of the fields. The keys are plain names, never array indexes (which
-/// JavaScript would order first) and never text that needs an escape, so
-/// [`ToJs::write_json`] writes each as it is.
+/// order of the fields. Every key must pass [`is_plain_key`] (checked at
+/// compile time), so [`ToJs::write_json`] writes each as it is and keeps
+/// the order [`ToJs::to_js`] gives.
 macro_rules! js_object {
     (
         $(#[$meta:meta])*
@@ -124,6 +144,10 @@ macro_rules! js_object {
         pub struct $name {
             $($(#[$field_meta])* pub $field: $ty,)+
         }
+
+        const _: () = {
+            $(assert!($crate::js::is_plain_key($key), concat!("not a plain object key: ", $key));)+
+        };
 
         impl $crate::js::ToJs for $name {
             fn to_js(&self) -> pipette_js_json::Value {
@@ -173,3 +197,18 @@ macro_rules! sql_row {
 }
 
 pub(crate) use {js_object, sql_row};
+
+#[cfg(test)]
+mod tests {
+    use super::is_plain_key;
+
+    #[test]
+    fn plain_keys_are_names_without_escapes() {
+        for key in ["minuteTs", "p25", "_id", "$n", "keystrokes"] {
+            assert!(is_plain_key(key), "{key}");
+        }
+        for key in ["", "0", "12", "1a", "a b", "a\"b", "a\\b", "ä", "a-b"] {
+            assert!(!is_plain_key(key), "{key}");
+        }
+    }
+}
