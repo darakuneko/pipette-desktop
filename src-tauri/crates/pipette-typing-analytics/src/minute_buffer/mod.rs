@@ -320,7 +320,7 @@ impl MinuteBuffer {
             entry.typing_test_set.insert(test.clone());
         }
 
-        let (key, action, overlap, poll_gap_ms) = match &event.kind {
+        match &event.kind {
             EventKind::Release { key, duration_ms } => {
                 // A release only adds its duration to the cell: its press
                 // was counted by its own event, possibly in another minute,
@@ -328,11 +328,9 @@ impl MinuteBuffer {
                 entry.cell(key).durations.push(*duration_ms);
                 return;
             }
-            EventKind::Char { .. } => (None, None, None, None),
-            EventKind::Matrix { key, action, overlap, poll_gap_ms } => {
-                (Some(key), *action, *overlap, *poll_gap_ms)
-            }
-        };
+            EventKind::Char { key } => *entry.char_counts.entry(key.clone()).or_insert(0) += 1,
+            EventKind::Matrix { .. } => {}
+        }
 
         if entry.keystrokes > 0 {
             let gap = event.ts - entry.last_event_ms;
@@ -350,12 +348,8 @@ impl MinuteBuffer {
         }
         entry.keystrokes += 1;
 
-        let Some(key) = key else {
-            if let EventKind::Char { key } = &event.kind {
-                *entry.char_counts.entry(key.clone()).or_insert(0) += 1;
-            }
-            return;
-        };
+        let EventKind::Matrix { key, action, overlap, poll_gap_ms } = &event.kind else { return };
+        let (action, overlap) = (*action, *overlap);
         let cell = entry.cell(key);
         // A press is what tells the keycode mapped at the cell now.
         cell.keycode = key.keycode;
@@ -365,7 +359,7 @@ impl MinuteBuffer {
             Some(TapHold::Hold) => cell.hold_count += 1,
             None => {}
         }
-        if let Some(gap) = poll_gap_ms {
+        if let Some(gap) = *poll_gap_ms {
             entry.poll_gaps.push(gap);
         }
         if action == Some(TapHold::Hold) {
