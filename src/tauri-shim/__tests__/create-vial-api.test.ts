@@ -63,7 +63,6 @@ describe('implemented', () => {
     const api = createVialApi(implemented)
     await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
-    await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
   })
 
   it('answers the Hub requests of the language packs as failed', async () => {
@@ -75,10 +74,20 @@ describe('implemented', () => {
     await expect(api.hubDeleteI18nPost('post-1')).resolves.toEqual(failed)
   })
 
+  it('answers the Hub requests of the theme packs as failed', async () => {
+    const api = createVialApi(implemented)
+    const failed = { success: false }
+    await expect(api.themePackHubTimestamps(['post-1'])).resolves.toEqual(failed)
+    await expect(api.hubListThemePosts()).resolves.toEqual(failed)
+    await expect(api.hubDownloadThemePost('post-1')).resolves.toEqual(failed)
+    await expect(api.hubUploadThemePost({ entryId: 'id', pack: {} as never })).resolves.toEqual(failed)
+    await expect(api.hubUpdateThemePost({ postId: 'p', entryId: 'id', pack: {} as never })).resolves.toEqual(failed)
+    await expect(api.hubDeleteThemePost('post-1')).resolves.toEqual(failed)
+  })
+
   it('answers the store calls of connecting a keyboard as a fresh install', async () => {
     const api = createVialApi(implemented)
     await expect(api.typingRunLogList('uid')).resolves.toEqual({ success: true, entries: [] })
-    await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
   })
 
   it('asks the backend for the app config', async () => {

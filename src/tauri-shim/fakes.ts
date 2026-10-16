@@ -14,7 +14,8 @@ import type { VialAPI } from '../shared/types/vial-api'
  *  message (for the key labels, the search's `keyLabels.errorSearchFailed`
  *  and the row actions' `keyLabels.errorGeneric` through `translateError`;
  *  for the language packs, `i18n.errorGeneric` and the `hub.*Failed`
- *  messages through `localizeHubError`). */
+ *  messages through `localizeHubError`; for the theme packs, the messages
+ *  named at their members). */
 const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
@@ -43,8 +44,20 @@ export const fakes = {
   hubUpdateI18nPost: hubUnavailable,
   hubDeleteI18nPost: hubUnavailable,
 
-  // Theme packs.
-  themePackList: () => Promise.resolve({ success: true, data: [] }),
+  // Theme pack Hub. The renderer reads `success` of these answers without a
+  // guard (the freshness check of Hub-linked packs, the Hub tab's search
+  // and preview, and the row actions), so each answers a failure rather
+  // than nothing. Every caller falls back to its own message when `error`
+  // is absent (`themePacks.hubEmpty`, `themePacks.parseError`,
+  // `hub.uploadFailed`, `hub.removeFailed`, and `hub.updateFailed` through
+  // `localizeHubError`); the freshness check and the preview read no
+  // message.
+  themePackHubTimestamps: hubUnavailable,
+  hubListThemePosts: hubUnavailable,
+  hubDownloadThemePost: hubUnavailable,
+  hubUploadThemePost: hubUnavailable,
+  hubUpdateThemePost: hubUnavailable,
+  hubDeleteThemePost: hubUnavailable,
 
   // Key label Hub. The renderer reads the result of each without a guard
   // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers
