@@ -8,6 +8,7 @@ import { cargoTargetTmpDir } from '../fixture-files'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const crateDir = resolve(here, '../../src-tauri/crates/pipette-typing-analytics-db')
+const timeCrateDir = resolve(here, '../../src-tauri/crates/pipette-time')
 
 /** Committed: the day JSONL and what the TypeScript DB layer made of it. */
 export const COMMITTED_FIXTURES_DIR = resolve(crateDir, 'tests/fixtures')
@@ -19,3 +20,7 @@ export const GENERATED_SQL_PATH = resolve(crateDir, 'data/sql.rs')
  *  `bench_dir` in the crate's tests/common/mod.rs resolves the same
  *  directory; the two must change together. */
 export const BENCH_DIR = cargoTargetTmpDir('pipette-typing-analytics-db')
+
+/** Committed: one file per time zone of time-zones.ts with the local days
+ *  JavaScript gives there (tz-local-days.test.ts). */
+export const LOCAL_DAYS_FIXTURES_DIR = resolve(timeCrateDir, 'tests/fixtures/local_days')

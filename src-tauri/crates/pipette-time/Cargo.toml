@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-time"
-description = "JavaScript's Date.prototype.toISOString and Date.parse (the ECMAScript date time string format) for milliseconds since the Unix epoch"
+description = "JavaScript's Date.prototype.toISOString, Date.parse (the ECMAScript date time string format) and local calendar days for milliseconds since the Unix epoch"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,6 +11,18 @@ rust-version.workspace = true
 [dependencies]
 # The JSON values whose dates `date_value_ms` reads (src/js_value.rs).
 pipette-js-json = { path = "../pipette-js-json" }
+# The system time zone and the IANA time zone data for local days
+# (src/local.rs): `TZ` first, as JavaScript reads it, with the data bundled
+# on Windows, which has no copy of its own.
+jiff = "=0.2.38"
+
+[features]
+# Runs a test once per time zone, each in a process of its own
+# (src/test_util.rs).
+test-util = []
+
+[dev-dependencies]
+pipette-time = { path = ".", features = ["test-util"] }
 
 [lints]
 workspace = true
