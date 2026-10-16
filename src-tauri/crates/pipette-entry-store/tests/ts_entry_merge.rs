@@ -51,8 +51,12 @@ fn side_key(side: MergeSide) -> &'static str {
 #[test]
 fn merges_match() {
     let fixture = load("ts_entry_merge.json");
+    let cases = list(get(&fixture, "merges"));
+    // The generator records more than 130 cases; fewer means a truncated
+    // fixture, which would otherwise pass with nothing compared.
+    assert!(cases.len() > 130, "only {} merge cases", cases.len());
     let mut failures = Vec::new();
-    for case in list(get(&fixture, "merges")) {
+    for case in cases {
         let name = text(get(case, "name"));
         let rules = get(case, "hasBody");
         let has_body = |side: MergeSide, e: &Entry| has_body_rule(get(rules, side_key(side)), e);
