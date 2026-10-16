@@ -314,7 +314,13 @@ describe('the fake OAuth endpoints', () => {
     }
     expect(refreshed.access_token).not.toBe(exchanged.access_token)
     expect(refreshed.refresh_token).toBeUndefined()
-    expect(JSON.parse(Buffer.from(refreshed.id_token.split('.')[1], 'base64url').toString('utf8'))).toMatchObject({ sub: 'fake-sub-2' })
+    // The token stays with the account it was issued for; a new sign-in
+    // gets the switched one.
+    expect(JSON.parse(Buffer.from(refreshed.id_token.split('.')[1], 'base64url').toString('utf8'))).toMatchObject({ sub: 'fake-sub-1' })
+    const verifierB = randomBytes(32).toString('base64url')
+    const codeB = (await authorize(verifierB)).searchParams.get('code') ?? ''
+    const signedInB = (await (await token({ grant_type: 'authorization_code', code: codeB, code_verifier: verifierB })).json()) as { id_token: string }
+    expect(JSON.parse(Buffer.from(signedInB.id_token.split('.')[1], 'base64url').toString('utf8'))).toMatchObject({ sub: 'fake-sub-2' })
     expect((await token({ grant_type: 'refresh_token', refresh_token: 'unknown' })).status).toBe(400)
   })
 

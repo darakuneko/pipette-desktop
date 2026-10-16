@@ -127,7 +127,9 @@ interface Context {
   state: DriveState
   account: FakeAccount
   codes: Map<string, { challenge: string; clientId: string }>
-  refreshTokens: Set<string>
+  /** Each refresh token with the account it was issued for: a refresh
+   *  answers that account, as Google does, whatever the account is now. */
+  refreshTokens: Map<string, FakeAccount>
 }
 
 async function handleDrive(ctx: Context, req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
@@ -241,7 +243,7 @@ async function handleToken(ctx: Context, req: IncomingMessage, res: ServerRespon
     }
     ctx.codes.delete(form.get('code') ?? '')
     const refreshToken = `fake-refresh-${randomBytes(8).toString('hex')}`
-    ctx.refreshTokens.add(refreshToken)
+    ctx.refreshTokens.set(refreshToken, { ...ctx.account })
     return sendJson(res, {
       access_token: accessToken,
       expires_in: 3600,
@@ -251,8 +253,9 @@ async function handleToken(ctx: Context, req: IncomingMessage, res: ServerRespon
       id_token: idToken(ctx.account, clientId),
     })
   }
-  if (form.get('grant_type') === 'refresh_token' && ctx.refreshTokens.has(form.get('refresh_token') ?? '')) {
-    return sendJson(res, { access_token: accessToken, expires_in: 3600, token_type: 'Bearer', id_token: idToken(ctx.account, clientId) })
+  const refreshed = form.get('grant_type') === 'refresh_token' ? ctx.refreshTokens.get(form.get('refresh_token') ?? '') : undefined
+  if (refreshed) {
+    return sendJson(res, { access_token: accessToken, expires_in: 3600, token_type: 'Bearer', id_token: idToken(refreshed, clientId) })
   }
   return send(res, 400, JSON.stringify({ error: 'invalid_grant' }))
 }
@@ -270,6 +273,7 @@ async function handleControl(ctx: Context, req: IncomingMessage, res: ServerResp
     case '/__control/reset':
       ctx.state.reset()
       return sendJson(res, {})
+    // The account the next sign-in gets; refresh tokens keep theirs.
     case '/__control/account':
       Object.assign(ctx.account, body as FakeAccount)
       return sendJson(res, {})
@@ -284,7 +288,7 @@ export async function startFakeDrive(options: { port?: number; account?: FakeAcc
     state: new DriveState(),
     account: { ...(options.account ?? DEFAULT_ACCOUNT) },
     codes: new Map(),
-    refreshTokens: new Set(),
+    refreshTokens: new Map(),
   }
   const requests: FakeDrive['requests'] = []
   const server: Server = createServer((req, res) => {
