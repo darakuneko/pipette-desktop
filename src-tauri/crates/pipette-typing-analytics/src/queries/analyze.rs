@@ -28,6 +28,21 @@ fn rejected(family: Family) -> Value {
     }
 }
 
+/// The uid of a [`Family`] read, the device hash a `…ForHash` read names
+/// and where the window and filters start; the handler's answer when it
+/// rejects the uid or the hash.
+pub(super) fn family_target(
+    family: Family,
+    devices: Devices,
+    args: Args<'_>,
+) -> Result<(&str, Option<&str>, usize), Value> {
+    let uid = args.text(0).ok_or_else(|| rejected(family))?;
+    match devices {
+        Devices::All | Devices::Own => Ok((uid, None, 1)),
+        Devices::ForHash => args.text(1).map(|hash| (uid, Some(hash), 2)).ok_or_else(|| rejected(family)),
+    }
+}
+
 /// A [`Family`] read: `(uid[, machineHash][, sinceMs, untilMs][, appScopes,
 /// typingTestScopes, runIdScopes])`. The daily and interval summaries take
 /// no window, the sessions and interval summaries no filters.
@@ -37,14 +52,13 @@ pub(super) fn family(
     args: Args<'_>,
     cx: &Context<'_>,
 ) -> Result<Value, crate::Error> {
-    let Some(uid) = args.text(0) else { return Ok(rejected(family)) };
-    let (hash, rest) = match devices {
-        Devices::All => (None, 1),
-        Devices::Own => (Some(cx.own_hash), 1),
-        Devices::ForHash => match args.text(1) {
-            Some(hash) => (Some(hash), 2),
-            None => return Ok(rejected(family)),
-        },
+    let (uid, named_hash, rest) = match family_target(family, devices, args) {
+        Ok(target) => target,
+        Err(rejected) => return Ok(rejected),
+    };
+    let hash = match devices {
+        Devices::Own => Some(cx.own_hash),
+        Devices::All | Devices::ForHash => named_hash,
     };
     let db = cx.db;
     // The window and the filters after it, for the families that take them.
@@ -71,12 +85,19 @@ pub(super) fn family(
 /// The Electron handler also adds the minute still being recorded; this
 /// build answers the flushed minutes only.
 pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let empty = || Value::Object(Object::new());
-    let Some(uid) = args.text(0) else { return Ok(empty()) };
-    let Some(layer) = args.finite(1).filter(|&l| l >= 0.0) else { return Ok(empty()) };
-    let Some(since) = args.finite(2) else { return Ok(empty()) };
+    let (uid, layer, since) = match heatmap_args(args) {
+        Ok(checked) => checked,
+        Err(rejected) => return Ok(rejected),
+    };
     let cells = cx.db.matrix_counts_since(uid, cx.own_hash, layer, floor_minute(since))?;
     Ok(heatmap(&cells))
+}
+
+/// The `(uid, layer, sinceMs)` of `GetMatrixHeatmap`; an empty heatmap
+/// when the handler rejects one.
+pub(super) fn heatmap_args(args: Args<'_>) -> Result<(&str, f64, f64), Value> {
+    let checked = (|| Some((args.text(0)?, args.finite(1).filter(|&l| l >= 0.0)?, args.finite(2)?)))();
+    checked.ok_or_else(|| Value::Object(Object::new()))
 }
 
 /// `TypingHeatmapByCell`: `{ total, tap, hold }` per `"row,col"`.

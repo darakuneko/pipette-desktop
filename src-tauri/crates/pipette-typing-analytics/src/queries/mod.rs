@@ -112,6 +112,28 @@ impl Query {
         })
     }
 
+    /// The handler's answer to `args` when it rejects them, which needs no
+    /// cache: the handlers check their arguments before they read it.
+    /// `None` when the query reads the cache.
+    pub fn rejection(self, args: &[Value]) -> Option<Value> {
+        let args = Args(args);
+        match self {
+            Self::ListKeyboards => None,
+            Self::Analyze(family, devices) => analyze::family_target(family, devices, args).err(),
+            Self::GetMatrixHeatmap => analyze::heatmap_args(args).err(),
+            Self::ListDeviceInfos => args.text(0).is_none().then_some(Value::Null),
+            Self::ListAppsForRange
+            | Self::ListTypingTestsForRange
+            | Self::GetAppUsageForRange
+            | Self::GetWpmByAppForRange
+            | Self::ListTypingTestRunsForRange => range::app_range_args(args).err(),
+            Self::GetMatrixHeatmapForRange => range::matrix_heatmap_args(args).err(),
+            Self::GetBigramAggregateForRange => range::bigram_args(args).err(),
+            Self::ListRolloverMinutes | Self::ListDurationCells => range::scoped_range_args(args).err(),
+            Self::GetLayoutComparisonForRange => range::layout_comparison_args(args).err(),
+        }
+    }
+
     /// The handler's answer to `args` on the cache of `cx`.
     pub fn answer(self, args: &[Value], cx: &Context<'_>) -> Result<Value, crate::Error> {
         let args = Args(args);

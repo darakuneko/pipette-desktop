@@ -9,8 +9,9 @@
 //! renderer sent and answers the handler's value as JSON text written by
 //! `pipette_js_json` (crates/pipette-typing-analytics, queries/): an
 //! argument of the wrong type gets the handler's answer for it, never a
-//! failed command. Every read but the day file listing waits for the
-//! analytics' initialization and runs on the database thread.
+//! failed command, and gets it without waiting for the cache. Every other
+//! read but the day file listing waits for the analytics' initialization
+//! and runs on the database thread.
 
 use std::sync::Arc;
 
@@ -35,12 +36,18 @@ pub(super) fn js_args<const N: usize>(args: [Arg; N]) -> Vec<Value> {
         .collect()
 }
 
-/// `query`'s answer to `args` on the database thread.
+/// `query`'s answer to `args`: the handler's answer to rejected arguments
+/// without waiting for the analytics, as the Electron handlers check their
+/// arguments before they touch the cache, and any other on the database
+/// thread.
 pub(super) async fn answer(
     analytics: &Arc<TypingAnalytics>,
     query: Query,
     args: Vec<Value>,
 ) -> Result<Response, CommandError> {
+    if let Some(rejected) = query.rejection(&args) {
+        return Ok(Response::new(pipette_js_json::stringify(&rejected)));
+    }
     let ready = analytics.ready().await?;
     let user_data = analytics.user_data().to_path_buf();
     let own_hash = ready.machine_hash.clone();
@@ -287,6 +294,44 @@ mod tests {
             "{}"
         );
         assert_eq!(text(block_on(typing_analytics_list_device_infos(state(), None))), "null");
+    }
+
+    /// The analytics of a cache that needs a rebuild, which this build
+    /// cannot do, so every wait for them fails.
+    fn app_without_a_cache(user_data: &TempDir) -> tauri::App<tauri::test::MockRuntime> {
+        let app = tauri::test::mock_app();
+        manage_with_machine_id(app.handle(), user_data.path(), "machine");
+        app
+    }
+
+    #[test]
+    fn rejected_arguments_get_the_handlers_answers_without_the_cache() {
+        let user_data = TempDir::new().unwrap();
+        let app = app_without_a_cache(&user_data);
+        let state = || app.state::<Arc<TypingAnalytics>>();
+        let uid = || Some(json!("0xA1"));
+        assert_eq!(
+            text(block_on(typing_analytics_list_items(state(), Some(json!("")), None, None, None))),
+            "[]"
+        );
+        let no_hash =
+            block_on(typing_analytics_list_sessions_for_hash(state(), uid(), Some(json!("")), None, None));
+        assert_eq!(text(no_hash), "[]");
+        let peaks =
+            block_on(typing_analytics_get_peak_records_local(state(), None, None, None, None, None, None));
+        assert!(text(peaks).starts_with(r#"{"peakWpm":null"#));
+        let heatmap =
+            block_on(typing_analytics_get_matrix_heatmap(state(), uid(), Some(json!(-1)), Some(json!(0))));
+        assert_eq!(text(heatmap), "{}");
+        assert_eq!(text(block_on(typing_analytics_list_device_infos(state(), Some(json!(1))))), "null");
+
+        assert!(block_on(typing_analytics_list_items(state(), uid(), None, None, None)).is_err());
+        assert!(
+            block_on(typing_analytics_get_matrix_heatmap(state(), uid(), Some(json!(0)), Some(json!(0))))
+                .is_err()
+        );
+        assert!(block_on(typing_analytics_list_device_infos(state(), uid())).is_err());
+        assert!(block_on(typing_analytics_list_keyboards(state())).is_err());
     }
 
     #[test]

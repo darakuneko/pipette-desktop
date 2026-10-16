@@ -223,6 +223,95 @@ mod tests {
     }
 
     #[test]
+    fn rejected_arguments_get_the_handlers_answers_without_the_cache() {
+        let user_data = TempDir::new().unwrap();
+        // No sync state: the cache needs a rebuild, which this build
+        // cannot do, so every wait for the analytics fails.
+        let app = tauri::test::mock_app();
+        manage_with_machine_id(app.handle(), user_data.path(), "machine");
+        let state = || app.state::<Arc<TypingAnalytics>>();
+        let (uid, since, until) = (|| Some(json!("0xA1")), || Some(json!(0)), || Some(json!(60_000)));
+        let apps = |until_ms: Arg| {
+            block_on(typing_analytics_list_apps_for_range(
+                state(),
+                uid(),
+                since(),
+                until_ms,
+                Some(json!("all")),
+            ))
+        };
+        assert_eq!(text(apps(Some(json!(0)))), "[]");
+        assert!(apps(until()).is_err());
+        let bigrams = |view: &str, scope: &str| {
+            block_on(typing_analytics_get_bigram_aggregate_for_range(
+                state(),
+                uid(),
+                since(),
+                until(),
+                Some(json!(view)),
+                Some(json!(scope)),
+                None,
+                None,
+                None,
+                None,
+            ))
+        };
+        assert_eq!(
+            text(bigrams("other", "own")),
+            r#"{"view":"top","entries":[],"truncated":false,"observedRolloverRatio":null}"#
+        );
+        assert_eq!(
+            text(bigrams("slow", "nobody")),
+            r#"{"view":"slow","entries":[],"truncated":false,"observedRolloverRatio":null}"#
+        );
+        assert!(bigrams("slow", "own").is_err());
+        let heatmap = |layer: Arg| {
+            block_on(typing_analytics_get_matrix_heatmap_for_range(
+                state(),
+                uid(),
+                layer,
+                since(),
+                until(),
+                Some(json!("own")),
+                None,
+                None,
+                None,
+            ))
+        };
+        assert_eq!(text(heatmap(None)), "{}");
+        assert!(heatmap(Some(json!(0))).is_err());
+        let rollover = |scope: Arg| {
+            block_on(typing_analytics_list_rollover_minutes(
+                state(),
+                uid(),
+                scope,
+                since(),
+                until(),
+                None,
+                None,
+                None,
+            ))
+        };
+        assert_eq!(text(rollover(None)), "[]");
+        assert!(rollover(Some(json!("all"))).is_err());
+        let compare = |options: &str| {
+            block_on(typing_analytics_get_layout_comparison_for_range(
+                state(),
+                uid(),
+                since(),
+                until(),
+                Some(json!("own")),
+                Some(options.to_owned()),
+                None,
+                None,
+                None,
+            ))
+        };
+        assert_eq!(text(compare("null")), "null");
+        assert!(compare(r#"{"source":{"id":"q","map":{}},"targets":[],"metrics":[]}"#).is_err());
+    }
+
+    #[test]
     fn layout_comparison_options_arrive_as_json_text() {
         let user_data = TempDir::new().unwrap();
         let app = app(&user_data);

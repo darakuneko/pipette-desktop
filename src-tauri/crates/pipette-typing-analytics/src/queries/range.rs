@@ -18,7 +18,7 @@ use crate::layout_comparison;
 
 /// The checked `(uid, sinceMs, untilMs, scope)` of a range handler: a
 /// non-empty uid, finite bounds with `until` above `since`, a scope.
-struct Range<'a> {
+pub(super) struct Range<'a> {
     uid: &'a str,
     since: f64,
     until: f64,
@@ -32,12 +32,21 @@ fn range<'a>(args: Args<'a>, uid: usize, since: usize, until: usize, scope: usiz
     Some(Range { uid, since, until, scope: DeviceScope::parse(args.get(scope))? })
 }
 
+/// The checked `(uid, sinceMs, untilMs, scope)` of the Monitor App lists;
+/// an empty list when the handler rejects one.
+pub(super) fn app_range_args(args: Args<'_>) -> Result<Range<'_>, Value> {
+    range(args, 0, 1, 2, 3).ok_or_else(empty_list)
+}
+
 /// `ListAppsForRange` / `ListTypingTestsForRange` / `GetAppUsageForRange` /
 /// `GetWpmByAppForRange` `(uid, sinceMs, untilMs, scope)` and
 /// `ListTypingTestRunsForRange` with `typingTestScopes` after them
 /// (`parseAppRangeArgs`): the window widened to whole minutes.
 pub(super) fn app_range(query: Query, args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let Some(r) = range(args, 0, 1, 2, 3) else { return Ok(empty_list()) };
+    let r = match app_range_args(args) {
+        Ok(r) => r,
+        Err(rejected) => return Ok(rejected),
+    };
     let hash = r.scope.machine_hash(cx.own_hash);
     let (since, until) = (floor_minute(r.since), ceil_minute(r.until));
     let aggregate = match query {
@@ -56,9 +65,10 @@ pub(super) fn app_range(query: Query, args: Args<'_>, cx: &Context<'_>) -> Resul
 /// `GetMatrixHeatmapForRange(uid, layer, sinceMs, untilMs, scope, …filters)`:
 /// the window widened to whole minutes.
 pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let empty = || Value::Object(Object::new());
-    let Some(r) = range(args, 0, 2, 3, 4) else { return Ok(empty()) };
-    let Some(layer) = args.finite(1).filter(|&l| l >= 0.0) else { return Ok(empty()) };
+    let (r, layer) = match matrix_heatmap_args(args) {
+        Ok(checked) => checked,
+        Err(rejected) => return Ok(rejected),
+    };
     let hash = r.scope.machine_hash(cx.own_hash);
     let cells = cx.db.matrix_counts_in_range(
         r.uid,
@@ -71,6 +81,13 @@ pub(super) fn matrix_heatmap(args: Args<'_>, cx: &Context<'_>) -> Result<Value, 
     Ok(heatmap(&cells))
 }
 
+/// The window and the layer of `GetMatrixHeatmapForRange`; an empty
+/// heatmap when the handler rejects one.
+pub(super) fn matrix_heatmap_args(args: Args<'_>) -> Result<(Range<'_>, f64), Value> {
+    let checked = (|| Some((range(args, 0, 2, 3, 4)?, args.finite(1).filter(|&l| l >= 0.0)?)))();
+    checked.ok_or_else(|| Value::Object(Object::new()))
+}
+
 /// The checked arguments of the scoped handlers (`parseScopedRangeArgs`):
 /// the window as sent, the device hash and the filters.
 struct Scoped<'a> {
@@ -81,16 +98,14 @@ struct Scoped<'a> {
     filters: ScopeFilters,
 }
 
-fn scoped<'a>(args: Args<'a>, positions: [usize; 4], filters: usize, cx: &Context<'_>) -> Option<Scoped<'a>> {
-    let [uid, since, until, scope] = positions;
-    let r = range(args, uid, since, until, scope)?;
-    Some(Scoped {
-        uid: r.uid,
-        hash: r.scope.machine_hash(cx.own_hash),
-        since: r.since,
-        until: r.until,
-        filters: args.filters(filters),
-    })
+fn scoped<'a>(r: Range<'a>, filters: ScopeFilters, cx: &Context<'_>) -> Scoped<'a> {
+    Scoped { uid: r.uid, hash: r.scope.machine_hash(cx.own_hash), since: r.since, until: r.until, filters }
+}
+
+/// The checked `(uid, scope, sinceMs, untilMs)` of `ListRolloverMinutes`
+/// and `ListDurationCells`; an empty list when the handler rejects one.
+pub(super) fn scoped_range_args(args: Args<'_>) -> Result<Range<'_>, Value> {
+    range(args, 0, 2, 3, 1).ok_or_else(empty_list)
 }
 
 /// The bigram view's answer without entries.
@@ -130,17 +145,29 @@ impl BigramOptions {
     }
 }
 
+/// The view and the window of `GetBigramAggregateForRange`; the view's
+/// answer without entries when the handler rejects one (`top`'s for an
+/// unknown view).
+pub(super) fn bigram_args(args: Args<'_>) -> Result<(&'static str, Range<'_>), Value> {
+    let view = match args.get(3) {
+        Value::String(v) if v == "top" => "top",
+        Value::String(v) if v == "slow" => "slow",
+        _ => return Err(empty_bigrams("top")),
+    };
+    let r = range(args, 0, 1, 2, 4).ok_or_else(|| empty_bigrams(view))?;
+    Ok((view, r))
+}
+
 /// `GetBigramAggregateForRange(uid, sinceMs, untilMs, view, scope, options,
 /// …filters)`: the n-grams of the window ranked by count (`top`) or by
 /// average interval (`slow`), whether more ids than the limit exist, and
 /// the rollover ratio (null for trigrams).
 pub(super) fn bigram_aggregate(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let view = match args.get(3) {
-        Value::String(v) if v == "top" => "top",
-        Value::String(v) if v == "slow" => "slow",
-        _ => return Ok(empty_bigrams("top")),
+    let (view, r) = match bigram_args(args) {
+        Ok(checked) => checked,
+        Err(rejected) => return Ok(rejected),
     };
-    let Some(s) = scoped(args, [0, 1, 2, 4], 6, cx) else { return Ok(empty_bigrams(view)) };
+    let s = scoped(r, args.filters(6), cx);
     let options = BigramOptions::parse(args.get(5));
     let rows =
         cx.db.ngram_minutes_in_range(options.gram, s.uid, s.hash.as_deref(), s.since, s.until, &s.filters)?;
@@ -159,16 +186,31 @@ pub(super) fn bigram_aggregate(args: Args<'_>, cx: &Context<'_>) -> Result<Value
 
 /// `ListRolloverMinutes(uid, scope, sinceMs, untilMs, …filters)`.
 pub(super) fn rollover_minutes(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let Some(s) = scoped(args, [0, 2, 3, 1], 4, cx) else { return Ok(empty_list()) };
+    let s = match scoped_range_args(args) {
+        Ok(r) => scoped(r, args.filters(4), cx),
+        Err(rejected) => return Ok(rejected),
+    };
     Ok(js(cx.db.rollover_minutes(s.uid, s.hash.as_deref(), s.since, s.until, &s.filters)?))
 }
 
 /// `ListDurationCells(uid, scope, sinceMs, untilMs, …filters)`: the
 /// keypress durations of the window, one total per cell and layer.
 pub(super) fn duration_cells(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let Some(s) = scoped(args, [0, 2, 3, 1], 4, cx) else { return Ok(empty_list()) };
+    let s = match scoped_range_args(args) {
+        Ok(r) => scoped(r, args.filters(4), cx),
+        Err(rejected) => return Ok(rejected),
+    };
     let rows = cx.db.matrix_duration_cells(s.uid, s.hash.as_deref(), s.since, s.until, &s.filters)?;
     Ok(Value::Array(aggregate_duration_totals(&rows).iter().map(duration_cell).collect()))
+}
+
+/// The window and the options of `GetLayoutComparisonForRange`; null when
+/// the handler rejects one.
+pub(super) fn layout_comparison_args(
+    args: Args<'_>,
+) -> Result<(Range<'_>, layout_comparison::Options), Value> {
+    let checked = (|| Some((range(args, 0, 1, 2, 3)?, layout_comparison::parse_options(args.get(4))?)))();
+    checked.ok_or(Value::Null)
 }
 
 /// `GetLayoutComparisonForRange(uid, sinceMs, untilMs, scope, options,
@@ -177,8 +219,10 @@ pub(super) fn duration_cells(args: Args<'_>, cx: &Context<'_>) -> Result<Value, 
 /// (only this device saves them); the counts are layer 0's for the scope,
 /// over the window widened to whole minutes.
 pub(super) fn layout_comparison(args: Args<'_>, cx: &Context<'_>) -> Result<Value, crate::Error> {
-    let Some(r) = range(args, 0, 1, 2, 3) else { return Ok(Value::Null) };
-    let Some(options) = layout_comparison::parse_options(args.get(4)) else { return Ok(Value::Null) };
+    let (r, options) = match layout_comparison_args(args) {
+        Ok(checked) => checked,
+        Err(rejected) => return Ok(rejected),
+    };
     let snapshot = get_keymap_snapshot_for_range(cx.user_data, r.uid, cx.own_hash, r.since, r.until)?;
     if matches!(snapshot, Value::Null) {
         return Ok(Value::Null);
