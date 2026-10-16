@@ -4,7 +4,8 @@
 //! ([`key_account`]), so another userData directory has a key of its own.
 //!
 //! Every operation on the entry (read, create, delete) runs one at a time
-//! under one lock, and "missing, so create" happens inside it: two creations
+//! under one lock per account name in the process, and "missing, so
+//! create" happens inside it: two creations
 //! at once would otherwise store two keys, and the files written with the
 //! first would no longer open. A key read in time is kept in memory for the
 //! rest of the process (zeroed when dropped). A key store that fails is not
@@ -17,9 +18,10 @@
 //! where the next call finds it; nothing that follows the call runs on its
 //! late result. The quit sequence never waits for such a thread.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
 use std::time::Duration;
 
 use sha2::{Digest, Sha256};
@@ -44,12 +46,26 @@ pub fn key_account(user_data: &Path) -> String {
     format!("local-auth-key/{}", &hex::encode(digest)[..16])
 }
 
+/// The lock of the key store entry of `account`, shared by every
+/// [`MasterKey`] of that account in the process.
+fn entry_lock(account: &str) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<String, Weak<Mutex<()>>>>> = OnceLock::new();
+    let mut locks = LOCKS.get_or_init(Default::default).lock().unwrap_or_else(PoisonError::into_inner);
+    locks.retain(|_, lock| lock.strong_count() > 0);
+    if let Some(lock) = locks.get(account).and_then(Weak::upgrade) {
+        return lock;
+    }
+    let lock = Arc::new(Mutex::new(()));
+    locks.insert(account.to_owned(), Arc::downgrade(&lock));
+    lock
+}
+
 /// The master key of one userData directory.
 pub struct MasterKey {
     keystore: Arc<dyn Keystore>,
     account: String,
     /// Held by the thread of each key store call, so the calls on the entry
-    /// run one at a time, in the order they take it.
+    /// run one at a time, in the order they take it ([`entry_lock`]).
     entry_lock: Arc<Mutex<()>>,
     cached: Mutex<Option<Arc<Key>>>,
     /// Advanced by a delete, so a read that started before it does not
@@ -73,9 +89,9 @@ impl MasterKey {
 
     pub fn with_timeout(keystore: Arc<dyn Keystore>, account: String, timeout: Duration) -> Self {
         Self {
+            entry_lock: entry_lock(&account),
             keystore,
             account,
-            entry_lock: Arc::new(Mutex::new(())),
             cached: Mutex::new(None),
             cache_generation: AtomicU64::new(0),
             timeout,
@@ -209,10 +225,14 @@ mod tests {
     use super::*;
     use crate::keystore::MemoryKeystore;
 
-    const ACCOUNT: &str = "local-auth-key/0123456789abcdef";
+    /// An account of the test's own: the entry locks are per account in
+    /// the process, and the tests run in parallel.
+    fn account(test: &str) -> String {
+        format!("local-auth-key/test-{test}")
+    }
 
-    fn master(keystore: &Arc<MemoryKeystore>) -> MasterKey {
-        MasterKey::with_timeout(keystore.clone(), ACCOUNT.to_owned(), Duration::from_millis(200))
+    fn master_for(keystore: &Arc<MemoryKeystore>, test: &str) -> MasterKey {
+        MasterKey::with_timeout(keystore.clone(), account(test), Duration::from_millis(200))
     }
 
     #[test]
@@ -232,10 +252,10 @@ mod tests {
     #[tokio::test]
     async fn creates_one_key_and_reads_it_back_from_memory() {
         let keystore = Arc::new(MemoryKeystore::default());
-        let master = master(&keystore);
+        let master = master_for(&keystore, "creates_one_key_and_reads_it_back_from_memory");
         assert!(master.read().await.unwrap().is_none());
         let key = master.read_or_create().await.unwrap();
-        assert_eq!(keystore.secret(ACCOUNT).as_deref(), Some(key.as_slice()));
+        assert_eq!(keystore.secret(master.account()).as_deref(), Some(key.as_slice()));
         let calls = keystore.calls();
         assert_eq!(*master.read().await.unwrap().unwrap(), *key);
         assert_eq!(*master.read_or_create().await.unwrap(), *key);
@@ -245,33 +265,60 @@ mod tests {
     #[tokio::test]
     async fn concurrent_creations_store_a_single_key() {
         let keystore = Arc::new(MemoryKeystore::default());
-        let first = master(&keystore);
-        let second = master(&keystore);
-        let (a, b) = tokio::join!(first.read_or_create(), second.read_or_create());
+        let account = account("concurrent_creations_store_a_single_key");
+        let first = MasterKey::with_timeout(keystore.clone(), account.clone(), Duration::from_secs(5));
+        let second = MasterKey::with_timeout(keystore.clone(), account.clone(), Duration::from_secs(5));
+        // The first creation waits in the key store while the second starts:
+        // the second must wait for it, not read "missing" too.
+        keystore.block();
+        let (a, b) = tokio::join!(first.read_or_create(), async {
+            while keystore.calls() == 0 {
+                tokio::task::yield_now().await;
+            }
+            let second_create = second.read_or_create();
+            tokio::pin!(second_create);
+            let early = tokio::time::timeout(Duration::from_millis(50), &mut second_create).await;
+            assert!(early.is_err(), "the second creation must wait for the first");
+            assert_eq!(keystore.calls(), 1);
+            keystore.release();
+            second_create.await
+        });
         assert_eq!(*a.unwrap(), *b.unwrap());
+        assert_eq!(keystore.secret(&account).as_deref(), Some(a_slice(&first).await.as_slice()));
+    }
+
+    async fn a_slice(master: &MasterKey) -> Vec<u8> {
+        master.read().await.unwrap().unwrap().to_vec()
     }
 
     #[tokio::test]
     async fn uses_an_existing_key() {
         let keystore = Arc::new(MemoryKeystore::default());
-        keystore.insert(ACCOUNT, &[7; KEY_LEN]);
-        assert_eq!(*master(&keystore).read_or_create().await.unwrap(), Zeroizing::new([7; KEY_LEN]));
+        keystore.insert(&account("uses_an_existing_key"), &[7; KEY_LEN]);
+        assert_eq!(
+            *master_for(&keystore, "uses_an_existing_key").read_or_create().await.unwrap(),
+            Zeroizing::new([7; KEY_LEN])
+        );
     }
 
     #[tokio::test]
     async fn an_entry_that_holds_no_key_reads_as_missing_and_is_replaced_on_create() {
         let keystore = Arc::new(MemoryKeystore::default());
-        keystore.insert(ACCOUNT, b"short");
-        let master = master(&keystore);
+        keystore.insert(
+            &account("an_entry_that_holds_no_key_reads_as_missing_and_is_replaced_on_create"),
+            b"short",
+        );
+        let master =
+            master_for(&keystore, "an_entry_that_holds_no_key_reads_as_missing_and_is_replaced_on_create");
         assert!(master.read().await.unwrap().is_none());
         let key = master.read_or_create().await.unwrap();
-        assert_eq!(keystore.secret(ACCOUNT).as_deref(), Some(key.as_slice()));
+        assert_eq!(keystore.secret(master.account()).as_deref(), Some(key.as_slice()));
     }
 
     #[tokio::test]
     async fn an_unavailable_key_store_is_asked_again_on_the_next_call() {
         let keystore = Arc::new(MemoryKeystore::default());
-        let master = master(&keystore);
+        let master = master_for(&keystore, "an_unavailable_key_store_is_asked_again_on_the_next_call");
         keystore.set_unavailable(true);
         assert!(matches!(master.read_or_create().await, Err(KeystoreError::Unavailable(_))));
         assert!(!master.available().await);
@@ -283,7 +330,7 @@ mod tests {
     #[tokio::test]
     async fn a_key_in_memory_survives_a_key_store_that_becomes_unavailable() {
         let keystore = Arc::new(MemoryKeystore::default());
-        let master = master(&keystore);
+        let master = master_for(&keystore, "a_key_in_memory_survives_a_key_store_that_becomes_unavailable");
         let key = master.read_or_create().await.unwrap();
         keystore.set_unavailable(true);
         assert_eq!(*master.read().await.unwrap().unwrap(), *key);
@@ -293,7 +340,8 @@ mod tests {
     #[tokio::test]
     async fn a_call_past_the_time_limit_is_given_up_and_its_late_key_is_not_kept() {
         let keystore = Arc::new(MemoryKeystore::default());
-        let master = master(&keystore);
+        let master =
+            master_for(&keystore, "a_call_past_the_time_limit_is_given_up_and_its_late_key_is_not_kept");
         keystore.block();
         assert_eq!(master.read_or_create().await.err(), Some(KeystoreError::TimedOut));
         keystore.release();
@@ -301,7 +349,7 @@ mod tests {
         // so the next call reads the stored key from the key store.
         let late = tokio::time::timeout(Duration::from_secs(5), async {
             loop {
-                if let Some(secret) = keystore.secret(ACCOUNT) {
+                if let Some(secret) = keystore.secret(master.account()) {
                     return secret;
                 }
                 tokio::time::sleep(Duration::from_millis(5)).await;
@@ -317,10 +365,10 @@ mod tests {
     #[tokio::test]
     async fn delete_removes_the_key_from_the_key_store_and_memory() {
         let keystore = Arc::new(MemoryKeystore::default());
-        let master = master(&keystore);
+        let master = master_for(&keystore, "delete_removes_the_key_from_the_key_store_and_memory");
         master.read_or_create().await.unwrap();
         master.delete().await.unwrap();
-        assert_eq!(keystore.secret(ACCOUNT), None);
+        assert_eq!(keystore.secret(master.account()), None);
         assert!(master.read().await.unwrap().is_none());
     }
 }

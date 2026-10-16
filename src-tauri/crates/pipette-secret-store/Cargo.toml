@@ -19,7 +19,10 @@ test-util = []
 
 [dependencies]
 # The files of local/auth/: AES-256-GCM, the version the sync format uses.
-aes-gcm = { version = "=0.10.3", default-features = false, features = ["aes", "alloc"] }
+# "zeroize" here and on aes: the cipher's copy of the master key (the AES
+# key schedule) is zeroed when the cipher is dropped, as the key itself is.
+aes-gcm = { version = "=0.10.3", default-features = false, features = ["aes", "alloc", "zeroize"] }
+aes = { version = "=0.8.4", default-features = false, features = ["zeroize"] }
 # The nonce of each write and the master key, from the OS.
 getrandom = "=0.3.4"
 hex = "=0.4.3"

@@ -27,6 +27,7 @@ dependencies = [
  "cfg-if",
  "cipher",
  "cpufeatures",
+ "zeroize",
 ]
 
 [[package]]
@@ -41,6 +42,7 @@ dependencies = [
  "ctr",
  "ghash",
  "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -3103,6 +3105,7 @@ version = "0.0.0"
 name = "pipette-secret-store"
 version = "0.0.0"
 dependencies = [
+ "aes",
  "aes-gcm",
  "getrandom 0.3.4",
  "hex",
