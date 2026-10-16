@@ -348,6 +348,7 @@ async fn passes_match_typescript() {
             concurrency: 1,
             password: false,
             marker: false,
+            store_backfill: false,
         };
         let world = World::with(options, |root| {
             for (path, content) in &tree {

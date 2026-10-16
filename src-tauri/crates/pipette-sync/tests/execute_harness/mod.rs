@@ -26,6 +26,7 @@ use pipette_sync::execute::{
 };
 use pipette_sync::format::{SYNC_FORMAT_VERSION, marker_content};
 use pipette_sync::merge::{MergeEvents, PackKind};
+use pipette_sync::meta_backfill::StoreMetaBackfill;
 use pipette_sync::preflight::{BoxFuture, Preflight, PreflightDeps, PreflightError};
 use pipette_sync::scope::SyncScope;
 use pipette_sync_format::Envelope;
@@ -223,11 +224,14 @@ pub struct Options {
     pub password: bool,
     /// Seeds this app's sync-format marker, so a pass creates none.
     pub marker: bool,
+    /// Runs the keyboard-name backfill of the app ([`StoreMetaBackfill`])
+    /// instead of [`FakeBackfill`].
+    pub store_backfill: bool,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self { codec: None, concurrency: 10, password: true, marker: true }
+        Self { codec: None, concurrency: 10, password: true, marker: true, store_backfill: false }
     }
 }
 
@@ -294,7 +298,7 @@ impl World {
         let applied = Arc::new(Applied::default());
         let codec = options.codec.clone().unwrap_or_else(|| Arc::new(PlainCodec));
         let units = Arc::new(UnitSync::new(UnitSyncDeps {
-            drive: client,
+            drive: client.clone(),
             runtime: runtime.clone(),
             ctx: ctx.clone(),
             ops: ops.clone(),
@@ -303,13 +307,18 @@ impl World {
         }));
         let account = Arc::new(FakeAccount::default());
         let backfill = Arc::new(FakeBackfill::default());
+        let pass_backfill: Arc<dyn KeyboardMetaBackfill> = if options.store_backfill {
+            Arc::new(StoreMetaBackfill { ctx: ctx.clone(), drive: client, events: applied.clone() })
+        } else {
+            backfill.clone()
+        };
         let hooks = Arc::new(RecordingHooks::default());
         let executor = SyncExecutor::new(ExecuteDeps {
             preflight: preflight.clone(),
             units: units.clone(),
             pending: pending.clone(),
             account: account.clone(),
-            backfill: backfill.clone(),
+            backfill: pass_backfill,
             hooks: hooks.clone(),
         })
         .with_concurrency(options.concurrency);

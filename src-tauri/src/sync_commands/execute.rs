@@ -11,13 +11,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use pipette_drive::canonical::Listing;
 use pipette_keyboard_stores::StoreContext;
 use pipette_sync::codec::EnvelopeCrypto;
 use pipette_sync::dispatch::{UnitSync, UnitSyncDeps};
-use pipette_sync::execute::{ExecuteDeps, KeyboardMetaBackfill, PassHooks, SyncExecuteResult, SyncExecutor};
+use pipette_sync::execute::{ExecuteDeps, PassHooks, SyncExecuteResult, SyncExecutor};
 use pipette_sync::merge::{MergeEvents, PackKind};
-use pipette_sync::preflight::{BoxFuture, Preflight, PreflightError};
+use pipette_sync::meta_backfill::StoreMetaBackfill;
+use pipette_sync::preflight::{Preflight, PreflightError};
 use pipette_sync::scope::SyncScope;
 use pipette_sync_pending::PendingStore;
 use pipette_sync_runtime::{SyncDirection, SyncProgress, SyncStatus};
@@ -104,16 +104,6 @@ impl<'a> From<&'a SyncProgress> for ProgressPayload<'a> {
     }
 }
 
-/// The keyboard-name backfill of a download of `'all'`: names nothing
-/// until the keyboard names' sync provides it.
-struct NoBackfill;
-
-impl KeyboardMetaBackfill for NoBackfill {
-    fn backfill<'a>(&'a self, _: &'a str, _: &'a Listing) -> BoxFuture<'a, Result<usize, String>> {
-        Box::pin(std::future::ready(Ok(0)))
-    }
-}
-
 /// The flush and the polling a pass hands work to: none runs yet, so the
 /// pending units wait for the next pass.
 struct NoTriggers;
@@ -132,20 +122,23 @@ impl PassHooks for NoTriggers {
 pub fn manage<R: Runtime>(app: &AppHandle<R>) {
     let preflight = Arc::clone(app.state::<Arc<Preflight>>().inner());
     let runtime = preflight.runtime().clone();
+    let ctx = app.state::<StoreContext>().inner().clone();
+    let events: Arc<dyn MergeEvents> = Arc::new(AppMergeEvents(app.clone()));
     let units = Arc::new(UnitSync::new(UnitSyncDeps {
         drive: preflight.drive().clone(),
         runtime: runtime.clone(),
-        ctx: app.state::<StoreContext>().inner().clone(),
+        ctx: ctx.clone(),
         ops: Arc::clone(app.state::<Arc<DataOps>>().inner()),
-        events: Arc::new(AppMergeEvents(app.clone())),
+        events: Arc::clone(&events),
         codec: Arc::new(EnvelopeCrypto),
     }));
+    let backfill = StoreMetaBackfill { ctx, drive: preflight.drive().clone(), events };
     let executor = SyncExecutor::new(ExecuteDeps {
         preflight,
         units: Arc::clone(&units),
         pending: app.state::<PendingStore>().inner().clone(),
         account: Arc::clone(&app.state::<SyncSecrets>().auth) as _,
-        backfill: Arc::new(NoBackfill),
+        backfill: Arc::new(backfill),
         hooks: Arc::new(NoTriggers),
     });
     let handle = app.clone();

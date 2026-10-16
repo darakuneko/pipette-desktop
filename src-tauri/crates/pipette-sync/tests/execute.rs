@@ -14,12 +14,14 @@ mod preflight_harness;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use execute_harness::{Options, World, favorite_bundle, seed_favorites, write};
+use execute_harness::{Options, PASSWORD, World, favorite_bundle, seed_favorites, write};
 use pipette_drive::fake::DriveOp;
 use pipette_sync::execute::{POLL_INTERVAL, SkipReason, SyncExecuteResult};
 use pipette_sync::password::guard::SyncBlockReason;
 use pipette_sync::preflight::PreflightError;
 use pipette_sync::scope::SyncScope;
+use pipette_sync_format::crypto::encrypt;
+use pipette_sync_format::drive_names::drive_file_name;
 use pipette_sync_runtime::{SyncCredentialFailureReason, SyncDirection, SyncStatus};
 use preflight_harness::Stored;
 
@@ -326,6 +328,42 @@ async fn a_download_of_all_names_the_keyboards_the_names_lack() {
     assert_eq!(world.pending_units(), ["meta/keyboard-names"]);
     assert_eq!(world.hooks.0.lock().unwrap().as_slice(), ["flush None"]);
     assert_eq!(world.pending.owner().map(|o| o.to_string_lossy().into_owned()).as_deref(), Some("sub-a"));
+}
+
+#[tokio::test]
+async fn a_download_of_all_names_a_keyboard_from_its_snapshots_on_drive() {
+    let world = World::with(Options { store_backfill: true, ..Options::default() }, |_| {}).await;
+    *world.account.0.lock().unwrap() = Some("sub-a".into());
+    // A keyboard with no local directory: the download of 'all' skips its
+    // units, so the backfill opens its snapshots bundle on Drive.
+    let unit = format!("keyboards/{UID}/snapshots");
+    let filename = "Remote Board_2026-04-16T10-00-00.000Z.pipette";
+    let bundle = format!(
+        r#"{{"type":"layout","key":"{UID}","index":{{"uid":"{UID}","entries":[{{"id":"s","label":"","filename":"{filename}","savedAt":"{T}"}}]}},"files":{{}}}}"#
+    );
+    let envelope = encrypt(&bundle, PASSWORD, &unit).unwrap();
+    world.drive.seed(&drive_file_name(&unit), &serde_json::to_string(&envelope).unwrap()).await;
+
+    assert_eq!(world.download(SyncScope::All).await, SyncExecuteResult::Completed);
+
+    let names = world.read("sync/meta/keyboard-names.json").unwrap();
+    let names: serde_json::Value = serde_json::from_str(&names).unwrap();
+    let entries = names["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), 1, "{names}");
+    assert_eq!(entries[0]["uid"], UID);
+    assert_eq!(entries[0]["deviceName"], "Remote Board");
+    assert!(world.applied.0.lock().unwrap().iter().any(|unit| unit == "meta/keyboard-names"));
+    assert_eq!(world.pending_units(), ["meta/keyboard-names"]);
+    assert_eq!(world.hooks.0.lock().unwrap().as_slice(), ["flush None"]);
+    assert_eq!(world.pending.owner().map(|o| o.to_string_lossy().into_owned()).as_deref(), Some("sub-a"));
+
+    // A keyboard the names already have is not named again.
+    let generation = world.pending.pending_generation_of("meta/keyboard-names");
+    world.pending.settle("meta/keyboard-names", generation);
+    world.hooks.0.lock().unwrap().clear();
+    world.download(SyncScope::All).await;
+    assert!(world.pending_units().is_empty());
+    assert!(world.hooks.0.lock().unwrap().is_empty());
 }
 
 // --- Uploads ---
