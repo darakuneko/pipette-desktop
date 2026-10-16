@@ -179,6 +179,9 @@ mod golden {
         }
     }
 
+    /// The recorder runs with `Date` faked to a fixed time
+    /// (scripts/sync-fixtures/setup.ts sets `FIXED_NOW` of harness.ts) and
+    /// records it as `now`, so `expiresAt` is `now` plus `expires_in`.
     #[test]
     fn stores_the_token_json_of_electron() {
         let fixture = fixture();
