@@ -61,10 +61,16 @@ jobs:
 
       # The step above builds pipette-net with the endpoint variables of the
       # development tools; without them, as in a release build, the
-      # variables must change nothing.
+      # variables must change nothing. The test exists only without the
+      # url-override feature, so a build that turns the feature on runs
+      # nothing here: require that it ran.
       - name: Test the Google endpoints without the development tools
         working-directory: src-tauri
-        run: cargo test -p pipette-net --test endpoints
+        shell: bash
+        run: |
+          output=$(cargo test -p pipette-net --test endpoints -- --exact a_release_build_ignores_the_variables)
+          echo "$output"
+          grep -q 'test result: ok\. 1 passed' <<< "$output"
 
       # The Node fake Drive passes the conformance cases the in-memory Drive
       # of pipette-drive passes (in the step above), and the harness of the
