@@ -14,6 +14,10 @@
 //!   rename, and the sync must work either way;
 //! - an unknown id is 404; [`InMemoryDrive::inject`] makes the next
 //!   requests fail with a status of the test's choosing.
+//!
+//! It answers the typed results of [`DriveApi`], so it has no `fields`
+//! parameter to model; the Node fake checks the `fields` of each request
+//! (scripts/fake-drive/conformance.test.ts).
 
 use std::collections::VecDeque;
 use std::sync::{Mutex, MutexGuard, PoisonError};

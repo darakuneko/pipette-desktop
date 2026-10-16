@@ -71,8 +71,11 @@ function sendJson(res: ServerResponse, value: unknown): void {
   send(res, 200, JSON.stringify(value))
 }
 
-/** The top-level fields a response is limited to (`fields=id,modifiedTime`). */
-function pickFields(file: StoredFile, fields: string | null): Record<string, string> {
+/** The fields of a file a response has when the request names none. */
+const DEFAULT_FILE_FIELDS = ['kind', 'id', 'name', 'mimeType']
+
+/** `file` limited to `wanted`, every field when null. */
+function pickFields(file: StoredFile, wanted: readonly string[] | null): Record<string, string> {
   const all: Record<string, string> = {
     kind: 'drive#file',
     id: file.id,
@@ -81,8 +84,52 @@ function pickFields(file: StoredFile, fields: string | null): Record<string, str
     modifiedTime: file.modifiedTime,
     createdTime: file.createdTime,
   }
-  const wanted = fields === null ? ['kind', 'id', 'name', 'mimeType'] : fields.split(',').map((field) => field.trim())
+  if (wanted === null) return all
   return Object.fromEntries(wanted.filter((field) => field in all).map((field) => [field, all[field]]))
+}
+
+/** A `fields` parameter split at its top-level commas, each field with the
+ *  sub-fields in its parentheses (`nextPageToken, files(id, name)`), null
+ *  for none; undefined when it does not parse. */
+function parseFields(fields: string): Map<string, string[] | null> | undefined {
+  const parsed = new Map<string, string[] | null>()
+  let depth = 0
+  let start = 0
+  const parts: string[] = []
+  for (let i = 0; i < fields.length; i++) {
+    if (fields[i] === '(') depth += 1
+    else if (fields[i] === ')') depth -= 1
+    if (depth < 0 || depth > 1) return undefined
+    if (fields[i] === ',' && depth === 0) {
+      parts.push(fields.slice(start, i))
+      start = i + 1
+    }
+  }
+  if (depth !== 0) return undefined
+  parts.push(fields.slice(start))
+  for (const part of parts) {
+    const match = /^\s*(\w+)\s*(?:\(([^()]*)\))?\s*$/.exec(part)
+    if (!match) return undefined
+    const sub = match[2] === undefined ? null : match[2].split(',').map((field) => field.trim())
+    if (sub?.some((field) => !/^\w+$/.test(field))) return undefined
+    parsed.set(match[1], sub)
+  }
+  return parsed
+}
+
+/** The fields of a listing: the request's `fields` (null for none), so a
+ *  field it leaves out, `nextPageToken` included, is not in the answer. */
+function listingFields(fields: string | null): Map<string, string[] | null> | undefined {
+  if (fields === null) {
+    return new Map<string, string[] | null>([['kind', null], ['incompleteSearch', null], ['nextPageToken', null], ['files', DEFAULT_FILE_FIELDS]])
+  }
+  const parsed = parseFields(fields)
+  const known = ['kind', 'incompleteSearch', 'nextPageToken', 'files']
+  return parsed && [...parsed.keys()].every((field) => known.includes(field)) ? parsed : undefined
+}
+
+function invalidFields(res: ServerResponse): void {
+  send(res, 400, errorBody(400, 'Invalid field selection', 'invalidParameter'))
 }
 
 async function readBody(req: IncomingMessage): Promise<Buffer> {
@@ -154,8 +201,12 @@ async function handleDrive(ctx: Context, req: IncomingMessage, res: ServerRespon
   const fault = ctx.state.takeFault(op)
   if (fault) return sendFailure(res, fault)
   const fields = params.get('fields')
-  const reply = (result: StoredFile | DriveFailure): void =>
-    isFailure(result) ? sendFailure(res, result) : sendJson(res, pickFields(result, fields))
+  const reply = (result: StoredFile | DriveFailure): void => {
+    if (isFailure(result)) return sendFailure(res, result)
+    const parsed = fields === null ? null : parseFields(fields)
+    if (parsed === undefined || [...(parsed?.values() ?? [])].some((sub) => sub !== null)) return invalidFields(res)
+    sendJson(res, pickFields(result, parsed === null ? DEFAULT_FILE_FIELDS : [...parsed.keys()]))
+  }
 
   switch (op) {
     case 'list': {
@@ -163,11 +214,17 @@ async function handleDrive(ctx: Context, req: IncomingMessage, res: ServerRespon
       if (params.get('spaces') !== 'appDataFolder' || filter === undefined) {
         return send(res, 400, errorBody(400, 'Invalid Value', 'invalid'))
       }
+      const wanted = listingFields(fields)
+      if (wanted === undefined) return invalidFields(res)
       const size = params.get('pageSize')
       const page = ctx.state.list({ nameContains: filter, pageToken: params.get('pageToken'), pageSize: size === null ? null : Number(size) })
       if (isFailure(page)) return sendFailure(res, page)
-      const files = page.files.map(({ id, name, modifiedTime, createdTime }) => ({ id, name, modifiedTime, createdTime }))
-      return sendJson(res, page.nextPageToken === null ? { files } : { nextPageToken: page.nextPageToken, files })
+      const answer: Record<string, unknown> = {}
+      if (wanted.has('kind')) answer.kind = 'drive#fileList'
+      if (wanted.has('incompleteSearch')) answer.incompleteSearch = false
+      if (wanted.has('nextPageToken') && page.nextPageToken !== null) answer.nextPageToken = page.nextPageToken
+      if (wanted.has('files')) answer.files = page.files.map((file) => pickFields(file, wanted.get('files') ?? null))
+      return sendJson(res, answer)
     }
     case 'download': {
       const file = ctx.state.find(fileId ?? '')

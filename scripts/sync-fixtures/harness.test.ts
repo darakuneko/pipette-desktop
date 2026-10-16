@@ -61,7 +61,7 @@ describe('the sync fixture harness', () => {
       const response = await fetch(`${fakeDriveEnv(drive.url).PIPETTE_DRIVE_API_URL}/files?spaces=appDataFolder`, {
         headers: { Authorization: 'Bearer x' },
       })
-      expect(await response.json()).toEqual({ files: [] })
+      expect(await response.json()).toMatchObject({ files: [] })
       const local = await redirectingTo(`${drive.url}/drive/v3/files?spaces=appDataFolder`)
       expect((await fetch(`${local}/x`, { headers: { Authorization: 'Bearer x' } })).status).toBe(200)
     } finally {

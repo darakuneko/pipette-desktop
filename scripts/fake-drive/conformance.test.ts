@@ -241,6 +241,28 @@ describe('the fake Drive', () => {
     expect(drive.state.files[0].mimeType).toBe('application/json')
   })
 
+  it('answers only the fields a listing asks for, as Drive does', async () => {
+    await create('a.enc', '{}', 'id')
+    await create('b.enc', '{}', 'id')
+    const list = async (fields: string | null): Promise<Response> => {
+      const params = new URLSearchParams({ spaces: 'appDataFolder', pageSize: '1' })
+      if (fields !== null) params.set('fields', fields)
+      return fetch(`${api}/files?${params}`, { headers: AUTH })
+    }
+    // A request that leaves out nextPageToken or modifiedTime gets neither.
+    expect(await (await list('files(id, name)')).json()).toEqual({ files: [{ id: 'fake-1', name: 'a.enc' }] })
+    expect(await (await list('nextPageToken')).json()).toEqual({ nextPageToken: 'page-1' })
+    expect(await (await list(null)).json()).toEqual({
+      kind: 'drive#fileList',
+      incompleteSearch: false,
+      nextPageToken: 'page-1',
+      files: [{ kind: 'drive#file', id: 'fake-1', name: 'a.enc', mimeType: 'application/json' }],
+    })
+    for (const fields of ['files(id', 'files(id(x))', 'nextPageToken, items', 'files(id name)']) {
+      expect((await list(fields)).status, fields).toBe(400)
+    }
+  })
+
   it('stops a case at a key no earlier step saved', async () => {
     await expect(runStep({ op: 'download', id: 'unsaved', expect: { content: '' } }, new Map(), 'case')).rejects.toThrow(/no file saved as unsaved/)
     const saved = new Map<string, Saved>()
