@@ -91,10 +91,12 @@ webkit2gtk = { version = "=2.0.2", optional = true }
 cairo-rs = { version = "0.18", features = ["png"], optional = true }
 
 [features]
-# The development tools of src/dev_commands/tools.rs. build.rs rejects the
-# feature in the release profile, so a bundled binary never has these commands
-# or links WebKitGTK's bindings or cairo.
-dev-tools = ["dep:webkit2gtk", "dep:cairo-rs"]
+# The development tools of src/dev_commands/tools.rs, and the Google endpoint
+# variables that point the sync at fake servers on the loopback interface
+# (pipette-net's url-override). build.rs rejects the feature in the release
+# profile, so a bundled binary never has these commands, never reads those
+# variables, and does not link WebKitGTK's bindings or cairo.
+dev-tools = ["dep:webkit2gtk", "dep:cairo-rs", "pipette-net/url-override"]
 
 [dev-dependencies]
 # A scripted hardware keyboard behind the IPC contract tests' HID service

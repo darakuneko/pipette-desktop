@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The one place that decides whether the development tools of
 //! dev_commands/tools.rs are in the app: they are with the dev-tools feature,
-//! which build.rs rejects in the release profile.
+//! which build.rs rejects in the release profile. The feature also lets the
+//! environment point the sync's Google endpoints at loopback servers
+//! (`pipette_net::google_endpoints`).
 
 use tauri::ipc::Invoke;
 use tauri::webview::PageLoadPayload;
@@ -50,4 +52,12 @@ pub fn manage_http(app: &AppHandle<Wry>) {
     tools::manage_queued_http(app, real);
     #[cfg(not(feature = "dev-tools"))]
     tauri::Manager::manage(app, pipette_net::Http::new(real));
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn reads_the_google_endpoint_variables_only_with_the_development_tools() {
+        assert_eq!(pipette_net::ENDPOINT_OVERRIDES_COMPILED, cfg!(feature = "dev-tools"));
+    }
 }

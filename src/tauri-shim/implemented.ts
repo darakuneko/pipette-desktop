@@ -17,13 +17,20 @@ import { runLogsApi } from './api/run-logs'
 import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
 import { snapshotsApi } from './api/snapshots'
+import { syncAuthApi } from './api/sync-auth'
+import { syncDataApi } from './api/sync-data'
+import { syncExecuteApi } from './api/sync-execute'
+import { syncPasswordApi } from './api/sync-password'
+import { syncPasswordChangeApi } from './api/sync-password-change'
 import { syncPendingApi } from './api/sync-pending'
+import { syncResetApi } from './api/sync-reset'
 import { themePacksApi } from './api/theme-packs'
 import { typingAnalyticsApi } from './api/typing-analytics'
 import { typingAnalyticsDataApi } from './api/typing-analytics-data'
 import { typingAnalyticsKeymapsApi } from './api/typing-analytics-keymaps'
 import { typingAnalyticsRangeApi } from './api/typing-analytics-range'
 import { typingAnalyticsRecordApi } from './api/typing-analytics-record'
+import { typingAnalyticsRemoteApi } from './api/typing-analytics-remote'
 import { typingDatasetsApi } from './api/typing-datasets'
 import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
@@ -53,6 +60,13 @@ export const real = {
   ...typingAnalyticsDataApi,
   ...i18nPacksApi,
   ...themePacksApi,
+  ...syncAuthApi,
+  ...syncPasswordApi,
+  ...syncExecuteApi,
+  ...syncPasswordChangeApi,
+  ...syncDataApi,
+  ...syncResetApi,
+  ...typingAnalyticsRemoteApi,
 } satisfies Partial<VialAPI>
 
 export const implemented: Partial<VialAPI> = { ...real, ...fakes }

@@ -18,12 +18,14 @@ indexmap = "=2.14.2"
 pipette-js-json = { path = "../pipette-js-json" }
 # The machine id and hash (node-machine-id's machineId(true)).
 pipette-sync-format = { path = "../pipette-sync-format" }
+# The sync lock and the reset lock, re-exported as `reset_lock`.
+pipette-sync-runtime = { path = "../pipette-sync-runtime" }
 pipette-time = { path = "../pipette-time" }
 pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
 # The warnings of the deleted-ranges store and of a failed keymap snapshot save.
 log = "=0.4.34"
 thiserror = "=2.0.21"
-# The answers of the database thread, and the waits of the reset lock.
+# The answers of the database thread.
 tokio = { version = "=1.53.3", features = ["sync", "time", "rt"] }
 
 # os.release(): uname(2) without unsafe code.

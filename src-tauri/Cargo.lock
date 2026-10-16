@@ -2804,6 +2804,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-drive"
+version = "0.0.0"
+dependencies = [
+ "pipette-drive",
+ "pipette-time",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "pipette-entry-store"
 version = "0.0.0"
 dependencies = [
@@ -2835,6 +2846,10 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
 ]
+
+[[package]]
+name = "pipette-google-auth"
+version = "0.0.0"
 
 [[package]]
 name = "pipette-hid"
@@ -2920,6 +2935,14 @@ name = "pipette-protocol"
 version = "0.0.0"
 
 [[package]]
+name = "pipette-secret-store"
+version = "0.0.0"
+
+[[package]]
+name = "pipette-sync"
+version = "0.0.0"
+
+[[package]]
 name = "pipette-sync-format"
 version = "0.0.0"
 dependencies = [
@@ -2951,6 +2974,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-sync-runtime"
+version = "0.0.0"
+dependencies = [
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "pipette-time"
 version = "0.0.0"
 dependencies = [
@@ -2970,6 +3001,7 @@ dependencies = [
  "pipette-js-json",
  "pipette-sync-format",
  "pipette-sync-pending",
+ "pipette-sync-runtime",
  "pipette-time",
  "pipette-typing-analytics-db",
  "rusqlite",
