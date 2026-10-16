@@ -62,10 +62,9 @@ fn uid_arg(uid: &Arg) -> Result<&str, Failed> {
 /// `validDays`: an array of `YYYY-MM-DD` days of the calendar.
 fn days_arg(dates: &Arg) -> Result<Vec<String>, Failed> {
     let days: Option<Vec<String>> = match dates {
-        Some(serde_json::Value::Array(items)) => items
-            .iter()
-            .map(|day| day.as_str().filter(|day| is_utc_day(day)).map(str::to_owned))
-            .collect(),
+        Some(serde_json::Value::Array(items)) => {
+            items.iter().map(|day| day.as_str().filter(|day| is_utc_day(day)).map(str::to_owned)).collect()
+        }
         _ => None,
     };
     days.ok_or(Failed("Invalid dates".into()))

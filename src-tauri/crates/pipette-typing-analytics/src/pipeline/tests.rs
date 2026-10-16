@@ -40,6 +40,8 @@ struct Fixture {
     units: Arc<Mutex<Vec<String>>>,
     recorder: Arc<Recorder>,
     hash: String,
+    /// The rebuilds the initializations tried.
+    rebuilds: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 fn hash() -> String {
@@ -59,7 +61,12 @@ fn fixture_with(fresh: bool, app_name: Arc<dyn Fn() -> Option<JsString> + Send +
         Arc::new(SequenceIds::new([INSTALLATION_ID])),
         Box::new(|| Ok(MACHINE_ID.into())),
     );
-    let rebuild: RebuildCache = Arc::new(|_, _, _| Err(Error::CacheRebuild("no".into())));
+    let rebuilds = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counted = rebuilds.clone();
+    let rebuild: RebuildCache = Arc::new(move |_, _, _| {
+        counted.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Err(Error::CacheRebuild("no".into()))
+    });
     let analytics = Arc::new(TypingAnalytics::new(dir.path(), identity, clock.clone(), rebuild));
     let timer = Arc::new(HeldTimer::default());
     let units = Arc::new(Mutex::new(Vec::new()));
@@ -72,7 +79,7 @@ fn fixture_with(fresh: bool, app_name: Arc<dyn Fn() -> Option<JsString> + Send +
         app_name,
     };
     let recorder = Recorder::new(analytics, deps, &tokio::runtime::Handle::current());
-    Fixture { dir, clock, timer, units, recorder, hash: hash() }
+    Fixture { dir, clock, timer, units, recorder, hash: hash(), rebuilds }
 }
 
 fn fixture() -> Fixture {
@@ -277,6 +284,28 @@ async fn a_failed_initialization_keeps_everything_buffered_until_one_succeeds() 
     assert_eq!(f.count("SELECT COUNT(*) FROM typing_sessions"), 1);
     assert_eq!(f.count("SELECT keystrokes FROM typing_minute_stats"), 1);
     assert!(!f.recorder.has_pending_work());
+}
+
+#[tokio::test]
+async fn a_debounced_flush_tries_a_failed_initialization_again_only_after_a_while() {
+    let f = fixture_with(false, Arc::new(|| None));
+    let rebuilds = || f.rebuilds.load(std::sync::atomic::Ordering::SeqCst);
+    f.ingest(char_event("A", TS, "a")).await;
+    f.timer.fire();
+    f.settle().await;
+    assert_eq!(rebuilds(), 1);
+    f.clock.set(TS + 29_999);
+    f.timer.fire();
+    f.settle().await;
+    assert_eq!(rebuilds(), 1);
+    f.clock.set(TS + 30_000);
+    f.timer.fire();
+    f.settle().await;
+    assert_eq!(rebuilds(), 2);
+    // A final flush (the renderer's, the quit's) always tries.
+    f.recorder.flush_now(true).await;
+    assert_eq!(rebuilds(), 3);
+    assert!(f.recorder.has_pending_work());
 }
 
 #[tokio::test]

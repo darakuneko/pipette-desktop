@@ -32,7 +32,8 @@ pub mod record;
 
 /// Manages the analytics of `user_data`, the operations on its data and the
 /// sync lock. The deleted-ranges files are written under the write locks
-/// of the stores (keyboard_data.rs), which must be managed already.
+/// of the stores (keyboard_data.rs), managed before this in the app; a
+/// test app without the stores gets locks of its own.
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
     manage_with_identity(app, user_data, MachineIdentity::system(user_data, Arc::new(RandomUuid)));
 }
