@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Vitest config for the typing-analytics fixtures shared with the Rust
-// crates under src-tauri/crates (pipette-typing-analytics-db, and the local
-// days of pipette-time). Kept separate from the root config so `pnpm test`
+// crates under src-tauri/crates (pipette-typing-analytics-db,
+// pipette-typing-analytics, and the local days of pipette-time). Kept separate from the root config so `pnpm test`
 // never rewrites the fixtures.
 //
 // Unlike the root config, `better-sqlite3` is NOT routed to the sql.js
