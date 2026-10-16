@@ -15,7 +15,7 @@ use pipette_typing_analytics::sync_state::{TypingSyncState, load_sync_state, sav
 use pipette_typing_analytics_db::DayRows;
 
 use super::settings::written_bytes;
-use super::{AnalyticsEnv, MergeError, blocking, prop};
+use super::{AnalyticsEnv, MergeError, blocking, other, prop};
 use crate::units::DeviceDayUnit;
 
 /// The day file's text as `readRows` reads it: none when it cannot be read.
@@ -70,7 +70,7 @@ pub async fn merge_device_day_bundle(
         .await?
     };
     if !rows.is_empty() {
-        let ready = analytics.ready().await.map_err(|err| MergeError::Other(err.to_string()))?;
+        let ready = analytics.ready().await.map_err(other)?;
         let (replayed, own) = (analytics.clone(), own_hash.to_owned());
         ready
             .db
@@ -88,8 +88,8 @@ pub async fn merge_device_day_bundle(
                 replay_day_hiding_deleted_ranges(db, &rows, &uid, &hash, &own, clock, hidden)
             })
             .await
-            .map_err(|err| MergeError::Other(err.to_string()))?
-            .map_err(|err| MergeError::Other(err.to_string()))?;
+            .map_err(other)?
+            .map_err(other)?;
     }
 
     let (now, own) = (analytics.now_ms(), own_hash.to_owned());

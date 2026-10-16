@@ -23,7 +23,7 @@ use pipette_typing_analytics::jsonl::DELETED_RANGES_FILENAME;
 use pipette_typing_analytics_db::DeleteRange;
 use tokio::task::JoinHandle;
 
-use super::{AnalyticsEnv, MergeError, blocking, prop};
+use super::{AnalyticsEnv, MergeError, blocking, other, prop};
 use crate::units::DeletedRangesUnit;
 
 /// What a typing-analytics merge did.
@@ -93,7 +93,7 @@ pub async fn merge_typing_deleted_ranges_bundle(
     let own_apply = if union.entries.is_empty() {
         None
     } else if ranges.machine_hash != own_hash {
-        let ready = env.ops.analytics().ready().await.map_err(|err| MergeError::Other(err.to_string()))?;
+        let ready = env.ops.analytics().ready().await.map_err(other)?;
         let entries: Vec<DeleteRange> = union.entries.iter().map(|entry| entry.range).collect();
         let (uid, hash, now) =
             (ranges.uid.to_owned(), ranges.machine_hash.to_owned(), env.ops.analytics().now_ms());
@@ -101,8 +101,8 @@ pub async fn merge_typing_deleted_ranges_bundle(
             .db
             .call(move |db| db.tombstone_ranges_for_uid_hash(&uid, &hash, &entries, now))
             .await
-            .map_err(|err| MergeError::Other(err.to_string()))?
-            .map_err(|err| MergeError::Other(err.to_string()))?;
+            .map_err(other)?
+            .map_err(other)?;
         None
     } else {
         Some(queue_own_apply(env.ops.clone(), ranges.uid, union.entries, env.holds.clone()))
