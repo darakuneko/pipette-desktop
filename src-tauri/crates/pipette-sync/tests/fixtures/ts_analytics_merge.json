@@ -1849,10 +1849,10 @@
       "mutated": true,
       "state": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\",\n  \"uploaded\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": [\n      \"2026-10-14\"\n    ],\n    \"kb9|remote-hash-1\": [\n      \"2026-10-14\"\n    ]\n  },\n  \"reconciled_at\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 5000\n  },\n  \"last_synced_at\": 1792108800000\n}",
       "requests": [
+        "list",
         "delete fake-2",
         "delete fake-3",
-        "delete fake-4",
-        "list"
+        "delete fake-4"
       ],
       "warnings": 0,
       "driveAfter": [
@@ -2005,11 +2005,11 @@
       "mutated": true,
       "state": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\",\n  \"uploaded\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": [\n      \"2026-10-14\"\n    ],\n    \"kb2|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": [],\n    \"kb3|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": []\n  },\n  \"reconciled_at\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 1792108800000,\n    \"kb2|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 9,\n    \"kb3|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 1792108800000\n  },\n  \"last_synced_at\": 1792108800000\n}",
       "requests": [
+        "list",
         "delete fake-2",
-        "delete fake-3",
         "delete fake-4",
-        "delete fake-5",
-        "list"
+        "delete fake-3",
+        "delete fake-5"
       ],
       "warnings": 0,
       "driveAfter": [
@@ -2169,9 +2169,9 @@
       "mutated": true,
       "state": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\",\n  \"uploaded\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": [],\n    \"kb5|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": []\n  },\n  \"reconciled_at\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 1792108800000,\n    \"kb5|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 1792108800000\n  },\n  \"last_synced_at\": 1792108800000\n}",
       "requests": [
+        "list",
         "delete fake-2",
-        "delete fake-3",
-        "list"
+        "delete fake-3"
       ],
       "warnings": 0,
       "driveAfter": [
@@ -2237,8 +2237,8 @@
       "mutated": true,
       "state": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\",\n  \"uploaded\": [\n    [\n      \"2026-10-14\"\n    ]\n  ],\n  \"reconciled_at\": [\n    5\n  ],\n  \"last_synced_at\": 1792108800000\n}",
       "requests": [
-        "delete fake-2",
-        "list"
+        "list",
+        "delete fake-2"
       ],
       "warnings": 0,
       "driveAfter": [
@@ -2311,10 +2311,10 @@
       "mutated": true,
       "state": "{\n  \"_rev\": 3,\n  \"my_device_id\": \"eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\",\n  \"uploaded\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": []\n  },\n  \"reconciled_at\": {\n    \"kb1|eb75aa2238270deec4f9f8e4e69864143ed4da6d26a8ea134ff65fd04dab137d\": 5000\n  },\n  \"last_synced_at\": 1792108800000\n}",
       "requests": [
+        "list",
         "delete fake-1",
         "delete fake-2",
-        "delete fake-3",
-        "list"
+        "delete fake-3"
       ],
       "warnings": 1,
       "driveAfter": [

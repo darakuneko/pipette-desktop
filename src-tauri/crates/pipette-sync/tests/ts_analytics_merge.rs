@@ -30,6 +30,7 @@ use pipette_js_json::{Value, parse, stringify};
 use pipette_sync::bundle::{bundle_plaintext, bundle_sync_unit};
 use pipette_sync::merge::{AnalyticsMerge, MergeError, merge_analytics_unit, queue_own_deleted_ranges_apply};
 use pipette_sync::typing_remote::{collect_remote_own_hash_days, reconcile_own_hash_typing_analytics};
+use pipette_typing_analytics_db::DATA_TABLE_NAMES;
 
 /// The scenarios the generator records; a fixture with fewer is truncated.
 const MERGE_SCENARIOS: usize = 7;
@@ -111,12 +112,16 @@ async fn merges_match_typescript() {
                 ready.db.call(move |db| db.apply_day_jsonl(&text)).await.unwrap().unwrap();
             }
         }
-        for (i, item) in items(get(scenario, "steps")).iter().enumerate() {
+        let steps = items(get(scenario, "steps"));
+        assert!(!steps.is_empty(), "{name}: no steps");
+        for (i, item) in steps.iter().enumerate() {
             let (step, want) = (get(item, "step"), get(item, "result"));
             harness.notified.lock().unwrap().clear();
             let label = format!("{name} / step {i}");
             if let Some(units) = opt(step, "bundle") {
-                for (unit, want) in strings(units).iter().zip(items(get(want, "bundles"))) {
+                let (units, bundles) = (strings(units), items(get(want, "bundles")));
+                assert_eq!(units.len(), bundles.len(), "{label}: the recorded bundles");
+                for (unit, want) in units.iter().zip(bundles) {
                     let got = bundle_sync_unit(&harness.ctx, unit).unwrap().map(|b| bundle_plaintext(&b));
                     failures.check(
                         format!("{label} bundle {unit}"),
@@ -163,10 +168,13 @@ async fn merges_match_typescript() {
                 strings(get(want, "notified")),
             );
             failures.check(format!("{label}: tree"), tree_without_cache(root), tree_of(get(want, "tree")));
-            let tables = get(want, "tables").as_object().unwrap();
-            for (table, rows) in tables.iter() {
-                let table = table.to_string_lossy();
-                failures.check(format!("{label}: {table}"), table_dump(root, &table), strings(rows));
+            let tables = get(want, "tables");
+            for table in DATA_TABLE_NAMES {
+                failures.check(
+                    format!("{label}: {table}"),
+                    table_dump(root, table),
+                    strings(get(tables, table)),
+                );
             }
         }
     }
@@ -262,9 +270,7 @@ async fn reconciles_match_typescript() {
             get(scenario, "mutated").clone(),
         );
         failures.check(format!("{name}: state"), reconciled.state.to_text(), text(get(scenario, "state")));
-        let mut requests = drive.requests();
-        requests.sort();
-        failures.check(format!("{name}: requests"), requests, strings(get(scenario, "requests")));
+        failures.check(format!("{name}: requests"), drive.requests(), strings(get(scenario, "requests")));
         let after: Vec<(String, String)> =
             drive.inner().files().into_iter().map(|stored| (stored.file.id, stored.file.name)).collect();
         let want_after: Vec<(String, String)> = items(get(scenario, "driveAfter"))

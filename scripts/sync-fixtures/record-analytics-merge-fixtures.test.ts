@@ -510,8 +510,9 @@ describe('analytics merge fixtures', () => {
         collected,
         mutated: result.mutated,
         state: JSON.stringify(result.state, null, 2),
-        // The deletes of one day run 5 at a time.
-        requests: [...requests].sort(),
+        // In the order sent: the deletes of one day start 5 at a time, in
+        // the order of the files.
+        requests,
         warnings: rec.warnings.length,
         driveAfter: drive.state.files.map((f) => ({ id: f.id, name: f.name })),
         treeAfter: readTree(userData),
