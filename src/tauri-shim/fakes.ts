@@ -8,6 +8,9 @@
 
 import type { VialAPI } from '../shared/types/vial-api'
 
+/** The answer of a Hub member before the backend reaches the Hub. */
+const HUB_UNAVAILABLE = { success: false, error: 'Hub is not available' } as const
+
 export const fakes = {
   // Tray.
   trayStatusUpdate: () => Promise.resolve(),
@@ -27,8 +30,17 @@ export const fakes = {
   // Theme packs.
   themePackList: () => Promise.resolve({ success: true, data: [] }),
 
-  // Key label store.
-  keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
+  // Key label Hub. The renderer reads the result of each without a guard
+  // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers
+  // a failure rather than nothing. The Hub detail is read in a try block and
+  // stays a stub.
+  keyLabelHubList: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubDownload: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubUpload: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubUpdate: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubSync: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubTimestamps: () => Promise.resolve(HUB_UNAVAILABLE),
+  keyLabelHubDelete: () => Promise.resolve(HUB_UNAVAILABLE),
 
   // Typing run log store.
   typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
