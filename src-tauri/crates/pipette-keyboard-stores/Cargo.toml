@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-keyboard-stores"
-description = "The per-keyboard stores under the userData directory: the keyboard names (sync/meta/keyboard-names.json), the list of stored keyboards, and the snapshots and pipette settings of each keyboard; and the key labels, favorites and typing test texts kept across keyboards"
+description = "The per-keyboard stores under the userData directory: the keyboard names (sync/meta/keyboard-names.json), the list of stored keyboards, and the snapshots, Analyze filters, Typing Test run logs and pipette settings of each keyboard; and the key labels, favorites and typing test texts kept across keyboards"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

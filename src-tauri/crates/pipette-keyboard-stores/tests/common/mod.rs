@@ -197,25 +197,35 @@ pub fn as_recorded(got: String, known: &[&str]) -> String {
     got
 }
 
+/// The scenarios of the fixture `name` (under tests/fixtures).
+pub fn fixture_scenarios(name: &str) -> Vec<Value> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name);
+    let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
+    let Value::Array(scenarios) = fixture else { panic!("not a list") };
+    assert!(!scenarios.is_empty());
+    scenarios
+}
+
 /// Replays the scenarios of the fixture `name` (under tests/fixtures)
 /// recorded by a store's recorder in scripts/keyboard-store-fixtures: the
 /// same userData files and clock, each step run by `run_step` (`None` for
 /// a clock move, which it makes) and its answer compared as
 /// [`as_recorded`] with `known`, then the notified units and every file
-/// left behind. `harness` makes each scenario's harness.
+/// left behind. `harness` makes each scenario's harness; the scenarios
+/// named in `skip` are left to the caller.
 pub fn replay_scenarios(
     name: &str,
+    skip: &[&str],
     harness: impl Fn(&pipette_js_json::Object) -> Harness,
     known: &[&str],
     run_step: impl Fn(&Harness, &pipette_js_json::Object) -> Option<String>,
 ) {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name);
-    let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
-    let Value::Array(scenarios) = fixture else { panic!("not a list") };
-    assert!(!scenarios.is_empty());
-    for scenario in &scenarios {
+    for scenario in &fixture_scenarios(name) {
         let scenario = scenario.as_object().unwrap();
         let name = step_text(scenario, "name");
+        if skip.contains(&name.as_str()) {
+            continue;
+        }
         let h = harness(scenario);
         h.clock.set(ms(&step_text(scenario, "time")));
         build(h.user_data(), &tree_of(scenario.get("tree").unwrap()));

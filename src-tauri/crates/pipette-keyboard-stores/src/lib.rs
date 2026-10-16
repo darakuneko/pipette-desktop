@@ -20,6 +20,9 @@
 //! - the saved Analyze filters of a keyboard
 //!   (`sync/keyboards/{uid}/analyze_filters`, the sync unit of the same
 //!   name) of src/main/analyze-filter-store.ts;
+//! - the keystroke logs of a keyboard's Typing Test runs
+//!   (`sync/keyboards/{uid}/runs`, the sync unit of the same name) of
+//!   src/main/typing-run-log-store.ts;
 //! - the pipette settings of a keyboard
 //!   (`sync/keyboards/{uid}/pipette_settings.json`, the sync unit
 //!   `keyboards/{uid}/settings`) of src/main/pipette-settings-store.ts,
@@ -40,6 +43,7 @@ mod key_labels;
 mod keyboard_index;
 mod keyboard_meta;
 mod response;
+mod run_logs;
 mod settings;
 mod snapshot_filename;
 mod snapshots;
@@ -74,6 +78,10 @@ pub use keyboard_meta::{
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
 };
 pub use response::{CodedError, coded_response, coded_response_json, done, field, response_json};
+pub use run_logs::{
+    MAX_RUN_LOG_BYTES, MAX_RUN_LOG_EVENTS, MAX_RUN_LOGS_PER_KEYBOARD, RunLogError, get_run_log,
+    list_run_logs, run_logs_sync_unit, save_run_log,
+};
 pub use settings::{
     KeyboardSettingsFile, SETTINGS_ETAG_ABSENT, SettingsError, SettingsFile, SettingsWrite,
     ensure_pipette_settings_dir, keyboard_settings_files_json, read_all_pipette_settings,
