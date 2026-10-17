@@ -317,6 +317,11 @@ impl SyncRuntime {
         Some(LockFreeWriter { runtime: self.clone(), uid: uid.to_owned(), kind: WriterKind::AnalyticsSync })
     }
 
+    /// Whether the analytics sync of `uid` runs (`analyticsSyncingUids`).
+    pub fn is_analytics_syncing(&self, uid: &str) -> bool {
+        self.lock().analytics_syncing_uids.contains(uid)
+    }
+
     /// Starts a remote day fetch of `uid` (several may run at once), unless
     /// [`Self::lock_free_writer_blocked`].
     pub fn try_start_remote_day_fetch(&self, uid: &str) -> Option<LockFreeWriter> {
@@ -605,6 +610,7 @@ mod tests {
 
         let writer = runtime.try_start_analytics_sync("a").unwrap();
         assert!(runtime.try_start_analytics_sync("a").is_none());
+        assert!(runtime.is_analytics_syncing("a") && !runtime.is_analytics_syncing("b"));
         assert_eq!(
             runtime.with_reset_lock(&uids(&["a"]), DELETE_BUSY_MESSAGE, async {}).await,
             Err(Busy(DELETE_BUSY_MESSAGE))
@@ -615,6 +621,7 @@ mod tests {
         );
         assert_eq!(runtime.with_reset_lock(&uids(&["b"]), DELETE_BUSY_MESSAGE, async { 1 }).await, Ok(1));
         drop(writer);
+        assert!(!runtime.is_analytics_syncing("a"));
         assert_eq!(runtime.with_reset_lock(&uids(&["a"]), DELETE_BUSY_MESSAGE, async { 2 }).await, Ok(2));
     }
 

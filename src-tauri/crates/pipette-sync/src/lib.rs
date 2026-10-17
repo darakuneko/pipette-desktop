@@ -25,7 +25,11 @@
 //!   guard, the password-check and the password change);
 //! - [`scan`]: what is on Drive, read without merging it;
 //! - [`local_data`]: the export and import of the Data modal's Local Data;
-//! - [`meta_backfill`]: the keyboard names a full download fills in.
+//! - [`meta_backfill`]: the keyboard names a full download fills in;
+//! - [`flush`] and [`polling`]: the debounced upload of the pending units
+//!   and the poll for remote changes, which ends by tidying the Drive names
+//!   with several copies ([`trash`]), and [`triggers`], what starts and
+//!   stops them.
 
 pub mod account;
 pub mod analytics;
@@ -34,16 +38,21 @@ pub mod codec;
 pub mod crypto;
 pub mod dispatch;
 pub mod execute;
+pub mod flush;
 pub mod format;
 pub mod format_status;
+mod limited;
 pub mod local_data;
 pub mod merge;
 pub mod meta_backfill;
 pub mod password;
+pub mod polling;
 pub mod preflight;
 pub mod scan;
 pub mod scope;
 mod single_flight;
+pub mod trash;
+pub mod triggers;
 pub mod typing_remote;
 pub mod unit_locks;
 pub mod units;

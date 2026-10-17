@@ -2,14 +2,14 @@
 //! The keyboard data commands of the shim's `listStoredKeyboards` and
 //! `keyboardMetaNameIfMissing` (src/tauri-shim/api/keyboard-data.ts), on
 //! the stores of crates/pipette-keyboard-stores. Their changes are recorded
-//! as pending sync units (store_commands/sync_pending.rs).
+//! as pending sync units (store_commands/sync_pending.rs) and flushed by
+//! the sync (sync_commands/triggers.rs).
 
 use std::path::Path;
 use std::sync::Arc;
 
 use pipette_entry_store::{SystemClock, WriteLocks};
 use pipette_keyboard_stores::{StoreContext, TypingTextStore};
-use pipette_sync_pending::PendingStore;
 use serde_json::Value;
 use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, Runtime, State};
@@ -19,15 +19,15 @@ use crate::store_commands::blocking;
 
 /// Manages the stores of `user_data` (the context every store command
 /// shares, the pack stores' included, and the state of the typing test
-/// texts), reporting their changes to the pending sync units, which must be
-/// managed already.
+/// texts), reporting their changes to the sync (the pending units, which
+/// must be managed already, and the flush of them).
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
-    let pending = app.state::<PendingStore>().inner().clone();
+    let handle = app.clone();
     app.manage(StoreContext::new(
         user_data,
         Arc::new(SystemClock),
         Arc::new(WriteLocks::new()),
-        Arc::new(move |unit: &str| pending.notify_change(unit)),
+        Arc::new(move |unit: &str| crate::sync_commands::triggers::notify_change(&handle, unit)),
     ));
     app.manage(TypingTextStore::default());
 }
@@ -64,6 +64,7 @@ pub async fn keyboard_meta_name_if_missing(
 mod tests {
     use super::*;
     use pipette_keyboard_stores::KEYBOARD_META_SYNC_UNIT;
+    use pipette_sync_pending::PendingStore;
     use tempfile::TempDir;
 
     #[test]

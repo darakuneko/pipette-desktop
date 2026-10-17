@@ -67,13 +67,16 @@ pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
 }
 
 /// Reacts to the renderer's changes: `zoomFactor` zooms every window,
-/// `trayResident` adds or removes the tray. `autoLaunch` has nothing to
-/// apply to: this build does not register itself to start at sign-in.
+/// `trayResident` adds or removes the tray, `autoSync` starts or stops the
+/// polling and the flush (sync_commands/triggers.rs). `autoLaunch` has
+/// nothing to apply to: this build does not register itself to start at
+/// sign-in.
 ///
 /// The listener runs under the store lock, once per set in the order the
 /// sets were saved. The zoom and the tray change are queued to the main
 /// thread without waiting for it, so the main thread applies them in that
-/// order and can read the store meanwhile without a deadlock.
+/// order and can read the store meanwhile without a deadlock; the sync
+/// keeps the value it is told and never reads the store from here.
 pub fn listen_for_changes(app: &AppHandle) {
     let handle = app.clone();
     app.state::<AppConfig>().subscribe(move |key, value| match key {
@@ -84,6 +87,7 @@ pub fn listen_for_changes(app: &AppHandle) {
             }
         }
         "trayResident" => crate::lifecycle::set_tray_resident(&handle, value.is_truthy()),
+        "autoSync" => crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy()),
         "autoLaunch" => {
             log::info!(
                 "[app-config] autoLaunch is now {}; this build does not start at sign-in",
