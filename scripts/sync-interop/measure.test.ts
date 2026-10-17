@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Times both sync engines on one synthetic userData against the Node fake
-// Drive (machines.ts) and prints the numbers; nothing here passes or
-// fails on them. Skipped unless PIPETTE_SYNC_MEASURE=1.
+// Drive (machines.ts) and logs the numbers as JSON; nothing here passes
+// or fails on them. Skipped unless PIPETTE_SYNC_MEASURE=1.
 //
 // The userData: 5 favorite stores of 10 entries, 28 keyboards (one with
 // settings only, the rest with settings and two 20 KB snapshots) and 100
@@ -20,8 +20,8 @@
 // (`VmHWM`). Set PIPETTE_SYNC_PEER to a release build of the peer for
 // the numbers of the shipped engine.
 //
-// Run: PIPETTE_SYNC_MEASURE=1 pnpm run test:sync-interop measure
-// (PIPETTE_SYNC_MEASURE_OUT=<file> also writes the numbers to the file)
+// Run: PIPETTE_SYNC_MEASURE=1 PIPETTE_SYNC_MEASURE_OUT=<file> pnpm run
+// test:sync-interop measure (the file gets the JSON too)
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
