@@ -44,17 +44,20 @@ pub struct KeymapPostParams<'a> {
 }
 
 /// The checked title and files of a keymap post (`validateTitle`, then
-/// `buildFiles`), with the keyboard name as the page sent it.
-pub(crate) struct CheckedKeymapPost<'a> {
-    pub title: String,
-    pub keyboard_name: &'a str,
-    pub files: KeymapFiles,
+/// `buildFiles`), with the keyboard name as the page sent it. Building the
+/// files decodes the PDF and the thumbnail and copies every file, so the
+/// app prepares it off the async runtime ([`prepare_upload`],
+/// [`prepare_update`]) and hands it to the request.
+pub struct CheckedKeymapPost {
+    pub(crate) title: String,
+    pub(crate) keyboard_name: String,
+    pub(crate) files: KeymapFiles,
 }
 
-impl<'a> KeymapPostParams<'a> {
+impl KeymapPostParams<'_> {
     /// `validateTitle(params.title)` then `buildFiles(params)`; `fallback`
     /// is the handler's message for a file input that is not a string.
-    pub(crate) fn check(&self, fallback: &str) -> Result<CheckedKeymapPost<'a>, HubFailure> {
+    pub(crate) fn check(&self, fallback: &str) -> Result<CheckedKeymapPost, HubFailure> {
         let title = validate_title(self.title)?;
         let (
             Some(keyboard_name),
@@ -82,7 +85,7 @@ impl<'a> KeymapPostParams<'a> {
             pdf_base64,
             thumbnail_base64,
         })?;
-        Ok(CheckedKeymapPost { title, keyboard_name, files })
+        Ok(CheckedKeymapPost { title, keyboard_name: keyboard_name.to_owned(), files })
     }
 }
 
@@ -90,11 +93,11 @@ impl<'a> KeymapPostParams<'a> {
 /// the TS builds the body anew for each send, the retry after a 401 too.
 pub(crate) fn keymap_body(
     token: &HubToken,
-    post: &CheckedKeymapPost<'_>,
+    post: &CheckedKeymapPost,
     expires_in_days: Option<f64>,
 ) -> MultipartBody {
     let boundary = post_boundary(token.http().timing().now_ms() as i64);
-    keymap_post_body(boundary, &post.title, post.keyboard_name, &post.files, expires_in_days)
+    keymap_post_body(boundary, &post.title, &post.keyboard_name, &post.files, expires_in_days)
 }
 
 /// Sends `endpoint` with the JWT and `body`.
@@ -147,39 +150,65 @@ pub(crate) fn answer(result: Result<Vec<(&str, Option<Value>)>, HubFailure>) -> 
 
 /// The fallbacks of `extractError` in the upload and update handlers,
 /// which are also the messages of a file input that is not a string.
-pub(crate) const UPLOAD_FAILED: &str = "Upload failed";
+const UPLOAD_FAILED: &str = "Upload failed";
 const UPDATE_FAILED: &str = "Update failed";
+
+/// The checks of `HUB_UPLOAD_POST` and its files.
+pub fn prepare_upload(params: KeymapPostParams<'_>) -> Result<CheckedKeymapPost, HubFailure> {
+    params.check(UPLOAD_FAILED)
+}
+
+/// The checks of `HUB_UPDATE_POST` and its files: the post id first. `None`
+/// stands for a post id that is not a string.
+pub fn prepare_update(
+    post_id: Option<&str>,
+    params: KeymapPostParams<'_>,
+) -> Result<(String, CheckedKeymapPost), HubFailure> {
+    let post_id = post_id.unwrap_or_default();
+    validate_post_id(post_id)?;
+    Ok((post_id.to_owned(), params.check(UPDATE_FAILED)?))
+}
 
 /// `HUB_UPLOAD_POST`: `{ success, postId }`.
 pub async fn upload_post(token: &HubToken, params: KeymapPostParams<'_>) -> Value {
-    answer(submit(token, params, None).await)
+    upload_prepared(token, prepare_upload(params)).await
 }
 
-/// `HUB_UPDATE_POST`: the post id is checked first. `None` stands for a
-/// post id that is not a string.
-pub async fn update_post(token: &HubToken, post_id: Option<&str>, params: KeymapPostParams<'_>) -> Value {
-    let result = match validate_post_id(post_id.unwrap_or_default()) {
-        Ok(()) => submit(token, params, post_id).await,
-        Err(err) => Err(err.into()),
-    };
+/// `HUB_UPLOAD_POST` of a post [`prepare_upload`] prepared.
+pub async fn upload_prepared(token: &HubToken, post: Result<CheckedKeymapPost, HubFailure>) -> Value {
+    let result = async { submit(token, &post?, &Endpoint::UploadPost).await }.await;
     answer(result)
 }
 
-/// The upload (`post_id` `None`) or the update of a keymap post.
+/// `HUB_UPDATE_POST`. `None` stands for a post id that is not a string.
+pub async fn update_post(token: &HubToken, post_id: Option<&str>, params: KeymapPostParams<'_>) -> Value {
+    update_prepared(token, prepare_update(post_id, params)).await
+}
+
+/// `HUB_UPDATE_POST` of a post [`prepare_update`] prepared.
+pub async fn update_prepared(
+    token: &HubToken,
+    prepared: Result<(String, CheckedKeymapPost), HubFailure>,
+) -> Value {
+    let result = async {
+        let (post_id, post) = prepared?;
+        submit(token, &post, &Endpoint::UpdatePost { post_id: &post_id }).await
+    }
+    .await;
+    answer(result)
+}
+
+/// Sends a checked keymap post to `endpoint`. The body is assembled anew
+/// for each send, as the TS does (a copy of the files, no decoding).
 async fn submit(
     token: &HubToken,
-    params: KeymapPostParams<'_>,
-    post_id: Option<&str>,
+    post: &CheckedKeymapPost,
+    endpoint: &Endpoint<'_>,
 ) -> Result<Vec<(&'static str, Option<Value>)>, HubFailure> {
-    let post = params.check(if post_id.is_some() { UPDATE_FAILED } else { UPLOAD_FAILED })?;
-    let endpoint = match post_id {
-        Some(post_id) => Endpoint::UpdatePost { post_id },
-        None => Endpoint::UploadPost,
-    };
     let data = token
         .with_token_retry(|jwt| {
-            let body = RequestBody::Multipart(keymap_body(token, &post, None));
-            send(token, &endpoint, jwt, body)
+            let body = RequestBody::Multipart(keymap_body(token, post, None));
+            send(token, endpoint, jwt, body)
         })
         .await?;
     Ok(vec![("postId", property(data.as_ref(), "id")?)])

@@ -55,6 +55,14 @@ fn expires_in_days(params: Option<&Value>) -> Option<f64> {
     }
 }
 
+/// Runs the checks of an upload and builds its files (base64 decoding and
+/// copies of up to tens of MB) on a blocking thread, off the async runtime.
+async fn off_runtime<T: Send + 'static>(
+    prepare: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, CommandError> {
+    Ok(tauri::async_runtime::spawn_blocking(prepare).await?)
+}
+
 /// `String(value)` (`undefined` for an absent one).
 fn js_string(value: Option<&Value>) -> String {
     let value = value
@@ -67,7 +75,8 @@ pub async fn hub_upload_post(
     hub: State<'_, Arc<Hub>>,
     params: Option<Value>,
 ) -> Result<Response, CommandError> {
-    respond(&posts::upload_post(hub.token(), keymap_post(params.as_ref())).await)
+    let post = off_runtime(move || posts::prepare_upload(keymap_post(params.as_ref()))).await?;
+    respond(&posts::upload_prepared(hub.token(), post).await)
 }
 
 #[tauri::command]
@@ -75,8 +84,12 @@ pub async fn hub_update_post(
     hub: State<'_, Arc<Hub>>,
     params: Option<Value>,
 ) -> Result<Response, CommandError> {
-    let params = params.as_ref();
-    respond(&posts::update_post(hub.token(), text(params, "postId"), keymap_post(params)).await)
+    let prepared = off_runtime(move || {
+        let params = params.as_ref();
+        posts::prepare_update(text(params, "postId"), keymap_post(params))
+    })
+    .await?;
+    respond(&posts::update_prepared(hub.token(), prepared).await)
 }
 
 #[tauri::command]
@@ -121,8 +134,9 @@ pub async fn hub_upload_private_post(
     hub: State<'_, Arc<Hub>>,
     params: Option<Value>,
 ) -> Result<Response, CommandError> {
-    let params = params.as_ref();
-    respond(&private::upload_private_post(hub.token(), keymap_post(params), expires_in_days(params)).await)
+    let expires_in_days = expires_in_days(params.as_ref());
+    let post = off_runtime(move || posts::prepare_upload(keymap_post(params.as_ref()))).await?;
+    respond(&private::upload_private_prepared(hub.token(), post, expires_in_days).await)
 }
 
 /// `kind` goes into the path unchecked, as Electron's handler sends it.

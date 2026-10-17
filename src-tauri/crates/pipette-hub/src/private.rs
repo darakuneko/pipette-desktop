@@ -15,19 +15,30 @@ use pipette_js_json::Value;
 
 use crate::endpoint::Endpoint;
 use crate::http::{RequestBody, StatusKind};
-use crate::posts::{KeymapPostParams, UPLOAD_FAILED, answer, keymap_body, property, send};
+use crate::posts::{
+    CheckedKeymapPost, KeymapPostParams, answer, keymap_body, prepare_upload, property, send,
+};
 use crate::token::{HubFailure, HubToken};
 
 /// `HUB_UPLOAD_PRIVATE_POST`: `{ success, id, url, expiresAt }`.
 /// `expires_in_days` is `None` for no expiry; it is written as
-/// `String(expiresInDays)`.
+/// `String(expiresInDays)`. The checks are those of a public upload.
 pub async fn upload_private_post(
     token: &HubToken,
     params: KeymapPostParams<'_>,
     expires_in_days: Option<f64>,
 ) -> Value {
+    upload_private_prepared(token, prepare_upload(params), expires_in_days).await
+}
+
+/// `HUB_UPLOAD_PRIVATE_POST` of a post [`prepare_upload`] prepared.
+pub async fn upload_private_prepared(
+    token: &HubToken,
+    post: Result<CheckedKeymapPost, HubFailure>,
+    expires_in_days: Option<f64>,
+) -> Value {
     let result = async {
-        let post = params.check(UPLOAD_FAILED)?;
+        let post = post?;
         let data = token
             .with_token_retry(|jwt| {
                 let body = RequestBody::Multipart(keymap_body(token, &post, expires_in_days));
