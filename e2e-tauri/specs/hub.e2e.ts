@@ -229,6 +229,23 @@ async function uploadWithVisibility(button: string, visibility: 'public' | 'priv
   await waitForGone(tid('upload-confirm-backdrop'), 'the upload dialog did not close')
 }
 
+/** Waits until the fake Hub has taken no request for a second, twice in a
+ *  row: the page's own requests (its refresh of the posts after a launch
+ *  or a sign-in) have ended, so the requests that follow are the test's. */
+async function waitForHubQuiet(): Promise<void> {
+  let last = -1
+  let quietChecks = 0
+  await browser.waitUntil(
+    () => {
+      const count = fakeHub().requests.length
+      quietChecks = count === last ? quietChecks + 1 : 0
+      last = count
+      return quietChecks >= 2
+    },
+    { timeout: 60_000, interval: 1000, timeoutMsg: 'the page kept sending Hub requests' },
+  )
+}
+
 /** Waits for `done`, polling every half second, for at most a minute: an
  *  upload builds the keymap's PDF and thumbnail first. */
 async function waitForHub(done: () => boolean, timeoutMsg: string): Promise<void> {
@@ -293,7 +310,7 @@ describe('Tauri build Pipette Hub', function () {
       const tokens = hubRequestsSince(from).filter((r) => r.op === 'auth.token')
       expect(tokens.length).toBeGreaterThanOrEqual(2)
       expect(tokens[0].body).toEqual({ json: { id_token: '[redacted]' } })
-      expect(tokens.at(-1)?.body).toEqual({ json: { id_token: '[redacted]', display_name: DISPLAY_NAME } })
+      expect(tokens.map((r) => r.body)).toContainEqual({ json: { id_token: '[redacted]', display_name: DISPLAY_NAME } })
       // Clearing the chosen name afterwards drops the JWT it got, as in
       // Electron; the next request takes a token again.
       const state = await hubState()
@@ -700,6 +717,7 @@ describe('Tauri build Pipette Hub', function () {
 
     it('takes a token again after a 401, waits out a 429, and shows a deactivated account after a 403', async () => {
       const myPosts = (): Promise<{ success: boolean; error?: string }> => vialApi('hubFetchMyPosts')
+      await waitForHubQuiet()
       expect((await myPosts()).success).toBe(true)
       expect((await hubState()).tokenCached).toBe(true)
 
@@ -747,9 +765,14 @@ describe('Tauri build Pipette Hub', function () {
       // A new account: the Hub has no display name for it.
       await $(tid('hub-display-name-required')).waitForDisplayed({ timeout: 30_000 })
       expect(hubUser(GOOGLE_ACCOUNT)?.display_name).toBeNull()
+      await waitForHubQuiet()
       const sent = hubRequestsSince(from)
-      expect(sent.filter((r) => r.op === 'auth.token').map((r) => r.body)).toEqual([{ json: { id_token: '[redacted]' } }])
-      expect(sent.filter((r) => r.op === 'auth.me').map((r) => r.account)).toEqual([GOOGLE_ACCOUNT])
+      const tokens = sent.filter((r) => r.op === 'auth.token')
+      expect(tokens.length).toBeGreaterThanOrEqual(1)
+      for (const token of tokens) expect(token.body).toEqual({ json: { id_token: '[redacted]' } })
+      const authorized = sent.filter((r) => r.op !== 'auth.token')
+      expect(authorized.length).toBeGreaterThanOrEqual(1)
+      for (const request of authorized) expect(request.account).toBe(GOOGLE_ACCOUNT)
       const signedIn = await hubState()
       expect(signedIn.tokenCached).toBe(true)
 
@@ -761,6 +784,7 @@ describe('Tauri build Pipette Hub', function () {
       expect(signedOut.tokenGeneration).toBeGreaterThan(signedIn.tokenGeneration)
       await $(tid('hub-requires-auth')).waitForDisplayed()
 
+      await waitForHubQuiet()
       const before = fakeHub().requests.length
       expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: NOT_AUTHENTICATED })
       expect(hubRequestsSince(before)).toEqual([])
@@ -769,6 +793,10 @@ describe('Tauri build Pipette Hub', function () {
   })
 
   describe('the page', () => {
+    it('sent the Hub only requests of the routes it serves', () => {
+      expect(fakeHub().requests.filter((r) => r.op === null).map((r) => `${r.method} ${r.path}`)).toEqual([])
+    })
+
     it('logged no page errors', async () => {
       expect([...earlierErrors, ...(await recordedPageErrors())]).toEqual([])
     })
