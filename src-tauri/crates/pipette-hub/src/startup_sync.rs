@@ -16,17 +16,17 @@
 
 use std::collections::{HashMap, HashSet};
 
-use futures_util::future::{join_all, try_join_all};
+use futures_util::future::join_all;
 use log::Level;
 use pipette_entry_store::{Entry, js_trim};
-use pipette_js_json::{JsString, Value, js_string, stringify};
+use pipette_js_json::{JsString, Value, js_string};
 use pipette_keyboard_stores::StoreContext;
 use pipette_pack_stores::Field;
 use pipette_pack_stores::i18n::{self, SavePackInput};
 
 use crate::endpoint::Endpoint;
 use crate::http::{HubError, HubHttp, RequestBody, StatusKind};
-use crate::packs::{TIMESTAMPS_BATCH_LIMIT, validate_i18n_export};
+use crate::packs::{TimestampsError, fetch_timestamp_items, validate_i18n_export};
 use crate::sources::BoxFuture;
 
 /// The language pack store as the pass reads and saves it. The app runs it
@@ -166,45 +166,23 @@ fn pick_hub_linked(metas: Vec<Entry>) -> Vec<Linked> {
         .collect()
 }
 
-/// `value.<key>` as the TS reads it off a timestamps answer: `undefined`
-/// for a primitive, the `TypeError` for `undefined` or `null`.
-fn read<'a>(value: Option<&'a Value>, key: &str) -> Result<Option<&'a Value>, String> {
-    match value {
-        None => Err(format!("TypeError: Cannot read properties of undefined (reading '{key}')")),
-        Some(Value::Null) => Err(format!("TypeError: Cannot read properties of null (reading '{key}')")),
-        Some(Value::Object(object)) => Ok(object.get(key)),
-        Some(_) => Ok(None),
-    }
-}
-
 /// `fetchTimestampsByPostId`: the Hub time of each distinct post id, by id.
 /// The batches go out at once and the first to fail ends the lookup.
 async fn fetch_timestamps(http: &HubHttp, post_ids: &[JsString]) -> Result<HashMap<JsString, Value>, String> {
     let mut seen = HashSet::new();
     let unique: Vec<&JsString> = post_ids.iter().filter(|id| seen.insert(*id)).collect();
-    let endpoint = Endpoint::I18nTimestamps;
-    let requests = unique.chunks(TIMESTAMPS_BATCH_LIMIT).map(|chunk| {
-        let ids = chunk.iter().map(|id| Value::String((*id).clone())).collect();
-        let body: pipette_js_json::Object = [("ids", Value::Array(ids))].into_iter().collect();
-        http.send(&endpoint, None, RequestBody::Json(stringify(&Value::Object(body))))
-    });
-    let responses = try_join_all(requests).await.map_err(|err| error_line(&err))?;
-    let mut by_id = HashMap::new();
-    for response in &responses {
-        let items = match read(response.as_ref(), "items")? {
-            Some(Value::Array(items)) => items,
-            // A string's characters have no `id`.
-            Some(Value::String(_)) => continue,
-            _ => return Err("TypeError: r.items is not iterable".to_owned()),
-        };
-        for item in items {
-            if let Some(Value::String(id)) = read(Some(item), "id")? {
-                let updated = read(Some(item), "updated_at")?.cloned().unwrap_or(Value::Null);
-                by_id.insert(id.clone(), updated);
-            }
-        }
-    }
-    Ok(by_id)
+    let items =
+        fetch_timestamp_items(http, &Endpoint::I18nTimestamps, &unique).await.map_err(|err| match err {
+            TimestampsError::Request(err) => error_line(&err),
+            TimestampsError::Read(message) => format!("TypeError: {}", message.to_string_lossy()),
+        })?;
+    Ok(items
+        .into_iter()
+        .map(|(id, item)| {
+            let updated = item.as_object().and_then(|item| item.get("updated_at")).cloned();
+            (id, updated.unwrap_or(Value::Null))
+        })
+        .collect())
 }
 
 /// What became of one pack.

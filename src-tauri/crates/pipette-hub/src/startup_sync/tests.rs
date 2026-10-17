@@ -4,7 +4,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use pipette_js_json::{Object, parse};
+use pipette_js_json::{Object, parse, stringify};
 use pipette_net::{HttpError, HttpReply, HttpRequest};
 
 use super::*;
