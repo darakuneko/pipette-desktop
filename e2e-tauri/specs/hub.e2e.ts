@@ -26,7 +26,16 @@ import {
 } from '../helpers/app'
 import { readAppConfig, userDataPath } from '../helpers/driver'
 import { HUB_TEST_ACCOUNT } from '../helpers/hub-env'
-import { assertHubSession, fakeHub, hubControl, hubRequestsSince, hubState, injectHubFault } from '../helpers/hub-harness'
+import {
+  assertHubSession,
+  fakeHub,
+  hubControl,
+  hubRequestsSince,
+  hubState,
+  injectHubFault,
+  switchToGoogleSession,
+} from '../helpers/hub-harness'
+import { openSyncSettings, signIn } from '../helpers/sync'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
@@ -47,6 +56,9 @@ const HUB_LANGUAGE_PACK = 'E2E Hub Japanese'
 const OWN_LANGUAGE_PACK = 'E2E Own Japanese'
 const OWN_THEME_PACK = 'E2E Own Theme'
 const LANGUAGE_PACK_EXPORTED_AT = '2026-01-01T00:00:00.000Z'
+/** The account the fake Google signs in (scripts/fake-drive/server.ts). */
+const GOOGLE_ACCOUNT = 'fake-user@example.invalid'
+const NOT_AUTHENTICATED = 'Not authenticated with Google. Please sign in again.'
 /** Not a picture: the Hub checks a thumbnail's name and size only. */
 const THUMBNAIL_BASE64 = Buffer.from('e2e thumbnail').toString('base64')
 /** The Hub's files of a keymap post, sorted. */
@@ -716,6 +728,43 @@ describe('Tauri build Pipette Hub', function () {
       await $(tid('hub-account-deactivated-warning')).waitForDisplayed({ timeout: 30_000 })
       await closeSettings()
       expect(await myPosts()).toEqual(expect.objectContaining({ success: true }))
+    })
+  })
+
+  describe('a Google account', () => {
+    it('signs in with the fake Google, takes a Hub token with its id_token, and forgets the token on sign-out', async () => {
+      earlierErrors.push(...(await recordedPageErrors()))
+      await switchToGoogleSession()
+      await recordPageErrors()
+      await $(tid('settings-button')).waitForDisplayed({ timeout: 20_000 })
+      expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: NOT_AUTHENTICATED })
+
+      await openSyncSettings()
+      await signIn()
+      const from = fakeHub().requests.length
+      await clickInPage(tid('hub-enable-toggle'))
+      await browser.waitUntil(() => readAppConfig().hubEnabled === true, { timeoutMsg: 'the Hub was not enabled' })
+      // A new account: the Hub has no display name for it.
+      await $(tid('hub-display-name-required')).waitForDisplayed({ timeout: 30_000 })
+      expect(hubUser(GOOGLE_ACCOUNT)?.display_name).toBeNull()
+      const sent = hubRequestsSince(from)
+      expect(sent.filter((r) => r.op === 'auth.token').map((r) => r.body)).toEqual([{ json: { id_token: '[redacted]' } }])
+      expect(sent.filter((r) => r.op === 'auth.me').map((r) => r.account)).toEqual([GOOGLE_ACCOUNT])
+      const signedIn = await hubState()
+      expect(signedIn.tokenCached).toBe(true)
+
+      await clickInPage(tid('sync-sign-out'))
+      await clickInPage(tid('sync-sign-out-confirm'))
+      await $(tid('sync-sign-in')).waitForDisplayed({ timeout: 30_000 })
+      const signedOut = await hubState()
+      expect(signedOut.tokenCached).toBe(false)
+      expect(signedOut.tokenGeneration).toBeGreaterThan(signedIn.tokenGeneration)
+      await $(tid('hub-requires-auth')).waitForDisplayed()
+
+      const before = fakeHub().requests.length
+      expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: NOT_AUTHENTICATED })
+      expect(hubRequestsSince(before)).toEqual([])
+      await closeSettings()
     })
   })
 
