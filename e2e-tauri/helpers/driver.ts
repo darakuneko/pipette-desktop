@@ -232,14 +232,25 @@ export function realAutostartDirs(env: NodeJS.ProcessEnv): string[] {
   return [...new Set(dirs)]
 }
 
-/** Throws unless `dir` may be the session's autostart directory: an
- *  absolute path strictly inside `sessionDir`, which after resolving its
+/** The normalized `dir` when it may be the session's autostart directory,
+ *  else throws: an absolute path without `.` or `..` components (the app
+ *  resolves `..` after following a link, so `<link>/..` could leave the
+ *  session), strictly inside `sessionDir`, which after resolving its
  *  symbolic links is still inside it and is none of `realDirs` nor inside
- *  one of them. */
-export function assertAutostartDir(dir: string, sessionDir: string, realDirs: string[]): void {
+ *  one of them. The app gets the returned path, the one checked. */
+export function assertAutostartDir(dir: string, sessionDir: string, realDirs: string[]): string {
   if (!isAbsolute(dir)) throw new Error(`${AUTOSTART_DIR_VARIABLE} must be an absolute path, not ${dir}`)
-  const session = realpathSync(sessionDir)
-  const resolved = resolveExisting(resolve(dir))
+  if (dir.split(/[\\/]/).some((part) => part === '.' || part === '..')) {
+    throw new Error(`${AUTOSTART_DIR_VARIABLE} must not contain . or .. components, not ${dir}`)
+  }
+  let session: string
+  try {
+    session = realpathSync(sessionDir)
+  } catch (err) {
+    throw new Error(`the session's directory ${sessionDir} for ${AUTOSTART_DIR_VARIABLE} cannot be resolved: ${String(err)}`)
+  }
+  const normalized = resolve(dir)
+  const resolved = resolveExisting(normalized)
   if (resolved === session || !isWithin(resolved, session)) {
     throw new Error(`${AUTOSTART_DIR_VARIABLE} must be inside the session's directory ${session}, not ${dir} (${resolved})`)
   }
@@ -252,6 +263,7 @@ export function assertAutostartDir(dir: string, sessionDir: string, realDirs: st
     }
     if (isWithin(resolved, target)) throw new Error(`${AUTOSTART_DIR_VARIABLE} resolves to the real autostart directory ${target}`)
   }
+  return normalized
 }
 
 /** The environment the app of a session runs with: the virtual keyboard
@@ -294,7 +306,7 @@ export function appEnv(userDataDir: string, extra: Record<string, string>): Node
   }
   const autostartDir = env[AUTOSTART_DIR_VARIABLE]
   if (autostartDir === undefined) delete env[AUTOSTART_DIR_VARIABLE]
-  else assertAutostartDir(autostartDir, userDataDir, realAutostartDirs(env))
+  else env[AUTOSTART_DIR_VARIABLE] = assertAutostartDir(autostartDir, userDataDir, realAutostartDirs(env))
   return env
 }
 

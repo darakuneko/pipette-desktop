@@ -142,6 +142,29 @@ describe('appEnv: the autostart directory', () => {
     expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: toReal })).toThrow(new RegExp(AUTOSTART_DIR_VARIABLE))
   })
 
+  it('refuses . and .. components, which a link could carry out of the session', () => {
+    // <session>/link -> <home>/.config: `link/../.config/autostart` reads as
+    // <session>/.config/autostart, but the filesystem follows the link
+    // first and reaches <home>/.config/autostart.
+    const home = join(outsideDir, 'home')
+    mkdirSync(join(home, '.config'), { recursive: true })
+    const link = join(sessionDir, 'link')
+    symlinkSync(join(home, '.config'), link)
+    for (const dir of [`${link}/../.config/autostart`, `${sessionDir}/./autostart`, `${sessionDir}/a/../autostart`]) {
+      expect(() => appEnv(sessionDir, { HOME: home, [AUTOSTART_DIR_VARIABLE]: dir }), dir).toThrow(/\. or \.\. components/)
+    }
+  })
+
+  it('passes the app the normalized path it checked', () => {
+    const dir = `${sessionDir}//autostart/`
+    expect(appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: dir })[AUTOSTART_DIR_VARIABLE]).toBe(join(sessionDir, 'autostart'))
+  })
+
+  it('names a session directory that does not exist', () => {
+    const missing = join(outsideDir, 'no-session')
+    expect(() => appEnv(missing, { [AUTOSTART_DIR_VARIABLE]: join(missing, 'autostart') })).toThrow(/session's directory .* cannot be resolved/)
+  })
+
   it('refuses a dangling link', () => {
     const dangling = join(sessionDir, 'dangling')
     symlinkSync(join(outsideDir, 'missing'), dangling)
