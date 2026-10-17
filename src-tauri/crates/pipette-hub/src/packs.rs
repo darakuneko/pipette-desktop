@@ -65,6 +65,13 @@ impl PackKind {
         }
     }
 
+    fn download(self, post_id: &str) -> Endpoint<'_> {
+        match self {
+            PackKind::I18n => Endpoint::I18nDownload { post_id },
+            PackKind::Theme => Endpoint::ThemeDownload { post_id },
+        }
+    }
+
     fn submit(self, post_id: Option<&str>) -> Endpoint<'_> {
         match (self, post_id) {
             (PackKind::I18n, None) => Endpoint::I18nUpload,
@@ -351,11 +358,7 @@ pub async fn list(http: &HubHttp, kind: PackKind, params: Option<&Value>) -> Val
 /// passes its check.
 pub async fn download(http: &HubHttp, kind: PackKind, post_id: Option<&Value>) -> Value {
     let Some(post_id) = string_post_id(post_id) else { return failure("Invalid post ID") };
-    let result = match kind {
-        PackKind::I18n => http.send(&Endpoint::I18nDownload { post_id }, None, RequestBody::None).await,
-        PackKind::Theme => http.send(&Endpoint::ThemeDownload { post_id }, None, RequestBody::None).await,
-    };
-    let body = match result {
+    let body = match http.send(&kind.download(post_id), None, RequestBody::None).await {
         Ok(body) => body,
         Err(err) => return failure(err.to_string()),
     };
