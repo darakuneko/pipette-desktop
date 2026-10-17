@@ -436,6 +436,15 @@ impl SyncExecutor {
         // Before the units are collected, so a day removed on one side is
         // not uploaded again. It deletes only on a divergence; otherwise the
         // pass's listing stays good and Drive is not listed again.
+        //
+        // The typing analytics start first: the reconcile writes
+        // sync_state.json, and an initialization that reads it afterwards
+        // trusts the cache and skips the rebuild from the day files, which
+        // leaves this device's typing unknown (its days are then never
+        // uploaded). A failed start fails `own_typing` below too.
+        if let Err(err) = self.units.ops().analytics().ready().await {
+            log::warn!("typing analytics did not start before the reconcile: {err}");
+        }
         let reconciled = match self.units.own_hash() {
             Ok(hash) => {
                 let analytics = self.units.ops().analytics();

@@ -11,7 +11,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 /** Cargo's target directory as `cargo test` run from src-tauri resolves it:
  *  `CARGO_TARGET_DIR` when set (a relative value is taken from the current
  *  directory, as Cargo does), otherwise the workspace's `target`. */
-const cargoTargetDir = process.env.CARGO_TARGET_DIR
+export const cargoTargetDir = process.env.CARGO_TARGET_DIR
   ? resolve(process.cwd(), process.env.CARGO_TARGET_DIR)
   : resolve(repoRoot, 'src-tauri/target')
 

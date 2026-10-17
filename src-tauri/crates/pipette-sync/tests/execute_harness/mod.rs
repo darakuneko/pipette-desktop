@@ -395,6 +395,19 @@ impl World {
         self.sync(SyncDirection::Upload, scope).await.unwrap()
     }
 
+    /// Waits for the typing analytics' flush chain to drain: a merge of
+    /// this device's own deleted ranges queues the apply (which writes
+    /// `deleted-ranges-applied.json`) without awaiting it. The queued task
+    /// may join the chain a moment later, so the drain is repeated a few
+    /// times with a short wait between, as the TypeScript recordings do
+    /// (scripts/sync-fixtures/flush-chain.ts).
+    pub async fn settle_flush_chain(&self) {
+        for _ in 0..5 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+            self.ops.recorder().run_on_flush_chain(async {}).await;
+        }
+    }
+
     pub fn write(&self, path: &str, content: &str) {
         write(&self.root, path, content);
     }

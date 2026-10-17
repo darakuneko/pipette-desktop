@@ -30,6 +30,7 @@ import { REPO_ROOT } from '../fixture-vitest-config'
 import { dumpTable } from '../analytics-db-fixtures/canonical'
 import { startFakeDrive, type FakeDrive } from '../fake-drive/server'
 import { FIXED_INSTALLATION_ID, FIXED_NOW, readTree, seedUserData, type Tree } from './harness'
+import { settleFlushChain } from './flush-chain'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-sync/tests/fixtures/ts_analytics_merge.json')
 
@@ -70,7 +71,6 @@ import { DATA_TABLE_NAMES } from '../../src/main/typing-analytics/db/schema'
 import { applyRowsToCache } from '../../src/main/typing-analytics/jsonl/apply-to-cache'
 import { charMinuteRowId, minuteStatsRowId, parseRow, scopeRowId, sessionRowId, type JsonlRow } from '../../src/main/typing-analytics/jsonl/jsonl-row'
 import { resetTypingAnalyticsForTests, setTypingAnalyticsSyncNotifier } from '../../src/main/typing-analytics/typing-analytics-state'
-import { runOnFlushChain } from '../../src/main/typing-analytics/typing-analytics-pipeline'
 import { parseTypingAnalyticsDeviceDaySyncUnit, parseTypingDeletedRangesSyncUnit } from '../../src/main/typing-analytics/sync'
 import type { SyncBundle } from '../../src/shared/types/sync'
 
@@ -404,13 +404,6 @@ function dumpTables(db: TypingAnalyticsDB): Record<string, string[]> {
 
 /** Waits until the flush chain has run everything queued so far, also work
  *  queued after a few awaits. */
-async function settleChain(): Promise<void> {
-  for (let i = 0; i < 5; i++) {
-    await new Promise((r) => setTimeout(r, 5))
-    await runOnFlushChain(() => undefined)
-  }
-}
-
 function rowsOf(text: string): JsonlRow[] {
   return text.split('\n').map((line) => parseRow(line)).filter((row): row is JsonlRow => row !== null)
 }
@@ -443,7 +436,7 @@ async function runMergeStep(userData: string, db: TypingAnalyticsDB, step: Merge
   } catch (err) {
     outcome = { error: errorName(err) }
   }
-  await settleChain()
+  await settleFlushChain()
   if (holds) syncRuntime.resetKeyboards = null
   return { ...outcome, notified: [...rec.notified], tree: readTree(userData), tables: dumpTables(db) }
 }

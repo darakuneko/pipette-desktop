@@ -23,6 +23,7 @@ import { utimesSync } from 'node:fs'
 import { writeJsonFixture } from '../fixture-files'
 import { REPO_ROOT } from '../fixture-vitest-config'
 import { FIXED_INSTALLATION_ID, FIXED_NOW, readTree, seedUserData, type Tree } from './harness'
+import { settleFlushChain } from './flush-chain'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-sync/tests/fixtures/ts_sync_merge.json')
 
@@ -499,6 +500,7 @@ async function runStep(userData: string, step: Step): Promise<Record<string, unk
     } catch (err) {
       outcome = { error: errorName(err) }
     }
+    await settleFlushChain()
     return { ...outcome, events: [...rec.events], pending: [...rec.pending], forgotten: [...rec.forgotten].sort(), tree: readTree(userData) }
   }
   if ('gc' in step) {

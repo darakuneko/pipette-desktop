@@ -31,6 +31,7 @@ import { REPO_ROOT } from '../fixture-vitest-config'
 import { startFakeDrive, type FakeDrive } from '../fake-drive/server'
 import { logRequest } from './drive-request-log'
 import { FIXED_INSTALLATION_ID, FIXED_NOW, readTree, seedUserData, type Tree } from './harness'
+import { settleFlushChain } from './flush-chain'
 import type { SyncProgress } from '../../src/shared/types/sync'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-sync/tests/fixtures/ts_triggers.json')
@@ -385,6 +386,7 @@ describe('trigger fixtures', () => {
           timer,
         })
       }
+      await settleFlushChain()
       const files = []
       for (const file of drive.state.files) files.push({ id: file.id, name: file.name, modifiedTime: file.modifiedTime, ...await driveContent(file.content) })
       return {
