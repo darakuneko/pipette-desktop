@@ -14,9 +14,10 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use common::{Clock, array, block_on, field, fixture, get, number, text};
 use pipette_hub::account;
+use pipette_hub::posts::{self, MyPostsParams};
 use pipette_hub::token::HubToken;
 use pipette_hub::{BoxFuture, HubHttp, HubRequesters, IdTokenSource};
-use pipette_js_json::{Object, Value, stringify};
+use pipette_js_json::{Value, stringify};
 use pipette_net::{HttpError, HttpReply, HttpRequest};
 use zeroize::Zeroizing;
 
@@ -144,18 +145,10 @@ async fn run_call(token: &HubToken, call: &str, args: &[Value]) -> Option<Value>
         }
         "HUB_FETCH_AUTH_ME" => account::fetch_auth_me(token).await,
         "HUB_PATCH_AUTH_ME" => account::patch_auth_me(token, arg).await,
-        // The posts handler of the token failure scenario: only its token
-        // request runs, which fails before the operation.
+        // The posts handler of the token failure scenario.
         "HUB_FETCH_MY_POSTS" => {
-            let err = token
-                .with_token_retry::<(), _, _>(|_| async {
-                    unreachable!("the token request fails in this scenario")
-                })
-                .await
-                .unwrap_err();
-            let answer: Object =
-                [("success", Value::Bool(false)), ("error", Value::from(err.message))].into_iter().collect();
-            Value::Object(answer)
+            assert!(args.is_empty());
+            posts::fetch_my_posts(token, MyPostsParams::default()).await
         }
         other => panic!("not an account call: {other}"),
     })
