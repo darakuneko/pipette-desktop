@@ -358,6 +358,30 @@ fn refuse_unsafe_path(name: &str, path: &Path) {
     }
 }
 
+/// Whether `dir` or anything under it is a symbolic link (never followed).
+/// An entry that cannot be read counts as one: the tree cannot be shown to
+/// hold none.
+fn holds_symlink(dir: &Path) -> bool {
+    let Ok(meta) = std::fs::symlink_metadata(dir) else { return false };
+    if meta.file_type().is_symlink() {
+        return true;
+    }
+    if !meta.is_dir() {
+        return false;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else { return true };
+    entries.into_iter().any(|entry| entry.map_or(true, |entry| holds_symlink(&entry.path())))
+}
+
+/// Exits before anything is touched when the userData `dir` holds a
+/// symbolic link anywhere: a store would follow it out of the copy.
+fn refuse_symlinks_in(dir: &Path) {
+    if holds_symlink(dir) {
+        eprintln!("hub_peer: refused userData: it holds a symbolic link");
+        std::process::exit(2);
+    }
+}
+
 /// Exits when the scripted Hub's base is not on 127.0.0.1.
 fn refuse_non_loopback(base: &str) {
     let host = base.strip_prefix("http://").and_then(|rest| rest.split(['/', ':']).next());
@@ -375,6 +399,7 @@ fn main() {
     let out = PathBuf::from(text(field(&input, "out")));
     refuse_unsafe_path("userData", &user_data);
     refuse_unsafe_path("out", &out);
+    refuse_symlinks_in(&user_data);
     let base = text(field(&input, "hubBase"));
     refuse_non_loopback(&base);
     let Value::Number(now) = *field(&input, "now") else { panic!("hub_peer: now") };
@@ -430,6 +455,26 @@ mod tests {
             Some("must be an absolute path")
         );
         assert_eq!(unsafe_reason(&real.join("sync"), &roots(&real)), Some("is inside a real userData"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_user_data_holding_a_symlink_is_refused() {
+        let (_top, real, work) = dirs();
+        let user_data = work.join("user-data");
+        std::fs::create_dir_all(user_data.join("local")).unwrap();
+        std::fs::write(user_data.join("local").join("installation-id"), "id").unwrap();
+        assert_eq!(unsafe_reason(&user_data, &roots(&real)), None);
+        assert!(!holds_symlink(&user_data));
+        // `sync` is a link into the real userData; the root itself is safe.
+        std::os::unix::fs::symlink(real.join("sync"), user_data.join("sync")).unwrap();
+        assert_eq!(unsafe_reason(&user_data, &roots(&real)), None);
+        assert!(holds_symlink(&user_data));
+        // A link deeper down counts too.
+        std::fs::remove_file(user_data.join("sync")).unwrap();
+        std::fs::create_dir_all(user_data.join("sync").join("i18n")).unwrap();
+        std::os::unix::fs::symlink("../../local", user_data.join("sync").join("i18n").join("packs")).unwrap();
+        assert!(holds_symlink(&user_data));
     }
 
     #[cfg(unix)]
