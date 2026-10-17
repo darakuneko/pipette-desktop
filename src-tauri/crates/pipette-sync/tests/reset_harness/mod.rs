@@ -345,3 +345,28 @@ impl World {
         self.preflight.forget_change_state_cache();
     }
 }
+
+/// Every file (as UTF-8 text) and empty directory (`path/`, `None`) under
+/// `root`, as the TypeScript harness's `readTree` lists them.
+pub fn read_tree(root: &Path) -> std::collections::BTreeMap<String, Option<String>> {
+    fn walk(root: &Path, dir: &Path, tree: &mut std::collections::BTreeMap<String, Option<String>>) {
+        let mut entries: Vec<_> = std::fs::read_dir(dir).unwrap().flatten().collect();
+        entries.sort_by_key(|entry| entry.file_name());
+        let rel = |path: &Path| path.strip_prefix(root).unwrap().to_string_lossy().replace('\\', "/");
+        if entries.is_empty() && dir != root {
+            tree.insert(format!("{}/", rel(dir)), None);
+        }
+        for entry in entries {
+            let path = entry.path();
+            if entry.file_type().unwrap().is_dir() {
+                walk(root, &path, tree);
+            } else {
+                let content = String::from_utf8_lossy(&std::fs::read(&path).unwrap()).into_owned();
+                tree.insert(rel(&path), Some(content));
+            }
+        }
+    }
+    let mut tree = std::collections::BTreeMap::new();
+    walk(root, root, &mut tree);
+    tree
+}
