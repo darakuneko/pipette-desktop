@@ -5,7 +5,7 @@
 //
 // Run: pnpm run test:hub-fixtures-harness
 
-import { writeFileSync } from 'node:fs'
+import { symlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
@@ -15,13 +15,16 @@ import { fetchAuthMe, fetchMyPosts, uploadFeaturePostToHub, Hub429Error } from '
 import { fetchI18nPostList } from '../../src/main/hub/hub-i18n'
 import { downloadKeyLabel } from '../../src/main/hub/hub-key-labels'
 import { getIdToken } from '../../src/main/sync/google-auth'
+import { getMachineHash } from '../../src/main/typing-analytics/machine-hash'
 import { FIXED_NOW, seedUserData, useUserData } from '../sync-fixtures/harness'
 import {
   FAKE_ID_TOKEN,
+  FIXED_MACHINE_HASH,
   HUB_BASE,
   scriptedFetch,
   setIdToken,
   setRules,
+  readSafeTree,
   settledTree,
   takeRecorded,
   unusedRules,
@@ -141,5 +144,19 @@ describe('the hub fixture harness', () => {
     const tree = await settledTree(dir)
     expect(tree['b.json']).toBe('2')
     expect(Date.now()).toBe(FIXED_NOW)
+  })
+
+  it('reads a tree without following symbolic links', async () => {
+    const dir = seedUserData({ 'a.json': '1' })
+    expect(readSafeTree(dir)['a.json']).toBe('1')
+    symlinkSync(join(homedir(), '.config', 'pipette-desktop'), join(dir, 'link'))
+    expect(() => readSafeTree(dir)).toThrow(/refused the symbolic link link/)
+    await expect(settledTree(dir)).rejects.toThrow(/refused the symbolic link/)
+    expect(() => readSafeTree(join(homedir(), '.config', 'pipette-desktop'))).toThrow(/refused the real userData/)
+  })
+
+  it('answers a fixed machine hash', async () => {
+    expect(await getMachineHash()).toBe(FIXED_MACHINE_HASH)
+    expect(FIXED_MACHINE_HASH).toMatch(/^[0-9a-f]{64}$/)
   })
 })

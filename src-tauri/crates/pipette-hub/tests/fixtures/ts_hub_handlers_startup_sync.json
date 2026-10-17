@@ -128,7 +128,8 @@
       "steps": [
         {
           "step": {
-            "startupSync": true
+            "startupSync": true,
+            "summary": true
           },
           "answer": null,
           "requests": [
@@ -273,7 +274,8 @@
       "steps": [
         {
           "step": {
-            "startupSync": true
+            "startupSync": true,
+            "summary": true
           },
           "answer": null,
           "requests": [
@@ -370,7 +372,8 @@
       "steps": [
         {
           "step": {
-            "startupSync": true
+            "startupSync": true,
+            "summary": true
           },
           "answer": null,
           "requests": [
@@ -436,7 +439,8 @@
       "steps": [
         {
           "step": {
-            "startupSync": true
+            "startupSync": true,
+            "summary": false
           },
           "answer": null,
           "requests": [],

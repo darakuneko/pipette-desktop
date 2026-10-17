@@ -77,6 +77,22 @@ export const I18N_PACK_SCENARIOS: Scenario[] = [
     ],
   },
   {
+    name: 'a pack without a name looks the uploader up in the unfiltered list',
+    seed: seedI18n,
+    rules: [
+      tokenRule(1),
+      rule('POST', '/api/i18n-packs', [ok({ id: 'hub-noname', title: '' }), ok({ id: 'hub-blank', title: '' })]),
+      rule('GET', '/api/i18n-packs', [
+        ok(page([summary('hub-noname', 'Unnamed', { uploader_name: 'Someone' })])),
+        ok(page([summary('other', 'Other'), summary('hub-blank', '   ', { updated_at: '2026-10-06T00:00:00.000Z' })])),
+      ], ''),
+    ],
+    steps: [
+      { call: 'HUB_UPLOAD_I18N_POST', args: [{ entryId: 'pack-ja', pack: { version: '1.2.0', common: { save: '保存' } } }] },
+      { call: 'HUB_UPLOAD_I18N_POST', args: [{ entryId: 'pack-linked', pack: { ...JA, name: '   ' } }] },
+    ],
+  },
+  {
     name: 'upload and update land on a pack that is not there',
     seed: seedI18n,
     rules: [
@@ -185,6 +201,22 @@ export const THEME_PACK_SCENARIOS: Scenario[] = [
       { call: 'HUB_DELETE_THEME_POST', args: ['hub-linked', 'theme-linked'] },
       { call: 'HUB_UPDATE_THEME_POST', args: [{ entryId: 'theme-linked', pack: NORD, postId: '' }] },
       { call: 'HUB_UPLOAD_THEME_POST', args: [undefined] },
+    ],
+  },
+  {
+    name: 'a theme pack without a name looks the uploader up in the unfiltered list',
+    seed: seedTheme,
+    rules: [
+      tokenRule(1),
+      rule('POST', '/api/theme-packs', [ok({ id: 'hub-noname', title: '' }), ok({ id: 'hub-blank', title: '' })]),
+      rule('GET', '/api/theme-packs', [
+        ok(page([summary('hub-noname', 'Unnamed', { uploader_name: 'Someone' })])),
+        ok(page([summary('hub-blank', '   ', { uploader_name: null })])),
+      ], ''),
+    ],
+    steps: [
+      { call: 'HUB_UPLOAD_THEME_POST', args: [{ entryId: 'theme-nord', pack: { version: '1.0.0', colorScheme: 'dark', colors: NORD.colors } }] },
+      { call: 'HUB_UPLOAD_THEME_POST', args: [{ entryId: 'theme-linked', pack: { ...NORD, name: '   ' } }] },
     ],
   },
   {

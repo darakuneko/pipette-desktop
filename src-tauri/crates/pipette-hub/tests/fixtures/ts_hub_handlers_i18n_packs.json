@@ -348,6 +348,260 @@
       }
     },
     {
+      "name": "a pack without a name looks the uploader up in the unfiltered list",
+      "rules": [
+        {
+          "method": "POST",
+          "path": "/api/auth/token",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "token": "jwt-1",
+                  "user": {
+                    "id": "u-1",
+                    "email": "user@example.com",
+                    "display_name": "User",
+                    "role": "user"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/i18n-packs",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "hub-noname",
+                  "title": ""
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "hub-blank",
+                  "title": ""
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/i18n-packs",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "items": [
+                    {
+                      "id": "hub-noname",
+                      "name": "Unnamed",
+                      "version": "1.2.0",
+                      "uploaded_by": "u-1",
+                      "uploader_name": "Someone",
+                      "created_at": "2026-10-01T00:00:00.000Z",
+                      "updated_at": "2026-10-05T00:00:00.000Z"
+                    }
+                  ],
+                  "total": 1,
+                  "page": 1,
+                  "per_page": 20
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "items": [
+                    {
+                      "id": "other",
+                      "name": "Other",
+                      "version": "1.2.0",
+                      "uploaded_by": "u-1",
+                      "uploader_name": "Uploader",
+                      "created_at": "2026-10-01T00:00:00.000Z",
+                      "updated_at": "2026-10-05T00:00:00.000Z"
+                    },
+                    {
+                      "id": "hub-blank",
+                      "name": "   ",
+                      "version": "1.2.0",
+                      "uploaded_by": "u-1",
+                      "uploader_name": "Uploader",
+                      "created_at": "2026-10-01T00:00:00.000Z",
+                      "updated_at": "2026-10-06T00:00:00.000Z"
+                    }
+                  ],
+                  "total": 2,
+                  "page": 1,
+                  "per_page": 20
+                }
+              }
+            }
+          ],
+          "query": ""
+        }
+      ],
+      "treeBefore": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"pack-ja\",\n      \"filename\": \"packs/pack-ja.json\",\n      \"name\": \"Japanese\",\n      \"version\": \"1.2.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.000Z\",\n        \"enabled\": \"2026-10-16T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"pack-linked\",\n      \"filename\": \"packs/pack-linked.json\",\n      \"name\": \"Linked\",\n      \"version\": \"1.2.0\",\n      \"enabled\": true,\n      \"hubPostId\": \"hub-linked\",\n      \"hubUpdatedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"uploaderName\": \"Me\",\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.000Z\",\n        \"enabled\": \"2026-10-16T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/i18n/packs/pack-ja.json": "{\n  \"name\": \"Japanese\",\n  \"version\": \"1.2.0\",\n  \"common\": {\n    \"save\": \"保存\",\n    \"cancel\": \"キャンセル\"\n  },\n  \"z\": \"last\",\n  \"a\": \"first\"\n}",
+        "sync/i18n/packs/pack-linked.json": "{\n  \"name\": \"Linked\",\n  \"version\": \"1.2.0\",\n  \"common\": {\n    \"save\": \"保存\",\n    \"cancel\": \"キャンセル\"\n  },\n  \"z\": \"last\",\n  \"a\": \"first\"\n}"
+      },
+      "steps": [
+        {
+          "step": {
+            "call": "HUB_UPLOAD_I18N_POST",
+            "args": [
+              {
+                "entryId": "pack-ja",
+                "pack": {
+                  "version": "1.2.0",
+                  "common": {
+                    "save": "保存"
+                  }
+                }
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "hub-noname"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/auth/token",
+              "query": [],
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": {
+                "json": {
+                  "id_token": "fixture-google-id-token"
+                },
+                "text": "{\"id_token\":\"fixture-google-id-token\"}"
+              }
+            },
+            {
+              "method": "POST",
+              "path": "/api/i18n-packs",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteI18nBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"i18n-export-v1.json\"\r\nContent-Type: application/json",
+                      "text": "{\"version\":1,\"kind\":\"i18n\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"pack\":{\"version\":\"1.2.0\",\"common\":{\"save\":\"保存\"}}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0iaTE4bi1leHBvcnQtdjEuanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7InZlcnNpb24iOjEsImtpbmQiOiJpMThuIiwiZXhwb3J0ZWRBdCI6IjIwMjYtMTAtMTZUMDA6MDA6MDAuMDAwWiIsInBhY2siOnsidmVyc2lvbiI6IjEuMi4wIiwiY29tbW9uIjp7InNhdmUiOiLkv53lrZgifX19DQotLXtib3VuZGFyeX0tLQ0K"
+                }
+              }
+            },
+            {
+              "method": "GET",
+              "path": "/api/i18n-packs",
+              "query": [],
+              "headers": {}
+            }
+          ],
+          "sleeps": [],
+          "notified": [
+            "i18n/index"
+          ],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_I18N_POST",
+            "args": [
+              {
+                "entryId": "pack-linked",
+                "pack": {
+                  "name": "   ",
+                  "version": "1.2.0",
+                  "common": {
+                    "save": "保存",
+                    "cancel": "キャンセル"
+                  },
+                  "z": "last",
+                  "a": "first"
+                }
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "hub-blank"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/i18n-packs",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteI18nBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"i18n-export-v1.json\"\r\nContent-Type: application/json",
+                      "text": "{\"version\":1,\"kind\":\"i18n\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"pack\":{\"name\":\"   \",\"version\":\"1.2.0\",\"common\":{\"save\":\"保存\",\"cancel\":\"キャンセル\"},\"z\":\"last\",\"a\":\"first\"}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0iaTE4bi1leHBvcnQtdjEuanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7InZlcnNpb24iOjEsImtpbmQiOiJpMThuIiwiZXhwb3J0ZWRBdCI6IjIwMjYtMTAtMTZUMDA6MDA6MDAuMDAwWiIsInBhY2siOnsibmFtZSI6IiAgICIsInZlcnNpb24iOiIxLjIuMCIsImNvbW1vbiI6eyJzYXZlIjoi5L+d5a2YIiwiY2FuY2VsIjoi44Kt44Oj44Oz44K744OrIn0sInoiOiJsYXN0IiwiYSI6ImZpcnN0In19DQotLXtib3VuZGFyeX0tLQ0K"
+                }
+              }
+            },
+            {
+              "method": "GET",
+              "path": "/api/i18n-packs",
+              "query": [],
+              "headers": {}
+            }
+          ],
+          "sleeps": [],
+          "notified": [
+            "i18n/index"
+          ],
+          "events": [],
+          "logs": []
+        }
+      ],
+      "treeAfter": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/i18n/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"pack-ja\",\n      \"filename\": \"packs/pack-ja.json\",\n      \"name\": \"Japanese\",\n      \"version\": \"1.2.0\",\n      \"enabled\": true,\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.001Z\",\n        \"enabled\": \"2026-10-16T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.001Z\",\n      \"hubPostId\": \"hub-noname\",\n      \"uploaderName\": \"Someone\",\n      \"hubUpdatedAt\": \"2026-10-05T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"pack-linked\",\n      \"filename\": \"packs/pack-linked.json\",\n      \"name\": \"Linked\",\n      \"version\": \"1.2.0\",\n      \"enabled\": true,\n      \"hubPostId\": \"hub-blank\",\n      \"hubUpdatedAt\": \"2026-10-06T00:00:00.000Z\",\n      \"uploaderName\": \"Uploader\",\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.001Z\",\n        \"enabled\": \"2026-10-16T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.001Z\"\n    }\n  ]\n}",
+        "sync/i18n/packs/pack-ja.json": "{\n  \"name\": \"Japanese\",\n  \"version\": \"1.2.0\",\n  \"common\": {\n    \"save\": \"保存\",\n    \"cancel\": \"キャンセル\"\n  },\n  \"z\": \"last\",\n  \"a\": \"first\"\n}",
+        "sync/i18n/packs/pack-linked.json": "{\n  \"name\": \"Linked\",\n  \"version\": \"1.2.0\",\n  \"common\": {\n    \"save\": \"保存\",\n    \"cancel\": \"キャンセル\"\n  },\n  \"z\": \"last\",\n  \"a\": \"first\"\n}"
+      }
+    },
+    {
       "name": "upload and update land on a pack that is not there",
       "rules": [
         {

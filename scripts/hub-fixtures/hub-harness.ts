@@ -22,7 +22,8 @@
 //     are fixed; the boundary is also written as a template with `{now}`;
 //   - `randomUUID` / `randomBytes` / `Math.random`: the sync harness's
 //     fixed sequences (new store ids, temporary file names);
-//   - the machine hash: the generators that need one mock it;
+//   - the machine hash: `getMachineHash` answers FIXED_MACHINE_HASH
+//     (setup.ts), so no machine id is read;
 //   - the Hub's answers (ids, JWTs, `updated_at`): literal values in the
 //     scenario's rules, numbered in the order the scenario lists them;
 //   - the waits of a 429: `setTimeout` from src/main/hub is recorded and
@@ -33,16 +34,27 @@
 //   - error stacks (the startup auto-update keeps `err.stack`): only the
 //     first line is recorded;
 //   - writes that are not awaited: a userData tree is read only after the
-//     tree, the change notices and the events have stopped changing for
-//     SETTLE_QUIET_MS (a time limit, never a count of yields).
+//     tree, the change notices, the events and the log lines have stopped
+//     changing for SETTLE_QUIET_MS (a time limit, never a count of yields);
+//     the startup auto-update is first waited for by its summary log line
+//     (waitForLog).
+//
+// A userData tree is read without following symbolic links: its root must
+// pass the sync harness's real-userData check and a link inside it fails
+// the read.
 
-import { readTree, type Tree } from '../sync-fixtures/harness'
+import { lstatSync, readFileSync, readdirSync } from 'node:fs'
+import { join, relative, sep } from 'node:path'
+import { assertSafePath, type Tree } from '../sync-fixtures/harness'
 import { logRequest, type LoggedRequest } from './request-log'
 
 /** The Hub every generator points the Electron code at
  *  (`PIPETTE_HUB_URL`, honoured with `PIPETTE_HUB_TEST=1`). Nothing
  *  listens on port 9; the scripted Hub answers before any connection. */
 export const HUB_BASE = 'http://127.0.0.1:9'
+
+/** The machine hash `getMachineHash` answers (64 hex digits). */
+export const FIXED_MACHINE_HASH = 'f1f0'.repeat(16)
 
 /** The fake Google id_token `getIdToken` answers by default. */
 export const FAKE_ID_TOKEN = 'fixture-google-id-token'
@@ -242,14 +254,46 @@ export async function withRecordedHubSleeps<T>(run: () => Promise<T>): Promise<T
 
 // --- Settling ---
 
-/** How long the tree, the change notices and the events must stay the
- *  same before a tree is read. */
-const SETTLE_QUIET_MS = 30
-/** How long settling may take before the generator fails. */
-const SETTLE_DEADLINE_MS = 5_000
+/** How long the tree, the change notices, the events and the log lines
+ *  must stay the same before a tree is read. */
+const SETTLE_QUIET_MS = 150
+/** How long settling, or waiting for a log line, may take before the
+ *  generator fails. */
+const SETTLE_DEADLINE_MS = 10_000
+
+/** Every file (UTF-8) and empty directory under `dir`, by path. The root
+ *  must not be a real userData; a symbolic link anywhere in the tree
+ *  throws instead of being followed. */
+export function readSafeTree(dir: string): Tree {
+  const root = assertSafePath(dir)
+  const tree: Tree = {}
+  const walk = (current: string): void => {
+    const entries = readdirSync(current).sort()
+    if (entries.length === 0 && current !== root) tree[`${relative(root, current).split(sep).join('/')}/`] = null
+    for (const entry of entries) {
+      const path = join(current, entry)
+      const stat = lstatSync(path)
+      if (stat.isSymbolicLink()) throw new Error(`hub fixture harness: refused the symbolic link ${relative(root, path)}`)
+      if (stat.isDirectory()) walk(path)
+      else tree[relative(root, path).split(sep).join('/')] = readFileSync(path, 'utf8')
+    }
+  }
+  if (lstatSync(root).isSymbolicLink()) throw new Error('hub fixture harness: refused a userData that is a symbolic link')
+  walk(root)
+  return tree
+}
 
 function snapshotKey(dir: string): string {
-  return JSON.stringify([readTree(dir), state.notified.length, state.events.length, state.logs.length])
+  return JSON.stringify([readSafeTree(dir), state.notified.length, state.events.length, state.logs.length])
+}
+
+/** Waits until a recorded log line starts with `prefix`. */
+export async function waitForLog(prefix: string): Promise<void> {
+  const deadline = performance.now() + SETTLE_DEADLINE_MS
+  while (!state.logs.some((line) => line.message.startsWith(prefix))) {
+    if (performance.now() > deadline) throw new Error(`hub fixture harness: no log line starting with ${prefix}`)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
 }
 
 /** The userData tree once nothing has changed for SETTLE_QUIET_MS:
@@ -267,7 +311,7 @@ export async function settledTree(dir: string): Promise<Tree> {
       last = current
       quietSince = now
     } else if (now - quietSince >= SETTLE_QUIET_MS) {
-      return readTree(dir)
+      return readSafeTree(dir)
     }
     if (now > deadline) throw new Error('hub fixture harness: the userData did not settle')
   }

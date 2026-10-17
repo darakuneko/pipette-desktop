@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Installs the Hub fixture harness (hub-harness.ts) before every test
 // file, after the sync fixture harness (../sync-fixtures/setup.ts):
-// Google's id_token is fake, the change notices, broadcasts and log lines
+// Google's id_token and the machine hash are fixed, the change notices, broadcasts and log lines
 // are recorded instead of acting, the IPC handlers are kept for the
 // generators to call, and the Hub base points at 127.0.0.1.
 
 import { afterEach, beforeEach, vi } from 'vitest'
-import { HUB_BASE, currentIdToken, recordEvent, recordLog, recordNotified, resetHubHarness } from './hub-harness'
+import { FIXED_MACHINE_HASH, HUB_BASE, currentIdToken, recordEvent, recordLog, recordNotified, resetHubHarness } from './hub-harness'
 import { registerHandler } from './ipc-handlers'
 
 vi.mock('../../src/main/sync/google-auth', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return { ...actual, getIdToken: async () => currentIdToken() }
 })
+
+// node-machine-id would read this machine's id.
+vi.mock('../../src/main/typing-analytics/machine-hash', () => ({
+  getMachineHash: async () => FIXED_MACHINE_HASH,
+  resetMachineHashCacheForTests: () => undefined,
+}))
 
 // The whole sync service stays out: the stores only call notifyChange.
 vi.mock('../../src/main/sync/sync-service', () => ({

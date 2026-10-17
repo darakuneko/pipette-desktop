@@ -33,8 +33,11 @@ export type Step =
   /** Signing in or out: `clearHubTokenCache` (hub-ipc-token.ts). */
   | { clearHubTokenCache: true }
   /** The startup auto-update of Hub-linked language packs
-   *  (`startI18nStartupSync`, i18n-startup-sync.ts), run to its end. */
-  | { startupSync: true }
+   *  (`startI18nStartupSync`, i18n-startup-sync.ts), run to its end.
+   *  `summary`: the pass checks Hub-linked packs and so ends with its
+   *  `i18n startup sync: checked=` log line, which the recorder waits for
+   *  before it waits for the userData to settle. */
+  | { startupSync: true; summary: boolean }
 
 export interface Scenario {
   name: string

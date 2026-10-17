@@ -458,6 +458,318 @@
       }
     },
     {
+      "name": "a theme pack without a name looks the uploader up in the unfiltered list",
+      "rules": [
+        {
+          "method": "POST",
+          "path": "/api/auth/token",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "token": "jwt-1",
+                  "user": {
+                    "id": "u-1",
+                    "email": "user@example.com",
+                    "display_name": "User",
+                    "role": "user"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/theme-packs",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "hub-noname",
+                  "title": ""
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "hub-blank",
+                  "title": ""
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/theme-packs",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "items": [
+                    {
+                      "id": "hub-noname",
+                      "name": "Unnamed",
+                      "version": "1.2.0",
+                      "uploaded_by": "u-1",
+                      "uploader_name": "Someone",
+                      "created_at": "2026-10-01T00:00:00.000Z",
+                      "updated_at": "2026-10-05T00:00:00.000Z"
+                    }
+                  ],
+                  "total": 1,
+                  "page": 1,
+                  "per_page": 20
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "items": [
+                    {
+                      "id": "hub-blank",
+                      "name": "   ",
+                      "version": "1.2.0",
+                      "uploaded_by": "u-1",
+                      "uploader_name": null,
+                      "created_at": "2026-10-01T00:00:00.000Z",
+                      "updated_at": "2026-10-05T00:00:00.000Z"
+                    }
+                  ],
+                  "total": 1,
+                  "page": 1,
+                  "per_page": 20
+                }
+              }
+            }
+          ],
+          "query": ""
+        }
+      ],
+      "treeBefore": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/themes/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"theme-nord\",\n      \"filename\": \"packs/theme-nord.json\",\n      \"name\": \"Nord\",\n      \"version\": \"1.0.0\",\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"theme-linked\",\n      \"filename\": \"packs/theme-linked.json\",\n      \"name\": \"Linked\",\n      \"version\": \"1.0.0\",\n      \"hubPostId\": \"hub-linked\",\n      \"hubUpdatedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/themes/packs/theme-linked.json": "{\n  \"name\": \"Linked\",\n  \"version\": \"1.0.0\",\n  \"colorScheme\": \"dark\",\n  \"colors\": {\n    \"surface\": \"#2e3440\",\n    \"surface-alt\": \"#2e3440\",\n    \"surface-dim\": \"#2e3440\",\n    \"surface-raised\": \"#2e3440\",\n    \"content\": \"#2e3440\",\n    \"content-secondary\": \"#2e3440\",\n    \"content-muted\": \"#2e3440\",\n    \"content-inverse\": \"#2e3440\",\n    \"edge\": \"#2e3440\",\n    \"edge-subtle\": \"#2e3440\",\n    \"edge-strong\": \"#2e3440\",\n    \"accent\": \"#2e3440\",\n    \"accent-hover\": \"#2e3440\",\n    \"accent-alt\": \"#2e3440\",\n    \"success\": \"#2e3440\",\n    \"warning\": \"#2e3440\",\n    \"danger\": \"#2e3440\",\n    \"pending\": \"#2e3440\",\n    \"key-bg\": \"#2e3440\",\n    \"key-bg-hover\": \"#2e3440\",\n    \"key-bg-active\": \"#2e3440\",\n    \"key-border\": \"#2e3440\",\n    \"key-shadow\": \"#2e3440\",\n    \"key-label\": \"#2e3440\",\n    \"key-sublabel\": \"#2e3440\",\n    \"key-label-remap\": \"#2e3440\",\n    \"key-bg-multi-selected\": \"#2e3440\",\n    \"tab-bg-active\": \"#2e3440\",\n    \"tab-text\": \"#2e3440\",\n    \"tab-text-active\": \"#2e3440\",\n    \"picker-bg\": \"#2e3440\",\n    \"picker-item-bg\": \"#2e3440\",\n    \"picker-item-hover\": \"#2e3440\",\n    \"picker-item-text\": \"#2e3440\",\n    \"picker-item-border\": \"#2e3440\"\n  }\n}",
+        "sync/themes/packs/theme-nord.json": "{\n  \"name\": \"Nord\",\n  \"version\": \"1.0.0\",\n  \"colorScheme\": \"dark\",\n  \"colors\": {\n    \"surface\": \"#2e3440\",\n    \"surface-alt\": \"#2e3440\",\n    \"surface-dim\": \"#2e3440\",\n    \"surface-raised\": \"#2e3440\",\n    \"content\": \"#2e3440\",\n    \"content-secondary\": \"#2e3440\",\n    \"content-muted\": \"#2e3440\",\n    \"content-inverse\": \"#2e3440\",\n    \"edge\": \"#2e3440\",\n    \"edge-subtle\": \"#2e3440\",\n    \"edge-strong\": \"#2e3440\",\n    \"accent\": \"#2e3440\",\n    \"accent-hover\": \"#2e3440\",\n    \"accent-alt\": \"#2e3440\",\n    \"success\": \"#2e3440\",\n    \"warning\": \"#2e3440\",\n    \"danger\": \"#2e3440\",\n    \"pending\": \"#2e3440\",\n    \"key-bg\": \"#2e3440\",\n    \"key-bg-hover\": \"#2e3440\",\n    \"key-bg-active\": \"#2e3440\",\n    \"key-border\": \"#2e3440\",\n    \"key-shadow\": \"#2e3440\",\n    \"key-label\": \"#2e3440\",\n    \"key-sublabel\": \"#2e3440\",\n    \"key-label-remap\": \"#2e3440\",\n    \"key-bg-multi-selected\": \"#2e3440\",\n    \"tab-bg-active\": \"#2e3440\",\n    \"tab-text\": \"#2e3440\",\n    \"tab-text-active\": \"#2e3440\",\n    \"picker-bg\": \"#2e3440\",\n    \"picker-item-bg\": \"#2e3440\",\n    \"picker-item-hover\": \"#2e3440\",\n    \"picker-item-text\": \"#2e3440\",\n    \"picker-item-border\": \"#2e3440\"\n  }\n}"
+      },
+      "steps": [
+        {
+          "step": {
+            "call": "HUB_UPLOAD_THEME_POST",
+            "args": [
+              {
+                "entryId": "theme-nord",
+                "pack": {
+                  "version": "1.0.0",
+                  "colorScheme": "dark",
+                  "colors": {
+                    "surface": "#2e3440",
+                    "surface-alt": "#2e3440",
+                    "surface-dim": "#2e3440",
+                    "surface-raised": "#2e3440",
+                    "content": "#2e3440",
+                    "content-secondary": "#2e3440",
+                    "content-muted": "#2e3440",
+                    "content-inverse": "#2e3440",
+                    "edge": "#2e3440",
+                    "edge-subtle": "#2e3440",
+                    "edge-strong": "#2e3440",
+                    "accent": "#2e3440",
+                    "accent-hover": "#2e3440",
+                    "accent-alt": "#2e3440",
+                    "success": "#2e3440",
+                    "warning": "#2e3440",
+                    "danger": "#2e3440",
+                    "pending": "#2e3440",
+                    "key-bg": "#2e3440",
+                    "key-bg-hover": "#2e3440",
+                    "key-bg-active": "#2e3440",
+                    "key-border": "#2e3440",
+                    "key-shadow": "#2e3440",
+                    "key-label": "#2e3440",
+                    "key-sublabel": "#2e3440",
+                    "key-label-remap": "#2e3440",
+                    "key-bg-multi-selected": "#2e3440",
+                    "tab-bg-active": "#2e3440",
+                    "tab-text": "#2e3440",
+                    "tab-text-active": "#2e3440",
+                    "picker-bg": "#2e3440",
+                    "picker-item-bg": "#2e3440",
+                    "picker-item-hover": "#2e3440",
+                    "picker-item-text": "#2e3440",
+                    "picker-item-border": "#2e3440"
+                  }
+                }
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "hub-noname"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/auth/token",
+              "query": [],
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": {
+                "json": {
+                  "id_token": "fixture-google-id-token"
+                },
+                "text": "{\"id_token\":\"fixture-google-id-token\"}"
+              }
+            },
+            {
+              "method": "POST",
+              "path": "/api/theme-packs",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteThemeBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"theme-pack.json\"\r\nContent-Type: application/json",
+                      "text": "{\"version\":\"1.0.0\",\"colorScheme\":\"dark\",\"colors\":{\"surface\":\"#2e3440\",\"surface-alt\":\"#2e3440\",\"surface-dim\":\"#2e3440\",\"surface-raised\":\"#2e3440\",\"content\":\"#2e3440\",\"content-secondary\":\"#2e3440\",\"content-muted\":\"#2e3440\",\"content-inverse\":\"#2e3440\",\"edge\":\"#2e3440\",\"edge-subtle\":\"#2e3440\",\"edge-strong\":\"#2e3440\",\"accent\":\"#2e3440\",\"accent-hover\":\"#2e3440\",\"accent-alt\":\"#2e3440\",\"success\":\"#2e3440\",\"warning\":\"#2e3440\",\"danger\":\"#2e3440\",\"pending\":\"#2e3440\",\"key-bg\":\"#2e3440\",\"key-bg-hover\":\"#2e3440\",\"key-bg-active\":\"#2e3440\",\"key-border\":\"#2e3440\",\"key-shadow\":\"#2e3440\",\"key-label\":\"#2e3440\",\"key-sublabel\":\"#2e3440\",\"key-label-remap\":\"#2e3440\",\"key-bg-multi-selected\":\"#2e3440\",\"tab-bg-active\":\"#2e3440\",\"tab-text\":\"#2e3440\",\"tab-text-active\":\"#2e3440\",\"picker-bg\":\"#2e3440\",\"picker-item-bg\":\"#2e3440\",\"picker-item-hover\":\"#2e3440\",\"picker-item-text\":\"#2e3440\",\"picker-item-border\":\"#2e3440\"}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0idGhlbWUtcGFjay5qc29uIg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9qc29uDQoNCnsidmVyc2lvbiI6IjEuMC4wIiwiY29sb3JTY2hlbWUiOiJkYXJrIiwiY29sb3JzIjp7InN1cmZhY2UiOiIjMmUzNDQwIiwic3VyZmFjZS1hbHQiOiIjMmUzNDQwIiwic3VyZmFjZS1kaW0iOiIjMmUzNDQwIiwic3VyZmFjZS1yYWlzZWQiOiIjMmUzNDQwIiwiY29udGVudCI6IiMyZTM0NDAiLCJjb250ZW50LXNlY29uZGFyeSI6IiMyZTM0NDAiLCJjb250ZW50LW11dGVkIjoiIzJlMzQ0MCIsImNvbnRlbnQtaW52ZXJzZSI6IiMyZTM0NDAiLCJlZGdlIjoiIzJlMzQ0MCIsImVkZ2Utc3VidGxlIjoiIzJlMzQ0MCIsImVkZ2Utc3Ryb25nIjoiIzJlMzQ0MCIsImFjY2VudCI6IiMyZTM0NDAiLCJhY2NlbnQtaG92ZXIiOiIjMmUzNDQwIiwiYWNjZW50LWFsdCI6IiMyZTM0NDAiLCJzdWNjZXNzIjoiIzJlMzQ0MCIsIndhcm5pbmciOiIjMmUzNDQwIiwiZGFuZ2VyIjoiIzJlMzQ0MCIsInBlbmRpbmciOiIjMmUzNDQwIiwia2V5LWJnIjoiIzJlMzQ0MCIsImtleS1iZy1ob3ZlciI6IiMyZTM0NDAiLCJrZXktYmctYWN0aXZlIjoiIzJlMzQ0MCIsImtleS1ib3JkZXIiOiIjMmUzNDQwIiwia2V5LXNoYWRvdyI6IiMyZTM0NDAiLCJrZXktbGFiZWwiOiIjMmUzNDQwIiwia2V5LXN1YmxhYmVsIjoiIzJlMzQ0MCIsImtleS1sYWJlbC1yZW1hcCI6IiMyZTM0NDAiLCJrZXktYmctbXVsdGktc2VsZWN0ZWQiOiIjMmUzNDQwIiwidGFiLWJnLWFjdGl2ZSI6IiMyZTM0NDAiLCJ0YWItdGV4dCI6IiMyZTM0NDAiLCJ0YWItdGV4dC1hY3RpdmUiOiIjMmUzNDQwIiwicGlja2VyLWJnIjoiIzJlMzQ0MCIsInBpY2tlci1pdGVtLWJnIjoiIzJlMzQ0MCIsInBpY2tlci1pdGVtLWhvdmVyIjoiIzJlMzQ0MCIsInBpY2tlci1pdGVtLXRleHQiOiIjMmUzNDQwIiwicGlja2VyLWl0ZW0tYm9yZGVyIjoiIzJlMzQ0MCJ9fQ0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            },
+            {
+              "method": "GET",
+              "path": "/api/theme-packs",
+              "query": [],
+              "headers": {}
+            }
+          ],
+          "sleeps": [],
+          "notified": [
+            "themes/index"
+          ],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_THEME_POST",
+            "args": [
+              {
+                "entryId": "theme-linked",
+                "pack": {
+                  "name": "   ",
+                  "version": "1.0.0",
+                  "colorScheme": "dark",
+                  "colors": {
+                    "surface": "#2e3440",
+                    "surface-alt": "#2e3440",
+                    "surface-dim": "#2e3440",
+                    "surface-raised": "#2e3440",
+                    "content": "#2e3440",
+                    "content-secondary": "#2e3440",
+                    "content-muted": "#2e3440",
+                    "content-inverse": "#2e3440",
+                    "edge": "#2e3440",
+                    "edge-subtle": "#2e3440",
+                    "edge-strong": "#2e3440",
+                    "accent": "#2e3440",
+                    "accent-hover": "#2e3440",
+                    "accent-alt": "#2e3440",
+                    "success": "#2e3440",
+                    "warning": "#2e3440",
+                    "danger": "#2e3440",
+                    "pending": "#2e3440",
+                    "key-bg": "#2e3440",
+                    "key-bg-hover": "#2e3440",
+                    "key-bg-active": "#2e3440",
+                    "key-border": "#2e3440",
+                    "key-shadow": "#2e3440",
+                    "key-label": "#2e3440",
+                    "key-sublabel": "#2e3440",
+                    "key-label-remap": "#2e3440",
+                    "key-bg-multi-selected": "#2e3440",
+                    "tab-bg-active": "#2e3440",
+                    "tab-text": "#2e3440",
+                    "tab-text-active": "#2e3440",
+                    "picker-bg": "#2e3440",
+                    "picker-item-bg": "#2e3440",
+                    "picker-item-hover": "#2e3440",
+                    "picker-item-text": "#2e3440",
+                    "picker-item-border": "#2e3440"
+                  }
+                }
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "hub-blank"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/theme-packs",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteThemeBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"theme-pack.json\"\r\nContent-Type: application/json",
+                      "text": "{\"name\":\"   \",\"version\":\"1.0.0\",\"colorScheme\":\"dark\",\"colors\":{\"surface\":\"#2e3440\",\"surface-alt\":\"#2e3440\",\"surface-dim\":\"#2e3440\",\"surface-raised\":\"#2e3440\",\"content\":\"#2e3440\",\"content-secondary\":\"#2e3440\",\"content-muted\":\"#2e3440\",\"content-inverse\":\"#2e3440\",\"edge\":\"#2e3440\",\"edge-subtle\":\"#2e3440\",\"edge-strong\":\"#2e3440\",\"accent\":\"#2e3440\",\"accent-hover\":\"#2e3440\",\"accent-alt\":\"#2e3440\",\"success\":\"#2e3440\",\"warning\":\"#2e3440\",\"danger\":\"#2e3440\",\"pending\":\"#2e3440\",\"key-bg\":\"#2e3440\",\"key-bg-hover\":\"#2e3440\",\"key-bg-active\":\"#2e3440\",\"key-border\":\"#2e3440\",\"key-shadow\":\"#2e3440\",\"key-label\":\"#2e3440\",\"key-sublabel\":\"#2e3440\",\"key-label-remap\":\"#2e3440\",\"key-bg-multi-selected\":\"#2e3440\",\"tab-bg-active\":\"#2e3440\",\"tab-text\":\"#2e3440\",\"tab-text-active\":\"#2e3440\",\"picker-bg\":\"#2e3440\",\"picker-item-bg\":\"#2e3440\",\"picker-item-hover\":\"#2e3440\",\"picker-item-text\":\"#2e3440\",\"picker-item-border\":\"#2e3440\"}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0idGhlbWUtcGFjay5qc29uIg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9qc29uDQoNCnsibmFtZSI6IiAgICIsInZlcnNpb24iOiIxLjAuMCIsImNvbG9yU2NoZW1lIjoiZGFyayIsImNvbG9ycyI6eyJzdXJmYWNlIjoiIzJlMzQ0MCIsInN1cmZhY2UtYWx0IjoiIzJlMzQ0MCIsInN1cmZhY2UtZGltIjoiIzJlMzQ0MCIsInN1cmZhY2UtcmFpc2VkIjoiIzJlMzQ0MCIsImNvbnRlbnQiOiIjMmUzNDQwIiwiY29udGVudC1zZWNvbmRhcnkiOiIjMmUzNDQwIiwiY29udGVudC1tdXRlZCI6IiMyZTM0NDAiLCJjb250ZW50LWludmVyc2UiOiIjMmUzNDQwIiwiZWRnZSI6IiMyZTM0NDAiLCJlZGdlLXN1YnRsZSI6IiMyZTM0NDAiLCJlZGdlLXN0cm9uZyI6IiMyZTM0NDAiLCJhY2NlbnQiOiIjMmUzNDQwIiwiYWNjZW50LWhvdmVyIjoiIzJlMzQ0MCIsImFjY2VudC1hbHQiOiIjMmUzNDQwIiwic3VjY2VzcyI6IiMyZTM0NDAiLCJ3YXJuaW5nIjoiIzJlMzQ0MCIsImRhbmdlciI6IiMyZTM0NDAiLCJwZW5kaW5nIjoiIzJlMzQ0MCIsImtleS1iZyI6IiMyZTM0NDAiLCJrZXktYmctaG92ZXIiOiIjMmUzNDQwIiwia2V5LWJnLWFjdGl2ZSI6IiMyZTM0NDAiLCJrZXktYm9yZGVyIjoiIzJlMzQ0MCIsImtleS1zaGFkb3ciOiIjMmUzNDQwIiwia2V5LWxhYmVsIjoiIzJlMzQ0MCIsImtleS1zdWJsYWJlbCI6IiMyZTM0NDAiLCJrZXktbGFiZWwtcmVtYXAiOiIjMmUzNDQwIiwia2V5LWJnLW11bHRpLXNlbGVjdGVkIjoiIzJlMzQ0MCIsInRhYi1iZy1hY3RpdmUiOiIjMmUzNDQwIiwidGFiLXRleHQiOiIjMmUzNDQwIiwidGFiLXRleHQtYWN0aXZlIjoiIzJlMzQ0MCIsInBpY2tlci1iZyI6IiMyZTM0NDAiLCJwaWNrZXItaXRlbS1iZyI6IiMyZTM0NDAiLCJwaWNrZXItaXRlbS1ob3ZlciI6IiMyZTM0NDAiLCJwaWNrZXItaXRlbS10ZXh0IjoiIzJlMzQ0MCIsInBpY2tlci1pdGVtLWJvcmRlciI6IiMyZTM0NDAifX0NCi0te2JvdW5kYXJ5fS0tDQo="
+                }
+              }
+            },
+            {
+              "method": "GET",
+              "path": "/api/theme-packs",
+              "query": [],
+              "headers": {}
+            }
+          ],
+          "sleeps": [],
+          "notified": [
+            "themes/index"
+          ],
+          "events": [],
+          "logs": []
+        }
+      ],
+      "treeAfter": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/themes/index.json": "{\n  \"metas\": [\n    {\n      \"id\": \"theme-nord\",\n      \"filename\": \"packs/theme-nord.json\",\n      \"name\": \"Nord\",\n      \"version\": \"1.0.0\",\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.001Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.001Z\",\n      \"hubPostId\": \"hub-noname\",\n      \"uploaderName\": \"Someone\",\n      \"hubUpdatedAt\": \"2026-10-05T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"theme-linked\",\n      \"filename\": \"packs/theme-linked.json\",\n      \"name\": \"Linked\",\n      \"version\": \"1.0.0\",\n      \"hubPostId\": \"hub-blank\",\n      \"hubUpdatedAt\": \"2026-10-05T00:00:00.000Z\",\n      \"savedAt\": \"2026-10-16T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T00:00:00.000Z\",\n        \"body\": \"2026-10-16T00:00:00.000Z\",\n        \"name\": \"2026-10-16T00:00:00.000Z\",\n        \"hub\": \"2026-10-16T00:00:00.001Z\"\n      },\n      \"updatedAt\": \"2026-10-16T00:00:00.001Z\"\n    }\n  ]\n}",
+        "sync/themes/packs/theme-linked.json": "{\n  \"name\": \"Linked\",\n  \"version\": \"1.0.0\",\n  \"colorScheme\": \"dark\",\n  \"colors\": {\n    \"surface\": \"#2e3440\",\n    \"surface-alt\": \"#2e3440\",\n    \"surface-dim\": \"#2e3440\",\n    \"surface-raised\": \"#2e3440\",\n    \"content\": \"#2e3440\",\n    \"content-secondary\": \"#2e3440\",\n    \"content-muted\": \"#2e3440\",\n    \"content-inverse\": \"#2e3440\",\n    \"edge\": \"#2e3440\",\n    \"edge-subtle\": \"#2e3440\",\n    \"edge-strong\": \"#2e3440\",\n    \"accent\": \"#2e3440\",\n    \"accent-hover\": \"#2e3440\",\n    \"accent-alt\": \"#2e3440\",\n    \"success\": \"#2e3440\",\n    \"warning\": \"#2e3440\",\n    \"danger\": \"#2e3440\",\n    \"pending\": \"#2e3440\",\n    \"key-bg\": \"#2e3440\",\n    \"key-bg-hover\": \"#2e3440\",\n    \"key-bg-active\": \"#2e3440\",\n    \"key-border\": \"#2e3440\",\n    \"key-shadow\": \"#2e3440\",\n    \"key-label\": \"#2e3440\",\n    \"key-sublabel\": \"#2e3440\",\n    \"key-label-remap\": \"#2e3440\",\n    \"key-bg-multi-selected\": \"#2e3440\",\n    \"tab-bg-active\": \"#2e3440\",\n    \"tab-text\": \"#2e3440\",\n    \"tab-text-active\": \"#2e3440\",\n    \"picker-bg\": \"#2e3440\",\n    \"picker-item-bg\": \"#2e3440\",\n    \"picker-item-hover\": \"#2e3440\",\n    \"picker-item-text\": \"#2e3440\",\n    \"picker-item-border\": \"#2e3440\"\n  }\n}",
+        "sync/themes/packs/theme-nord.json": "{\n  \"name\": \"Nord\",\n  \"version\": \"1.0.0\",\n  \"colorScheme\": \"dark\",\n  \"colors\": {\n    \"surface\": \"#2e3440\",\n    \"surface-alt\": \"#2e3440\",\n    \"surface-dim\": \"#2e3440\",\n    \"surface-raised\": \"#2e3440\",\n    \"content\": \"#2e3440\",\n    \"content-secondary\": \"#2e3440\",\n    \"content-muted\": \"#2e3440\",\n    \"content-inverse\": \"#2e3440\",\n    \"edge\": \"#2e3440\",\n    \"edge-subtle\": \"#2e3440\",\n    \"edge-strong\": \"#2e3440\",\n    \"accent\": \"#2e3440\",\n    \"accent-hover\": \"#2e3440\",\n    \"accent-alt\": \"#2e3440\",\n    \"success\": \"#2e3440\",\n    \"warning\": \"#2e3440\",\n    \"danger\": \"#2e3440\",\n    \"pending\": \"#2e3440\",\n    \"key-bg\": \"#2e3440\",\n    \"key-bg-hover\": \"#2e3440\",\n    \"key-bg-active\": \"#2e3440\",\n    \"key-border\": \"#2e3440\",\n    \"key-shadow\": \"#2e3440\",\n    \"key-label\": \"#2e3440\",\n    \"key-sublabel\": \"#2e3440\",\n    \"key-label-remap\": \"#2e3440\",\n    \"key-bg-multi-selected\": \"#2e3440\",\n    \"tab-bg-active\": \"#2e3440\",\n    \"tab-text\": \"#2e3440\",\n    \"tab-text-active\": \"#2e3440\",\n    \"picker-bg\": \"#2e3440\",\n    \"picker-item-bg\": \"#2e3440\",\n    \"picker-item-hover\": \"#2e3440\",\n    \"picker-item-text\": \"#2e3440\",\n    \"picker-item-border\": \"#2e3440\"\n  }\n}"
+      }
+    },
+    {
       "name": "a downloaded theme pack is validated; the list and timestamps",
       "rules": [
         {

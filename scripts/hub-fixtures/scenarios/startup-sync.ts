@@ -46,7 +46,7 @@ export const STARTUP_SYNC_SCENARIOS: Scenario[] = [
       { method: 'GET', path: '/api/i18n-packs/hub-never/download', responses: [{ status: 200, json: exportOf(pack('Never')) }] },
       { method: 'GET', path: '/api/i18n-packs/hub-bad/download', responses: [{ status: 200, json: exportOf(pack('Bad', { version: 'nope' })) }] },
     ],
-    steps: [{ startupSync: true }],
+    steps: [{ startupSync: true, summary: true }],
     unordered: true,
   },
   {
@@ -61,14 +61,14 @@ export const STARTUP_SYNC_SCENARIOS: Scenario[] = [
       { method: 'GET', path: '/api/i18n-packs/hub-old/download', responses: [{ status: 500, text: 'down' }] },
       { method: 'GET', path: '/api/i18n-packs/hub-never/download', responses: [{ status: 429, text: 'slow', headers: { 'Retry-After': '1' } }] },
     ],
-    steps: [{ startupSync: true }],
+    steps: [{ startupSync: true, summary: true }],
     unordered: true,
   },
   {
     name: 'a failed timestamps request ends the pass',
     seed,
     rules: [{ method: 'POST', path: '/api/i18n-packs/timestamps', responses: [{ status: 503, text: 'down' }] }],
-    steps: [{ startupSync: true }],
+    steps: [{ startupSync: true, summary: true }],
   },
   {
     name: 'no Hub-linked pack sends nothing',
@@ -77,6 +77,6 @@ export const STARTUP_SYNC_SCENARIOS: Scenario[] = [
       await savePack({ id: 'pack-blank', pack: pack('Blank'), hubPostId: '   ' })
     },
     rules: [],
-    steps: [{ startupSync: true }],
+    steps: [{ startupSync: true, summary: false }],
   },
 ]
