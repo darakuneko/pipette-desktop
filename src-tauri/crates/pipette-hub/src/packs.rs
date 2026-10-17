@@ -20,7 +20,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use futures_util::future::join_all;
+use futures_util::future::try_join_all;
 use pipette_js_json::{JsString, Object, Value, js_string, stringify};
 use pipette_keyboard_stores::StoreContext;
 use pipette_pack_stores::i18n_validate::validate_pack;
@@ -30,6 +30,7 @@ use pipette_pack_stores::{Cached, i18n, theme};
 use crate::endpoint::{Endpoint, ListQuery};
 use crate::http::{HubHttp, RequestBody};
 use crate::multipart::{UploadFile, i18n_boundary, pack_body, theme_boundary};
+use crate::sources::BoxFuture;
 use crate::token::HubToken;
 use crate::validate::is_valid_post_id;
 
@@ -94,21 +95,44 @@ impl PackKind {
             PackKind::Theme => theme_boundary(now_ms),
         }
     }
+}
 
-    /// Links (or unlinks) the local pack `id` (`setHubPostId`). A failure
-    /// is left unreported, as the TS ignores the store's answer.
-    fn link(
-        self,
-        stores: &StoreContext,
-        id: &JsString,
-        post: Option<&JsString>,
-        uploader: Cached,
-        updated: Cached,
-    ) {
-        let _ = match self {
-            PackKind::I18n => i18n::set_hub_post_id(stores, id, post, uploader, updated),
-            PackKind::Theme => theme::set_hub_post_id(stores, id, post, uploader, updated),
+/// A change of a local pack's Hub link (`setHubPostId`): the pack `id` of
+/// `kind` linked to `post` (unlinked for `None`), with its cached uploader
+/// and Hub time.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LinkChange {
+    pub kind: PackKind,
+    pub id: JsString,
+    pub post: Option<JsString>,
+    pub uploader: Cached,
+    pub updated: Cached,
+}
+
+impl LinkChange {
+    /// Writes the change through the pack store. A failure is left
+    /// unreported, as the TS ignores the store's answer.
+    pub fn apply(self, stores: &StoreContext) {
+        let Self { kind, id, post, uploader, updated } = self;
+        let _ = match kind {
+            PackKind::I18n => i18n::set_hub_post_id(stores, &id, post.as_ref(), uploader, updated),
+            PackKind::Theme => theme::set_hub_post_id(stores, &id, post.as_ref(), uploader, updated),
         };
+    }
+}
+
+/// Where the handlers write a local pack's Hub link. The app writes it off
+/// the async runtime, as every store write; a [`StoreContext`] writes it
+/// in place, for the tests.
+pub trait PackLinks: Send + Sync {
+    /// Resolves once the change is written (or has failed).
+    fn link(&self, change: LinkChange) -> BoxFuture<'_, ()>;
+}
+
+impl PackLinks for StoreContext {
+    fn link(&self, change: LinkChange) -> BoxFuture<'_, ()> {
+        change.apply(self);
+        Box::pin(std::future::ready(()))
     }
 }
 
@@ -400,14 +424,12 @@ pub async fn timestamps(http: &HubHttp, kind: PackKind, ids: Option<&Value>) -> 
         let body: Object = [("ids", Value::Array(ids))].into_iter().collect();
         http.send(&endpoint, None, RequestBody::Json(stringify(&Value::Object(body))))
     });
-    // `Promise.all` fails with a failed request before any answer is read.
-    let mut responses = Vec::new();
-    for response in join_all(requests).await {
-        match response {
-            Ok(response) => responses.push(response),
-            Err(err) => return failure(err.to_string()),
-        }
-    }
+    // `Promise.all`: the first request to fail ends the call, before any
+    // answer is read.
+    let responses = match try_join_all(requests).await {
+        Ok(responses) => responses,
+        Err(err) => return failure(err.to_string()),
+    };
     let mut by_id: HashMap<JsString, Value> = HashMap::new();
     for response in &responses {
         let listed = match property(response.as_ref(), "items") {
@@ -512,8 +534,8 @@ fn cached(value: Option<&Value>) -> Option<Cached> {
 /// values the handler has: a local pack id that is not a string matches no
 /// pack, and a post id that is neither a string nor nullish fails the
 /// store's `trim`.
-fn link_pack(
-    stores: &StoreContext,
+async fn link_pack(
+    links: &dyn PackLinks,
     kind: PackKind,
     entry_id: Option<&Value>,
     post_id: Option<&Value>,
@@ -530,7 +552,8 @@ fn link_pack(
     else {
         return;
     };
-    kind.link(stores, entry_id, post, uploader, updated);
+    let change = LinkChange { kind, id: entry_id.clone(), post: post.cloned(), uploader, updated };
+    links.link(change).await;
 }
 
 /// Uploads (no `post_id`) or updates the pack with the JWT, as
@@ -571,7 +594,7 @@ async fn submit(
 /// uploader and Hub time the list of the pack's name gives.
 pub async fn upload(
     token: &HubToken,
-    stores: &StoreContext,
+    links: &dyn PackLinks,
     kind: PackKind,
     params: Option<&Value>,
 ) -> Value {
@@ -585,7 +608,7 @@ pub async fn upload(
             let name = property(pack, "name")?;
             let post_id = property(result.as_ref(), "id")?;
             let enriched = enrich_from_list(token.http(), kind, name, post_id).await;
-            link_pack(stores, kind, param(params, "entryId"), post_id, &enriched);
+            link_pack(links, kind, param(params, "entryId"), post_id, &enriched).await;
             Ok(success("postId", post_id.cloned()))
         }
         .await,
@@ -597,7 +620,7 @@ pub async fn upload(
 /// time from the timestamps (its uploader stays).
 pub async fn update(
     token: &HubToken,
-    stores: &StoreContext,
+    links: &dyn PackLinks,
     kind: PackKind,
     params: Option<&Value>,
 ) -> Value {
@@ -610,7 +633,7 @@ pub async fn update(
             let result = submit(token, kind, Some(&post_id), param(params, "pack")).await?;
             let posted = property(result.as_ref(), "id")?;
             let enriched = enrich_from_timestamps(token.http(), kind, posted).await;
-            link_pack(stores, kind, param(params, "entryId"), posted, &enriched);
+            link_pack(links, kind, param(params, "entryId"), posted, &enriched).await;
             Ok(success("postId", posted.cloned()))
         }
         .await,
@@ -621,7 +644,7 @@ pub async fn update(
 /// unlinks the local pack `local_pack_id` when it is a non-empty string.
 pub async fn delete(
     token: &HubToken,
-    stores: &StoreContext,
+    links: &dyn PackLinks,
     kind: PackKind,
     post_id: Option<&Value>,
     local_pack_id: Option<&Value>,
@@ -637,7 +660,9 @@ pub async fn delete(
         return failure(err.message);
     }
     if let Some(Value::String(local)) = local_pack_id.filter(|id| id.is_truthy()) {
-        kind.link(stores, local, None, Cached::Keep, Cached::Keep);
+        let change =
+            LinkChange { kind, id: local.clone(), post: None, uploader: Cached::Keep, updated: Cached::Keep };
+        links.link(change).await;
     }
     succeeded()
 }

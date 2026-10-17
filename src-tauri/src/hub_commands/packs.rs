@@ -9,14 +9,16 @@
 //! its key order reaches the Hub as Electron sends it. The answers are JSON
 //! text written by `pipette_js_json`, so the packs and the Hub's objects
 //! reach the page in the order the Hub sent them. The local pack's link is
-//! written through the pack store, which reports its sync unit; like
+//! written through the pack store on a blocking-task thread, as every
+//! store write; the store reports its sync unit. Like
 //! Electron's handlers, these send no `i18n-pack:changed` /
 //! `theme-pack:changed`.
 
 use std::sync::Arc;
 
-use pipette_hub::packs::{self, PackKind};
-use pipette_js_json::Value as JsValue;
+use pipette_hub::BoxFuture;
+use pipette_hub::packs::{self, LinkChange, PackKind, PackLinks};
+use pipette_js_json::{Object, Value as JsValue};
 use pipette_keyboard_stores::StoreContext;
 use serde_json::Value;
 use tauri::State;
@@ -39,6 +41,29 @@ fn with_pack(params: Arg, pack: Option<String>) -> Result<Option<JsValue>, Comma
         object.insert("pack", pipette_js_json::parse(&pack)?);
     }
     Ok(params)
+}
+
+/// `{ success: false, error }`: arguments that cannot be read fail as a
+/// handler that throws does, not as a rejected call.
+fn failure(error: CommandError) -> JsValue {
+    let mut answer = Object::new();
+    answer.insert("success", JsValue::Bool(false));
+    answer.insert("error", JsValue::from(error.to_string()));
+    JsValue::Object(answer)
+}
+
+/// The pack store's Hub links, written on a blocking-task thread.
+struct BlockingLinks(StoreContext);
+
+impl PackLinks for BlockingLinks {
+    fn link(&self, change: LinkChange) -> BoxFuture<'_, ()> {
+        let stores = self.0.clone();
+        Box::pin(async move {
+            if let Err(err) = tauri::async_runtime::spawn_blocking(move || change.apply(&stores)).await {
+                log::error!("[hub] writing a pack's Hub link failed: {err}");
+            }
+        })
+    }
 }
 
 fn respond(answer: &JsValue) -> Result<Response, CommandError> {
@@ -64,7 +89,12 @@ async fn upload(
     params: Arg,
     pack: Option<String>,
 ) -> Result<Response, CommandError> {
-    respond(&packs::upload(hub.token(), stores, kind, with_pack(params, pack)?.as_ref()).await)
+    let params = match with_pack(params, pack) {
+        Ok(params) => params,
+        Err(err) => return respond(&failure(err)),
+    };
+    let links = BlockingLinks(stores.clone());
+    respond(&packs::upload(hub.token(), &links, kind, params.as_ref()).await)
 }
 
 async fn update(
@@ -74,7 +104,12 @@ async fn update(
     params: Arg,
     pack: Option<String>,
 ) -> Result<Response, CommandError> {
-    respond(&packs::update(hub.token(), stores, kind, with_pack(params, pack)?.as_ref()).await)
+    let params = match with_pack(params, pack) {
+        Ok(params) => params,
+        Err(err) => return respond(&failure(err)),
+    };
+    let links = BlockingLinks(stores.clone());
+    respond(&packs::update(hub.token(), &links, kind, params.as_ref()).await)
 }
 
 async fn delete(
@@ -85,7 +120,8 @@ async fn delete(
     local_pack_id: Arg,
 ) -> Result<Response, CommandError> {
     let (post_id, local_pack_id) = (js(post_id)?, js(local_pack_id)?);
-    respond(&packs::delete(hub.token(), stores, kind, post_id.as_ref(), local_pack_id.as_ref()).await)
+    let links = BlockingLinks(stores.clone());
+    respond(&packs::delete(hub.token(), &links, kind, post_id.as_ref(), local_pack_id.as_ref()).await)
 }
 
 #[tauri::command]
@@ -243,6 +279,18 @@ mod tests {
 
         let downloaded = text(hub_download_i18n_post(app.state(), Some(json!(post_id))).await.unwrap());
         assert!(downloaded.ends_with(&format!(r#""pack":{PACK}}}}}"#)), "{downloaded}");
+
+        let unreadable = text(
+            hub_update_i18n_post(
+                app.state(),
+                app.state(),
+                Some(json!({ "postId": "p" })),
+                Some("{".to_owned()),
+            )
+            .await
+            .unwrap(),
+        );
+        assert!(unreadable.starts_with(r#"{"success":false,"error":""#), "{unreadable}");
 
         let refused =
             text(hub_upload_theme_post(app.state(), app.state(), Some(json!("x")), None).await.unwrap());
