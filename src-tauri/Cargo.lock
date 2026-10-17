@@ -3049,6 +3049,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-hub"
+version = "0.0.0"
+dependencies = [
+ "form_urlencoded",
+ "log",
+ "pipette-entry-store",
+ "pipette-hub",
+ "pipette-js-json",
+ "pipette-net",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
 name = "pipette-js-json"
 version = "0.0.0"
 dependencies = [

@@ -1,0 +1,889 @@
+{
+  "validateTitle": [
+    {
+      "input": "",
+      "error": "Title must not be empty"
+    },
+    {
+      "input": " ",
+      "error": "Title must not be empty"
+    },
+    {
+      "input": "a",
+      "ok": "a"
+    },
+    {
+      "input": "  a  ",
+      "ok": "a"
+    },
+    {
+      "input": "　x　",
+      "ok": "x"
+    },
+    {
+      "input": "﻿x",
+      "ok": "x"
+    },
+    {
+      "input": " x ",
+      "ok": "x"
+    },
+    {
+      "input": "​x",
+      "ok": "​x"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "ok": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "ok": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "input": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "ok": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+    },
+    {
+      "input": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "ok": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "Title too long"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "ok": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "error": "Title too long"
+    },
+    {
+      "input": "\t\n\u000b\f\r x      ",
+      "ok": "x"
+    },
+    {
+      "input": null,
+      "error": "Title must not be empty"
+    },
+    {
+      "input": 5,
+      "error": "Title must not be empty"
+    },
+    {
+      "input": true,
+      "error": "Title must not be empty"
+    },
+    {
+      "input": [],
+      "error": "Title must not be empty"
+    },
+    {
+      "input": {},
+      "error": "Title must not be empty"
+    }
+  ],
+  "validateDisplayName": [
+    {
+      "input": "",
+      "error": "Display name must not be empty"
+    },
+    {
+      "input": " ",
+      "error": "Display name must not be empty"
+    },
+    {
+      "input": "a",
+      "ok": "a"
+    },
+    {
+      "input": "  a  ",
+      "ok": "a"
+    },
+    {
+      "input": "　x　",
+      "ok": "x"
+    },
+    {
+      "input": "﻿x",
+      "ok": "x"
+    },
+    {
+      "input": " x ",
+      "ok": "x"
+    },
+    {
+      "input": "​x",
+      "ok": "​x"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "Display name too long"
+    },
+    {
+      "input": " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "ok": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "error": "Display name too long"
+    },
+    {
+      "input": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "error": "Display name too long"
+    },
+    {
+      "input": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "error": "Display name too long"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "Display name too long"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "Display name too long"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "error": "Display name too long"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "error": "Display name too long"
+    },
+    {
+      "input": "\t\n\u000b\f\r x      ",
+      "ok": "x"
+    },
+    {
+      "input": null,
+      "error": "Display name must not be empty"
+    },
+    {
+      "input": 5,
+      "error": "Display name must not be empty"
+    },
+    {
+      "input": true,
+      "error": "Display name must not be empty"
+    },
+    {
+      "input": [],
+      "error": "Display name must not be empty"
+    },
+    {
+      "input": {},
+      "error": "Display name must not be empty"
+    }
+  ],
+  "validateKeyboardName": [
+    {
+      "input": "",
+      "error": "Missing keyboard name"
+    },
+    {
+      "input": " ",
+      "error": "Missing keyboard name"
+    },
+    {
+      "input": "a",
+      "ok": "a"
+    },
+    {
+      "input": "  a  ",
+      "ok": "a"
+    },
+    {
+      "input": "　x　",
+      "ok": "x"
+    },
+    {
+      "input": "﻿x",
+      "ok": "x"
+    },
+    {
+      "input": " x ",
+      "ok": "x"
+    },
+    {
+      "input": "​x",
+      "ok": "​x"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+      "ok": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "ok": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "ok": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "input": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "ok": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+    },
+    {
+      "input": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "error": "Keyboard name too long"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "Keyboard name too long"
+    },
+    {
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "Keyboard name too long"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "error": "Keyboard name too long"
+    },
+    {
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "error": "Keyboard name too long"
+    },
+    {
+      "input": "\t\n\u000b\f\r x      ",
+      "ok": "x"
+    },
+    {
+      "input": null,
+      "error": "Missing keyboard name"
+    },
+    {
+      "input": 5,
+      "error": "Missing keyboard name"
+    },
+    {
+      "input": true,
+      "error": "Missing keyboard name"
+    },
+    {
+      "input": [],
+      "error": "Missing keyboard name"
+    },
+    {
+      "input": {},
+      "error": "Missing keyboard name"
+    }
+  ],
+  "validatePostId": [
+    {
+      "input": "",
+      "error": "Invalid post ID"
+    },
+    {
+      "input": "abc",
+      "ok": true
+    },
+    {
+      "input": "a-b_C9",
+      "ok": true
+    },
+    {
+      "input": "a b",
+      "error": "Invalid post ID"
+    },
+    {
+      "input": "a/b",
+      "error": "Invalid post ID"
+    },
+    {
+      "input": "é",
+      "error": "Invalid post ID"
+    },
+    {
+      "input": "a.b",
+      "error": "Invalid post ID"
+    },
+    {
+      "input": "-",
+      "ok": true
+    },
+    {
+      "input": "_",
+      "ok": true
+    }
+  ],
+  "clampInt": [
+    {
+      "value": null,
+      "min": 1,
+      "max": 100,
+      "result": null
+    },
+    {
+      "value": 5,
+      "min": 1,
+      "max": 100,
+      "result": 5
+    },
+    {
+      "value": 0,
+      "min": 1,
+      "max": 100,
+      "result": 1
+    },
+    {
+      "value": 101,
+      "min": 1,
+      "max": 100,
+      "result": 100
+    },
+    {
+      "value": 5.9,
+      "min": 1,
+      "max": 100,
+      "result": 5
+    },
+    {
+      "value": -5.5,
+      "min": 1,
+      "max": 100,
+      "result": 1
+    },
+    {
+      "value": "NaN",
+      "min": 1,
+      "max": 100,
+      "result": null
+    },
+    {
+      "value": "Infinity",
+      "min": 1,
+      "max": 100,
+      "result": null
+    },
+    {
+      "value": "-Infinity",
+      "min": 1,
+      "max": 100,
+      "result": null
+    },
+    {
+      "value": "-0",
+      "min": 0,
+      "max": 100,
+      "result": 0
+    },
+    {
+      "value": -0.5,
+      "min": -1,
+      "max": 0,
+      "result": -1
+    },
+    {
+      "value": 1e+300,
+      "min": 1,
+      "max": 100,
+      "result": 100
+    }
+  ],
+  "computeTotalPages": [
+    {
+      "total": 0,
+      "perPage": 20,
+      "result": 1
+    },
+    {
+      "total": 1,
+      "perPage": 20,
+      "result": 1
+    },
+    {
+      "total": 20,
+      "perPage": 20,
+      "result": 1
+    },
+    {
+      "total": 21,
+      "perPage": 20,
+      "result": 2
+    },
+    {
+      "total": -5,
+      "perPage": 20,
+      "result": 1
+    },
+    {
+      "total": "NaN",
+      "perPage": 20,
+      "result": 1
+    },
+    {
+      "total": "Infinity",
+      "perPage": 20,
+      "result": 1
+    },
+    {
+      "total": 10,
+      "perPage": 0,
+      "result": 10
+    },
+    {
+      "total": 10,
+      "perPage": -1,
+      "result": 10
+    },
+    {
+      "total": 10,
+      "perPage": "NaN",
+      "result": 10
+    },
+    {
+      "total": 10,
+      "perPage": "Infinity",
+      "result": 10
+    },
+    {
+      "total": 10,
+      "perPage": 2.5,
+      "result": 4
+    },
+    {
+      "total": 0.5,
+      "perPage": 1,
+      "result": 1
+    }
+  ],
+  "sanitizeFilenameBase": [
+    {
+      "productName": "",
+      "fallback": "",
+      "result": "analytics"
+    },
+    {
+      "productName": "",
+      "fallback": "fb",
+      "result": "fb"
+    },
+    {
+      "productName": "My Board",
+      "fallback": "",
+      "result": "My_Board"
+    },
+    {
+      "productName": "a/b\\c",
+      "fallback": "x",
+      "result": "a_b_c"
+    },
+    {
+      "productName": "😀",
+      "fallback": "",
+      "result": "__"
+    },
+    {
+      "productName": "é-_9",
+      "fallback": "",
+      "result": "_-_9"
+    },
+    {
+      "productName": "",
+      "fallback": " ",
+      "result": "_"
+    }
+  ],
+  "keyboardFileBase": [
+    {
+      "input": "",
+      "vil": ".vil",
+      "thumbnail": ".jpg"
+    },
+    {
+      "input": "My Board",
+      "vil": "My_Board.vil",
+      "thumbnail": "My_Board.jpg"
+    },
+    {
+      "input": "a/b",
+      "vil": "a_b.vil",
+      "thumbnail": "a_b.jpg"
+    },
+    {
+      "input": "😀",
+      "vil": "__.vil",
+      "thumbnail": "__.jpg"
+    },
+    {
+      "input": "é",
+      "vil": "_.vil",
+      "thumbnail": "_.jpg"
+    },
+    {
+      "input": "A-z_0",
+      "vil": "A-z_0.vil",
+      "thumbnail": "A-z_0.jpg"
+    }
+  ],
+  "base64": [
+    {
+      "input": "",
+      "hex": ""
+    },
+    {
+      "input": "Q",
+      "hex": ""
+    },
+    {
+      "input": "QQ",
+      "hex": "41"
+    },
+    {
+      "input": "QQ=",
+      "hex": "41"
+    },
+    {
+      "input": "QQ==",
+      "hex": "41"
+    },
+    {
+      "input": "QUI",
+      "hex": "4142"
+    },
+    {
+      "input": "QUJD",
+      "hex": "414243"
+    },
+    {
+      "input": "QUJDRA",
+      "hex": "41424344"
+    },
+    {
+      "input": "QUJDRA==",
+      "hex": "41424344"
+    },
+    {
+      "input": "QU JD\nRA==",
+      "hex": "41424344"
+    },
+    {
+      "input": "Q!U@J#D",
+      "hex": "414243"
+    },
+    {
+      "input": "QQ==QUJD",
+      "hex": "41"
+    },
+    {
+      "input": "-_-_",
+      "hex": "fbffbf"
+    },
+    {
+      "input": "+/+/",
+      "hex": "fbffbf"
+    },
+    {
+      "input": "QUJD=QUJD",
+      "hex": "414243"
+    },
+    {
+      "input": "QUJDŁ",
+      "hex": "414243"
+    },
+    {
+      "input": "QUJŁ",
+      "hex": "414240"
+    },
+    {
+      "input": "====",
+      "hex": ""
+    },
+    {
+      "input": "QUJDRA=",
+      "hex": "41424344"
+    },
+    {
+      "input": "😀QUJD",
+      "hex": ""
+    },
+    {
+      "input": "QUJDRE",
+      "hex": "41424344"
+    },
+    {
+      "input": "QUJDREVG",
+      "hex": "414243444546"
+    },
+    {
+      "input": "QUJDRAĽ",
+      "hex": "41424344"
+    },
+    {
+      "input": "QUJDREVĽ",
+      "hex": "4142434445"
+    },
+    {
+      "input": "😀",
+      "hex": ""
+    }
+  ],
+  "fileSizes": [
+    {
+      "sizes": {
+        "thumbnail": 2097152,
+        "vil": 10485760,
+        "pipette": 0,
+        "c": 0,
+        "pdf": 0
+      },
+      "ok": true
+    },
+    {
+      "sizes": {
+        "thumbnail": 2097153,
+        "vil": 10485761,
+        "pipette": 0,
+        "c": 0,
+        "pdf": 0
+      },
+      "error": "File too large: thumbnail exceeds 2 MB limit"
+    },
+    {
+      "sizes": {
+        "thumbnail": 0,
+        "vil": 10485761,
+        "pipette": 10485761,
+        "c": 0,
+        "pdf": 0
+      },
+      "error": "File too large: vil exceeds 10 MB limit"
+    },
+    {
+      "sizes": {
+        "thumbnail": 0,
+        "vil": 0,
+        "pipette": 0,
+        "c": 10485761,
+        "pdf": 10485761
+      },
+      "error": "File too large: keymap C exceeds 10 MB limit"
+    },
+    {
+      "sizes": {
+        "thumbnail": 0,
+        "vil": 0,
+        "pipette": 0,
+        "c": 0,
+        "pdf": 10485761
+      },
+      "error": "File too large: PDF exceeds 10 MB limit"
+    }
+  ],
+  "sanitizeFieldValue": [
+    {
+      "input": "a",
+      "result": "a"
+    },
+    {
+      "input": "a\r\nb",
+      "result": "a b"
+    },
+    {
+      "input": "a\rb",
+      "result": "a b"
+    },
+    {
+      "input": "a\nb",
+      "result": "a b"
+    },
+    {
+      "input": "a\n\rb",
+      "result": "a  b"
+    },
+    {
+      "input": "a\r\n\r\nb",
+      "result": "a  b"
+    },
+    {
+      "input": " ",
+      "result": " "
+    }
+  ],
+  "retryAfter": {
+    "nowMs": 784111770000,
+    "cases": [
+      {
+        "header": "",
+        "seconds": null
+      },
+      {
+        "header": "0",
+        "seconds": 0
+      },
+      {
+        "header": "1",
+        "seconds": 1
+      },
+      {
+        "header": "1.5",
+        "seconds": 1.5
+      },
+      {
+        "header": " 5 ",
+        "seconds": 5
+      },
+      {
+        "header": "\t3\n",
+        "seconds": 3
+      },
+      {
+        "header": "+5",
+        "seconds": 5
+      },
+      {
+        "header": "-0",
+        "seconds": "-0"
+      },
+      {
+        "header": "60",
+        "seconds": 60
+      },
+      {
+        "header": "61",
+        "seconds": 61
+      },
+      {
+        "header": "1e1",
+        "seconds": 10
+      },
+      {
+        "header": "1E1",
+        "seconds": 10
+      },
+      {
+        "header": ".5",
+        "seconds": 0.5
+      },
+      {
+        "header": "5.",
+        "seconds": 5
+      },
+      {
+        "header": "0x1A",
+        "seconds": 26
+      },
+      {
+        "header": "0X1a",
+        "seconds": 26
+      },
+      {
+        "header": "0o7",
+        "seconds": 7
+      },
+      {
+        "header": "0b11",
+        "seconds": 3
+      },
+      {
+        "header": "Infinity",
+        "seconds": null
+      },
+      {
+        "header": "-Infinity",
+        "seconds": null
+      },
+      {
+        "header": "1_0",
+        "seconds": null
+      },
+      {
+        "header": "1e",
+        "seconds": null
+      },
+      {
+        "header": "0x",
+        "seconds": null
+      },
+      {
+        "header": "00012",
+        "seconds": 12
+      },
+      {
+        "header": "abc",
+        "seconds": null
+      },
+      {
+        "header": "Sun, 06 Nov 1994 08:49:37 GMT",
+        "seconds": 7
+      },
+      {
+        "header": "Sunday, 06-Nov-94 08:49:37 GMT",
+        "seconds": 7
+      },
+      {
+        "header": "Sun, 06 Nov 1994 08:49:30 GMT",
+        "seconds": 0
+      },
+      {
+        "header": "Sun, 06 Nov 1994 08:49:00 GMT",
+        "seconds": 0
+      },
+      {
+        "header": "Sun, 6 Nov 1994 08:49:37 GMT",
+        "seconds": 7
+      },
+      {
+        "header": "sun, 06 nov 1994 08:49:37 gmt",
+        "seconds": 7
+      },
+      {
+        "header": "Mon, 06 Nov 1994 08:50:30 GMT",
+        "seconds": 60
+      },
+      {
+        "header": "Sunday, 06-Nov-49 08:49:37 GMT",
+        "seconds": 1735689607
+      },
+      {
+        "header": "Sun, 31 Feb 1994 08:49:37 GMT",
+        "seconds": 0
+      },
+      {
+        "header": "Sun, 06 Nov 1994 25:49:37 GMT",
+        "seconds": null
+      },
+      {
+        "header": "Sun, 06 Nov 1994 08:49:37 UTC",
+        "seconds": 7
+      }
+    ]
+  }
+}
