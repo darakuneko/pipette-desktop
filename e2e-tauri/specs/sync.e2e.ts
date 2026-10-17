@@ -33,6 +33,7 @@ import {
   vialApi,
   VIRTUAL_DEVICE_NAME,
   waitForGone,
+  waitForUncovered,
 } from '../helpers/app'
 import { quitApp, readAppConfig, readPendingUnits, userDataPath } from '../helpers/driver'
 import { assertDevToolsBuild, fakeDrive, injectDriveFault, switchMachine } from '../helpers/sync-harness'
@@ -117,8 +118,16 @@ async function disconnect(): Promise<void> {
   await $(tid('settings-button')).waitForDisplayed()
 }
 
-async function connectAndFindUid(): Promise<string> {
+/** Connects the virtual keyboard and waits until the editor shows: with
+ *  Auto Sync on, the connecting overlay covers it while the keyboard's
+ *  data downloads, which takes a while on a slow machine. */
+async function connect(): Promise<void> {
   await connectVirtualKeyboard()
+  await waitForUncovered(EDITOR_SELECTOR)
+}
+
+async function connectAndFindUid(): Promise<string> {
+  await connect()
   let uid = ''
   await browser.waitUntil(
     async () => {
@@ -134,10 +143,26 @@ async function connectAndFindUid(): Promise<string> {
 describe('Tauri build Cloud Sync', function () {
   this.timeout(180_000)
 
+  /** The first failed test: every later test builds on the state the
+   *  earlier ones left, so they are not run after it. */
+  let firstFailure: string | null = null
+
+  beforeEach(function () {
+    if (firstFailure !== null) {
+      throw new Error(`not run: "${firstFailure}" failed, and the later tests depend on it`)
+    }
+  })
+
   afterEach(async function () {
     if (this.currentTest?.state !== 'failed') return
-    const page = await browser.execute(() => document.body.innerText).catch((err: unknown) => String(err))
-    console.error(`page text at the failure:\n${page.slice(0, 1500)}`)
+    firstFailure = this.currentTest.title
+    const page = await browser
+      .execute(() => {
+        const top = document.elementFromPoint(innerWidth / 2, innerHeight / 2)
+        return `topmost at the centre: ${top?.outerHTML.slice(0, 400) ?? 'none'}\n${document.body.innerText.slice(0, 1500)}`
+      })
+      .catch((err: unknown) => String(err))
+    console.error(`page at the failure:\n${page}`)
     console.error(`files on the fake Drive: ${driveFileNames().join(', ')}`)
     await returnToDeviceList()
   })
@@ -217,7 +242,7 @@ describe('Tauri build Cloud Sync', function () {
     })
 
     it('sends a change saved right before a quit, or keeps it pending', async () => {
-      await connectVirtualKeyboard()
+      await connect()
       const before = driveModifiedTime(settingsFileName(uid))
       const value = await toggleAutoMove(uid)
       await quitApp(QUIT_TIMEOUT_MS)
