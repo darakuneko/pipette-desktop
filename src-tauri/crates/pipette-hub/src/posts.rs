@@ -44,16 +44,17 @@ pub struct KeymapPostParams<'a> {
 }
 
 /// The checked title and files of a keymap post (`validateTitle`, then
-/// `buildFiles`).
-pub(crate) struct CheckedKeymapPost {
+/// `buildFiles`), with the keyboard name as the page sent it.
+pub(crate) struct CheckedKeymapPost<'a> {
     pub title: String,
+    pub keyboard_name: &'a str,
     pub files: KeymapFiles,
 }
 
-impl KeymapPostParams<'_> {
+impl<'a> KeymapPostParams<'a> {
     /// `validateTitle(params.title)` then `buildFiles(params)`; `fallback`
     /// is the handler's message for a file input that is not a string.
-    pub(crate) fn check(&self, fallback: &str) -> Result<CheckedKeymapPost, HubFailure> {
+    pub(crate) fn check(&self, fallback: &str) -> Result<CheckedKeymapPost<'a>, HubFailure> {
         let title = validate_title(self.title)?;
         let (
             Some(keyboard_name),
@@ -81,7 +82,7 @@ impl KeymapPostParams<'_> {
             pdf_base64,
             thumbnail_base64,
         })?;
-        Ok(CheckedKeymapPost { title, files })
+        Ok(CheckedKeymapPost { title, keyboard_name, files })
     }
 }
 
@@ -89,16 +90,15 @@ impl KeymapPostParams<'_> {
 /// the TS builds the body anew for each send, the retry after a 401 too.
 pub(crate) fn keymap_body(
     token: &HubToken,
-    post: &CheckedKeymapPost,
-    keyboard_name: &str,
+    post: &CheckedKeymapPost<'_>,
     expires_in_days: Option<f64>,
 ) -> MultipartBody {
     let boundary = post_boundary(token.http().timing().now_ms() as i64);
-    keymap_post_body(boundary, &post.title, keyboard_name, &post.files, expires_in_days)
+    keymap_post_body(boundary, &post.title, post.keyboard_name, &post.files, expires_in_days)
 }
 
 /// Sends `endpoint` with the JWT and `body`.
-async fn send(
+pub(crate) async fn send(
     token: &HubToken,
     endpoint: &Endpoint<'_>,
     jwt: Jwt,
@@ -172,15 +172,13 @@ async fn submit(
     post_id: Option<&str>,
 ) -> Result<Vec<(&'static str, Option<Value>)>, HubFailure> {
     let post = params.check(if post_id.is_some() { UPDATE_FAILED } else { UPLOAD_FAILED })?;
-    // `check` passed, so the keyboard name is a string.
-    let keyboard_name = params.keyboard_name.unwrap_or_default();
     let endpoint = match post_id {
         Some(post_id) => Endpoint::UpdatePost { post_id },
         None => Endpoint::UploadPost,
     };
     let data = token
         .with_token_retry(|jwt| {
-            let body = RequestBody::Multipart(keymap_body(token, &post, keyboard_name, None));
+            let body = RequestBody::Multipart(keymap_body(token, &post, None));
             send(token, &endpoint, jwt, body)
         })
         .await?;

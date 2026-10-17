@@ -15,7 +15,7 @@ use pipette_js_json::Value;
 
 use crate::endpoint::Endpoint;
 use crate::http::{RequestBody, StatusKind};
-use crate::posts::{KeymapPostParams, UPLOAD_FAILED, answer, keymap_body, property};
+use crate::posts::{KeymapPostParams, UPLOAD_FAILED, answer, keymap_body, property, send};
 use crate::token::{HubFailure, HubToken};
 
 /// `HUB_UPLOAD_PRIVATE_POST`: `{ success, id, url, expiresAt }`.
@@ -28,12 +28,10 @@ pub async fn upload_private_post(
 ) -> Value {
     let result = async {
         let post = params.check(UPLOAD_FAILED)?;
-        // `check` passed, so the keyboard name is a string.
-        let keyboard_name = params.keyboard_name.unwrap_or_default();
         let data = token
             .with_token_retry(|jwt| {
-                let body = RequestBody::Multipart(keymap_body(token, &post, keyboard_name, expires_in_days));
-                async move { token.http().send(&Endpoint::UploadPrivatePost, Some(jwt.as_str()), body).await }
+                let body = RequestBody::Multipart(keymap_body(token, &post, expires_in_days));
+                send(token, &Endpoint::UploadPrivatePost, jwt, body)
             })
             .await?;
         // `toPrivateResult`.
@@ -55,15 +53,10 @@ pub async fn delete_private_post(token: &HubToken, kind: &str, id: Option<&str>)
         return answer(Err(HubFailure::plain("Invalid id")));
     };
     let endpoint = Endpoint::DeletePrivatePost { kind, id };
-    let result = token
-        .with_token_retry(|jwt| async move {
-            token.http().send(&endpoint, Some(jwt.as_str()), RequestBody::None).await
-        })
-        .await;
+    let result = token.with_token_retry(|jwt| send(token, &endpoint, jwt, RequestBody::None)).await;
     match result {
-        Ok(_) => answer(Ok(Vec::new())),
-        Err(err) if err.is(StatusKind::NotFound) => answer(Ok(Vec::new())),
-        Err(err) => answer(Err(err)),
+        Err(err) if !err.is(StatusKind::NotFound) => answer(Err(err)),
+        _ => answer(Ok(Vec::new())),
     }
 }
 
