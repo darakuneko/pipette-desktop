@@ -1,0 +1,3126 @@
+{
+  "source": "src/main/index.ts and app-behavior.ts booted on scripts/resident-fixtures; calls of the Electron Tray, Menu and BrowserWindow",
+  "scenarios": [
+    {
+      "name": "statuses on a tray created at boot",
+      "boot": {
+        "config": {
+          "trayResident": true
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Tray.new",
+          "args": [
+            0,
+            {
+              "path": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setToolTip",
+          "args": [
+            0,
+            "Pipette"
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setContextMenu",
+          "args": [
+            0,
+            [
+              {
+                "label": "Show",
+                "click": true
+              },
+              {
+                "type": "separator"
+              },
+              {
+                "label": "Quit",
+                "click": true
+              }
+            ]
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": false,
+              "count": 0,
+              "kpm": 0
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": true,
+              "count": 1234,
+              "kpm": 56
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R — Cnt: 1,234 · KPM: 56"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 1,234",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 56",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": true,
+              "count": 1235,
+              "kpm": 57.5
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R — Cnt: 1,235 · KPM: 57.5"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 1,235",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 57.5",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "Other keyboard",
+              "recording": true,
+              "count": 1235,
+              "kpm": 57.5
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — Other keyboard — Cnt: 1,235 · KPM: 57.5"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Other keyboard",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 1,235",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 57.5",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "Other keyboard",
+              "recording": false,
+              "count": 1235,
+              "kpm": 57.5
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — Other keyboard"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Other keyboard",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "",
+              "recording": true,
+              "count": 10,
+              "kpm": 2
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 10",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 2",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "",
+              "recording": false,
+              "count": 10,
+              "kpm": 2
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": null,
+              "recording": true,
+              "count": 3,
+              "kpm": 1
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 3",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 1",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": null,
+              "recording": false,
+              "count": 0,
+              "kpm": 0
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": true,
+              "count": 7,
+              "kpm": 8
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R — Cnt: 7 · KPM: 8"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 7",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 8",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": 1,
+              "recording": true,
+              "count": 0,
+              "kpm": 0
+            }
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "trayStatusUpdate": null
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "  spaced  name  ",
+              "recording": true,
+              "count": 0,
+              "kpm": 0
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette —   spaced  name   — Cnt: 0 · KPM: 0"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "  spaced  name  ",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 0",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 0",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "trayResident toggled while statuses arrive",
+      "boot": {
+        "config": {
+          "trayResident": false
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": true,
+              "count": 99,
+              "kpm": 12
+            }
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": true
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "Tray.new",
+              "args": [
+                0,
+                {
+                  "path": "build/icon.png"
+                }
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R — Cnt: 99 · KPM: 12"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 99",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 12",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": true,
+              "count": 100,
+              "kpm": 13
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R — Cnt: 100 · KPM: 13"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Recording",
+                    "enabled": false
+                  },
+                  {
+                    "label": "Cnt: 100",
+                    "enabled": false
+                  },
+                  {
+                    "label": "KPM: 13",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": true
+            }
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": false
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.destroy",
+              "args": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "After destroy",
+              "recording": false,
+              "count": 0,
+              "kpm": 0
+            }
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": false
+            }
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": true
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "Tray.new",
+              "args": [
+                1,
+                {
+                  "path": "build/icon.png"
+                }
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                1,
+                "Pipette — After destroy"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                1,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "After destroy",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "x"
+            }
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": false
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.destroy",
+              "args": [
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "trayResident",
+              "value": true
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "Tray.new",
+              "args": [
+                2,
+                {
+                  "path": "build/icon.png"
+                }
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                2,
+                "Pipette — After destroy"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                2,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "After destroy",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "menu and tray clicks, close and quit with the tray",
+      "boot": {
+        "config": {
+          "trayResident": true
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Tray.new",
+          "args": [
+            0,
+            {
+              "path": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setToolTip",
+          "args": [
+            0,
+            "Pipette"
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setContextMenu",
+          "args": [
+            0,
+            [
+              {
+                "label": "Show",
+                "click": true
+              },
+              {
+                "type": "separator"
+              },
+              {
+                "label": "Quit",
+                "click": true
+              }
+            ]
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "trayStatusUpdate": {
+              "keyboardName": "GPK60-63R",
+              "recording": false,
+              "count": 0,
+              "kpm": 0
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "tray.setToolTip",
+              "args": [
+                0,
+                "Pipette — GPK60-63R"
+              ]
+            },
+            {
+              "t": 0,
+              "call": "tray.setContextMenu",
+              "args": [
+                0,
+                [
+                  {
+                    "label": "Show",
+                    "click": true
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "GPK60-63R",
+                    "enabled": false
+                  },
+                  {
+                    "type": "separator"
+                  },
+                  {
+                    "label": "Quit",
+                    "click": true
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "windowClose": true
+          },
+          "result": {
+            "prevented": true
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "saveWindowState",
+              "args": [
+                {
+                  "x": 300,
+                  "y": 0,
+                  "width": 1320,
+                  "height": 1040
+                }
+              ]
+            },
+            {
+              "t": 0,
+              "call": "window.hide",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                false
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_IS_VISIBLE"
+          },
+          "result": false,
+          "calls": []
+        },
+        {
+          "action": {
+            "menuClick": "Show"
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "windowClose": true
+          },
+          "result": {
+            "prevented": true
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "saveWindowState",
+              "args": [
+                {
+                  "x": 300,
+                  "y": 0,
+                  "width": 1320,
+                  "height": 1040
+                }
+              ]
+            },
+            {
+              "t": 0,
+              "call": "window.hide",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                false
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "trayClick": true
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_HIDE"
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.hide",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                false
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_SHOW"
+          },
+          "result": true,
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_SHOW"
+          },
+          "result": false,
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "appEvent": "second-instance"
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "appEvent": "window-all-closed"
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "menuClick": "Quit"
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "app.quit",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "appEvent": "before-quit"
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "windowClose": true
+          },
+          "result": {
+            "prevented": false
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "saveWindowState",
+              "args": [
+                {
+                  "x": 300,
+                  "y": 0,
+                  "width": 1320,
+                  "height": 1040
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close and quit without the tray",
+      "boot": {
+        "config": {
+          "trayResident": false
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "windowClose": true
+          },
+          "result": {
+            "prevented": false
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "saveWindowState",
+              "args": [
+                {
+                  "x": 300,
+                  "y": 0,
+                  "width": 1320,
+                  "height": 1040
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_HIDE"
+          },
+          "calls": []
+        },
+        {
+          "action": {
+            "appEvent": "window-all-closed"
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "app.quit",
+              "args": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "start in tray: {\"startInTray\":true,\"trayResident\":true}",
+      "boot": {
+        "config": {
+          "startInTray": true,
+          "trayResident": true
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "show": false,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Tray.new",
+          "args": [
+            0,
+            {
+              "path": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setToolTip",
+          "args": [
+            0,
+            "Pipette"
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setContextMenu",
+          "args": [
+            0,
+            [
+              {
+                "label": "Show",
+                "click": true
+              },
+              {
+                "type": "separator"
+              },
+              {
+                "label": "Quit",
+                "click": true
+              }
+            ]
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "ipc": "WINDOW_STARTED_HIDDEN"
+          },
+          "result": true,
+          "calls": []
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_IS_VISIBLE"
+          },
+          "result": false,
+          "calls": []
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_SHOW"
+          },
+          "result": true,
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_STARTED_HIDDEN"
+          },
+          "result": true,
+          "calls": []
+        }
+      ]
+    },
+    {
+      "name": "start in tray: {\"startInTray\":true,\"trayResident\":false}",
+      "boot": {
+        "config": {
+          "startInTray": true,
+          "trayResident": false
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "ipc": "WINDOW_STARTED_HIDDEN"
+          },
+          "result": false,
+          "calls": []
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_IS_VISIBLE"
+          },
+          "result": true,
+          "calls": []
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_SHOW"
+          },
+          "result": false,
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_STARTED_HIDDEN"
+          },
+          "result": false,
+          "calls": []
+        }
+      ]
+    },
+    {
+      "name": "start in tray: {\"startInTray\":false,\"trayResident\":true}",
+      "boot": {
+        "config": {
+          "startInTray": false,
+          "trayResident": true
+        }
+      },
+      "bootCalls": [
+        {
+          "t": 0,
+          "call": "BrowserWindow.new",
+          "args": [
+            {
+              "width": 1320,
+              "height": 1040,
+              "minWidth": 1280,
+              "minHeight": 1024,
+              "icon": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Menu.setApplicationMenu",
+          "args": [
+            null
+          ]
+        },
+        {
+          "t": 0,
+          "call": "webContents.setZoomFactor",
+          "args": [
+            1
+          ]
+        },
+        {
+          "t": 0,
+          "call": "Tray.new",
+          "args": [
+            0,
+            {
+              "path": "build/icon.png"
+            }
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setToolTip",
+          "args": [
+            0,
+            "Pipette"
+          ]
+        },
+        {
+          "t": 0,
+          "call": "tray.setContextMenu",
+          "args": [
+            0,
+            [
+              {
+                "label": "Show",
+                "click": true
+              },
+              {
+                "type": "separator"
+              },
+              {
+                "label": "Quit",
+                "click": true
+              }
+            ]
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": {
+            "ipc": "WINDOW_STARTED_HIDDEN"
+          },
+          "result": false,
+          "calls": []
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_IS_VISIBLE"
+          },
+          "result": true,
+          "calls": []
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_SHOW"
+          },
+          "result": false,
+          "calls": [
+            {
+              "t": 0,
+              "call": "window.show",
+              "args": []
+            },
+            {
+              "t": 0,
+              "call": "window.focus",
+              "args": []
+            }
+          ]
+        },
+        {
+          "action": {
+            "ipc": "WINDOW_STARTED_HIDDEN"
+          },
+          "result": false,
+          "calls": []
+        }
+      ]
+    }
+  ],
+  "formatCount": [
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 1,
+      "text": "1"
+    },
+    {
+      "value": 9,
+      "text": "9"
+    },
+    {
+      "value": 10,
+      "text": "10"
+    },
+    {
+      "value": 99,
+      "text": "99"
+    },
+    {
+      "value": 100,
+      "text": "100"
+    },
+    {
+      "value": 999,
+      "text": "999"
+    },
+    {
+      "value": 1000,
+      "text": "1,000"
+    },
+    {
+      "value": 1001,
+      "text": "1,001"
+    },
+    {
+      "value": 9999,
+      "text": "9,999"
+    },
+    {
+      "value": 10000,
+      "text": "10,000"
+    },
+    {
+      "value": 99999,
+      "text": "99,999"
+    },
+    {
+      "value": 100000,
+      "text": "100,000"
+    },
+    {
+      "value": 999999,
+      "text": "999,999"
+    },
+    {
+      "value": 1000000,
+      "text": "1,000,000"
+    },
+    {
+      "value": 1234567,
+      "text": "1,234,567"
+    },
+    {
+      "value": 12345678,
+      "text": "12,345,678"
+    },
+    {
+      "value": 123456789,
+      "text": "123,456,789"
+    },
+    {
+      "value": 2147483647,
+      "text": "2,147,483,647"
+    },
+    {
+      "value": 4294967296,
+      "text": "4,294,967,296"
+    },
+    {
+      "value": 9007199254740991,
+      "text": "9,007,199,254,740,991"
+    },
+    {
+      "value": 9007199254740992,
+      "text": "9,007,199,254,740,992"
+    },
+    {
+      "value": 1000000000000000,
+      "text": "1,000,000,000,000,000"
+    },
+    {
+      "value": 10000000000000000,
+      "text": "10,000,000,000,000,000"
+    },
+    {
+      "value": 100000000000000000000,
+      "text": "100,000,000,000,000,000,000"
+    },
+    {
+      "value": 1e+21,
+      "text": "1,000,000,000,000,000,000,000"
+    },
+    {
+      "value": 1.5e+21,
+      "text": "1,500,000,000,000,000,000,000"
+    },
+    {
+      "value": 1e+22,
+      "text": "10,000,000,000,000,000,000,000"
+    },
+    {
+      "value": 1e+100,
+      "text": "10,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
+    },
+    {
+      "value": 1.7976931348623157e+308,
+      "text": "179,769,313,486,231,570,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
+    },
+    {
+      "value": 0.1,
+      "text": "0.1"
+    },
+    {
+      "value": 0.5,
+      "text": "0.5"
+    },
+    {
+      "value": 1.5,
+      "text": "1.5"
+    },
+    {
+      "value": 2.5,
+      "text": "2.5"
+    },
+    {
+      "value": 12.3456,
+      "text": "12.346"
+    },
+    {
+      "value": 12.3454,
+      "text": "12.345"
+    },
+    {
+      "value": 12.3455,
+      "text": "12.346"
+    },
+    {
+      "value": 0.0005,
+      "text": "0.001"
+    },
+    {
+      "value": 0.0004,
+      "text": "0"
+    },
+    {
+      "value": 0.0006,
+      "text": "0.001"
+    },
+    {
+      "value": 0.0015,
+      "text": "0.002"
+    },
+    {
+      "value": 0.0025,
+      "text": "0.003"
+    },
+    {
+      "value": 1.0005,
+      "text": "1.001"
+    },
+    {
+      "value": 1.0004,
+      "text": "1"
+    },
+    {
+      "value": 2.0005,
+      "text": "2.001"
+    },
+    {
+      "value": 0.9995,
+      "text": "1"
+    },
+    {
+      "value": 0.9994,
+      "text": "0.999"
+    },
+    {
+      "value": 9.9995,
+      "text": "10"
+    },
+    {
+      "value": 999.9995,
+      "text": "1,000"
+    },
+    {
+      "value": 999.9994,
+      "text": "999.999"
+    },
+    {
+      "value": 1234.5678,
+      "text": "1,234.568"
+    },
+    {
+      "value": 0.001,
+      "text": "0.001"
+    },
+    {
+      "value": 0.0001,
+      "text": "0"
+    },
+    {
+      "value": 1e-7,
+      "text": "0"
+    },
+    {
+      "value": 5e-324,
+      "text": "0"
+    },
+    {
+      "value": 1.23e-10,
+      "text": "0"
+    },
+    {
+      "value": 123456.7891,
+      "text": "123,456.789"
+    },
+    {
+      "value": 0.30000000000000004,
+      "text": "0.3"
+    },
+    {
+      "value": 0.3333333333333333,
+      "text": "0.333"
+    },
+    {
+      "value": 0.6666666666666666,
+      "text": "0.667"
+    },
+    {
+      "value": -1,
+      "text": "-1"
+    },
+    {
+      "value": -999,
+      "text": "-999"
+    },
+    {
+      "value": -1000,
+      "text": "-1,000"
+    },
+    {
+      "value": -1234567,
+      "text": "-1,234,567"
+    },
+    {
+      "value": -12.3456,
+      "text": "-12.346"
+    },
+    {
+      "value": -0.0004,
+      "text": "-0"
+    },
+    {
+      "value": -0.0005,
+      "text": "-0.001"
+    },
+    {
+      "value": -0.0006,
+      "text": "-0.001"
+    },
+    {
+      "value": -0.5,
+      "text": "-0.5"
+    },
+    {
+      "value": -1e+21,
+      "text": "-1,000,000,000,000,000,000,000"
+    },
+    {
+      "value": -1.7976931348623157e+308,
+      "text": "-179,769,313,486,231,570,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
+    },
+    {
+      "value": 57.5,
+      "text": "57.5"
+    },
+    {
+      "value": 56.25,
+      "text": "56.25"
+    },
+    {
+      "value": 60.125,
+      "text": "60.125"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 55277,
+      "text": "55,277"
+    },
+    {
+      "value": 8913538,
+      "text": "8,913,538"
+    },
+    {
+      "value": -0.00004989924153778702,
+      "text": "-0"
+    },
+    {
+      "value": 2.622,
+      "text": "2.622"
+    },
+    {
+      "value": -5.520692924037576,
+      "text": "-5.521"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 0.008287515356205404,
+      "text": "0.008"
+    },
+    {
+      "value": 9323,
+      "text": "9,323"
+    },
+    {
+      "value": 733.955,
+      "text": "733.955"
+    },
+    {
+      "value": 0.7956702404189855,
+      "text": "0.796"
+    },
+    {
+      "value": 89.02673774864525,
+      "text": "89.027"
+    },
+    {
+      "value": 0.000046955111925490205,
+      "text": "0"
+    },
+    {
+      "value": 4497.699,
+      "text": "4,497.699"
+    },
+    {
+      "value": 4336569.435,
+      "text": "4,336,569.435"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -538157.4151106179,
+      "text": "-538,157.415"
+    },
+    {
+      "value": 8941952,
+      "text": "8,941,952"
+    },
+    {
+      "value": 17782380.036,
+      "text": "17,782,380.036"
+    },
+    {
+      "value": 428634.312,
+      "text": "428,634.312"
+    },
+    {
+      "value": 9582663.423,
+      "text": "9,582,663.423"
+    },
+    {
+      "value": 34.982616757042706,
+      "text": "34.983"
+    },
+    {
+      "value": 61520034.191,
+      "text": "61,520,034.191"
+    },
+    {
+      "value": -0.2663928451947868,
+      "text": "-0.266"
+    },
+    {
+      "value": -0.006418865574523806,
+      "text": "-0.006"
+    },
+    {
+      "value": -899.5257415808737,
+      "text": "-899.526"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 47277606.977,
+      "text": "47,277,606.977"
+    },
+    {
+      "value": 389.86597838811576,
+      "text": "389.866"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -0.0008854889424983412,
+      "text": "-0.001"
+    },
+    {
+      "value": 62884249.608,
+      "text": "62,884,249.608"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -6418891.800567508,
+      "text": "-6,418,891.801"
+    },
+    {
+      "value": 2957065.38,
+      "text": "2,957,065.38"
+    },
+    {
+      "value": -797284.6331540495,
+      "text": "-797,284.633"
+    },
+    {
+      "value": 28.581,
+      "text": "28.581"
+    },
+    {
+      "value": 49,
+      "text": "49"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 349,
+      "text": "349"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 29180.485079996288,
+      "text": "29,180.485"
+    },
+    {
+      "value": 18074043,
+      "text": "18,074,043"
+    },
+    {
+      "value": -75082279.22953665,
+      "text": "-75,082,279.23"
+    },
+    {
+      "value": 55.03944542724639,
+      "text": "55.039"
+    },
+    {
+      "value": 3781256.0913152993,
+      "text": "3,781,256.091"
+    },
+    {
+      "value": 911351.2330222875,
+      "text": "911,351.233"
+    },
+    {
+      "value": 0.0014618351473473013,
+      "text": "0.001"
+    },
+    {
+      "value": 0.06723627117462457,
+      "text": "0.067"
+    },
+    {
+      "value": -312.3343177139759,
+      "text": "-312.334"
+    },
+    {
+      "value": -0.0005631553267594427,
+      "text": "-0.001"
+    },
+    {
+      "value": 0.805,
+      "text": "0.805"
+    },
+    {
+      "value": -0.0006935551317874343,
+      "text": "-0.001"
+    },
+    {
+      "value": 1,
+      "text": "1"
+    },
+    {
+      "value": 0.03971077159512788,
+      "text": "0.04"
+    },
+    {
+      "value": 0.00007813604522962124,
+      "text": "0"
+    },
+    {
+      "value": 747,
+      "text": "747"
+    },
+    {
+      "value": 761,
+      "text": "761"
+    },
+    {
+      "value": 84413634.38032568,
+      "text": "84,413,634.38"
+    },
+    {
+      "value": -9067430.696450174,
+      "text": "-9,067,430.696"
+    },
+    {
+      "value": 11448245,
+      "text": "11,448,245"
+    },
+    {
+      "value": -5722248.877864331,
+      "text": "-5,722,248.878"
+    },
+    {
+      "value": 0.0007474845293909311,
+      "text": "0.001"
+    },
+    {
+      "value": -0.000026264908583834767,
+      "text": "-0"
+    },
+    {
+      "value": 0.0007059716586954892,
+      "text": "0.001"
+    },
+    {
+      "value": 5451129,
+      "text": "5,451,129"
+    },
+    {
+      "value": 47.999,
+      "text": "47.999"
+    },
+    {
+      "value": 760805,
+      "text": "760,805"
+    },
+    {
+      "value": 258784.326,
+      "text": "258,784.326"
+    },
+    {
+      "value": -8805146.84598893,
+      "text": "-8,805,146.846"
+    },
+    {
+      "value": 0.078,
+      "text": "0.078"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 0.000004876816319301725,
+      "text": "0"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -0.000013541551539674401,
+      "text": "-0"
+    },
+    {
+      "value": 0.01,
+      "text": "0.01"
+    },
+    {
+      "value": -5.366676447447389,
+      "text": "-5.367"
+    },
+    {
+      "value": -8.15369273070246,
+      "text": "-8.154"
+    },
+    {
+      "value": 4827124,
+      "text": "4,827,124"
+    },
+    {
+      "value": -1.8653204198926687,
+      "text": "-1.865"
+    },
+    {
+      "value": 0.142,
+      "text": "0.142"
+    },
+    {
+      "value": -0.8073329806793481,
+      "text": "-0.807"
+    },
+    {
+      "value": 1,
+      "text": "1"
+    },
+    {
+      "value": 565491.0374432802,
+      "text": "565,491.037"
+    },
+    {
+      "value": 5006313,
+      "text": "5,006,313"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -81968.97197049111,
+      "text": "-81,968.972"
+    },
+    {
+      "value": 82110.154,
+      "text": "82,110.154"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 5160,
+      "text": "5,160"
+    },
+    {
+      "value": -34.5237024826929,
+      "text": "-34.524"
+    },
+    {
+      "value": -5755.975018255413,
+      "text": "-5,755.975"
+    },
+    {
+      "value": 8851.258,
+      "text": "8,851.258"
+    },
+    {
+      "value": 9000.899,
+      "text": "9,000.899"
+    },
+    {
+      "value": 1,
+      "text": "1"
+    },
+    {
+      "value": 0.932,
+      "text": "0.932"
+    },
+    {
+      "value": -661.925251595676,
+      "text": "-661.925"
+    },
+    {
+      "value": -64219.44049652666,
+      "text": "-64,219.44"
+    },
+    {
+      "value": -135506.01853057742,
+      "text": "-135,506.019"
+    },
+    {
+      "value": 68.865,
+      "text": "68.865"
+    },
+    {
+      "value": 0.009905882179737091,
+      "text": "0.01"
+    },
+    {
+      "value": 0.317,
+      "text": "0.317"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 9.066412136889994,
+      "text": "9.066"
+    },
+    {
+      "value": 28124858,
+      "text": "28,124,858"
+    },
+    {
+      "value": -8.9718071045354,
+      "text": "-8.972"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 9883,
+      "text": "9,883"
+    },
+    {
+      "value": 9.22,
+      "text": "9.22"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -0.00007537256516516209,
+      "text": "-0"
+    },
+    {
+      "value": -9978.593687992543,
+      "text": "-9,978.594"
+    },
+    {
+      "value": 0.847,
+      "text": "0.847"
+    },
+    {
+      "value": -51971.03663813323,
+      "text": "-51,971.037"
+    },
+    {
+      "value": 36718501.38343871,
+      "text": "36,718,501.383"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 0.04755154608283192,
+      "text": "0.048"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 0.013,
+      "text": "0.013"
+    },
+    {
+      "value": 19,
+      "text": "19"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 0.07805808847770096,
+      "text": "0.078"
+    },
+    {
+      "value": 0.00007745225462131202,
+      "text": "0"
+    },
+    {
+      "value": 9823,
+      "text": "9,823"
+    },
+    {
+      "value": 29860641.20195806,
+      "text": "29,860,641.202"
+    },
+    {
+      "value": -63.89627088792622,
+      "text": "-63.896"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 565.8152203541249,
+      "text": "565.815"
+    },
+    {
+      "value": 0.048,
+      "text": "0.048"
+    },
+    {
+      "value": 9667256,
+      "text": "9,667,256"
+    },
+    {
+      "value": -0.00004378150729462504,
+      "text": "-0"
+    },
+    {
+      "value": 90522.661,
+      "text": "90,522.661"
+    },
+    {
+      "value": 15878185,
+      "text": "15,878,185"
+    },
+    {
+      "value": 694,
+      "text": "694"
+    },
+    {
+      "value": -0.000015128889377228917,
+      "text": "-0"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -0.0008116095620207489,
+      "text": "-0.001"
+    },
+    {
+      "value": 59,
+      "text": "59"
+    },
+    {
+      "value": 0.002,
+      "text": "0.002"
+    },
+    {
+      "value": 40,
+      "text": "40"
+    },
+    {
+      "value": -0.000014345070137642324,
+      "text": "-0"
+    },
+    {
+      "value": 504.185,
+      "text": "504.185"
+    },
+    {
+      "value": -83.56437764596194,
+      "text": "-83.564"
+    },
+    {
+      "value": -0.9986636228859425,
+      "text": "-0.999"
+    },
+    {
+      "value": 1928.192,
+      "text": "1,928.192"
+    },
+    {
+      "value": 2530.9359980747104,
+      "text": "2,530.936"
+    },
+    {
+      "value": -65598781.942389905,
+      "text": "-65,598,781.942"
+    },
+    {
+      "value": 0.005,
+      "text": "0.005"
+    },
+    {
+      "value": 6927917,
+      "text": "6,927,917"
+    },
+    {
+      "value": 82,
+      "text": "82"
+    },
+    {
+      "value": 9.27073213038966,
+      "text": "9.271"
+    },
+    {
+      "value": 93813.793,
+      "text": "93,813.793"
+    },
+    {
+      "value": 46794.13978010416,
+      "text": "46,794.14"
+    },
+    {
+      "value": 3.954043339472264,
+      "text": "3.954"
+    },
+    {
+      "value": 8886.897342745215,
+      "text": "8,886.897"
+    },
+    {
+      "value": -38360723.899677396,
+      "text": "-38,360,723.9"
+    },
+    {
+      "value": 0.058,
+      "text": "0.058"
+    },
+    {
+      "value": -0.00003732596058398485,
+      "text": "-0"
+    },
+    {
+      "value": -0.04530061222612858,
+      "text": "-0.045"
+    },
+    {
+      "value": -0.0026125402329489587,
+      "text": "-0.003"
+    },
+    {
+      "value": 0.055,
+      "text": "0.055"
+    },
+    {
+      "value": 3.2256296346895397,
+      "text": "3.226"
+    },
+    {
+      "value": 1634.669,
+      "text": "1,634.669"
+    },
+    {
+      "value": 75810.968,
+      "text": "75,810.968"
+    },
+    {
+      "value": 0.024,
+      "text": "0.024"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -0.07628464230801911,
+      "text": "-0.076"
+    },
+    {
+      "value": 4.556392633821815,
+      "text": "4.556"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": -9.41649841144681,
+      "text": "-9.416"
+    },
+    {
+      "value": -0.0062199803069233894,
+      "text": "-0.006"
+    },
+    {
+      "value": 0.076,
+      "text": "0.076"
+    },
+    {
+      "value": 9.742,
+      "text": "9.742"
+    },
+    {
+      "value": 95,
+      "text": "95"
+    },
+    {
+      "value": 251.49408471770585,
+      "text": "251.494"
+    },
+    {
+      "value": 0,
+      "text": "0"
+    },
+    {
+      "value": 694571.4568719268,
+      "text": "694,571.457"
+    },
+    {
+      "value": 90.5997546389699,
+      "text": "90.6"
+    },
+    {
+      "value": 0.06,
+      "text": "0.06"
+    },
+    {
+      "value": 605,
+      "text": "605"
+    },
+    {
+      "value": -44427824.34634864,
+      "text": "-44,427,824.346"
+    },
+    {
+      "value": 49681.87939375639,
+      "text": "49,681.879"
+    },
+    {
+      "value": 6.151915823575109,
+      "text": "6.152"
+    },
+    {
+      "value": -5738.536408171058,
+      "text": "-5,738.536"
+    },
+    {
+      "value": 19658694,
+      "text": "19,658,694"
+    },
+    {
+      "value": 306344.936,
+      "text": "306,344.936"
+    },
+    {
+      "value": -72245414.27567601,
+      "text": "-72,245,414.276"
+    },
+    {
+      "value": 69783.19,
+      "text": "69,783.19"
+    },
+    {
+      "value": 0.0000014267885126173497,
+      "text": "0"
+    },
+    {
+      "value": 0.105,
+      "text": "0.105"
+    },
+    {
+      "value": 50049653,
+      "text": "50,049,653"
+    },
+    {
+      "value": 961942,
+      "text": "961,942"
+    },
+    {
+      "value": -0.0127013074234128,
+      "text": "-0.013"
+    },
+    {
+      "value": -0.00003808480959851295,
+      "text": "-0"
+    },
+    {
+      "value": -674.6034529060125,
+      "text": "-674.603"
+    },
+    {
+      "value": -5.6057676719501615,
+      "text": "-5.606"
+    },
+    {
+      "value": 735.1209272164851,
+      "text": "735.121"
+    },
+    {
+      "value": -0.014738642587326468,
+      "text": "-0.015"
+    },
+    {
+      "value": 0.005821743730921298,
+      "text": "0.006"
+    }
+  ],
+  "isValidTrayStatus": [
+    {
+      "input": null,
+      "valid": false
+    },
+    {
+      "input": true,
+      "valid": false
+    },
+    {
+      "input": 0,
+      "valid": false
+    },
+    {
+      "input": "status",
+      "valid": false
+    },
+    {
+      "input": [],
+      "valid": false
+    },
+    {
+      "input": [
+        null,
+        false,
+        0,
+        0
+      ],
+      "valid": false
+    },
+    {
+      "input": {},
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": null,
+        "recording": false,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": true
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": true,
+        "count": 1,
+        "kpm": 2
+      },
+      "valid": true
+    },
+    {
+      "input": {
+        "keyboardName": "",
+        "recording": false,
+        "count": -1,
+        "kpm": 0.5
+      },
+      "valid": true
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": 0,
+        "kpm": 0,
+        "extra": "ignored"
+      },
+      "valid": true
+    },
+    {
+      "input": {
+        "recording": false,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": 1,
+        "recording": false,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": false,
+        "recording": false,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": {},
+        "recording": false,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": "true",
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": 1,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": null,
+        "count": 0,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": "1",
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": null,
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": 0,
+        "kpm": "0"
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": 0,
+        "kpm": null
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": [
+          1
+        ],
+        "kpm": 0
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "keyboardName": "K",
+        "recording": false,
+        "count": 1e+308,
+        "kpm": -1e+308
+      },
+      "valid": true
+    }
+  ]
+}
