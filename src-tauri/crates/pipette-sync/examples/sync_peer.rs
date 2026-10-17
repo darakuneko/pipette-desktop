@@ -12,7 +12,8 @@
 //! fake Drive, on 127.0.0.1 only), `now` (the clock of the stores and of
 //! the password-change lock, in milliseconds), `machineId`, `sub` (the
 //! signed-in account) and `command`. It prints one line of JSON: the
-//! command's answer, or `{"error": …}`.
+//! command's answer, or `{"error": …}`, with the command's time
+//! (`elapsedMs`) and the process's peak memory (`maxRssKb`, Linux only).
 //!
 //! Nothing reaches the network but the loopback interface: the URL must be
 //! on 127.0.0.1 and the HTTP client refuses every other destination.
@@ -35,7 +36,7 @@ use pipette_keyboard_stores::{
 };
 use pipette_net::{Limits, ReqwestClient};
 use pipette_secret_store::{Keystore, KeystoreError, SecretStore};
-use pipette_sync::codec::EnvelopeCrypto;
+use pipette_sync::codec::{EnvelopeCodec, EnvelopeCrypto};
 use pipette_sync::dispatch::{UnitSync, UnitSyncDeps};
 use pipette_sync::execute::{
     ExecuteDeps, KeyboardMetaBackfill, PassAccount, SyncExecuteResult, SyncExecutor,
@@ -154,7 +155,7 @@ fn field<'a>(value: &'a Value, name: &str) -> &'a str {
 }
 
 impl Peer {
-    fn new(input: &Value) -> Self {
+    fn new(input: &Value) -> (Self, Arc<TypingAnalytics>) {
         let root = PathBuf::from(field(input, "userData"));
         let drive_url = field(input, "driveUrl");
         assert!(drive_url.starts_with("http://127.0.0.1:"), "the Drive must be on 127.0.0.1: {drive_url}");
@@ -189,6 +190,9 @@ impl Peer {
             Arc::new(move |unit: &str| notify.notify_change(unit)),
         );
         let ops = Arc::new(DataOps::new(recorder, locks, Arc::new(RandomUuid)));
+        // The app starts the typing analytics at launch (the cache rebuilt
+        // from the day files when it cannot be trusted), before any pass.
+        let analytics = ops.analytics().clone();
 
         let secrets = Arc::new(SecretStore::new(
             &root,
@@ -256,7 +260,7 @@ impl Peer {
         let progress = Arc::new(Mutex::new(Vec::new()));
         let sink = progress.clone();
         runtime.progress().set(move |p: &SyncProgress| sink.lock().unwrap().push(p.clone()));
-        Self { ctx, pending, preflight, executor, triggers, change, progress }
+        (Self { ctx, pending, preflight, executor, triggers, change, progress }, analytics)
     }
 
     async fn run(&self, command: &Value) -> Value {
@@ -310,6 +314,16 @@ impl Peer {
                 Err(err) => json!({ "error": err.to_string() }),
             },
             "changeStatus" => serde_json::to_value(self.change.status().await).unwrap(),
+            // Seals `count` envelopes at once: each derives its own key, so
+            // this times the key derivations (4 at a time).
+            "deriveKeys" => {
+                let count = command["count"].as_u64().unwrap_or(16);
+                let seals = (0..count).map(|i| {
+                    EnvelopeCrypto.seal("{}".to_owned(), Zeroizing::new("pw".to_owned()), format!("unit-{i}"))
+                });
+                let sealed = futures_util::future::join_all(seals).await;
+                json!({ "success": sealed.iter().all(Result::is_ok) })
+            }
             other => json!({ "error": format!("unknown command {other}") }),
         }
     }
@@ -341,17 +355,31 @@ fn execute_result(result: &SyncExecuteResult) -> Value {
     }
 }
 
+/// The peak resident set size of this process (`VmHWM`), on Linux.
+fn max_rss_kb() -> Option<u64> {
+    let status = std::fs::read_to_string("/proc/self/status").ok()?;
+    let line = status.lines().find(|line| line.starts_with("VmHWM:"))?;
+    line.split_whitespace().nth(1)?.parse().ok()
+}
+
 fn main() {
     let input: Value = serde_json::from_str(&std::env::args().nth(1).expect("usage: sync_peer '<json>'"))
         .expect("the argument must be JSON");
     assert!(Path::new(field(&input, "userData")).is_absolute(), "userData must be an absolute path");
-    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
-    let output = runtime.block_on(async {
-        let peer = Peer::new(&input);
+    // The multi-threaded runtime of the app (Tauri's async runtime).
+    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    let mut output = runtime.block_on(async {
+        let (peer, analytics) = Peer::new(&input);
+        if let Err(err) = analytics.ready().await {
+            return json!({ "error": format!("the typing analytics did not start: {err}") });
+        }
+        let started = std::time::Instant::now();
         let mut answer = peer.run(&input["command"]).await;
+        answer["elapsedMs"] = json!(started.elapsed().as_millis());
         peer.pending.persist_now();
         answer["progress"] = Value::Array(peer.progress());
         answer
     });
+    output["maxRssKb"] = json!(max_rss_kb());
     println!("{output}");
 }
