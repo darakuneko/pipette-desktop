@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI members of the keymap posts and the private posts on the Hub, each the backend command
-// of src-tauri/src/hub_commands/posts.rs with its arguments by name.
+// of src-tauri/src/hub_commands/posts.rs with its arguments by name. The
+// Hub token stays in the backend; the answers carry results only.
 // `hubPostsReal` holds the members the backend implements; the others stay
 // fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
@@ -19,4 +20,13 @@ export const hubPostsApi = {
   hubDeletePrivatePost: (kind, id) => call<Answer<'hubDeletePrivatePost'>>('hub_delete_private_post', { kind, id }),
 } satisfies Partial<VialAPI>
 
-export const hubPostsReal = {} satisfies Partial<VialAPI>
+export const hubPostsReal = {
+  hubUploadPost: hubPostsApi.hubUploadPost,
+  hubUpdatePost: hubPostsApi.hubUpdatePost,
+  hubPatchPost: hubPostsApi.hubPatchPost,
+  hubDeletePost: hubPostsApi.hubDeletePost,
+  hubFetchMyPosts: hubPostsApi.hubFetchMyPosts,
+  hubFetchMyKeyboardPosts: hubPostsApi.hubFetchMyKeyboardPosts,
+  hubUploadPrivatePost: hubPostsApi.hubUploadPrivatePost,
+  hubDeletePrivatePost: hubPostsApi.hubDeletePrivatePost,
+} satisfies Partial<VialAPI>

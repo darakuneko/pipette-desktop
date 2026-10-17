@@ -24,7 +24,10 @@
         "thumbnailBase64": ""
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubUpdatePost",
@@ -53,7 +56,10 @@
         "thumbnailBase64": ""
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubPatchPost",
@@ -70,7 +76,10 @@
         "title": "T"
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubDeletePost",
@@ -81,7 +90,10 @@
     "invokeArgs": {
       "postId": "p1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubFetchMyPosts",
@@ -98,7 +110,10 @@
         "per_page": 10
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubFetchMyKeyboardPosts",
@@ -109,7 +124,10 @@
     "invokeArgs": {
       "keyboardName": "KB"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubUploadPrivatePost",
@@ -138,7 +156,10 @@
         "expiresInDays": 7
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubDeletePrivatePost",
@@ -151,6 +172,9 @@
       "kind": "files",
       "id": "p1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   }
 ]
