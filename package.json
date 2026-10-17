@@ -56,7 +56,7 @@
     "generate:drive-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-drive",
     "generate:sync-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-",
     "test:sync-fixtures-harness": "vitest run --config scripts/sync-fixtures/vitest.config.ts harness",
-    "generate:hub-fixtures": "vitest run --config scripts/hub-fixtures/vitest.config.ts record-",
+    "generate:hub-fixtures": "vitest run --config scripts/hub-fixtures/vitest.config.ts record- && ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/hub-fixtures/analytics-export/vitest.config.ts",
     "test:hub-fixtures-harness": "vitest run --config scripts/hub-fixtures/vitest.config.ts harness",
     "test:sync-interop": "vitest run --config scripts/sync-interop/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
