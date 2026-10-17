@@ -90,8 +90,9 @@ fn io_error(message: impl AsRef<str>) -> KeyLabelError {
     refused(KeyLabelErrorCode::IoError, message.as_ref())
 }
 
-fn respond(answer: Answer) -> String {
-    key_label_response(answer)
+/// A failed Hub request as the `IO_ERROR` of the answer.
+fn hub_failure(err: HubError) -> KeyLabelError {
+    io_error(err.to_string())
 }
 
 /// `value.<key>` (`None` for `undefined`), or the `TypeError` of reading it
@@ -185,12 +186,14 @@ pub async fn list(http: &HubHttp, params: Option<&Value>) -> String {
     // `query.q && query.q.trim()`.
     let q = match param("q") {
         Some(Value::String(q)) => Some(q.to_string_lossy().into_owned()),
-        Some(q) if q.is_truthy() => return respond(Err(io_error("query.q.trim is not a function"))),
+        Some(q) if q.is_truthy() => {
+            return key_label_response(Err(io_error("query.q.trim is not a function")));
+        }
         _ => None,
     };
     let query = ListQuery { q: q.as_deref(), name: None, page: Some(page), per_page: Some(per_page) };
     let data = http.send(&Endpoint::KeyLabelList(query), None, RequestBody::None).await;
-    respond(data.map_err(|err| io_error(err.to_string())))
+    key_label_response(data.map_err(hub_failure))
 }
 
 /// The number `clampInt` floors: `Math.floor` turns a string or a boolean
@@ -208,10 +211,10 @@ fn number_param(value: Option<&Value>) -> Option<f64> {
 /// `HUB_KEY_LABEL_DETAIL`.
 pub async fn detail(http: &HubHttp, hub_post_id: Option<&Value>) -> String {
     let Some(post_id) = self::hub_post_id(hub_post_id) else {
-        return respond(Err(not_found("Invalid hub post id")));
+        return key_label_response(Err(not_found("Invalid hub post id")));
     };
     let data = http.send(&Endpoint::KeyLabelDetail { post_id }, None, RequestBody::None).await;
-    respond(data.map_err(|err| io_error(err.to_string())))
+    key_label_response(data.map_err(hub_failure))
 }
 
 /// `HUB_KEY_LABEL_TIMESTAMPS`: the ids without repeats, sent 100 to a
@@ -219,11 +222,11 @@ pub async fn detail(http: &HubHttp, hub_post_id: Option<&Value>) -> String {
 /// order they were given.
 pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
     const INVALID: &str = "ids must be an array of valid hub post ids";
-    let Some(Value::Array(items)) = ids else { return respond(Err(not_found(INVALID))) };
+    let Some(Value::Array(items)) = ids else { return key_label_response(Err(not_found(INVALID))) };
     let mut seen = HashSet::new();
     let mut unique = Vec::new();
     for item in items {
-        let Some(id) = hub_post_id(Some(item)) else { return respond(Err(not_found(INVALID))) };
+        let Some(id) = hub_post_id(Some(item)) else { return key_label_response(Err(not_found(INVALID))) };
         if seen.insert(id) {
             unique.push(id);
         }
@@ -237,7 +240,7 @@ pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
     for response in join_all(requests).await {
         match response {
             Ok(response) => responses.push(response),
-            Err(err) => return respond(Err(io_error(err.to_string()))),
+            Err(err) => return key_label_response(Err(hub_failure(err))),
         }
     }
     let mut by_id: HashMap<&str, &Value> = HashMap::new();
@@ -246,8 +249,8 @@ pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
             Ok(Some(Value::Array(listed))) => listed,
             // A string's characters have no `id`.
             Ok(Some(Value::String(_))) => continue,
-            Ok(_) => return respond(Err(io_error("r.items is not iterable"))),
-            Err(err) => return respond(Err(io_error(err))),
+            Ok(_) => return key_label_response(Err(io_error("r.items is not iterable"))),
+            Err(err) => return key_label_response(Err(io_error(err))),
         };
         for item in listed {
             match property(Some(item), "id") {
@@ -257,13 +260,13 @@ pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
                     }
                 }
                 Ok(_) => {}
-                Err(err) => return respond(Err(io_error(err))),
+                Err(err) => return key_label_response(Err(io_error(err))),
             }
         }
     }
     let found = unique.iter().filter_map(|id| by_id.get(id).map(|item| (*item).clone())).collect();
     let data: Object = [("items", Value::Array(found))].into_iter().collect();
-    respond(Ok(Some(Value::Object(data))))
+    key_label_response(Ok(Some(Value::Object(data))))
 }
 
 /// The download's body with the uploader and the Hub time of the post's
@@ -332,16 +335,16 @@ async fn save(stores: &StoreContext, save: KeyLabelSave) -> Answer {
 /// the Hub once the label is gone locally.
 pub async fn download(http: &HubHttp, stores: &StoreContext, hub_post_id: Option<&Value>) -> String {
     let Some(post_id) = self::hub_post_id(hub_post_id) else {
-        return respond(Err(not_found("Invalid hub post id")));
+        return key_label_response(Err(not_found("Invalid hub post id")));
     };
     let answer = async {
-        let payload = payload(http, post_id, None, None).await.map_err(|err| io_error(err.to_string()))?;
+        let payload = payload(http, post_id, None, None).await.map_err(hub_failure)?;
         // `body.name`, read before the save.
         let name = property(payload.body.as_ref(), "name").map_err(io_error)?.cloned();
         let save_input = save_of(post_id.into(), name.as_ref(), post_id, false, payload)?;
         save(stores, save_input).await
     };
-    respond(answer.await)
+    key_label_response(answer.await)
 }
 
 /// What an upload or update failed with: a 409 is the duplicate name, any
@@ -415,7 +418,7 @@ pub async fn upload(token: &HubToken, stores: &StoreContext, local_id: Option<&V
         let (uploader, updated) = (cached(read("uploader_name")?), cached(read("updated_at")?));
         link(stores, id, post_id, uploader, updated).await.map(Some)
     };
-    respond(answer.await)
+    key_label_response(answer.await)
 }
 
 /// `HUB_KEY_LABEL_UPDATE`: posts the local label over its Hub post and
@@ -439,7 +442,7 @@ pub async fn update(token: &HubToken, stores: &StoreContext, local_id: Option<&V
         let updated = cached(property(result.as_ref(), "updated_at").map_err(io_error)?);
         link(stores, id, Some(post_id.into()), None, updated).await.map(Some)
     };
-    respond(answer.await)
+    key_label_response(answer.await)
 }
 
 /// `HUB_KEY_LABEL_SYNC`: takes the post's map, composite labels and keymap
@@ -453,13 +456,12 @@ pub async fn sync(http: &HubHttp, stores: &StoreContext, local_id: Option<&Value
         let post_id = linked_post_id(&record)?;
         let meta = meta_of(&record);
         let read = |key: &str| property(meta, key).ok().flatten().cloned();
-        let payload = payload(http, &post_id, read("uploaderName"), read("hubUpdatedAt"))
-            .await
-            .map_err(|err| io_error(err.to_string()))?;
+        let payload =
+            payload(http, &post_id, read("uploaderName"), read("hubUpdatedAt")).await.map_err(hub_failure)?;
         let name = read("name");
         save(stores, save_of(id, name.as_ref(), &post_id, true, payload)?).await
     };
-    respond(answer.await)
+    key_label_response(answer.await)
 }
 
 /// `HUB_KEY_LABEL_DELETE`: deletes the Hub post and unlinks the local
@@ -482,7 +484,7 @@ pub async fn delete(token: &HubToken, stores: &StoreContext, local_id: Option<&V
         link(stores, id, None, None, None).await?;
         Ok(None)
     };
-    respond(answer.await)
+    key_label_response(answer.await)
 }
 
 #[cfg(test)]
