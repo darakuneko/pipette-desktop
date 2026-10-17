@@ -5,7 +5,7 @@
 import { resolve } from 'node:path'
 import { REPO_ROOT } from '../fixture-vitest-config'
 
-export const HUB_FIXTURES_DIR = resolve(REPO_ROOT, 'src-tauri/crates/pipette-hub/tests/fixtures')
+const HUB_FIXTURES_DIR = resolve(REPO_ROOT, 'src-tauri/crates/pipette-hub/tests/fixtures')
 
 export function hubFixturePath(name: string): string {
   return resolve(HUB_FIXTURES_DIR, name)

@@ -128,7 +128,7 @@ export function recordLog(level: string, message: string): void {
 }
 
 /** The first line of `text`: an error stack keeps only its message. */
-export function firstLine(text: string): string {
+function firstLine(text: string): string {
   const end = text.indexOf('\n')
   return end === -1 ? text : text.slice(0, end)
 }
@@ -244,9 +244,9 @@ export async function withRecordedHubSleeps<T>(run: () => Promise<T>): Promise<T
 
 /** How long the tree, the change notices and the events must stay the
  *  same before a tree is read. */
-export const SETTLE_QUIET_MS = 30
+const SETTLE_QUIET_MS = 30
 /** How long settling may take before the generator fails. */
-export const SETTLE_DEADLINE_MS = 5_000
+const SETTLE_DEADLINE_MS = 5_000
 
 function snapshotKey(dir: string): string {
   return JSON.stringify([readTree(dir), state.notified.length, state.events.length, state.logs.length])

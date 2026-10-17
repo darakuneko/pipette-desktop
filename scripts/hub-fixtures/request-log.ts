@@ -13,6 +13,7 @@
 //     its parts and all of its bytes with the boundary written as
 //     `{boundary}`; other bytes as base64.
 
+import { queryPairs } from '../sync-fixtures/drive-request-log'
 import { FIXED_NOW } from '../sync-fixtures/harness'
 
 export interface LoggedRequest {
@@ -23,7 +24,7 @@ export interface LoggedRequest {
   body?: LoggedBody
 }
 
-export interface LoggedPart {
+interface LoggedPart {
   /** The part's header lines, `\r\n` between them, as sent. */
   headers: string
   /** The content as UTF-8 text, or as base64 when it is not UTF-8. */
@@ -39,11 +40,6 @@ export type LoggedBody =
 
 /** Header names the log leaves out. */
 const UNCOMPARED_HEADERS = new Set(['user-agent', 'accept'])
-
-/** `params` as sorted [name, value] pairs. */
-export function queryPairs(params: URLSearchParams): Array<[string, string]> {
-  return [...params.entries()].sort(([a, av], [b, bv]) => (a === b ? compare(av, bv) : compare(a, b)))
-}
 
 function compare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
