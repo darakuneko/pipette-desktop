@@ -7,13 +7,14 @@
 //!
 //! `params` is the text of `JSON.stringify(params)`, read as `JSON.parse`
 //! would, so a field of an unexpected type gets Electron's answer for it;
-//! no text reads as `null`. The answers are the handlers' `{ success, … }`
-//! objects as JSON text.
+//! no text reads as `null`, and a text that is not JSON is answered
+//! `{ success: false, error }` as a handler that throws is. The answers are
+//! the handlers' `{ success, … }` objects as JSON text.
 
 use std::sync::Arc;
 
 use pipette_hub::analytics::{AnalyticsPosts, TypingAnalyticsSource};
-use pipette_js_json::Value;
+use pipette_js_json::{Object, Value};
 use pipette_keyboard_stores::StoreContext;
 use pipette_typing_analytics::TypingAnalytics;
 use tauri::State;
@@ -40,7 +41,15 @@ async fn answer(
     params: Option<String>,
     handler: Handler,
 ) -> Result<Response, CommandError> {
-    let params = params.as_deref().map(pipette_js_json::parse).transpose()?.unwrap_or(Value::Null);
+    let params = match params.as_deref().map(pipette_js_json::parse).transpose() {
+        Ok(params) => params.unwrap_or(Value::Null),
+        Err(err) => {
+            let mut answer = Object::new();
+            answer.insert("success", Value::Bool(false));
+            answer.insert("error", Value::from(CommandError::from(err).to_string()));
+            return Ok(Response::new(pipette_js_json::stringify(&answer.into())));
+        }
+    };
     let source = TypingAnalyticsSource(Arc::clone(analytics));
     let posts = AnalyticsPosts { token: hub.token(), store: stores, source: &source };
     let answer = match handler {
@@ -269,6 +278,19 @@ mod tests {
             preview,
             r#"{"success":true,"preview":{"totalKeystrokes":0,"rangeMs":0,"estimatedBytes":0,"validation":{"ok":false,"reason":"Invalid uid"}}}"#
         );
+        assert!(fake.requests().is_empty());
+    }
+
+    #[tokio::test]
+    async fn params_that_are_not_json_are_a_failed_answer() {
+        let user_data = tempfile::tempdir().unwrap();
+        let fake = Arc::new(FakeHub::new());
+        let app = app(user_data.path(), &fake);
+        let (hub, stores, analytics) =
+            (app.state::<Arc<Hub>>(), app.state::<StoreContext>(), app.state::<Arc<TypingAnalytics>>());
+        let answer =
+            text(hub_upload_analytics_post(hub, stores, analytics, Some("{".to_owned())).await.unwrap());
+        assert!(answer.starts_with(r#"{"success":false,"error":""#), "{answer}");
         assert!(fake.requests().is_empty());
     }
 }
