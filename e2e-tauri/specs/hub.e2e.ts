@@ -17,16 +17,11 @@
 // a Hub token with its id_token and forgets it on sign-out. The tests share
 // the sessions and run in order.
 
-import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import { HUB_ERROR_NOT_AUTHENTICATED } from '../../src/shared/types/hub'
-import type { HubPrivateLink } from '../../src/shared/types/hub-private'
 import {
   clickInPage,
-  connectVirtualKeyboard,
-  EDITOR_SELECTOR,
   invokeCommand,
   openOverlayTab,
   recordPageErrors,
@@ -36,9 +31,32 @@ import {
   vialApi,
   VIRTUAL_DEVICE_NAME,
   waitForGone,
-  waitForUncovered,
 } from '../helpers/app'
 import { readAppConfig, userDataPath } from '../helpers/driver'
+import {
+  changeHubLanguagePack,
+  clickWhenEnabled,
+  closeFromTools,
+  closeSettings,
+  connectAndFindUid,
+  dataOf,
+  disconnect,
+  hubPosts,
+  hubPrivatePosts,
+  hubUser,
+  openFromTools,
+  openHubSettings,
+  type PackMeta,
+  readSample,
+  SAMPLE_PACKS,
+  saveDisplayName,
+  snapshotEntry,
+  uploadWithVisibility,
+  waitForHub,
+  waitForHubQuiet,
+  waitForPack,
+  withFilesDialog,
+} from '../helpers/hub'
 import { HUB_TEST_ACCOUNT } from '../helpers/hub-env'
 import {
   assertHubSession,
@@ -60,7 +78,6 @@ const TAKEN_NAME = 'Taken Name'
 const POST_LABEL = 'E2E keymap post'
 const POST_RENAMED = 'E2E other post renamed'
 const OTHER_KEYBOARD = 'E2E other keyboard'
-const SAMPLE_PACKS = resolve(dirname(fileURLToPath(import.meta.url)), '../../sample-packs')
 const OTHER_ACCOUNT = 'other@example.com'
 const TAP_DANCE = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
 const FAVORITE_LABEL = 'E2E favorite'
@@ -76,188 +93,6 @@ const GOOGLE_ACCOUNT = 'fake-user@example.invalid'
 const THUMBNAIL_BASE64 = Buffer.from('e2e thumbnail').toString('base64')
 /** The Hub's files of a keymap post, sorted. */
 const KEYMAP_FILE_TYPES = ['c', 'pdf', 'pipette', 'vil']
-
-/** The fake Hub's account with `email`. */
-function hubUser(email: string): { display_name: string | null } | undefined {
-  return fakeHub().state.users.find((user) => user.email === email)
-}
-
-async function openHubSettings(): Promise<void> {
-  await clickInPage(tid('settings-button'))
-  await $(tid('settings-modal')).waitForDisplayed()
-  await clickInPage(tid('settings-tab-data'))
-  await $(tid('pipette-hub-title')).waitForDisplayed()
-}
-
-async function closeSettings(): Promise<void> {
-  await clickInPage(tid('settings-close'))
-  await waitForGone(tid('settings-modal'), 'the Settings modal did not close')
-}
-
-/** Types `name` into the display name field and saves it. */
-async function saveDisplayName(name: string): Promise<void> {
-  await fillInput(tid('hub-display-name-input'), name)
-  const save = $(tid('hub-display-name-save'))
-  await browser.waitUntil(() => save.isEnabled(), { timeoutMsg: `the display name ${name} cannot be saved` })
-  await save.click()
-}
-
-interface SnapshotEntry {
-  id: string
-  label: string
-  hubPostId?: string
-  hubPrivate?: HubPrivateLink
-  deletedAt?: string
-}
-
-/** The live snapshot of keyboard `uid` labelled `label`, as on disk. */
-function snapshotEntry(uid: string, label: string): SnapshotEntry | undefined {
-  const index = JSON.parse(readFileSync(userDataPath('sync', 'keyboards', uid, 'snapshots', 'index.json'), 'utf8')) as {
-    entries: SnapshotEntry[]
-  }
-  return index.entries.find((entry) => entry.label === label && !entry.deletedAt)
-}
-
-/** The fake Hub's public posts and private posts titled `title`. */
-const hubPosts = (title: string) => fakeHub().state.posts.filter((post) => post.title === title)
-const hubPrivatePosts = (title: string) => fakeHub().state.privatePosts.filter((post) => post.title === title)
-
-/** Connects the virtual keyboard, waits until nothing covers the editor,
- *  and answers the keyboard's uid. */
-async function connectAndFindUid(): Promise<string> {
-  await connectVirtualKeyboard()
-  await waitForUncovered(EDITOR_SELECTOR)
-  let uid = ''
-  await browser.waitUntil(
-    async () => {
-      const stored = await vialApi<{ uid: string; name: string }[]>('listStoredKeyboards')
-      uid = stored.find((kb) => kb.name === VIRTUAL_DEVICE_NAME)?.uid ?? ''
-      return uid !== ''
-    },
-    { timeoutMsg: 'the connected keyboard was not stored under its name' },
-  )
-  return uid
-}
-
-/** The `{success, data}` answer of `member`, its data, or a throw. */
-async function dataOf<T>(member: string, ...args: unknown[]): Promise<T> {
-  const answer = await vialApi<{ success: boolean; data?: T; error?: string }>(member, ...args)
-  if (!answer.success) throw new Error(`${member} failed: ${JSON.stringify(answer)}`)
-  return answer.data as T
-}
-
-/** Calls `member` with `paths` queued as the answer of its file dialog
- *  (`dev_dialog_respond`), and checks that the call took that answer. */
-async function withFilesDialog<T>(paths: string[], member: string, ...args: unknown[]): Promise<T> {
-  const queued = (): Promise<number> => invokeCommand<number>('dev_dialog_queued')
-  if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
-  await invokeCommand('dev_dialog_respond', { paths })
-  const answer = await vialApi<T>(member, ...args)
-  if ((await queued()) !== 0) throw new Error(`${member} opened no file dialog`)
-  return answer
-}
-
-interface PackMeta {
-  id: string
-  name: string
-  hubPostId?: string
-  uploaderName?: string
-  hubUpdatedAt?: string
-}
-
-/** Waits until `member` lists a pack for which `match` holds, and
- *  answers it. */
-async function waitForPack(member: string, match: (meta: PackMeta) => boolean, timeoutMsg: string): Promise<PackMeta> {
-  let found: PackMeta | undefined
-  await browser.waitUntil(
-    async () => {
-      found = (await dataOf<PackMeta[]>(member)).find(match)
-      return found !== undefined
-    },
-    { timeout: 30_000, timeoutMsg },
-  )
-  return found as PackMeta
-}
-
-/** Opens the device selector's settings on the Tools tab and the pack
- *  modal `modal` from its button `button`. */
-async function openFromTools(button: string, modal: string): Promise<void> {
-  await clickInPage(tid('settings-button'))
-  await $(tid('settings-modal')).waitForDisplayed()
-  await clickInPage(tid('settings-tab-tools'))
-  await clickInPage(tid(button))
-  await $(tid(modal)).waitForDisplayed()
-}
-
-async function closeFromTools(close: string, modal: string): Promise<void> {
-  await clickInPage(tid(close))
-  await waitForGone(tid(modal), `${modal} did not close`)
-  await closeSettings()
-}
-
-/** The language pack the fake Hub keeps under `id`, with `edit` applied to
- *  its body, and its update time moved on. */
-async function changeHubLanguagePack(id: string, edit: (pack: Record<string, Record<string, string>>) => void): Promise<string> {
-  const stored = fakeHub().state.packs.i18n.find((pack) => pack.id === id)
-  if (!stored) throw new Error(`the fake Hub has no language pack ${id}`)
-  const exported = JSON.parse(stored.pack_json) as { pack: Record<string, Record<string, string>> }
-  edit(exported.pack)
-  stored.pack_json = JSON.stringify(exported)
-  return (await hubControl<{ updated_at: string }>('touch', { kind: 'i18n', id })).updated_at
-}
-
-const readSample = (path: string): Record<string, unknown> =>
-  JSON.parse(readFileSync(join(SAMPLE_PACKS, path), 'utf8')) as Record<string, unknown>
-
-async function disconnect(): Promise<void> {
-  await clickInPage(tid('disconnect-button'))
-  await $(tid('settings-button')).waitForDisplayed()
-}
-
-/** Clicks `selector` once it is enabled: an action button stays disabled
- *  while the previous Hub operation finishes, and a click on it then does
- *  nothing. */
-async function clickWhenEnabled(selector: string): Promise<void> {
-  const element = $(selector)
-  await element.waitForExist({ timeout: 30_000 })
-  await browser.waitUntil(() => element.isEnabled(), { timeout: 60_000, timeoutMsg: `${selector} stayed disabled` })
-  await clickInPage(selector)
-}
-
-/** Clicks `button` of the snapshot row in the Import / Save tab, picks
- *  `visibility` in the upload dialog it opens, and confirms it. */
-async function uploadWithVisibility(button: string, visibility: 'public' | 'private'): Promise<void> {
-  await openOverlayTab('data')
-  await waitForUncovered(tid(button))
-  await clickWhenEnabled(tid(button))
-  await $(tid('upload-confirm-submit')).waitForDisplayed()
-  await clickInPage(`${tid(`upload-confirm-visibility-${visibility}`)} input`)
-  await clickInPage(tid('upload-confirm-submit'))
-  await waitForGone(tid('upload-confirm-backdrop'), 'the upload dialog did not close')
-}
-
-/** Waits until the fake Hub has taken no request for a second, twice in a
- *  row: the page's own requests (its refresh of the posts after a launch
- *  or a sign-in) have ended, so the requests that follow are the test's. */
-async function waitForHubQuiet(): Promise<void> {
-  let last = -1
-  let quietChecks = 0
-  await browser.waitUntil(
-    () => {
-      const count = fakeHub().requests.length
-      quietChecks = count === last ? quietChecks + 1 : 0
-      last = count
-      return quietChecks >= 2
-    },
-    { timeout: 60_000, interval: 1000, timeoutMsg: 'the page kept sending Hub requests' },
-  )
-}
-
-/** Waits for `done`, polling every half second, for at most a minute: an
- *  upload builds the keymap's PDF and thumbnail first. */
-async function waitForHub(done: () => boolean, timeoutMsg: string): Promise<void> {
-  await browser.waitUntil(async () => done(), { timeout: 60_000, interval: 500, timeoutMsg })
-}
 
 describe('Tauri build Pipette Hub', function () {
   this.timeout(180_000)
