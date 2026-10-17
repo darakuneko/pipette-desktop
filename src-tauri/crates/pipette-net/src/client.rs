@@ -86,14 +86,32 @@ impl Method {
     }
 }
 
-/// A request with a method, headers and a body.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A request with a method, headers and a body. Its `Debug` shows the
+/// method, the URL without its query and the header names only: the
+/// headers and the body can carry tokens (`Authorization: Bearer …`, a
+/// Google id_token).
+#[derive(Clone, PartialEq, Eq)]
 pub struct HttpRequest {
     pub method: Method,
     pub url: String,
     /// Sent in this order.
     pub headers: Vec<(String, String)>,
     pub body: Option<Vec<u8>>,
+}
+
+impl std::fmt::Debug for HttpRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let url = self.url.split(['?', '#']).next().unwrap_or_default();
+        let headers: Vec<String> =
+            self.headers.iter().map(|(name, _)| format!("{name}: <redacted>")).collect();
+        let body = self.body.as_ref().map(|body| format!("<{} bytes>", body.len()));
+        f.debug_struct("HttpRequest")
+            .field("method", &self.method)
+            .field("url", &url)
+            .field("headers", &headers)
+            .field("body", &body)
+            .finish()
+    }
 }
 
 /// A finished response to an [`HttpRequest`].
@@ -466,6 +484,27 @@ fn network_error(err: reqwest::Error) -> HttpError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_request_debug_shows_no_header_value_query_or_body() {
+        let request = super::HttpRequest {
+            method: super::Method::Post,
+            url: "http://127.0.0.1:9/api/auth/token?name=secret-name".to_owned(),
+            headers: vec![
+                ("Authorization".to_owned(), "Bearer secret-jwt".to_owned()),
+                ("Content-Type".to_owned(), "application/json".to_owned()),
+            ],
+            body: Some(br#"{"id_token":"secret-id-token"}"#.to_vec()),
+        };
+        let debug = format!("{request:?}");
+        for secret in
+            ["secret-jwt", "Bearer", "secret-id-token", "id_token", "secret-name", "application/json"]
+        {
+            assert!(!debug.contains(secret), "{debug}");
+        }
+        assert!(debug.contains("Post") && debug.contains("http://127.0.0.1:9/api/auth/token"), "{debug}");
+        assert!(debug.contains("Authorization: <redacted>") && debug.contains("<30 bytes>"), "{debug}");
+    }
+
     use super::*;
 
     fn block_on<T>(future: impl Future<Output = T>) -> T {
