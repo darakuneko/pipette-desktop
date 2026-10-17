@@ -6,23 +6,12 @@
 
 import { $, browser } from '@wdio/globals'
 import type { StoredFile } from '../../scripts/fake-drive/drive-state'
-import { invokeCommand, waitForGone } from './app'
+import { clickInPage, invokeCommand, tid, waitForGone } from './app'
 import { fakeDrive } from './sync-harness'
-
-export const tid = (id: string): string => `[data-testid="${id}"]`
-
-/** Clicks `selector` from the page: a tooltip of the previous control can
- *  still cover it, which a WebDriver click reports as intercepted. */
-export async function clickInPage(selector: string): Promise<void> {
-  await $(selector).waitForExist()
-  await browser.execute((sel: string) => {
-    ;(document.querySelector(sel) as HTMLElement).click()
-  }, selector)
-}
 
 /** Puts `value` into the input `selector` as React reads an edit: typed
  *  keys reach WebKitGTK's fields unreliably. */
-export async function fillInput(selector: string, value: string): Promise<void> {
+async function fillInput(selector: string, value: string): Promise<void> {
   await $(selector).waitForDisplayed()
   await browser.execute(
     (sel: string, text: string) => {
@@ -48,9 +37,19 @@ export function driveFileNames(): string[] {
   return fakeDrive().state.files.map((file) => file.name)
 }
 
+function newestModifiedTime(files: StoredFile[]): string {
+  return files.reduce((newest, file) => (file.modifiedTime > newest ? file.modifiedTime : newest), '')
+}
+
 /** The newest `modifiedTime` of the files named `name`; '' when none. */
 export function driveModifiedTime(name: string): string {
-  return driveFilesNamed(name).reduce((newest, file) => (file.modifiedTime > newest ? file.modifiedTime : newest), '')
+  return newestModifiedTime(driveFilesNamed(name))
+}
+
+/** The newest `modifiedTime` on the fake Drive (its clock moves one second
+ *  per write). */
+export function driveClock(): string {
+  return newestModifiedTime(fakeDrive().state.files)
 }
 
 export const settingsFileName = (uid: string): string => `keyboards_${uid}_settings.enc`
@@ -152,7 +151,7 @@ export async function enableAutoSync(): Promise<void> {
 
 /** Waits until the sync the Connect tab runs has ended: its button is
  *  enabled again and no sync work runs. */
-export async function waitForSyncIdle(): Promise<void> {
+async function waitForSyncIdle(): Promise<void> {
   await waitForQuietSync(() => $(tid('sync-now')).isEnabled())
 }
 

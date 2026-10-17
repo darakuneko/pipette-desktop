@@ -20,6 +20,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import {
+  clickInPage,
   clickIntoFileDialog,
   clickIntoFilesDialog,
   connectVirtualKeyboard,
@@ -28,6 +29,7 @@ import {
   recordPageErrors,
   recordedPageErrors,
   restartApp,
+  tid,
   unlockIfAsked,
   vialApi,
   virtualDevice,
@@ -75,8 +77,6 @@ interface TypingSyncState {
   my_device_id: string
   uploaded: Record<string, unknown>
 }
-
-const tid = (id: string): string => `[data-testid="${id}"]`
 
 function utcDay(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10)
@@ -162,15 +162,6 @@ const runLogs = async (uid: string): Promise<{ id: string }[]> =>
 const localDays = (uid: string): Promise<DaySummary[]> => vialApi<DaySummary[]>('typingAnalyticsListItemsLocal', uid)
 const remoteDays = (uid: string, hash: string): Promise<DaySummary[]> =>
   vialApi<DaySummary[]>('typingAnalyticsListItemsForHash', uid, hash)
-
-/** Clicks `selector` from the page: a tooltip of the previous control can
- *  still cover it, which a WebDriver click reports as intercepted. */
-async function clickInPage(selector: string): Promise<void> {
-  await $(selector).waitForExist()
-  await browser.execute((sel: string) => {
-    ;(document.querySelector(sel) as HTMLElement).click()
-  }, selector)
-}
 
 async function openAnalyze(uid: string): Promise<void> {
   await clickInPage(tid('tab-analyze'))

@@ -19,6 +19,17 @@ const QUIT_TIMEOUT_MS = 40_000
 
 type ChainablePromiseElement = ReturnType<typeof $>
 
+export const tid = (id: string): string => `[data-testid="${id}"]`
+
+/** Clicks `selector` from the page: a tooltip of the previous control can
+ *  still cover it, which a WebDriver click reports as intercepted. */
+export async function clickInPage(selector: string): Promise<void> {
+  await $(selector).waitForExist()
+  await browser.execute((sel: string) => {
+    ;(document.querySelector(sel) as HTMLElement).click()
+  }, selector)
+}
+
 /** Calls a backend command from the page through the IPC entry Tauri
  *  injects into every window (`window.__TAURI_INTERNALS__`, present with
  *  `withGlobalTauri: false` too), the same entry `@tauri-apps/api` uses. The

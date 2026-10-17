@@ -23,11 +23,13 @@ import { existsSync, readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync
 import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import {
+  clickInPage,
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
   invokeCommand,
   openToolsOverlay,
   restartApp,
+  tid,
   vialApi,
   VIRTUAL_DEVICE_NAME,
   waitForGone,
@@ -35,10 +37,10 @@ import {
 import { quitApp, readAppConfig, readPendingUnits, userDataPath } from '../helpers/driver'
 import { fakeDrive, injectDriveFault, switchMachine } from '../helpers/sync-harness'
 import {
-  clickInPage,
   closeDataModal,
   closeSettings,
   deviceDayContent,
+  driveClock,
   driveFileNames,
   driveFilesNamed,
   driveModifiedTime,
@@ -52,7 +54,6 @@ import {
   settingsFileName,
   signIn,
   submitPassword,
-  tid,
   waitForQuietSync,
 } from '../helpers/sync'
 
@@ -86,10 +87,6 @@ const machineHash = (): Promise<string> => invokeCommand<string>('dev_typing_ana
 
 const dayFileName = (uid: string, hash: string, day: string): string =>
   `keyboards_${uid}_devices_${hash}_days_${day}.enc`
-
-/** The newest `modifiedTime` on the fake Drive (its clock moves one second
- *  per write). */
-const driveClock = (): string => fakeDrive().state.files.reduce((t, f) => (f.modifiedTime > t ? f.modifiedTime : t), '')
 
 /** Flips Auto Move of the connected keyboard, and resolves with the new
  *  value once the pipette settings hold it. */

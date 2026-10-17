@@ -27,7 +27,7 @@ const REQUIRED_SYNC_ENV: Record<string, string | null> = {
 
 /** Throws unless `env` has every variable of {@link REQUIRED_SYNC_ENV}, the
  *  endpoints on 127.0.0.1. */
-export function assertSyncEnv(env: Record<string, string | undefined>): void {
+function assertSyncEnv(env: Record<string, string | undefined>): void {
   for (const [name, expected] of Object.entries(REQUIRED_SYNC_ENV)) {
     const value = env[name]
     if (value === undefined || value === '') throw new Error(`${name} is not set; the sync session is not started`)
