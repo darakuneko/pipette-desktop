@@ -46,13 +46,6 @@ export async function boot(options: BootOptions = {}): Promise<void> {
   await vi.advanceTimersByTimeAsync(0)
 }
 
-/** Clears what was recorded so far (the boot's own calls). */
-export function clearRecorded(): void {
-  const state = harnessState()
-  state.calls = []
-  state.logs = []
-}
-
 /** Runs `body` with `process.platform` and the given environment variables
  *  (undefined removes one), putting both back afterwards. */
 export async function withPlatformAndEnv<T>(

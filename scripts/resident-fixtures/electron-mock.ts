@@ -281,7 +281,7 @@ export const nativeImage = {
 
 /** A menu item as the golden files hold it: what is shown, and whether a
  *  click does something. */
-export function describeMenuItem(item: MenuItem): Record<string, unknown> {
+function describeMenuItem(item: MenuItem): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   if (item.type !== undefined) out.type = item.type
   if (item.label !== undefined) out.label = item.label
