@@ -101,7 +101,8 @@ export function tick(): void {
 
 /** A new temporary directory, removed after the test. */
 export function tempDir(prefix: string): string {
-  const dir = assertSafePath(mkdtempSync(join(tmpdir(), `pipette-sync-interop-${prefix}-`)))
+  // The parent is checked first, so nothing is created in a real userData.
+  const dir = assertSafePath(mkdtempSync(join(assertSafePath(tmpdir()), `pipette-sync-interop-${prefix}-`)))
   dirs.push(dir)
   return dir
 }

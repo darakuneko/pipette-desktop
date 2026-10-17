@@ -26,7 +26,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
-import { FIXED_NOW, seedUserData, writeTree, type Tree } from '../sync-fixtures/harness'
+import { resolve } from 'node:path'
+import { FIXED_NOW, assertSafePath, seedUserData, writeTree, type Tree } from '../sync-fixtures/harness'
 import {
   caught,
   fakeDrive,
@@ -179,7 +180,8 @@ describe.skipIf(!MEASURE)('sync performance', () => {
         keys: rustKeys.value.maxRssKb,
       },
     }, null, 2)
-    if (process.env.PIPETTE_SYNC_MEASURE_OUT) writeFileSync(process.env.PIPETTE_SYNC_MEASURE_OUT, `${report}\n`)
+    const out = process.env.PIPETTE_SYNC_MEASURE_OUT
+    if (out) writeFileSync(assertSafePath(resolve(out)), `${report}\n`)
     console.log(report)
   })
 })

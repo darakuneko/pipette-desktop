@@ -18,7 +18,7 @@
 //! Nothing reaches the network but the loopback interface: the URL must be
 //! on 127.0.0.1 and the HTTP client refuses every other destination.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::print_stdout)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::print_stdout, clippy::print_stderr)]
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -362,10 +362,76 @@ fn max_rss_kb() -> Option<u64> {
     line.split_whitespace().nth(1)?.parse().ok()
 }
 
+/// The real userData directories of Pipette and of Electron, as the
+/// harness of the TypeScript sync tests lists them
+/// (scripts/sync-fixtures/harness.ts): under `~/.config`,
+/// `$XDG_CONFIG_HOME`, `~/Library/Application Support` and `%APPDATA%`.
+fn forbidden_roots() -> Vec<PathBuf> {
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from);
+    let mut config_roots: Vec<PathBuf> = Vec::new();
+    if let Some(home) = &home {
+        config_roots.push(home.join(".config"));
+        config_roots.push(home.join("Library").join("Application Support"));
+    }
+    for name in ["XDG_CONFIG_HOME", "APPDATA"] {
+        if let Some(dir) = std::env::var_os(name).filter(|dir| !dir.is_empty()) {
+            config_roots.push(PathBuf::from(dir));
+        }
+    }
+    config_roots
+        .into_iter()
+        .flat_map(|root| [root.join("pipette-desktop"), root.join("Electron")])
+        .flat_map(|dir| {
+            let resolved = resolve(&dir);
+            [dir, resolved]
+        })
+        .collect()
+}
+
+/// `path` with its symlinks resolved: the deepest ancestor that exists,
+/// canonicalized, with the rest of the path after it.
+fn resolve(path: &Path) -> PathBuf {
+    let mut rest = Vec::new();
+    let mut current = path.to_path_buf();
+    loop {
+        if let Ok(real) = std::fs::canonicalize(&current) {
+            return rest.into_iter().rev().fold(real, |acc: PathBuf, part| acc.join(part));
+        }
+        match (current.file_name().map(ToOwned::to_owned), current.parent()) {
+            (Some(name), Some(parent)) => {
+                rest.push(name);
+                current = parent.to_path_buf();
+            }
+            _ => return path.to_path_buf(),
+        }
+    }
+}
+
+/// Exits before anything is touched when `path` is relative, or is or is
+/// inside a real userData directory (itself or through a symlink).
+fn refuse_unsafe_path(name: &str, path: &Path) {
+    if !path.is_absolute() {
+        eprintln!("sync_peer: {name} must be an absolute path");
+        std::process::exit(2);
+    }
+    let candidates = [path.to_path_buf(), resolve(path)];
+    for root in forbidden_roots() {
+        if candidates.iter().any(|candidate| candidate.starts_with(&root)) {
+            eprintln!(
+                "sync_peer: refused {name} {} inside the real userData {}",
+                path.display(),
+                root.display()
+            );
+            std::process::exit(2);
+        }
+    }
+}
+
 fn main() {
     let input: Value = serde_json::from_str(&std::env::args().nth(1).expect("usage: sync_peer '<json>'"))
         .expect("the argument must be JSON");
-    assert!(Path::new(field(&input, "userData")).is_absolute(), "userData must be an absolute path");
+    refuse_unsafe_path("userData", Path::new(field(&input, "userData")));
+    refuse_unsafe_path("keystore", Path::new(field(&input, "keystore")));
     // The multi-threaded runtime of the app (Tauri's async runtime).
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
     let mut output = runtime.block_on(async {
