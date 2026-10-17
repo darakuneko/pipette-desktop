@@ -519,6 +519,22 @@ async fn a_new_own_day_is_uploaded_and_recorded_once() {
     assert_eq!(sync_state(&world)["uploaded"][&key], serde_json::json!(["2026-04-18"]));
 }
 
+#[tokio::test]
+async fn an_upload_before_the_analytics_start_still_uploads_the_own_days() {
+    // No sync_state.json and nothing has started the typing analytics: the
+    // pass's reconcile writes the state, so the analytics must start (and
+    // rebuild the cache from the day file) before it.
+    let world = World::new().await;
+    let text = day_text(&world.own_hash());
+    write(&world.root, &format!("sync/keyboards/{UID}/devices/{}/2026-04-18.jsonl", world.own_hash()), &text);
+    world.requests();
+
+    assert_eq!(world.upload(SyncScope::All).await, SyncExecuteResult::Completed);
+    let name = format!("keyboards_{UID}_devices_{}_days_2026-04-18.enc", world.own_hash());
+    let requests = world.requests();
+    assert!(requests.contains(&format!("create:{name}")), "{requests:?}");
+}
+
 /// A day file of `hash` with one scope row for [`UID`].
 fn day_text(hash: &str) -> String {
     let scope = format!("{hash}|linux|{UID}");
