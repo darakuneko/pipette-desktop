@@ -120,3 +120,12 @@ fn build_tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
     tray.build(app)?;
     Ok(())
 }
+
+/// `TRAY_STATUS_UPDATE` of src/main/index.ts: the connected keyboard's name
+/// and the REC counters the renderer reports for the tray. This build does
+/// not show them yet, so the status is dropped.
+#[tauri::command]
+pub fn tray_status_update(status: Option<serde_json::Value>) {
+    drop(status);
+    log::warn!("[tray] trayStatusUpdate is not implemented");
+}

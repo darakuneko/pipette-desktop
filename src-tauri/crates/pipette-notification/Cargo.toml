@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-notification"
+description = "The startup notices of src/main/notification-store.ts: where they are fetched from, the request, and the checks and normalization of the response"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# The request goes through the app's HTTP client.
+pipette-net = { path = "../pipette-net" }
+# The request body, byte for byte as JSON.stringify writes it.
+pipette-js-json = { path = "../pipette-js-json" }
+# Date.parse and toISOString for the notices' publication dates.
+pipette-time = { path = "../pipette-time" }
+log = "=0.4.34"
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "=2.0.21"
+
+[lints]
+workspace = true

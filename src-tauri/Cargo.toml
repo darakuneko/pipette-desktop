@@ -59,6 +59,10 @@ pipette-sync-runtime = { path = "crates/pipette-sync-runtime" }
 # The sync password the page sends is zeroed once the command is done.
 zeroize = "=1.9.0"
 pipette-time = { path = "crates/pipette-time" }
+# The startup notices (src/notification_commands.rs) and starting the app at
+# sign-in (src/app_config.rs).
+pipette-notification = { path = "crates/pipette-notification" }
+pipette-autostart = { path = "crates/pipette-autostart" }
 log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).

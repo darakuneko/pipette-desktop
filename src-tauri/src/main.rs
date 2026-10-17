@@ -31,6 +31,7 @@ mod ipc_contract;
 mod lifecycle;
 mod main_window;
 mod navigation;
+mod notification_commands;
 mod shell;
 mod shutdown;
 mod store_commands;
@@ -76,6 +77,14 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         window_commands::window_hide,
         window_commands::window_started_hidden,
         window_commands::window_is_visible,
+        window_commands::set_window_compact_mode,
+        window_commands::set_window_aspect_ratio,
+        window_commands::set_window_always_on_top,
+        window_commands::set_window_opacity,
+        window_commands::set_window_min_size,
+        window_commands::is_always_on_top_supported,
+        tray::tray_status_update,
+        notification_commands::notification_fetch,
         store_commands::sync_pending::sync_has_pending_changes,
         file_commands::file_save_layout,
         file_commands::file_load_layout,

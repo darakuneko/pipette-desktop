@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The command of src/tray.rs.
+
+[[set]]
+identifier = "tray"
+description = "Reports the connected keyboard and the REC counters for the tray icon."
+permissions = ["allow-tray-status-update"]

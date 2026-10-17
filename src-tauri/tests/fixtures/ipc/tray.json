@@ -1,0 +1,11 @@
+[
+  {
+    "member": "trayStatusUpdate",
+    "args": [{ "keyboardName": "GPK60-63R", "recording": true, "count": 1234, "kpm": 56 }],
+    "command": "tray_status_update",
+    "invokeArgs": {
+      "status": { "keyboardName": "GPK60-63R", "recording": true, "count": 1234, "kpm": 56 }
+    },
+    "response": null
+  }
+]
