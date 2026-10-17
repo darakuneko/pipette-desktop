@@ -6,6 +6,7 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { useKeyLabels } from '../useKeyLabels'
 import { keyLabelsApi } from '../../../tauri-shim/api/key-labels'
+import { keyLabelHubApi } from '../../../tauri-shim/api/key-label-hub'
 
 const mockList = vi.fn()
 const mockImport = vi.fn()
@@ -30,7 +31,8 @@ const storeMembers = {
   keyLabelStoreDelete: mockDelete,
 }
 
-// The Hub members are the same spies for both implementations.
+// The preload-like mock's Hub members; the shim's hand their arguments to
+// the same spies.
 const hubMembers = {
   keyLabelHubList: mockHubList,
   keyLabelHubDownload: mockHubDownload,
@@ -46,8 +48,9 @@ function installVialAPI(members: object): void {
 }
 
 // Both vialAPI implementations answer from the same spies: a preload-like
-// mock, and the Tauri shim's key label members over a mocked Tauri IPC,
-// whose commands hand their arguments to the spies in the members' order.
+// mock, and the Tauri shim's key label and key label Hub members over a
+// mocked Tauri IPC, whose commands hand their arguments to the spies in the
+// members' order.
 const backends = [
   { name: 'preload-like mock', install: () => installVialAPI(storeMembers) },
   {
@@ -62,10 +65,17 @@ const backends = [
           case 'key_label_store_reorder': return mockReorder(a.orderedIds)
           case 'key_label_store_rename': return mockRename(a.id, a.newName)
           case 'key_label_store_delete': return mockDelete(a.id)
+          case 'key_label_hub_list': return mockHubList(a.params)
+          case 'key_label_hub_download': return mockHubDownload(a.hubPostId)
+          case 'key_label_hub_upload': return mockHubUpload(a.localId)
+          case 'key_label_hub_update': return mockHubUpdate(a.localId)
+          case 'key_label_hub_delete': return mockHubDelete(a.localId)
+          case 'key_label_hub_sync': return mockHubSync(a.localId)
+          case 'key_label_hub_timestamps': return mockHubTimestamps(a.ids)
           default: throw new Error(`unexpected command ${cmd}`)
         }
       })
-      installVialAPI(keyLabelsApi)
+      installVialAPI({ ...keyLabelsApi, ...keyLabelHubApi })
     },
   },
 ]
