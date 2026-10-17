@@ -93,12 +93,18 @@ jobs:
       # nothing. The tree of pipette-typing-analytics (its
       # tests/rust_user_data.rs) must give the same machine hash, keep or
       # rebuild the same cache and answer every query member the same.
+      # The sync interop test runs the Electron sync code and the Rust
+      # engine (pipette-sync's example sync_peer) against one Node fake
+      # Drive, and has the Electron code sync a copy of the userData the
+      # Rust engine synced without changing it.
       - name: Read the Rust stores' userData with the Electron handlers
         run: |
           pnpm run verify:keyboard-store-rust-user-data
           pnpm run verify:pack-store-rust-user-data
           pnpm run verify:typing-dataset-rust-user-data
           pnpm run verify:analytics-rust-user-data
+          (cd src-tauri && cargo build -p pipette-sync --example sync_peer)
+          pnpm run test:sync-interop
 
       # --intent-to-add makes a new file show up in the diff too;
       # comparing with HEAD keeps a deleted one in it even when the add
