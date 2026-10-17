@@ -40,11 +40,12 @@ impl SignIn for GoogleSignIn {
 }
 
 /// The Drive of this build: the endpoints of `pipette_net::google_endpoints`,
-/// or, when the environment makes them unusable, none: every request is
-/// refused and nothing falls back to the real Drive.
+/// or, when the environment makes them unusable (an e2e run without them
+/// included), none: every request is refused and nothing falls back to the
+/// real Drive.
 fn drive_api(auth: &Arc<GoogleAuth>, user_agent: String) -> Arc<dyn DriveApi> {
     let tokens = GoogleTokens(Arc::clone(auth));
-    match pipette_net::google_endpoints() {
+    match crate::e2e_run::google_endpoints() {
         Ok(endpoints) => Arc::new(HttpDrive::for_endpoints(&endpoints, tokens, user_agent)),
         Err(_) => {
             let refuse = |_: HttpRequest| Err(HttpError::Refused("an unusable Drive endpoint".to_owned()));

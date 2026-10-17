@@ -186,12 +186,7 @@ fn boundary(content_type: &str) -> Option<&str> {
 
 /// The log entry of `request`, as drive-request-log.ts writes one.
 pub fn log_entry(request: &HttpRequest) -> Value {
-    let method = match request.method {
-        Method::Get => "GET",
-        Method::Post => "POST",
-        Method::Patch => "PATCH",
-        Method::Delete => "DELETE",
-    };
+    let method = request.method.as_str();
     let path = request.url.strip_prefix(ORIGIN).unwrap().split('?').next().unwrap();
     let mut query = query_pairs(&request.url);
     query.sort();

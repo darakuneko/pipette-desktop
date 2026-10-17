@@ -36,6 +36,8 @@ pipette-keyboard-stores = { path = "crates/pipette-keyboard-stores" }
 pipette-pack-stores = { path = "crates/pipette-pack-stores" }
 # The HTTP client every request goes through (src/dev_commands.rs).
 pipette-net = { path = "crates/pipette-net" }
+# The Hub client of src/hub_commands/.
+pipette-hub = { path = "crates/pipette-hub" }
 # The Typing Test word lists and datasets (src/typing_dataset_commands.rs).
 pipette-typing-datasets = { path = "crates/pipette-typing-datasets" }
 # The typing analytics and the sync lock (src/analytics_commands.rs).
@@ -129,6 +131,8 @@ tokio = { version = "=1.53.3", features = ["rt", "macros", "test-util"] }
 pipette-secret-store = { path = "crates/pipette-secret-store", features = ["test-util"] }
 # The in-memory Drive of the sync command tests.
 pipette-drive = { path = "crates/pipette-drive", features = ["test-util"] }
+# The in-memory Hub of the Hub command tests.
+pipette-hub = { path = "crates/pipette-hub", features = ["test-util"] }
 # The mock runtime the IPC contract tests (src/ipc_contract.rs) run the app
 # commands on. Same version as the tauri dependency.
 tauri = { version = "=2.12.1", features = ["tray-icon", "test"] }

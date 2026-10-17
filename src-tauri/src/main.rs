@@ -20,9 +20,11 @@ mod command_error;
 mod definition;
 mod dev_commands;
 mod dialog;
+mod e2e_run;
 mod events;
 mod file_commands;
 mod hid_commands;
+mod hub_commands;
 #[cfg(test)]
 mod ipc_contract;
 mod lifecycle;
@@ -249,6 +251,46 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::reset::sync_reset_targets,
         sync_commands::reset::reset_keyboard_data,
         sync_commands::reset::reset_local_targets,
+        hub_commands::account::hub_get_origin,
+        hub_commands::account::hub_set_auth_display_name,
+        hub_commands::account::hub_fetch_auth_me,
+        hub_commands::account::hub_patch_auth_me,
+        hub_commands::posts::hub_upload_post,
+        hub_commands::posts::hub_update_post,
+        hub_commands::posts::hub_patch_post,
+        hub_commands::posts::hub_delete_post,
+        hub_commands::posts::hub_fetch_my_posts,
+        hub_commands::posts::hub_fetch_my_keyboard_posts,
+        hub_commands::posts::hub_upload_private_post,
+        hub_commands::posts::hub_delete_private_post,
+        hub_commands::favorite::hub_upload_favorite_post,
+        hub_commands::favorite::hub_update_favorite_post,
+        hub_commands::favorite::hub_upload_private_favorite_post,
+        hub_commands::favorite::hub_favorite_entry,
+        hub_commands::analytics::hub_upload_analytics_post,
+        hub_commands::analytics::hub_update_analytics_post,
+        hub_commands::analytics::hub_preview_analytics_post,
+        hub_commands::analytics::hub_upload_private_analytics_post,
+        hub_commands::packs::i18n_pack_hub_timestamps,
+        hub_commands::packs::hub_list_i18n_posts,
+        hub_commands::packs::hub_download_i18n_post,
+        hub_commands::packs::hub_upload_i18n_post,
+        hub_commands::packs::hub_update_i18n_post,
+        hub_commands::packs::hub_delete_i18n_post,
+        hub_commands::packs::theme_pack_hub_timestamps,
+        hub_commands::packs::hub_list_theme_posts,
+        hub_commands::packs::hub_download_theme_post,
+        hub_commands::packs::hub_upload_theme_post,
+        hub_commands::packs::hub_update_theme_post,
+        hub_commands::packs::hub_delete_theme_post,
+        hub_commands::key_labels::key_label_hub_list,
+        hub_commands::key_labels::key_label_hub_detail,
+        hub_commands::key_labels::key_label_hub_download,
+        hub_commands::key_labels::key_label_hub_upload,
+        hub_commands::key_labels::key_label_hub_update,
+        hub_commands::key_labels::key_label_hub_sync,
+        hub_commands::key_labels::key_label_hub_timestamps,
+        hub_commands::key_labels::key_label_hub_delete,
     ]
 }
 
@@ -308,6 +350,7 @@ fn main() {
             sync_commands::reset::manage(app.handle());
             sync_commands::triggers::start(app.handle());
             analytics_commands::start(app.handle());
+            hub_commands::setup(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);

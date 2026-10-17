@@ -150,7 +150,8 @@ fn sends_the_method_the_headers_and_the_body() {
         }
     );
     assert!(reply.ok());
-    for (method, name) in [(Method::Get, "GET"), (Method::Patch, "PATCH"), (Method::Delete, "DELETE")] {
+    for method in [Method::Get, Method::Put, Method::Patch, Method::Delete] {
+        let name = method.as_str();
         let reply = send(request(method, format!("{base}/echo"), &[], None)).unwrap();
         assert_eq!(reply.body, format!("{name} /echo  ").into_bytes());
     }
@@ -226,7 +227,7 @@ fn the_loopback_client_refuses_googleapis_and_every_other_host() {
         "http://10.0.0.1/",
         "http://[::2]/",
     ] {
-        for method in [Method::Get, Method::Post, Method::Patch, Method::Delete] {
+        for method in [Method::Get, Method::Post, Method::Put, Method::Patch, Method::Delete] {
             let err = send_with(&loopback(), request(method, url.to_owned(), &[], Some(b"x"))).unwrap_err();
             assert!(matches!(err, HttpError::Refused(_)), "{method:?} {url}: {err:?}");
         }

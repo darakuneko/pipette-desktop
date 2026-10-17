@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/hub_commands/analytics.rs.
+
+[[set]]
+identifier = "hub-analytics"
+description = "Previews, uploads and updates Analyze posts on the Hub, publicly or privately."
+permissions = [
+  "allow-hub-upload-analytics-post",
+  "allow-hub-update-analytics-post",
+  "allow-hub-preview-analytics-post",
+  "allow-hub-upload-private-analytics-post",
+]

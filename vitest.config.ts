@@ -39,7 +39,8 @@ export default defineConfig({
   test: {
     // Default: node environment for preload/shared tests
     // Component tests use // @vitest-environment jsdom directive
-    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+    // The e2e harness's own checks run here too; the specs run under wdio.
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}', 'e2e-tauri/helpers/__tests__/**/*.test.ts'],
     setupFiles: [
       'src/renderer/__tests__/setup.ts',
       'src/main/__tests__/setup-sqlite-mock.ts',

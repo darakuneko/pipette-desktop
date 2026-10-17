@@ -14,6 +14,8 @@ use pipette_net::{Limits, ReqwestClient};
 use crate::dialog::SystemDialogs;
 
 #[cfg(feature = "dev-tools")]
+mod hub;
+#[cfg(feature = "dev-tools")]
 mod sync_auth;
 #[cfg(feature = "dev-tools")]
 mod sync_triggers;
@@ -48,10 +50,17 @@ pub fn manage_dialogs(app: &AppHandle<Wry>) {
 
 /// Manages the HTTP client every request goes through: the real one, with
 /// the dev-tools feature behind the recorded responses of
-/// `dev_http_respond`.
+/// `dev_http_respond`. In an e2e run (`crate::e2e_run`) the real client
+/// sends only to the loopback interface, so a request no test recorded a
+/// response for (a word list, a Hub dataset) never leaves the machine,
+/// redirects included.
 pub fn manage_http(app: &AppHandle<Wry>) {
     let user_agent = format!("Pipette/{}", app.package_info().version);
-    let real = ReqwestClient::new(Limits::DEFAULT, user_agent);
+    let real = if crate::e2e_run::is_e2e_run() {
+        ReqwestClient::loopback_only(Limits::DEFAULT, user_agent)
+    } else {
+        ReqwestClient::new(Limits::DEFAULT, user_agent)
+    };
     #[cfg(feature = "dev-tools")]
     tools::manage_queued_http(app, real);
     #[cfg(not(feature = "dev-tools"))]

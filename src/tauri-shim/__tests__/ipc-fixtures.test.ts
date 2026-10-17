@@ -19,6 +19,12 @@ import { typingAnalyticsDataApi } from '../api/typing-analytics-data'
 import { typingAnalyticsRangeApi } from '../api/typing-analytics-range'
 import { syncDataApi } from '../api/sync-data'
 import { syncResetApi } from '../api/sync-reset'
+import { hubAccountApi } from '../api/hub-account'
+import { hubPostsApi } from '../api/hub-posts'
+import { hubFavoriteApi } from '../api/hub-favorite'
+import { hubAnalyticsApi } from '../api/hub-analytics'
+import { hubPacksApi } from '../api/hub-packs'
+import { keyLabelHubApi } from '../api/key-label-hub'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
@@ -75,6 +81,12 @@ interface Shim {
   typingAnalyticsRemote: typeof import('../api/typing-analytics-remote')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
+  hubAccount: typeof import('../api/hub-account')
+  hubPosts: typeof import('../api/hub-posts')
+  hubFavorite: typeof import('../api/hub-favorite')
+  hubAnalytics: typeof import('../api/hub-analytics')
+  hubPacks: typeof import('../api/hub-packs')
+  keyLabelHub: typeof import('../api/key-label-hub')
   transport: typeof import('../hid-transport')
 }
 
@@ -111,6 +123,12 @@ async function load(): Promise<Shim> {
     typingAnalyticsRemote: await import('../api/typing-analytics-remote'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
+    hubAccount: await import('../api/hub-account'),
+    hubPosts: await import('../api/hub-posts'),
+    hubFavorite: await import('../api/hub-favorite'),
+    hubAnalytics: await import('../api/hub-analytics'),
+    hubPacks: await import('../api/hub-packs'),
+    keyLabelHub: await import('../api/key-label-hub'),
     transport: await import('../hid-transport'),
   }
 }
@@ -233,6 +251,15 @@ const CALLERS: Record<string, Caller> = {
   },
   ...queryCallers((shim) => shim.syncData.syncDataApi, syncDataApi),
   ...queryCallers((shim) => shim.syncReset.syncResetApi, syncResetApi),
+  ...queryCallers((shim) => shim.hubAccount.hubAccountApi, hubAccountApi),
+  ...queryCallers((shim) => shim.hubPosts.hubPostsApi, hubPostsApi),
+  ...queryCallers((shim) => shim.hubFavorite.hubFavoriteApi, hubFavoriteApi),
+  ...queryCallers((shim) => shim.hubAnalytics.hubAnalyticsApi, hubAnalyticsApi),
+  ...queryCallers((shim) => shim.hubPacks.hubPacksApi, hubPacksApi),
+  ...queryCallers((shim) => shim.keyLabelHub.keyLabelHubApi, keyLabelHubApi),
+  'hub-favorite.favoriteEntry': {
+    run: ({ hubFavorite }, [type, entryId]) => hubFavorite.favoriteEntry(type as FavoriteType, entryId as string),
+  },
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
   loadLayout: {
     run: ({ files }, [title, extensions]) => files.filesApi.loadLayout(title as string, extensions as string[]),

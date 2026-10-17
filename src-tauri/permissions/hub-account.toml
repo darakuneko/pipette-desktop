@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/hub_commands/account.rs.
+
+[[set]]
+identifier = "hub-account"
+description = "Reads the Hub origin, sets the display name of the next Hub token, and reads and changes the Hub account."
+permissions = [
+  "allow-hub-get-origin",
+  "allow-hub-set-auth-display-name",
+  "allow-hub-fetch-auth-me",
+  "allow-hub-patch-auth-me",
+]

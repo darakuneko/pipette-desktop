@@ -157,20 +157,49 @@ export async function quitApp(timeoutMs: number): Promise<void> {
  *  real Hub. The development tools' build reads PIPETTE_HUB_URL. */
 export const E2E_HUB_URL = 'http://127.0.0.1:9'
 
+/** Whether `url` is an http(s) URL on 127.0.0.1 or [::1], written as an IP
+ *  address (the loopback interface, which the app's loopback-only clients
+ *  allow). */
+export function isLoopbackUrl(url: string | undefined): boolean {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      (parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]')
+  } catch {
+    return false
+  }
+}
+
 /** The environment the app of a session runs with: the virtual keyboard
- *  only, the session's userData directory, a Hub that is not there, and
- *  the sync's master key in a file of that directory
+ *  only, the session's userData directory, a Hub on the loopback interface
+ *  (E2E_HUB_URL unless the session names another, a fake Hub), the e2e
+ *  mark, and the sync's master key in a file of that directory
  *  (`PIPETTE_DEV_KEYSTORE=file`, read by the development tools' build), so
- *  a session never reaches the OS key store of the developer's desktop. */
-function appEnv(userDataDir: string, extra: Record<string, string>): NodeJS.ProcessEnv {
-  return {
+ *  a session never reaches the OS key store of the developer's desktop.
+ *
+ *  PIPETTE_E2E=1 makes the app refuse every Hub request and the real Google
+ *  when their destinations are not on the loopback interface,
+ *  PIPETTE_HUB_TEST=1 makes even a build without the development tools take
+ *  the Hub address, and PIPETTE_DEV_SUPPRESS_BROWSER=1 keeps the sign-in
+ *  from opening the system browser. The extra variables cannot replace
+ *  these, and a Hub address off the loopback interface stops the launch. */
+export function appEnv(userDataDir: string, extra: Record<string, string>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
+    PIPETTE_HUB_URL: E2E_HUB_URL,
     ...extra,
     PIPETTE_VIRTUAL_DEVICE: 'only',
     PIPETTE_USER_DATA_DIR: userDataDir,
-    PIPETTE_HUB_URL: E2E_HUB_URL,
     PIPETTE_DEV_KEYSTORE: 'file',
+    PIPETTE_E2E: '1',
+    PIPETTE_HUB_TEST: '1',
+    PIPETTE_DEV_SUPPRESS_BROWSER: '1',
   }
+  if (!isLoopbackUrl(env.PIPETTE_HUB_URL)) {
+    throw new Error(`PIPETTE_HUB_URL must be on 127.0.0.1 or [::1] in an e2e session, not ${String(env.PIPETTE_HUB_URL)}`)
+  }
+  return env
 }
 
 export interface LaunchResult {

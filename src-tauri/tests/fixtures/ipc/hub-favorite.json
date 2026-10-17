@@ -1,0 +1,82 @@
+[
+  {
+    "member": "hubUploadFavoritePost",
+    "args": [
+      {
+        "type": "macro",
+        "entryId": "e1",
+        "title": "T",
+        "vialProtocol": 6
+      }
+    ],
+    "command": "hub_upload_favorite_post",
+    "invokeArgs": {
+      "params": {
+        "type": "macro",
+        "entryId": "e1",
+        "title": "T",
+        "vialProtocol": 6
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubUpdateFavoritePost",
+    "args": [
+      {
+        "type": "macro",
+        "entryId": "e1",
+        "title": "T",
+        "postId": "p1",
+        "vialProtocol": 6
+      }
+    ],
+    "command": "hub_update_favorite_post",
+    "invokeArgs": {
+      "params": {
+        "type": "macro",
+        "entryId": "e1",
+        "title": "T",
+        "postId": "p1",
+        "vialProtocol": 6
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubUploadPrivateFavoritePost",
+    "args": [
+      {
+        "type": "macro",
+        "entryId": "e1",
+        "title": "T",
+        "vialProtocol": 6,
+        "expiresInDays": 7
+      }
+    ],
+    "command": "hub_upload_private_favorite_post",
+    "invokeArgs": {
+      "params": {
+        "type": "macro",
+        "entryId": "e1",
+        "title": "T",
+        "vialProtocol": 6,
+        "expiresInDays": 7
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hub-favorite.favoriteEntry",
+    "args": [
+      "macro",
+      "e1"
+    ],
+    "command": "hub_favorite_entry",
+    "invokeArgs": {
+      "type": "macro",
+      "entryId": "e1"
+    },
+    "response": null
+  }
+]

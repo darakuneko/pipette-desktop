@@ -89,6 +89,11 @@ jobs:
           pnpm run test:fake-hub
           pnpm run test:sync-fixtures-harness
 
+      # The harness of the Hub fixture generators keeps the Electron Hub
+      # code off the real Hub, Google and the real userData.
+      - name: Hub fixture harness
+        run: pnpm run test:hub-fixtures-harness
+
       # The test above wrote userData trees with the Rust stores (the
       # tests/rust_user_data.rs of pipette-keyboard-stores,
       # pipette-pack-stores and pipette-typing-datasets); the Electron

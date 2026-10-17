@@ -1,0 +1,38 @@
+[
+  {
+    "member": "hubGetOrigin",
+    "args": [],
+    "command": "hub_get_origin",
+    "invokeArgs": {},
+    "response": null
+  },
+  {
+    "member": "hubSetAuthDisplayName",
+    "args": [
+      "Alice"
+    ],
+    "command": "hub_set_auth_display_name",
+    "invokeArgs": {
+      "displayName": "Alice"
+    },
+    "response": null
+  },
+  {
+    "member": "hubFetchAuthMe",
+    "args": [],
+    "command": "hub_fetch_auth_me",
+    "invokeArgs": {},
+    "response": null
+  },
+  {
+    "member": "hubPatchAuthMe",
+    "args": [
+      "Alice"
+    ],
+    "command": "hub_patch_auth_me",
+    "invokeArgs": {
+      "displayName": "Alice"
+    },
+    "response": null
+  }
+]
