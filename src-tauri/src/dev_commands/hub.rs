@@ -5,11 +5,35 @@
 
 use std::sync::Arc;
 
+use pipette_hub::startup_sync::StartupSyncResult;
+use pipette_keyboard_stores::StoreContext;
 use serde::Serialize;
-use tauri::State;
+use tauri::{AppHandle, Runtime, State};
 
 use crate::command_error::CommandError;
-use crate::hub_commands::setup::Hub;
+use crate::hub_commands::setup::{Hub, run_startup_sync};
+
+/// The counts of a startup update of the Hub-linked language packs
+/// (`I18nStartupSyncResult`, with the number of errors).
+#[derive(Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupSyncCounts {
+    checked: usize,
+    updated: usize,
+    missing_on_hub: usize,
+    errors: usize,
+}
+
+impl From<&StartupSyncResult> for StartupSyncCounts {
+    fn from(result: &StartupSyncResult) -> Self {
+        Self {
+            checked: result.checked,
+            updated: result.updated,
+            missing_on_hub: result.missing_on_hub,
+            errors: result.errors.len(),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -29,12 +53,17 @@ pub struct DevHubState {
     token_generation: u64,
     /// A display name is set for the next Hub token request.
     display_name_pending: bool,
+    /// A startup update of the Hub-linked language packs ran to its end.
+    startup_sync_done: bool,
+    /// What the last one that did found; `null` before one has.
+    startup_sync: Option<StartupSyncCounts>,
 }
 
 #[tauri::command]
 pub fn dev_hub_state(hub: State<'_, Arc<Hub>>) -> DevHubState {
     let destination = hub.destination();
     let token = hub.token().snapshot();
+    let startup_sync = hub.startup_sync_result();
     DevHubState {
         base: destination.base.clone(),
         loopback: destination.loopback,
@@ -43,13 +72,29 @@ pub fn dev_hub_state(hub: State<'_, Arc<Hub>>) -> DevHubState {
         token_inflight: token.inflight,
         token_generation: token.generation,
         display_name_pending: token.display_name_pending,
+        startup_sync_done: startup_sync.is_some(),
+        startup_sync: startup_sync.as_ref().map(StartupSyncCounts::from),
     }
 }
 
-/// The startup sync of the Hub-linked language packs, run now.
+/// The startup update of the Hub-linked language packs, run now as at
+/// launch (logged, `i18n-pack:changed` when a pack changed, recorded in
+/// [`dev_hub_state`]); its counts. Refused where the Hub's background work
+/// may not start, and failed when the quit stopped it.
 #[tauri::command]
-pub fn dev_hub_run_startup_sync() -> Result<(), CommandError> {
-    Err(CommandError::new("the startup sync of the Hub-linked language packs is not implemented"))
+pub async fn dev_hub_run_startup_sync<R: Runtime>(
+    app: AppHandle<R>,
+    hub: State<'_, Arc<Hub>>,
+    stores: State<'_, StoreContext>,
+) -> Result<StartupSyncCounts, CommandError> {
+    if !hub.background_allowed() {
+        return Err(CommandError::new("the Hub is blocked in this e2e run"));
+    }
+    let outcome = run_startup_sync(&app, &hub, stores.inner().clone()).await;
+    if outcome.stopped {
+        return Err(CommandError::new("the app is quitting"));
+    }
+    Ok(StartupSyncCounts::from(&outcome.result))
 }
 
 #[cfg(test)]
@@ -90,8 +135,62 @@ mod tests {
                 "tokenInflight": false,
                 "tokenGeneration": 0,
                 "displayNamePending": false,
+                "startupSyncDone": false,
+                "startupSync": null,
             })
         );
         assert!(!state.to_string().contains(jwt));
+    }
+
+    /// A run now records its counts in the state; a blocked Hub refuses it.
+    #[tokio::test]
+    async fn a_startup_update_run_now_is_counted_in_the_state() {
+        let user_data = tempfile::tempdir().unwrap();
+        let app = tauri::test::mock_app();
+        crate::store_commands::keyboard_data::manage(app.handle(), user_data.path());
+        let stores = app.state::<StoreContext>().inner().clone();
+        let pack = pipette_js_json::parse(r#"{"name":"Japanese","version":"1.2.0"}"#).unwrap();
+        let input = pipette_pack_stores::i18n::SavePackInput {
+            id: Some("pack-ja".into()),
+            pack: Some(pack),
+            hub_post_id: pipette_pack_stores::Field::Set("gone".into()),
+            ..Default::default()
+        };
+        pipette_pack_stores::i18n::save_pack(&stores, input).unwrap();
+        let fake = Arc::new(FakeHub::new());
+        let destination = HubDestination::resolve(true, &|name| {
+            (name == "PIPETTE_HUB_URL").then(|| "http://127.0.0.1:9".to_owned())
+        });
+        crate::hub_commands::setup::manage_with(
+            app.handle(),
+            destination,
+            HubRequesters::single(fake.clone()),
+            Arc::new(|| None::<String>),
+        );
+
+        let counts = dev_hub_run_startup_sync(app.handle().clone(), app.state(), app.state()).await.unwrap();
+        let expected = serde_json::json!({ "checked": 1, "updated": 0, "missingOnHub": 1, "errors": 0 });
+        assert_eq!(serde_json::to_value(&counts).unwrap(), expected);
+        let state = serde_json::to_value(dev_hub_state(app.state::<Arc<Hub>>())).unwrap();
+        assert_eq!(state["startupSyncDone"], true);
+        assert_eq!(state["startupSync"], expected);
+
+        let blocked = tauri::test::mock_app();
+        crate::store_commands::keyboard_data::manage(blocked.handle(), user_data.path());
+        let destination =
+            HubDestination::resolve(true, &|name| (name == "PIPETTE_E2E").then(|| "1".to_owned()));
+        crate::hub_commands::setup::manage_with(
+            blocked.handle(),
+            destination,
+            HubRequesters::single(fake.clone()),
+            Arc::new(|| None::<String>),
+        );
+        let sent = fake.requests().len();
+        assert!(
+            dev_hub_run_startup_sync(blocked.handle().clone(), blocked.state(), blocked.state())
+                .await
+                .is_err()
+        );
+        assert_eq!(fake.requests().len(), sent);
     }
 }

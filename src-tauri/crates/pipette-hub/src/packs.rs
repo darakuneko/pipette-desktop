@@ -28,7 +28,7 @@ use pipette_pack_stores::theme_validate::validate_theme_pack;
 use pipette_pack_stores::{Cached, i18n, theme};
 
 use crate::endpoint::{Endpoint, ListQuery};
-use crate::http::{HubHttp, RequestBody};
+use crate::http::{HubError, HubHttp, RequestBody};
 use crate::multipart::{UploadFile, i18n_boundary, pack_body, theme_boundary};
 use crate::sources::BoxFuture;
 use crate::token::HubToken;
@@ -404,6 +404,45 @@ pub async fn download(http: &HubHttp, kind: PackKind, post_id: Option<&Value>) -
     }
 }
 
+/// Why a timestamps lookup failed.
+pub(crate) enum TimestampsError {
+    /// A request failed.
+    Request(HubError),
+    /// An answer is not shaped as read: the message of the `TypeError`.
+    Read(JsString),
+}
+
+/// The timestamps items of the distinct `ids`, by their `id`. The batches of
+/// [`TIMESTAMPS_BATCH_LIMIT`] go out at once (`Promise.all`: the first
+/// request to fail ends the lookup, before any answer is read).
+pub(crate) async fn fetch_timestamp_items(
+    http: &HubHttp,
+    endpoint: &Endpoint<'_>,
+    ids: &[&JsString],
+) -> Result<HashMap<JsString, Value>, TimestampsError> {
+    let requests = ids.chunks(TIMESTAMPS_BATCH_LIMIT).map(|chunk| {
+        let ids = chunk.iter().map(|id| Value::String((*id).clone())).collect();
+        let body: Object = [("ids", Value::Array(ids))].into_iter().collect();
+        http.send(endpoint, None, RequestBody::Json(stringify(&Value::Object(body))))
+    });
+    let responses = try_join_all(requests).await.map_err(TimestampsError::Request)?;
+    let mut by_id: HashMap<JsString, Value> = HashMap::new();
+    for response in &responses {
+        let listed = match property(response.as_ref(), "items").map_err(TimestampsError::Read)? {
+            Some(Value::Array(listed)) => listed,
+            // A string's characters have no `id`.
+            Some(Value::String(_)) => continue,
+            _ => return Err(TimestampsError::Read("r.items is not iterable".into())),
+        };
+        for item in listed {
+            if let Some(Value::String(id)) = property(Some(item), "id").map_err(TimestampsError::Read)? {
+                by_id.insert(id.clone(), item.clone());
+            }
+        }
+    }
+    Ok(by_id)
+}
+
 /// `HUB_I18N_PACK_TIMESTAMPS` / `HUB_THEME_PACK_TIMESTAMPS`: the distinct
 /// ids asked for in batches of [`TIMESTAMPS_BATCH_LIMIT`], sent at once;
 /// the Hub's items come back in the order of the ids, without the ids it
@@ -418,37 +457,11 @@ pub async fn timestamps(http: &HubHttp, kind: PackKind, ids: Option<&Value>) -> 
             unique.push(id);
         }
     }
-    let endpoint = kind.timestamps();
-    let requests = unique.chunks(TIMESTAMPS_BATCH_LIMIT).map(|chunk| {
-        let ids = chunk.iter().map(|id| Value::String((*id).clone())).collect();
-        let body: Object = [("ids", Value::Array(ids))].into_iter().collect();
-        http.send(&endpoint, None, RequestBody::Json(stringify(&Value::Object(body))))
-    });
-    // `Promise.all`: the first request to fail ends the call, before any
-    // answer is read.
-    let responses = match try_join_all(requests).await {
-        Ok(responses) => responses,
-        Err(err) => return failure(err.to_string()),
+    let by_id = match fetch_timestamp_items(http, &kind.timestamps(), &unique).await {
+        Ok(by_id) => by_id,
+        Err(TimestampsError::Request(err)) => return failure(err.to_string()),
+        Err(TimestampsError::Read(message)) => return failure(message),
     };
-    let mut by_id: HashMap<JsString, Value> = HashMap::new();
-    for response in &responses {
-        let listed = match property(response.as_ref(), "items") {
-            Ok(Some(Value::Array(listed))) => listed,
-            // A string's characters have no `id`.
-            Ok(Some(Value::String(_))) => continue,
-            Ok(_) => return failure("r.items is not iterable"),
-            Err(err) => return failure(err),
-        };
-        for item in listed {
-            match property(Some(item), "id") {
-                Ok(Some(Value::String(id))) => {
-                    by_id.insert(id.clone(), item.clone());
-                }
-                Ok(_) => {}
-                Err(err) => return failure(err),
-            }
-        }
-    }
     let found = unique.iter().filter_map(|id| by_id.get(*id).cloned()).collect();
     let data: Object = [("items", Value::Array(found))].into_iter().collect();
     success("data", Some(Value::Object(data)))
