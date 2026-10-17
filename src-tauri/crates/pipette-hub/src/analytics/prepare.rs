@@ -71,14 +71,15 @@ async fn blocking<T: Send + 'static>(read: impl FnOnce() -> T + Send + 'static) 
     tokio::task::spawn_blocking(read).await.map_err(|err| PrepareError(err.to_string()))
 }
 
-/// `prepareAnalyticsExport(params)` with `own_hash` as this device and
-/// `now_ms` as the export's time: the saved filters read from `store`,
-/// the snapshot from its userData, the export built on `source`'s cache.
+/// `prepareAnalyticsExport(params)` with `now_ms` as the export's time:
+/// the saved filters read from `store`, this device's hash read from
+/// `source` once the saved filter has a range (so a failure to read it
+/// never hides the checks before), the snapshot from the userData and the
+/// export built on `source`'s cache.
 pub async fn prepare_analytics_export(
     params: &Value,
     store: &StoreContext,
     source: &dyn AnalyticsSource,
-    own_hash: &str,
     now_ms: i64,
 ) -> Result<Prepared, PrepareError> {
     let Some(uid) = text(prop(params, "uid")) else { return Ok(failed("Invalid uid", 0.0)) };
@@ -117,8 +118,9 @@ pub async fn prepare_analytics_export(
     };
 
     // Only this device saves keymap snapshots.
+    let own_hash = source.machine_hash().await.map_err(PrepareError)?;
     let snapshot = {
-        let (user_data, uid, hash) = (store.user_data().to_path_buf(), uid.to_owned(), own_hash.to_owned());
+        let (user_data, uid, hash) = (store.user_data().to_path_buf(), uid.to_owned(), own_hash.clone());
         blocking(move || get_keymap_snapshot_for_range(&user_data, &uid, &hash, from_ms, to_ms)).await?
     }
     .map_err(|err| PrepareError(err.to_string()))?;
@@ -164,7 +166,6 @@ pub async fn prepare_analytics_export(
     };
 
     let (answer, answered) = tokio::sync::oneshot::channel();
-    let own_hash = own_hash.to_owned();
     source
         .with_db(Box::new(move |db| {
             let built = build_analytics_export(db, &input, &own_hash, now_ms).map_err(|err| err.to_string());
