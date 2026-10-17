@@ -34,6 +34,8 @@ pipette-entry-store = { path = "../pipette-entry-store" }
 pipette-js-json = { path = "../pipette-js-json" }
 # The requests, the clients and the Hub API base URL.
 pipette-net = { path = "../pipette-net" }
+# `toISOString` of the Analyze export's time.
+pipette-time = { path = "../pipette-time" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = "=2.0.21"
@@ -47,6 +49,8 @@ zeroize = "=1.9.0"
 pipette-hub = { path = ".", features = ["test-util"] }
 # Fixed entry ids and clocks for the handlers' store writes.
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+# The Analyze export golden runs in the time zone it was recorded in.
+pipette-time = { path = "../pipette-time", features = ["test-util"] }
 tempfile = { workspace = true }
 tokio = { version = "=1.53.3", features = ["rt", "macros", "time", "test-util"] }
 

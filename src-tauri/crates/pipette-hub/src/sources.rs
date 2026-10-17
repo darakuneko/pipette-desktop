@@ -6,6 +6,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use pipette_typing_analytics_db::TypingAnalyticsDb;
 use zeroize::Zeroizing;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -24,10 +25,23 @@ impl<F: Fn() -> Option<String> + Send + Sync> IdTokenSource for F {
     }
 }
 
-/// The typing analytics queries the Analyze post's export reads
-/// (src/main/hub/hub-analytics.ts). The app connects it to its analytics
-/// actor; the export's tests answer from fixed rows.
-pub trait AnalyticsSource: Send + Sync {}
+/// A read of the typing analytics cache, run where the cache lives.
+pub type AnalyticsJob = Box<dyn FnOnce(&TypingAnalyticsDb) + Send>;
+
+/// The typing analytics the Analyze post's export reads
+/// (src/main/hub/hub-analytics.ts): this device's machine hash and the
+/// cache. [`crate::analytics::TypingAnalyticsSource`] connects it to the
+/// app's analytics; the tests connect it to a seeded cache.
+pub trait AnalyticsSource: Send + Sync {
+    /// `getMachineHash()`: this device's hash, once the analytics are
+    /// ready. The error is the text of what kept them from it.
+    fn machine_hash(&self) -> BoxFuture<'_, Result<String, String>>;
+
+    /// Runs `job` on the cache, after the writes sent before it, and
+    /// returns once it has run. The error is the text of what kept it from
+    /// running.
+    fn with_db(&self, job: AnalyticsJob) -> BoxFuture<'_, Result<(), String>>;
+}
 
 #[cfg(test)]
 mod tests {
