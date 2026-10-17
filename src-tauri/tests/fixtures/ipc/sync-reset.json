@@ -1,0 +1,118 @@
+[
+  {
+    "member": "syncResetTargets",
+    "args": [
+      {
+        "keyboards": false,
+        "favorites": false
+      }
+    ],
+    "command": "sync_reset_targets",
+    "invokeArgs": {
+      "targets": {
+        "keyboards": false,
+        "favorites": false
+      }
+    },
+    "response": {
+      "success": false,
+      "error": "No targets selected"
+    }
+  },
+  {
+    "member": "syncResetTargets",
+    "args": [
+      {
+        "keyboards": [
+          "uid1",
+          "../x"
+        ],
+        "favorites": false
+      }
+    ],
+    "command": "sync_reset_targets",
+    "invokeArgs": {
+      "targets": {
+        "keyboards": [
+          "uid1",
+          "../x"
+        ],
+        "favorites": false
+      }
+    },
+    "response": {
+      "success": false,
+      "error": "Invalid keyboard UID"
+    }
+  },
+  {
+    "member": "resetKeyboardData",
+    "args": [
+      "../x"
+    ],
+    "command": "reset_keyboard_data",
+    "invokeArgs": {
+      "uid": "../x"
+    },
+    "response": {
+      "success": false,
+      "error": "Invalid uid"
+    }
+  },
+  {
+    "member": "resetKeyboardData",
+    "args": [
+      "uid1"
+    ],
+    "command": "reset_keyboard_data",
+    "invokeArgs": {
+      "uid": "uid1"
+    },
+    "response": {
+      "success": true
+    }
+  },
+  {
+    "member": "resetLocalTargets",
+    "args": [
+      {
+        "keyboards": false,
+        "favorites": false,
+        "appSettings": false
+      }
+    ],
+    "command": "reset_local_targets",
+    "invokeArgs": {
+      "targets": {
+        "keyboards": false,
+        "favorites": false,
+        "appSettings": false
+      }
+    },
+    "response": {
+      "success": false,
+      "error": "No targets selected"
+    }
+  },
+  {
+    "member": "resetLocalTargets",
+    "args": [
+      {
+        "keyboards": false,
+        "favorites": true,
+        "appSettings": false
+      }
+    ],
+    "command": "reset_local_targets",
+    "invokeArgs": {
+      "targets": {
+        "keyboards": false,
+        "favorites": true,
+        "appSettings": false
+      }
+    },
+    "response": {
+      "success": true
+    }
+  }
+]

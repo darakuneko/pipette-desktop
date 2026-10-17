@@ -11,11 +11,7 @@
 // label members (key labels, typing test texts, language and theme packs,
 // word lists, datasets and the Aozora Bunko import) are all real; the
 // members named after the Hub are fakes or stubs. The Cloud Sync members
-// (each listed with the module that holds it) are stubs but the sign-in
-// status, the password members, the password change members, the sync of
-// a scope with its progress and applied-unit events, the Analyze sync, the
-// sync format status, the export and import of the local data and the
-// typing analytics on Drive.
+// (each listed with the module that holds it) are all real.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -246,9 +242,8 @@ const TYPING_DATASET_MEMBERS = [
   'aozoraImport',
 ]
 
-/** The Cloud Sync members, by the shim module that holds them. Those of
- *  SYNC_REAL are real; each other one is a stub until its module backs it
- *  with a backend command. */
+/** The Cloud Sync members, by the shim module that holds them; SYNC_REAL
+ *  lists them all. */
 const SYNC_MEMBERS = [
   { module: syncAuthApi, members: ['syncAuthStart', 'syncAuthStatus', 'syncAuthSignOut'] },
   {
@@ -298,13 +293,14 @@ const SYNC_MEMBERS = [
   },
 ]
 
-/** The Cloud Sync members that are real: the sign-in, the sign-out, the
+/** The Cloud Sync members, all real: the sign-in, the sign-out, the
  *  sign-in and password statuses, setting and re-entering the password,
  *  whether Drive has a password-check, the password change with its Drive
  *  lock and the files no password opens, the sync of a scope with its progress
  *  and applied-unit events, the Analyze sync, the sync format status and its
- *  event, the export and import of the local data, the typing analytics on
- *  Drive (backend commands) and the password strength check (in the shim). */
+ *  event, the Data modal's scan, bundle, deletes and trash, the resets, the
+ *  export and import of the local data, the typing analytics on Drive
+ *  (backend commands) and the password strength check (in the shim). */
 const SYNC_REAL = [
   'syncAuthStart',
   'syncAuthStatus',
@@ -328,6 +324,15 @@ const SYNC_REAL = [
   'syncExecute',
   'syncOnProgress',
   'syncOnUnitApplied',
+  'syncScanRemote',
+  'syncFetchRemoteBundle',
+  'syncDeleteFiles',
+  'syncListTrash',
+  'syncRestoreTrash',
+  'syncDeleteTrash',
+  'syncResetTargets',
+  'resetKeyboardData',
+  'resetLocalTargets',
   'exportLocalData',
   'importLocalData',
   'syncAnalyticsNow',

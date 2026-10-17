@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/sync_commands/reset.rs: the reset of chosen targets
+# on Drive, of one keyboard's data, and of chosen targets of this machine's
+# data.
+
+[[set]]
+identifier = "sync-reset"
+description = "Removes chosen targets from Drive, one keyboard's data, or chosen targets of this machine's data."
+permissions = [
+  "allow-sync-reset-targets",
+  "allow-reset-keyboard-data",
+  "allow-reset-local-targets",
+]

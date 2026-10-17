@@ -240,6 +240,15 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::analytics_remote::typing_analytics_list_remote_cloud_hashes,
         sync_commands::analytics_remote::typing_analytics_list_remote_cloud_days,
         sync_commands::analytics_remote::typing_analytics_fetch_remote_day,
+        sync_commands::data::sync_scan_remote,
+        sync_commands::data::sync_fetch_remote_bundle,
+        sync_commands::data::sync_delete_files,
+        sync_commands::trash::sync_list_trash,
+        sync_commands::trash::sync_restore_trash,
+        sync_commands::trash::sync_delete_trash,
+        sync_commands::reset::sync_reset_targets,
+        sync_commands::reset::reset_keyboard_data,
+        sync_commands::reset::reset_local_targets,
     ]
 }
 
@@ -296,6 +305,7 @@ fn main() {
             sync_commands::analytics_remote::manage(app.handle());
             sync_commands::adopt_pending_at_startup(app.handle());
             sync_commands::password_change::manage(app.handle());
+            sync_commands::reset::manage(app.handle());
             sync_commands::triggers::start(app.handle());
             analytics_commands::start(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;

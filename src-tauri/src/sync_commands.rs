@@ -23,7 +23,9 @@ pub mod execute;
 pub mod password;
 pub mod password_change;
 pub mod preflight;
+pub mod reset;
 pub mod result;
+pub mod trash;
 pub mod triggers;
 
 /// The secret store and the Google sign-in of the sync.

@@ -1,13 +1,21 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The commands of src/sync_commands/data.rs: the export of the local
-# favorites, snapshots and settings to a file the user picks, and the import
-# of such a file.
+# The commands of src/sync_commands/data.rs and src/sync_commands/trash.rs:
+# the scan of what Drive holds, one unit's bundle read without merging it,
+# the delete of chosen Drive files, the trash screen's list, restore and
+# delete, and the export of the local favorites, snapshots and settings to
+# a file the user picks, and the import of such a file.
 
 [[set]]
 identifier = "sync-data"
-description = "Exports the local favorites, snapshots and settings to a file the user picks, and imports such a file."
+description = "Scans Drive, reads one unit's bundle without merging it, deletes chosen Drive files, lists, restores and deletes Drive trash files, exports the local favorites, snapshots and settings to a file the user picks, and imports such a file."
 permissions = [
+  "allow-sync-scan-remote",
+  "allow-sync-fetch-remote-bundle",
+  "allow-sync-delete-files",
+  "allow-sync-list-trash",
+  "allow-sync-restore-trash",
+  "allow-sync-delete-trash",
   "allow-export-local-data",
   "allow-import-local-data",
 ]

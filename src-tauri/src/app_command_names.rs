@@ -226,4 +226,15 @@ pub const APP_COMMANDS: &[&str] = &[
     "typing_analytics_list_remote_cloud_hashes",
     "typing_analytics_list_remote_cloud_days",
     "typing_analytics_fetch_remote_day",
+    // src/sync_commands/data.rs, src/sync_commands/trash.rs,
+    // src/sync_commands/reset.rs
+    "sync_scan_remote",
+    "sync_fetch_remote_bundle",
+    "sync_delete_files",
+    "sync_list_trash",
+    "sync_restore_trash",
+    "sync_delete_trash",
+    "sync_reset_targets",
+    "reset_keyboard_data",
+    "reset_local_targets",
 ];

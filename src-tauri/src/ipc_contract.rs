@@ -168,6 +168,7 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     crate::sync_commands::execute::manage(app.handle());
     crate::sync_commands::password_change::manage_for_tests(app.handle());
     crate::sync_commands::analytics_remote::manage(app.handle());
+    crate::sync_commands::reset::manage(app.handle());
     app
 }
 
