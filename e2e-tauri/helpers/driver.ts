@@ -179,10 +179,11 @@ export function isLoopbackUrl(url: string | undefined): boolean {
  *  a session never reaches the OS key store of the developer's desktop.
  *
  *  PIPETTE_E2E=1 makes the app refuse every Hub request and the real Google
- *  when their destinations are not on the loopback interface, and
+ *  when their destinations are not on the loopback interface,
  *  PIPETTE_HUB_TEST=1 makes even a build without the development tools take
- *  the Hub address. The extra variables cannot replace either, and a Hub
- *  address off the loopback interface stops the launch. */
+ *  the Hub address, and PIPETTE_DEV_SUPPRESS_BROWSER=1 keeps the sign-in
+ *  from opening the system browser. The extra variables cannot replace
+ *  these, and a Hub address off the loopback interface stops the launch. */
 export function appEnv(userDataDir: string, extra: Record<string, string>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -193,6 +194,7 @@ export function appEnv(userDataDir: string, extra: Record<string, string>): Node
     PIPETTE_DEV_KEYSTORE: 'file',
     PIPETTE_E2E: '1',
     PIPETTE_HUB_TEST: '1',
+    PIPETTE_DEV_SUPPRESS_BROWSER: '1',
   }
   if (!isLoopbackUrl(env.PIPETTE_HUB_URL)) {
     throw new Error(`PIPETTE_HUB_URL must be on 127.0.0.1 or [::1] in an e2e session, not ${String(env.PIPETTE_HUB_URL)}`)

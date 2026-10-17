@@ -3,8 +3,10 @@
 //! `PIPETTE_DEV_SUPPRESS_BROWSER=1` the sync's sign-in opens no browser and
 //! records its authorization URL instead, which `dev_sync_last_auth_url`
 //! answers, so a test reads the state and the redirect from it and plays the
-//! browser against the loopback listener itself. Builds with the
-//! development tools only.
+//! browser against the loopback listener itself. An e2e run
+//! (`PIPETTE_E2E=1`, `crate::e2e_run`) never opens the system browser
+//! either: a loopback authorization page could send a real browser on to
+//! Google. Builds with the development tools only.
 
 use std::sync::{Arc, Mutex, PoisonError};
 
@@ -30,9 +32,11 @@ impl LastAuthUrl {
 }
 
 /// Manages the sign-in's browser: the system's, or with
-/// [`SUPPRESS_BROWSER_ENV`] set to `1`, the recorder of `dev_sync_last_auth_url`.
+/// [`SUPPRESS_BROWSER_ENV`] set to `1` or in an e2e run, the recorder of
+/// `dev_sync_last_auth_url`.
 pub fn manage(app: &AppHandle<Wry>) {
-    let suppress = std::env::var_os(SUPPRESS_BROWSER_ENV).is_some_and(|value| value == "1");
+    let suppress = std::env::var_os(SUPPRESS_BROWSER_ENV).is_some_and(|value| value == "1")
+        || crate::e2e_run::is_e2e_run();
     let last = Arc::new(LastAuthUrl::default());
     app.manage(browser_for(suppress, Arc::clone(&last), AuthBrowser::system()));
     app.manage(last);
@@ -42,7 +46,7 @@ fn browser_for(suppress: bool, last: Arc<LastAuthUrl>, system: AuthBrowser) -> A
     if !suppress {
         return system;
     }
-    log::warn!("[dev] {SUPPRESS_BROWSER_ENV}=1: the sign-in opens no browser");
+    log::warn!("[dev] {SUPPRESS_BROWSER_ENV}=1 or an e2e run: the sign-in opens no browser");
     AuthBrowser::new(move |url| {
         last.set(url);
         Ok(())

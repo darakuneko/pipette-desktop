@@ -11,6 +11,7 @@ describe('appEnv', () => {
     expect(env.PIPETTE_HUB_URL).toBe(E2E_HUB_URL)
     expect(env.PIPETTE_E2E).toBe('1')
     expect(env.PIPETTE_HUB_TEST).toBe('1')
+    expect(env.PIPETTE_DEV_SUPPRESS_BROWSER).toBe('1')
     expect(env.PIPETTE_USER_DATA_DIR).toBe('/tmp/user-data')
   })
 
@@ -26,8 +27,14 @@ describe('appEnv', () => {
   })
 
   it('keeps the e2e mark whatever a session adds', () => {
-    const env = appEnv('/tmp/u', { PIPETTE_E2E: '0', PIPETTE_HUB_TEST: '0', PIPETTE_USER_DATA_DIR: '/elsewhere' })
-    expect([env.PIPETTE_E2E, env.PIPETTE_HUB_TEST, env.PIPETTE_USER_DATA_DIR]).toEqual(['1', '1', '/tmp/u'])
+    const env = appEnv('/tmp/u', {
+      PIPETTE_E2E: '0',
+      PIPETTE_HUB_TEST: '0',
+      PIPETTE_DEV_SUPPRESS_BROWSER: '0',
+      PIPETTE_USER_DATA_DIR: '/elsewhere',
+    })
+    expect([env.PIPETTE_E2E, env.PIPETTE_HUB_TEST, env.PIPETTE_DEV_SUPPRESS_BROWSER, env.PIPETTE_USER_DATA_DIR])
+      .toEqual(['1', '1', '1', '/tmp/u'])
   })
 
   it('tells loopback URLs apart', () => {
