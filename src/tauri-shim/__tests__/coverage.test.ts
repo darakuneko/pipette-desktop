@@ -10,7 +10,8 @@
 // and Drive members (every typing analytics member), and the pack and
 // label members (key labels, typing test texts, language and theme packs,
 // word lists, datasets and the Aozora Bunko import) are all real; the
-// members named after the Hub are fakes or stubs. The Cloud Sync members
+// members named after the Hub are real where their module's `…Real` lists
+// them (`HUB_MODULES`) and stubs otherwise. The Cloud Sync members
 // (each listed with the module that holds it) are all real.
 
 import { describe, expect, it, vi } from 'vitest'
@@ -36,18 +37,6 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 const EXPECTED_FAKES = [
   'trayStatusUpdate',
   'notificationFetch',
-  'i18nPackHubTimestamps',
-  'hubListI18nPosts',
-  'hubDownloadI18nPost',
-  'hubUploadI18nPost',
-  'hubUpdateI18nPost',
-  'hubDeleteI18nPost',
-  'themePackHubTimestamps',
-  'hubListThemePosts',
-  'hubDownloadThemePost',
-  'hubUploadThemePost',
-  'hubUpdateThemePost',
-  'hubDeleteThemePost',
 ]
 
 /** The members the keyboard editor needs from the backend, all real. */

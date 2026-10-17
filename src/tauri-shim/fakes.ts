@@ -2,19 +2,11 @@
 // Fixed answers for the VialAPI members the renderer awaits during startup
 // and while connecting a keyboard and opening its editor, for areas the
 // backend does not implement yet: the values of a fresh install (no
-// startup notification), and failed answers for the Hub
-// requests whose answer the renderer reads. Writes succeed without
-// storing anything. Each group names the backend area whose commands take
-// its place; coverage.test.ts lists them.
+// startup notification). Writes succeed without storing anything. Each
+// group names the backend area whose commands take its place;
+// coverage.test.ts lists them.
 
 import type { VialAPI } from '../shared/types/vial-api'
-
-/** The answer of a Hub member before the backend reaches the Hub. It has
- *  no `error`: without one the renderer shows its own localized failure
- *  message (for the language packs, `i18n.errorGeneric` and the
- *  `hub.*Failed` messages through `localizeHubError`; for the theme packs,
- *  the messages named at their members). */
-const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
   // Tray.
@@ -22,32 +14,4 @@ export const fakes = {
 
   // Startup notification.
   notificationFetch: () => Promise.resolve({ success: false }),
-
-  // Language pack Hub. The renderer reads `success` of these answers
-  // without a guard, on its own (the freshness check of Hub-linked packs
-  // and the Hub tab's list) or after a local change (the sync after
-  // renaming a Hub-linked pack), so each answers a failure rather than
-  // nothing. Every caller falls back to its own message when `error` is
-  // absent; the freshness check reads no message.
-  i18nPackHubTimestamps: hubUnavailable,
-  hubListI18nPosts: hubUnavailable,
-  hubDownloadI18nPost: hubUnavailable,
-  hubUploadI18nPost: hubUnavailable,
-  hubUpdateI18nPost: hubUnavailable,
-  hubDeleteI18nPost: hubUnavailable,
-
-  // Theme pack Hub. The renderer reads `success` of these answers without a
-  // guard (the freshness check of Hub-linked packs, the Hub tab's search
-  // and preview, and the row actions), so each answers a failure rather
-  // than nothing. Every caller falls back to its own message when `error`
-  // is absent (`themePacks.hubEmpty`, `themePacks.parseError`,
-  // `hub.uploadFailed`, `hub.removeFailed`, and `hub.updateFailed` through
-  // `localizeHubError`); the freshness check and the preview read no
-  // message.
-  themePackHubTimestamps: hubUnavailable,
-  hubListThemePosts: hubUnavailable,
-  hubDownloadThemePost: hubUnavailable,
-  hubUploadThemePost: hubUnavailable,
-  hubUpdateThemePost: hubUnavailable,
-  hubDeleteThemePost: hubUnavailable,
 } satisfies Partial<VialAPI>

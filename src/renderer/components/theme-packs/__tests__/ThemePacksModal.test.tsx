@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
@@ -115,6 +116,7 @@ const vialAPI = {
 Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
 
 import { ThemePacksModal } from '../ThemePacksModal'
+import { hubPackBackends } from '../../../hooks/__tests__/hub-pack-backends'
 import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
 import { ERROR_DISMISS_MS } from '../../ui/DismissibleError'
 
@@ -141,14 +143,16 @@ function meta(over: Partial<{
   }
 }
 
-describe('ThemePacksModal', () => {
+describe.each(hubPackBackends(vialAPI))('ThemePacksModal ($name)', ({ install }) => {
   afterEach(() => {
     vi.useRealTimers()
+    clearMocks()
   })
 
   beforeEach(() => {
     vi.clearAllMocks()
     metas = []
+    Object.assign(window, { vialAPI: install() })
     mockTheme = 'system'
     removeFn.mockResolvedValue({ success: true })
     renameFn.mockResolvedValue({ success: true })
