@@ -65,6 +65,7 @@ jobs:
           pnpm generate:typing-text-fixtures
           pnpm generate:typing-dataset-fixtures
           pnpm generate:active-window-fixtures
+          pnpm generate:hub-fixtures
 
       # ts_random_envelopes.json is recorded with real random salts and IVs,
       # so it differs on every run.
