@@ -764,10 +764,14 @@ describe('Tauri build Pipette Hub', function () {
       const from = fakeHub().requests.length
       await clickInPage(tid('hub-enable-toggle'))
       await browser.waitUntil(() => readAppConfig().hubEnabled === true, { timeoutMsg: 'the Hub was not enabled' })
-      // A new account: the Hub has no display name for it.
-      await $(tid('hub-display-name-required')).waitForDisplayed({ timeout: 30_000 })
-      expect(hubUser(GOOGLE_ACCOUNT)?.display_name).toBeNull()
+      // A new account, which the Hub has no display name for.
+      await waitForHub(
+        () => hubUser(GOOGLE_ACCOUNT) !== undefined && hubRequestsSince(from).some((r) => r.op === 'auth.me'),
+        'the Hub account was not created and read',
+      )
       await waitForHubQuiet()
+      expect(hubUser(GOOGLE_ACCOUNT)?.display_name).toBeNull()
+      await $(tid('hub-display-name-required')).waitForDisplayed()
       const sent = hubRequestsSince(from)
       const tokens = sent.filter((r) => r.op === 'auth.token')
       expect(tokens.length).toBeGreaterThanOrEqual(1)
