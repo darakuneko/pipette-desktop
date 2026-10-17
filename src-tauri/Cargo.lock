@@ -3062,6 +3062,7 @@ dependencies = [
  "pipette-keyboard-stores",
  "pipette-net",
  "pipette-pack-stores",
+ "pipette-time",
  "pipette-typing-analytics",
  "pipette-typing-analytics-db",
  "serde",
