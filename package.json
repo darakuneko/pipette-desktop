@@ -56,6 +56,8 @@
     "generate:drive-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-drive",
     "generate:sync-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-",
     "test:sync-fixtures-harness": "vitest run --config scripts/sync-fixtures/vitest.config.ts harness",
+    "generate:hub-fixtures": "vitest run --config scripts/hub-fixtures/vitest.config.ts record-",
+    "test:hub-fixtures-harness": "vitest run --config scripts/hub-fixtures/vitest.config.ts harness",
     "test:sync-interop": "vitest run --config scripts/sync-interop/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
