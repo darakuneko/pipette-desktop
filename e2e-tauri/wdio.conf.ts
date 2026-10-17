@@ -67,7 +67,10 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   },
 
   async afterSession() {
-    await stopDriver({ keepUserData: sessionFailed })
-    await stopSyncHarness()
+    try {
+      await stopDriver({ keepUserData: sessionFailed })
+    } finally {
+      await stopSyncHarness()
+    }
   },
 }

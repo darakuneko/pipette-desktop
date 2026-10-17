@@ -12,6 +12,7 @@
 import { browser } from '@wdio/globals'
 import { fakeDriveEnv, startFakeDrive, type FakeDrive } from '../../scripts/fake-drive/server'
 import type { Fault } from '../../scripts/fake-drive/drive-state'
+import { invokeCommand } from './app'
 import { retireDriver, startDriver } from './driver'
 
 /** The variables a sync session cannot start without, and the value each
@@ -52,13 +53,34 @@ export function fakeDrive(): FakeDrive {
 export async function startSyncDriver(): Promise<void> {
   if (drive) throw new Error('the fake Drive is already running')
   drive = await startFakeDrive()
-  syncEnv = {
-    ...fakeDriveEnv(drive.url),
-    PIPETTE_DEV_KEYSTORE: 'file',
-    PIPETTE_DEV_SUPPRESS_BROWSER: '1',
+  try {
+    syncEnv = {
+      ...fakeDriveEnv(drive.url),
+      PIPETTE_DEV_KEYSTORE: 'file',
+      PIPETTE_DEV_SUPPRESS_BROWSER: '1',
+    }
+    assertSyncEnv(syncEnv)
+    await startDriver(syncEnv)
+  } catch (err) {
+    // afterSession does not run for a session that never started.
+    await stopSyncHarness()
+    throw err
   }
-  assertSyncEnv(syncEnv)
-  await startDriver(syncEnv)
+}
+
+/** Throws unless the running app has the development tools. Only their
+ *  build reads the endpoint variables; any other build would sync with the
+ *  real Google endpoints, so a sync spec checks this before it signs in. */
+export async function assertDevToolsBuild(): Promise<void> {
+  let state: unknown
+  try {
+    state = await invokeCommand<unknown>('dev_sync_state')
+  } catch (err) {
+    throw new Error(`the app has no development tools (dev_sync_state: ${String(err)}); the sync spec stops here`)
+  }
+  if (typeof state !== 'object' || state === null || !('workRunning' in state)) {
+    throw new Error(`dev_sync_state answered ${JSON.stringify(state)}; the sync spec stops here`)
+  }
 }
 
 /** Stops the fake Drive, if it runs. */
@@ -83,6 +105,7 @@ export async function switchMachine(): Promise<void> {
   await retireDriver()
   await startDriver(syncEnv)
   await browser.reloadSession()
+  await assertDevToolsBuild()
 }
 
 /** Makes the next requests of the fake Drive fail, through its control

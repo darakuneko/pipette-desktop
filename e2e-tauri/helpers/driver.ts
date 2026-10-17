@@ -57,7 +57,7 @@ process.once('exit', () => {
   for (const dir of retiredUserDataDirs.splice(0)) rmSync(dir, { recursive: true, force: true })
   if (!session) return
   stopping = true
-  session.driver.kill()
+  session.driver.kill('SIGKILL')
   if (process.platform === 'linux') signalAll(sessionPids(session.userDataDir), 'SIGKILL')
   rmSync(session.userDataDir, { recursive: true, force: true })
 })
@@ -249,18 +249,54 @@ async function waitForPort(): Promise<void> {
  *  the userData directory of the session, or null when none ran. */
 async function endSession(): Promise<string | null> {
   const current = session
-  session = null
   if (!current) return null
   const { driver, userDataDir } = current
   stopping = true
-  // No pid: the spawn failed, and there is no process to wait for.
-  if (driver.pid !== undefined && driver.exitCode === null && driver.signalCode === null) {
-    const exited = new Promise((r) => driver.once('exit', r))
-    driver.kill()
-    await exited
+  // The session stays tracked until its processes are gone, so the exit
+  // handler still finds them if the worker exits meanwhile.
+  try {
+    await stopDriverProcess(driver)
+  } finally {
+    if (process.platform === 'linux') await killLeftoverProcesses(userDataDir)
+    session = null
   }
-  if (process.platform === 'linux') await killLeftoverProcesses(userDataDir)
   return userDataDir
+}
+
+const DRIVER_TERM_WAIT_MS = 5_000
+const DRIVER_KILL_WAIT_MS = 5_000
+
+/** Whether `child` has exited. */
+function hasExited(child: ChildProcess): boolean {
+  return child.exitCode !== null || child.signalCode !== null
+}
+
+/** Resolves once `child` has exited, or after `timeoutMs`. */
+function waitForExit(child: ChildProcess, timeoutMs: number): Promise<void> {
+  if (hasExited(child)) return Promise.resolve()
+  return new Promise((resolvePromise) => {
+    const timer = setTimeout(done, timeoutMs)
+    function done(): void {
+      clearTimeout(timer)
+      child.off('exit', done)
+      resolvePromise()
+    }
+    child.once('exit', done)
+  })
+}
+
+/** SIGTERM to tauri-driver, then SIGKILL when it has not exited within
+ *  {@link DRIVER_TERM_WAIT_MS}. */
+async function stopDriverProcess(driver: ChildProcess): Promise<void> {
+  // No pid: the spawn failed, and there is no process to wait for.
+  if (driver.pid === undefined || hasExited(driver)) return
+  driver.kill('SIGTERM')
+  await waitForExit(driver, DRIVER_TERM_WAIT_MS)
+  if (hasExited(driver)) return
+  console.error(`tauri-driver (pid ${driver.pid}) did not exit on SIGTERM; sending SIGKILL`)
+  driver.kill('SIGKILL')
+  await waitForExit(driver, DRIVER_KILL_WAIT_MS)
+  if (!hasExited(driver)) console.error(`tauri-driver (pid ${driver.pid}) is still running after SIGKILL`)
 }
 
 /** Ends the running session as {@link stopDriver} does, and keeps its
