@@ -3,8 +3,7 @@
 //! fake Hub (scripts/fake-hub/conformance-cases.json, whose "format" lines
 //! describe the steps; scripts/fake-hub/conformance-runner.ts runs them
 //! over HTTP). The cases are read from the repository, or from the file
-//! `PIPETTE_HUB_CONFORMANCE_CASES` names; without either the test has
-//! nothing to run.
+//! `PIPETTE_HUB_CONFORMANCE_CASES` names.
 
 // Test helpers outside #[test] functions panic on a broken case.
 #![allow(clippy::unwrap_used)]
@@ -18,13 +17,13 @@ use pipette_net::{HttpRequest, HttpRequester, Method};
 
 type Saved = Vec<(String, Value)>;
 
-fn cases_path() -> Option<PathBuf> {
-    if let Some(path) = std::env::var_os("PIPETTE_HUB_CONFORMANCE_CASES") {
-        return Some(PathBuf::from(path));
+fn cases_path() -> PathBuf {
+    match std::env::var_os("PIPETTE_HUB_CONFORMANCE_CASES") {
+        Some(path) => PathBuf::from(path),
+        None => {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../scripts/fake-hub/conformance-cases.json")
+        }
     }
-    let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../scripts/fake-hub/conformance-cases.json");
-    path.exists().then_some(path)
 }
 
 fn get<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
@@ -393,13 +392,12 @@ async fn run_case(hub: &FakeHub, case: &Value, templates: &Value) -> Result<(), 
 
 #[tokio::test]
 async fn the_in_memory_hub_passes_the_conformance_cases() {
-    let Some(path) = cases_path() else {
-        eprintln!("no conformance cases (scripts/fake-hub/conformance-cases.json); nothing to run");
-        return;
-    };
-    let file = parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let path = cases_path();
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| panic!("{}: {err}", path.display()));
+    let file = parse(&text).unwrap();
     let templates = get(&file, "templates").cloned().unwrap();
     let Some(Value::Array(cases)) = get(&file, "cases") else { panic!("no cases") };
+    assert_eq!(cases.len(), 12);
     let mut failures = Vec::new();
     for case in cases {
         let hub = FakeHub::new();
