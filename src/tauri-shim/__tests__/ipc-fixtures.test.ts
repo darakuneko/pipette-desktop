@@ -28,6 +28,11 @@ import { keyLabelHubApi } from '../api/key-label-hub'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
+import type {
+  HubPrivateUploadFavoritePostParams,
+  HubUpdateFavoritePostParams,
+  HubUploadFavoritePostParams,
+} from '../../shared/types/hub'
 import type { I18nPackImportApplyOptions } from '../../shared/types/i18n-store'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store'
@@ -264,6 +269,16 @@ const CALLERS: Record<string, Caller> = {
   ...queryCallers((shim) => shim.keyLabelHub.keyLabelHubApi, keyLabelHubApi),
   'hub-favorite.favoriteEntry': {
     run: ({ hubFavorite }, [type, entryId]) => hubFavorite.favoriteEntry(type as FavoriteType, entryId as string),
+  },
+  'hub-favorite.uploadFavorite': {
+    run: ({ hubFavorite }, [params, json]) => hubFavorite.uploadFavorite(params as HubUploadFavoritePostParams, json as string),
+  },
+  'hub-favorite.updateFavorite': {
+    run: ({ hubFavorite }, [params, json]) => hubFavorite.updateFavorite(params as HubUpdateFavoritePostParams, json as string),
+  },
+  'hub-favorite.uploadPrivateFavorite': {
+    run: ({ hubFavorite }, [params, json]) =>
+      hubFavorite.uploadPrivateFavorite(params as HubPrivateUploadFavoritePostParams, json as string),
   },
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
   loadLayout: {

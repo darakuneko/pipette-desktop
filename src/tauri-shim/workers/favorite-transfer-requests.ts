@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // What the favorite transfer worker (favorite-transfer.worker.ts) does for
 // each request: the keycode conversion and file building of the favorite
-// export and import (src/shared/favorite-transfer.ts), on the worker's own
-// copy of the keycode tables. Every answer is a value; an exception is
+// export and import (src/shared/favorite-transfer.ts) and of a favorite
+// post's export JSON (`buildFavoriteExportJson` of
+// src/main/hub/hub-ipc-favorite.ts), on the worker's own copy of the keycode
+// tables. Every answer is a value; an exception is
 // answered as `{ error: String(err) }`, the text the Electron handlers
 // answer for it.
 
+import { buildFavExportFile } from '../../shared/favorite-data'
 import {
   buildCurrentFavoriteExport,
   buildFavoriteExport,
   favoriteDataForCurrent,
+  favoriteExportCategories,
+  favoriteExportEntry,
   planFavoriteImport,
   readFavoriteExportFile,
   type FavoriteExportBody,
@@ -27,12 +32,16 @@ export type FavoriteTransferRequest =
   | { op: 'importToCurrent'; scope: FavoriteType; raw: string }
   /** The batches to store for the export file `raw`. */
   | { op: 'import'; raw: string }
+  /** The export JSON a Hub post of the stored favorite `entry` carries
+   *  (`hub_favorite_entry` read it). */
+  | { op: 'hubExport'; scope: FavoriteType; vialProtocol: number; entry: FavoriteExportBody }
 
 export interface FavoriteTransferResults {
   export: FavoriteExportBuild
   exportCurrent: FavoriteExportBuild
   importToCurrent: { data: unknown } | { error: string }
   import: { plan: FavoriteImportPlan } | { error: string }
+  hubExport: { json: string } | { error: string }
 }
 
 export type FavoriteTransferResult<R extends FavoriteTransferRequest> = FavoriteTransferResults[R['op']]
@@ -53,6 +62,15 @@ function answer(request: FavoriteTransferRequest): FavoriteTransferResults[Favor
     case 'import': {
       const file = readFavoriteExportFile(request.raw)
       return file ? { plan: planFavoriteImport(file) } : INVALID_FILE
+    }
+    case 'hubExport': {
+      // One entry, unindented: `JSON.stringify(exportFile)` of the Electron
+      // handler. The backend has checked that the body has `data`.
+      const { scope, vialProtocol, entry } = request
+      const exported = favoriteExportEntry(scope, vialProtocol, entry.label, entry.savedAt, entry.body)
+      if (!exported) return { error: 'Entry data is empty' }
+      const file = buildFavExportFile(vialProtocol, favoriteExportCategories(scope, [exported]), now.toISOString())
+      return { json: JSON.stringify(file) }
     }
   }
 }
