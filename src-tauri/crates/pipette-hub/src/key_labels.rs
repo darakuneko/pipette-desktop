@@ -42,6 +42,8 @@ pub const HUB_ERROR_KEY_LABEL_DUPLICATE: &str = "KEY_LABEL_DUPLICATE";
 const DEFAULT_PER_PAGE: f64 = 20.0;
 /// The largest page size the list asks for.
 const MAX_PER_PAGE: f64 = 100.0;
+/// `Number.MAX_SAFE_INTEGER`, the largest page the list asks for.
+const MAX_PAGE: f64 = 9_007_199_254_740_991.0;
 
 /// `HubKeyLabelInput`: the body of an upload or update. `None` leaves a
 /// field out, as `JSON.stringify` leaves out `undefined`.
@@ -178,7 +180,7 @@ fn input_of(record: &Object) -> KeyLabelInput {
 /// when not given, within 1 to 100) the renderer asks for.
 pub async fn list(http: &HubHttp, params: Option<&Value>) -> String {
     let param = |key: &str| params.and_then(Value::as_object).and_then(|object| object.get(key));
-    let page = clamp_int(number_param(param("page")), 1.0, 9_007_199_254_740_991.0).unwrap_or(1.0);
+    let page = clamp_int(number_param(param("page")), 1.0, MAX_PAGE).unwrap_or(1.0);
     let per_page = clamp_int(number_param(param("perPage")), 1.0, MAX_PER_PAGE).unwrap_or(DEFAULT_PER_PAGE);
     // `query.q && query.q.trim()`.
     let q = match param("q") {
