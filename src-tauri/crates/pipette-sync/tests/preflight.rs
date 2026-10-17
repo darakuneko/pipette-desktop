@@ -21,14 +21,16 @@ use preflight_harness::{Harness, Stored};
 
 const OWN: &str = "sync-format-v2.json";
 
+/// Waits for work on other tasks or blocking threads (the key store and
+/// the key derivation run on blocking threads, which a slow machine may
+/// not schedule within any fixed number of yields).
 async fn wait_until(condition: impl Fn() -> bool) {
-    for _ in 0..1000 {
-        if condition() {
-            return;
+    let waited = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+        while !condition() {
+            tokio::task::yield_now().await;
         }
-        tokio::task::yield_now().await;
-    }
-    panic!("the condition never held");
+    });
+    waited.await.expect("the condition never held");
 }
 
 fn creates(events: &[String]) -> usize {
@@ -213,18 +215,6 @@ async fn the_credentials_need_the_sign_in_then_the_password() {
     );
 }
 
-/// [`wait_until`] for a condition that waits on work off the runtime (the
-/// key derivation, the file reads): yields until it holds, failing after a
-/// minute.
-async fn wait_for_blocking_work(condition: impl Fn() -> bool) {
-    let waited = tokio::time::timeout(std::time::Duration::from_secs(60), async {
-        while !condition() {
-            tokio::task::yield_now().await;
-        }
-    });
-    waited.await.expect("the condition never held");
-}
-
 fn password_check_creates(events: &[String]) -> usize {
     events.iter().filter(|event| *event == "create:password-check.enc").count()
 }
@@ -242,7 +232,7 @@ async fn a_sign_in_change_before_the_upload_sends_no_password_check() {
     let preflight = Arc::clone(&h.preflight);
     let validate =
         tokio::spawn(async move { preflight.validate_password_check("pw", &[], generation).await });
-    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    wait_until(|| h.drive.held() == 1).await;
     h.preflight.forget_account();
     h.drive.open_gate();
 
@@ -261,7 +251,7 @@ async fn a_password_check_uploaded_across_a_sign_in_change_is_deleted_and_not_re
     let preflight = Arc::clone(&h.preflight);
     let validate =
         tokio::spawn(async move { preflight.validate_password_check("pw", &[], generation).await });
-    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    wait_until(|| h.drive.held() == 1).await;
     h.preflight.forget_account();
     h.drive.open_gate();
 
@@ -285,7 +275,7 @@ async fn a_set_across_a_sign_in_change_creates_nothing_and_keeps_no_password() {
     h.drive.hold(DriveOp::List, Some(None));
     let preflight = Arc::clone(&h.preflight);
     let set = tokio::spawn(async move { preflight.set_password_and_validate("pw").await });
-    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    wait_until(|| h.drive.held() == 1).await;
     h.preflight.forget_account();
     h.drive.open_gate();
 
@@ -302,7 +292,7 @@ async fn a_validation_after_a_finished_creation_opens_it_instead_of_creating_ano
     h.drive.hold(DriveOp::Create, None);
     let (a, b) = (Arc::clone(&h.preflight), Arc::clone(&h.preflight));
     let first = tokio::spawn(async move { a.validate_password_check("pw", &[], generation).await });
-    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    wait_until(|| h.drive.held() == 1).await;
     // Arrives while the creation is in flight or once it ended: it joins
     // the run or opens the created file, and never creates another.
     let joined = tokio::spawn(async move { b.validate_password_check("pw", &[], generation).await });
@@ -328,7 +318,7 @@ async fn sets_at_once_store_and_create_only_the_first_password() {
     h.drive.hold(DriveOp::List, Some(None));
     let (a, b) = (Arc::clone(&h.preflight), Arc::clone(&h.preflight));
     let first = tokio::spawn(async move { a.set_password_and_validate("a").await });
-    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    wait_until(|| h.drive.held() == 1).await;
     let second = tokio::spawn(async move { b.set_password_and_validate("b").await });
     for _ in 0..100 {
         tokio::task::yield_now().await;
@@ -351,7 +341,7 @@ async fn a_replace_validated_before_a_sign_in_change_stores_nothing() {
     h.drive.hold(DriveOp::List, Some(None));
     let preflight = Arc::clone(&h.preflight);
     let replace = tokio::spawn(async move { preflight.replace_password_and_validate("new").await });
-    wait_for_blocking_work(|| h.drive.held() == 1).await;
+    wait_until(|| h.drive.held() == 1).await;
     h.preflight.forget_account();
     h.drive.open_gate();
 

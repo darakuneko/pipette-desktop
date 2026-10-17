@@ -19,6 +19,17 @@ const QUIT_TIMEOUT_MS = 40_000
 
 type ChainablePromiseElement = ReturnType<typeof $>
 
+export const tid = (id: string): string => `[data-testid="${id}"]`
+
+/** Clicks `selector` from the page: a tooltip of the previous control can
+ *  still cover it, which a WebDriver click reports as intercepted. */
+export async function clickInPage(selector: string): Promise<void> {
+  await $(selector).waitForExist()
+  await browser.execute((sel: string) => {
+    ;(document.querySelector(sel) as HTMLElement).click()
+  }, selector)
+}
+
 /** Calls a backend command from the page through the IPC entry Tauri
  *  injects into every window (`window.__TAURI_INTERNALS__`, present with
  *  `withGlobalTauri: false` too), the same entry `@tauri-apps/api` uses. The
@@ -243,12 +254,36 @@ async function overlaySettledOpen(): Promise<boolean> {
   })
 }
 
+const UNCOVERED_TIMEOUT_MS = 60_000
+
+/** Waits until the element `selector` is the topmost element at its centre:
+ *  nothing covers it (the connecting overlay, while the keyboard's data
+ *  downloads on connect, covers the whole window), so a click reaches it. */
+export async function waitForUncovered(selector: string): Promise<void> {
+  await browser.waitUntil(
+    () =>
+      browser.execute((sel: string) => {
+        const element = document.querySelector(sel)
+        if (!element) return false
+        const box = element.getBoundingClientRect()
+        const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+        return top !== null && (top === element || element.contains(top))
+      }, selector),
+    { timeout: UNCOVERED_TIMEOUT_MS, timeoutMsg: `${selector} stayed covered by another element` },
+  )
+}
+
+const OVERLAY_TOGGLE_SELECTOR = 'button[aria-controls="keycodes-overlay-panel"]'
+
 /** Opens the `tab` tab of the keycodes overlay (`tools`, or `data` for the
  *  Import / Save tab) and waits until the overlay has stopped sliding. With
  *  one tab the panel draws no tab bar, and that tab is already showing. */
 export async function openOverlayTab(tab: 'tools' | 'data'): Promise<void> {
-  const toggle = $('button[aria-controls="keycodes-overlay-panel"]')
-  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  const toggle = $(OVERLAY_TOGGLE_SELECTOR)
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
+    await waitForUncovered(OVERLAY_TOGGLE_SELECTOR)
+    await toggle.click()
+  }
   await browser.waitUntil(overlaySettledOpen, { timeoutMsg: 'the keycodes overlay did not open' })
   const button = $(`[data-testid="overlay-tab-${tab}"]`)
   if ((await button.isExisting()) && (await button.getAttribute('aria-selected')) !== 'true') {

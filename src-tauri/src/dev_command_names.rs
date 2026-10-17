@@ -21,6 +21,8 @@ pub const DEV_COMMANDS: &[&str] = &[
     "dev_http_queued",
     "dev_typing_analytics_machine_hash",
     "dev_sync_last_auth_url",
+    "dev_sync_run_poll_now",
+    "dev_sync_state",
 ];
 
 /// The development commands that exist on Linux only.

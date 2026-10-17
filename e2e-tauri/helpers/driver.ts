@@ -38,20 +38,26 @@ const DRIVER_COMMAND = process.env.TAURI_DRIVER ?? 'tauri-driver'
 export interface DriverSession {
   driver: ChildProcess
   userDataDir: string
+  /** The variables the session's app gets on top of {@link appEnv}'s. */
+  env: Record<string, string>
 }
 
 let session: DriverSession | null = null
+/** The userData directories of the sessions {@link retireDriver} ended
+ *  earlier in this worker, kept until {@link stopDriver} decides on them. */
+const retiredUserDataDirs: string[] = []
 /** Set while tauri-driver is being stopped on purpose, so its exit is not
  *  reported as a crash. */
 let stopping = false
 
 // afterSession does not run when the session never started, so the worker
 // also stops tauri-driver, kills the session's other processes and removes
-// the userData directory when it exits.
+// the userData directories when it exits.
 process.once('exit', () => {
+  for (const dir of retiredUserDataDirs.splice(0)) rmSync(dir, { recursive: true, force: true })
   if (!session) return
   stopping = true
-  session.driver.kill()
+  session.driver.kill('SIGKILL')
   if (process.platform === 'linux') signalAll(sessionPids(session.userDataDir), 'SIGKILL')
   rmSync(session.userDataDir, { recursive: true, force: true })
 })
@@ -156,9 +162,10 @@ export const E2E_HUB_URL = 'http://127.0.0.1:9'
  *  the sync's master key in a file of that directory
  *  (`PIPETTE_DEV_KEYSTORE=file`, read by the development tools' build), so
  *  a session never reaches the OS key store of the developer's desktop. */
-function appEnv(userDataDir: string): NodeJS.ProcessEnv {
+function appEnv(userDataDir: string, extra: Record<string, string>): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    ...extra,
     PIPETTE_VIRTUAL_DEVICE: 'only',
     PIPETTE_USER_DATA_DIR: userDataDir,
     PIPETTE_HUB_URL: E2E_HUB_URL,
@@ -178,7 +185,10 @@ export interface LaunchResult {
  *  process still running after `timeoutMs` is killed. */
 export function launchAppAgain(timeoutMs: number): Promise<LaunchResult> {
   if (!session) throw new Error('no session is running')
-  const child = spawn(APP_BINARY, [], { env: appEnv(session.userDataDir), stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(APP_BINARY, [], {
+    env: appEnv(session.userDataDir, session.env),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
   let output = ''
   child.stdout.on('data', (chunk) => { output += chunk })
   child.stderr.on('data', (chunk) => { output += chunk })
@@ -196,19 +206,20 @@ export function launchAppAgain(timeoutMs: number): Promise<LaunchResult> {
 }
 
 /** Starts tauri-driver for one session with a fresh userData directory, and
- *  resolves once it accepts connections. */
-export async function startDriver(): Promise<DriverSession> {
+ *  resolves once it accepts connections. The session's app gets `env` on
+ *  top of the variables every session sets. */
+export async function startDriver(env: Record<string, string> = {}): Promise<DriverSession> {
   if (session) throw new Error('tauri-driver is already running')
   const userDataDir = mkdtempSync(join(tmpdir(), 'pipette-e2e-tauri-'))
   stopping = false
   const driver = spawn(DRIVER_COMMAND, ['--port', String(DRIVER_PORT), '--native-port', String(NATIVE_DRIVER_PORT)], {
-    env: appEnv(userDataDir),
+    env: appEnv(userDataDir, env),
     stdio: ['ignore', 'inherit', 'inherit'],
   })
   driver.on('exit', (code, signal) => {
     if (!stopping) console.error(`tauri-driver exited unexpectedly (code ${code}, signal ${signal})`)
   })
-  session = { driver, userDataDir }
+  session = { driver, userDataDir, env }
   // Settles only on failure: tauri-driver could not be started or exited.
   const failed = new Promise<never>((_, reject) => {
     driver.once('error', (err) => reject(new Error(`tauri-driver could not be started (${DRIVER_COMMAND}): ${err.message}`)))
@@ -234,28 +245,83 @@ async function waitForPort(): Promise<void> {
   throw new Error(`tauri-driver did not accept connections within ${DRIVER_READY_TIMEOUT_MS} ms`)
 }
 
-/** Stops tauri-driver, ends the session's processes that outlive it, and
- *  removes the userData directory. With `keepUserData`
- *  the directory stays, and the app logs in it are printed for the failure
- *  report. */
-export async function stopDriver(opts: { keepUserData: boolean }): Promise<void> {
+/** Stops tauri-driver and ends the session's processes that outlive it;
+ *  the userData directory of the session, or null when none ran. */
+async function endSession(): Promise<string | null> {
   const current = session
-  session = null
-  if (!current) return
+  if (!current) return null
   const { driver, userDataDir } = current
   stopping = true
-  // No pid: the spawn failed, and there is no process to wait for.
-  if (driver.pid !== undefined && driver.exitCode === null && driver.signalCode === null) {
-    const exited = new Promise((r) => driver.once('exit', r))
-    driver.kill()
-    await exited
+  // The session stays tracked until its processes are gone, so the exit
+  // handler still finds them if the worker exits meanwhile.
+  try {
+    await stopDriverProcess(driver)
+  } finally {
+    if (process.platform === 'linux') await killLeftoverProcesses(userDataDir)
+    session = null
   }
-  if (process.platform === 'linux') await killLeftoverProcesses(userDataDir)
-  if (opts.keepUserData) {
-    console.error(`userData of the failed session kept at ${userDataDir}`)
-    printLogs(join(userDataDir, 'logs'))
-  } else {
-    rmSync(userDataDir, { recursive: true, force: true })
+  return userDataDir
+}
+
+const DRIVER_TERM_WAIT_MS = 5_000
+const DRIVER_KILL_WAIT_MS = 5_000
+
+/** Whether `child` has exited. */
+function hasExited(child: ChildProcess): boolean {
+  return child.exitCode !== null || child.signalCode !== null
+}
+
+/** Resolves once `child` has exited, or after `timeoutMs`. */
+function waitForExit(child: ChildProcess, timeoutMs: number): Promise<void> {
+  if (hasExited(child)) return Promise.resolve()
+  return new Promise((resolvePromise) => {
+    const timer = setTimeout(done, timeoutMs)
+    function done(): void {
+      clearTimeout(timer)
+      child.off('exit', done)
+      resolvePromise()
+    }
+    child.once('exit', done)
+  })
+}
+
+/** SIGTERM to tauri-driver, then SIGKILL when it has not exited within
+ *  {@link DRIVER_TERM_WAIT_MS}. */
+async function stopDriverProcess(driver: ChildProcess): Promise<void> {
+  // No pid: the spawn failed, and there is no process to wait for.
+  if (driver.pid === undefined || hasExited(driver)) return
+  driver.kill('SIGTERM')
+  await waitForExit(driver, DRIVER_TERM_WAIT_MS)
+  if (hasExited(driver)) return
+  console.error(`tauri-driver (pid ${driver.pid}) did not exit on SIGTERM; sending SIGKILL`)
+  driver.kill('SIGKILL')
+  await waitForExit(driver, DRIVER_KILL_WAIT_MS)
+  if (!hasExited(driver)) console.error(`tauri-driver (pid ${driver.pid}) is still running after SIGKILL`)
+}
+
+/** Ends the running session as {@link stopDriver} does, and keeps its
+ *  userData directory until {@link stopDriver} ends the last session of the
+ *  worker, so a spec can go on with another tauri-driver and a fresh
+ *  userData directory ({@link startDriver}). */
+export async function retireDriver(): Promise<void> {
+  const userDataDir = await endSession()
+  if (userDataDir !== null) retiredUserDataDirs.push(userDataDir)
+}
+
+/** Stops tauri-driver, ends the session's processes that outlive it, and
+ *  removes the userData directory, and those of the sessions
+ *  {@link retireDriver} ended. With `keepUserData` the directories stay,
+ *  and the app logs in them are printed for the failure report. */
+export async function stopDriver(opts: { keepUserData: boolean }): Promise<void> {
+  const current = await endSession()
+  const dirs = [...retiredUserDataDirs.splice(0), ...(current === null ? [] : [current])]
+  for (const userDataDir of dirs) {
+    if (opts.keepUserData) {
+      console.error(`userData of the failed session kept at ${userDataDir}`)
+      printLogs(join(userDataDir, 'logs'))
+    } else {
+      rmSync(userDataDir, { recursive: true, force: true })
+    }
   }
 }
 

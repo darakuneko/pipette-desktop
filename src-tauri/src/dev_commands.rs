@@ -16,6 +16,8 @@ use crate::dialog::SystemDialogs;
 #[cfg(feature = "dev-tools")]
 mod sync_auth;
 #[cfg(feature = "dev-tools")]
+mod sync_triggers;
+#[cfg(feature = "dev-tools")]
 mod tools;
 
 /// Installs `app`, the handler of the app commands, and `on_page_load`, the

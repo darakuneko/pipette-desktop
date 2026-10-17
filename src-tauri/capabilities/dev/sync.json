@@ -1,7 +1,7 @@
 {
   "$schema": "../../gen/schemas/desktop-schema.json",
   "identifier": "dev-sync",
-  "description": "Builds with the dev-tools feature only: tells the authorization URL the browserless sign-in (PIPETTE_DEV_SUPPRESS_BROWSER=1) recorded, so the e2e tests play the browser against the loopback redirect.",
+  "description": "Builds with the dev-tools feature only: tells the authorization URL the browserless sign-in (PIPETTE_DEV_SUPPRESS_BROWSER=1) recorded, so the e2e tests play the browser against the loopback redirect, runs a poll pass on demand and tells whether sync work runs or a flush is due.",
   "windows": ["main"],
-  "permissions": ["allow-dev-sync-last-auth-url"]
+  "permissions": ["allow-dev-sync-last-auth-url", "allow-dev-sync-run-poll-now", "allow-dev-sync-state"]
 }
