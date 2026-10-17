@@ -68,8 +68,22 @@ impl<F: Fn(&str) -> Result<HttpResponse, HttpError> + Send + Sync> HttpClient fo
 pub enum Method {
     Get,
     Post,
+    Put,
     Patch,
     Delete,
+}
+
+impl Method {
+    /// The method's name on the wire.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Method::Get => "GET",
+            Method::Post => "POST",
+            Method::Put => "PUT",
+            Method::Patch => "PATCH",
+            Method::Delete => "DELETE",
+        }
+    }
 }
 
 /// A request with a method, headers and a body.
@@ -196,6 +210,12 @@ enum Destinations {
     /// 127.0.0.1 and ::1 only, written as IP addresses: no host name, so
     /// no lookup decides where a request goes.
     Loopback,
+}
+
+/// Whether `url` parses as a URL whose host is 127.0.0.1 or ::1, written
+/// as an IP address (no host name, so no lookup decides where it goes).
+pub fn is_loopback_url(url: &str) -> bool {
+    reqwest::Url::parse(url).is_ok_and(|parsed| is_loopback(&parsed))
 }
 
 /// Whether `url` is on 127.0.0.1 or ::1.
@@ -331,6 +351,7 @@ impl ReqwestClient {
         let method = match request.method {
             Method::Get => reqwest::Method::GET,
             Method::Post => reqwest::Method::POST,
+            Method::Put => reqwest::Method::PUT,
             Method::Patch => reqwest::Method::PATCH,
             Method::Delete => reqwest::Method::DELETE,
         };
@@ -504,7 +525,12 @@ mod tests {
             "file:///tmp/x",
         ] {
             assert!(!is_loopback(&url(other)), "{other}");
+            assert!(!is_loopback_url(other), "{other}");
         }
+        assert!(is_loopback_url("http://127.0.0.1:9"));
+        assert!(is_loopback_url("https://[::1]/a"));
+        assert!(!is_loopback_url("not a url"));
+        assert!(!is_loopback_url(""));
     }
 
     #[test]

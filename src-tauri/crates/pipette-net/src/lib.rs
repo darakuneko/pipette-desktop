@@ -26,7 +26,7 @@ mod hub;
 
 pub use client::{
     ERROR_BODY_LIMIT, Http, HttpClient, HttpError, HttpFuture, HttpReply, HttpRequest, HttpRequester,
-    HttpResponse, Limits, Method, RequestFuture, ReqwestClient,
+    HttpResponse, Limits, Method, RequestFuture, ReqwestClient, is_loopback_url,
 };
 #[cfg(feature = "url-override")]
 pub use google::{
