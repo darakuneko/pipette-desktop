@@ -56,6 +56,29 @@ impl Script {
     }
 }
 
+/// The body of a multipart request with its boundary written `{boundary}`:
+/// each attempt takes the boundary from the clock, so two attempts a
+/// millisecond apart differ only there.
+fn without_boundary(request: &HttpRequest) -> Vec<u8> {
+    let content_type = request
+        .headers
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
+        .map(|(_, value)| value.as_str())
+        .expect("a content type");
+    let boundary = content_type.split_once("boundary=").expect("a boundary").1.as_bytes();
+    let body = request.body.as_deref().expect("a body");
+    let mut out = Vec::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(at) = rest.windows(boundary.len()).position(|window| window == boundary) {
+        out.extend_from_slice(&rest[..at]);
+        out.extend_from_slice(b"{boundary}");
+        rest = &rest[at + boundary.len()..];
+    }
+    out.extend_from_slice(rest);
+    out
+}
+
 fn params() -> KeymapPostParams<'static> {
     KeymapPostParams {
         title: Some("  My keymap  "),
@@ -264,7 +287,7 @@ async fn a_401_sends_the_same_body_again_with_the_new_token() {
     assert_eq!(text(&upload_post(&token, params()).await), r#"{"success":true,"postId":"post-1"}"#);
     let seen = script.seen.lock().unwrap();
     let (first, second) = (&seen[1], &seen[3]);
-    assert_eq!(first.body, second.body);
+    assert_eq!(without_boundary(first), without_boundary(second));
     assert_eq!(first.headers[0].1, "Bearer jwt-1");
     assert_eq!(second.headers[0].1, "Bearer jwt-2");
 }
