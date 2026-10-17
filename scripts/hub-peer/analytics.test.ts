@@ -114,28 +114,22 @@ async function electronExport(params: Params): Promise<Record<string, unknown>> 
 
 describe('the Analyze post export of both builds on a copy of a userData', () => {
   it('builds the same export for every saved filter', async () => {
+    const golden = real === null
+      ? (JSON.parse(readFileSync(hubFixturePath('ts_hub_analytics_export.json'), 'utf8')) as Golden)
+      : null
     let source: string
-    let seed: string | null = null
-    let params: Params[]
-    if (real !== null) {
-      source = real
+    if (golden === null) {
+      source = real as string
     } else {
-      const golden = JSON.parse(readFileSync(hubFixturePath('ts_hub_analytics_export.json'), 'utf8')) as Golden
       source = assertSafePath(mkdtempSync(join(tmpdir(), 'pipette-hub-peer-source-')))
       temp.push(source)
       writeTree(source, golden.tree)
-      seed = hubFixturePath('ts_hub_analytics_export_seed.jsonl')
     }
+    const seed = golden === null ? null : hubFixturePath('ts_hub_analytics_export_seed.jsonl')
     const electron = electronCopy(source)
     const rust = rustCopy(source)
-    if (real !== null) {
-      ownHash.value = await machineHashFor(electron)
-      params = filterParams(electron)
-    } else {
-      const golden = JSON.parse(readFileSync(hubFixturePath('ts_hub_analytics_export.json'), 'utf8')) as Golden
-      ownHash.value = golden.ownHash
-      params = golden.cases.map((c) => c.params)
-    }
+    ownHash.value = golden === null ? await machineHashFor(electron) : golden.ownHash
+    const params = golden === null ? filterParams(electron) : golden.cases.map((c) => c.params)
 
     const dbDir = assertSafePath(mkdtempSync(join(tmpdir(), 'pipette-hub-peer-cache-')))
     temp.push(dbDir)
