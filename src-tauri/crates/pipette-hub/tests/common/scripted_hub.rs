@@ -47,6 +47,8 @@ pub struct Script {
     rules: Mutex<Vec<Rule>>,
     /// Every request so far, as [`request_line`] writes it.
     pub seen: Mutex<Vec<String>>,
+    /// Every request so far, as it was sent.
+    pub sent: Mutex<Vec<HttpRequest>>,
 }
 
 impl Script {
@@ -58,6 +60,7 @@ impl Script {
         let (path, query) = rest.split_once('?').unwrap_or((rest, ""));
         let body = request.body.as_ref().map(|body| String::from_utf8_lossy(body).into_owned());
         self.seen.lock().unwrap().push(request_line(&request, &self.base));
+        self.sent.lock().unwrap().push(request.clone());
         let response = {
             let mut rules = self.rules.lock().unwrap();
             let rule = rules
@@ -105,6 +108,7 @@ pub fn scripted_hub(base: &str, now: f64, rules: &Value) -> ScriptedHub {
         base: base.to_owned(),
         rules: Mutex::new(array(rules).iter().map(Rule::of).collect()),
         seen: Mutex::new(Vec::new()),
+        sent: Mutex::new(Vec::new()),
     });
     let answering = Arc::clone(&script);
     let requester = move |request: HttpRequest| answering.answer(request);

@@ -2,5 +2,5 @@
   "extends": "./tsconfig.main.json",
   // The scripts/ globs must match the scripts/ entries in eslint.config.js.
   // lzma.d.ts types the 'lzma' package for the src/main files the generators import.
-  "include": ["scripts/*-fixtures/**/*.ts", "scripts/fixture-*.ts", "scripts/fake-drive/**/*.ts", "scripts/fake-hub/**/*.ts", "scripts/fake-server/**/*.ts", "scripts/sync-interop/**/*.ts", "src/preload/lzma.d.ts"]
+  "include": ["scripts/*-fixtures/**/*.ts", "scripts/fixture-*.ts", "scripts/fake-drive/**/*.ts", "scripts/fake-hub/**/*.ts", "scripts/fake-server/**/*.ts", "scripts/sync-interop/**/*.ts", "scripts/hub-peer/**/*.ts", "src/preload/lzma.d.ts"]
 }
