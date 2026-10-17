@@ -11,7 +11,7 @@ import { fakeDrive } from './sync-harness'
 
 /** Puts `value` into the input `selector` as React reads an edit: typed
  *  keys reach WebKitGTK's fields unreliably. */
-async function fillInput(selector: string, value: string): Promise<void> {
+export async function fillInput(selector: string, value: string): Promise<void> {
   await $(selector).waitForDisplayed()
   await browser.execute(
     (sel: string, text: string) => {
