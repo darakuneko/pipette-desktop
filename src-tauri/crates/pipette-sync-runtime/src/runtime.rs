@@ -38,6 +38,7 @@ use crate::remote_state::RemoteMemory;
 pub const RESET_BUSY_MESSAGE: &str = "sync.resetBusy";
 pub const DELETE_BUSY_MESSAGE: &str = "sync.deleteBusy";
 pub const IMPORT_BUSY_MESSAGE: &str = "sync.importBusy";
+pub const TRASH_BUSY_MESSAGE: &str = "sync.trashBusy";
 
 /// How long [`SyncRuntime::with_reset_lock_when_free`] waits for running
 /// sync work (`RESET_LOCK_WAIT_MS`).
