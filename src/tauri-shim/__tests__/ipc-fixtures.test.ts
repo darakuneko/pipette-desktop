@@ -252,6 +252,11 @@ const CALLERS: Record<string, Caller> = {
   ...queryCallers((shim) => shim.syncData.syncDataApi, syncDataApi),
   ...queryCallers((shim) => shim.syncReset.syncResetApi, syncResetApi),
   ...queryCallers((shim) => shim.hubAccount.hubAccountApi, hubAccountApi),
+  hubSetAuthDisplayName: {
+    run: ({ hubAccount }, [displayName]) =>
+      hubAccount.hubAccountApi.hubSetAuthDisplayName(displayName as string | null),
+    void: true,
+  },
   ...queryCallers((shim) => shim.hubPosts.hubPostsApi, hubPostsApi),
   ...queryCallers((shim) => shim.hubFavorite.hubFavoriteApi, hubFavoriteApi),
   ...queryCallers((shim) => shim.hubAnalytics.hubAnalyticsApi, hubAnalyticsApi),

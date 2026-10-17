@@ -4,7 +4,7 @@
     "args": [],
     "command": "hub_get_origin",
     "invokeArgs": {},
-    "response": null
+    "response": "https://pipette-hub-worker.keymaps.workers.dev"
   },
   {
     "member": "hubSetAuthDisplayName",
@@ -22,7 +22,10 @@
     "args": [],
     "command": "hub_fetch_auth_me",
     "invokeArgs": {},
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubPatchAuthMe",
@@ -33,6 +36,9 @@
     "invokeArgs": {
       "displayName": "Alice"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   }
 ]
