@@ -75,23 +75,56 @@ describe('the fake Hub', () => {
     expect(() => matchPattern('2026-01-01T00:00:00.000Z', '$hubStamp', saved, 'x')).toThrow(/\$hubStamp/)
   })
 
-  it('logs each request with its route, account and body, without tokens', async () => {
+  it('logs each request with its route, account and body, without credentials', async () => {
     const { data } = (await (await fetch(`${hub.url}/api/auth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id_token: 'test:alice@example.com' }),
     })).json()) as { data: { token: string } }
     await fetch(`${hub.url}/api/files/me?page=2`, { headers: { Authorization: `Bearer ${data.token}` } })
-    await fetch(`${hub.url}/api/nothing`)
+    await fetch(`${hub.url}/api/nothing?token=pt_v1_x&q=x`)
     expect(hub.requests).toEqual([
-      { method: 'POST', path: '/api/auth/token', query: {}, op: 'auth.token', account: null, contentType: 'application/json', body: { json: { id_token: 'test:alice@example.com' } } },
+      { method: 'POST', path: '/api/auth/token', query: {}, op: 'auth.token', account: null, contentType: 'application/json', body: { json: { id_token: '[redacted]' } } },
       { method: 'GET', path: '/api/files/me', query: { page: '2' }, op: 'files.me', account: 'alice@example.com', contentType: null, body: null },
-      { method: 'GET', path: '/api/nothing', query: {}, op: null, account: null, contentType: null, body: null },
+      { method: 'GET', path: '/api/nothing', query: { token: '[redacted]', q: 'x' }, op: null, account: null, contentType: null, body: null },
     ])
     expect(JSON.stringify(hub.requests)).not.toContain(data.token)
+    expect(JSON.stringify(hub.requests)).not.toContain('test:alice')
+    expect(JSON.stringify(hub.requests)).not.toContain('pt_v1_x')
     expect(await json('/__control/requests')).toEqual(hub.requests)
     await control('/__control/clear-requests')
     expect(hub.requests).toEqual([])
+  })
+
+  it('refuses a fault it could not apply', async () => {
+    for (const fault of [{ status: '429', count: 1 }, { status: 429, count: 0 }, { status: 429, count: 1.5 }, { status: 429, count: 1, only: 'files.upload' }, { status: 429, count: 1, retryAfter: 1 }]) {
+      const response = await fetch(`${hub.url}/__control/faults`, { method: 'POST', body: JSON.stringify(fault) })
+      expect(response.status, JSON.stringify(fault)).toBe(400)
+    }
+    expect((await fetch(`${hub.url}/api/key-labels`)).status).toBe(200)
+  })
+
+  it('reads uploaded JSON with a byte order mark as the Hub does', async () => {
+    const { data } = (await (await fetch(`${hub.url}/api/auth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: 'test:alice@example.com' }),
+    })).json()) as { data: { token: string } }
+    const pack = JSON.stringify({ version: 1, kind: 'i18n', exportedAt: '2026-01-01T00:00:00.000Z', pack: { name: 'Bom', version: '1.0.0' } })
+    const boundary = 'b'
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="json"; filename="p.json"\r\nContent-Type: application/json\r\n\r\n`),
+      Buffer.from([0xef, 0xbb, 0xbf]),
+      Buffer.from(`${pack}\r\n--${boundary}--\r\n`),
+    ])
+    const response = await fetch(`${hub.url}/api/i18n-packs`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${data.token}`, 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+      body,
+    })
+    expect(response.status).toBe(201)
+    const { data: created } = (await response.json()) as { data: { id: string } }
+    expect(await (await fetch(`${hub.url}/api/i18n-packs/${created.id}/download`)).text()).toBe(JSON.stringify(JSON.parse(pack), null, 2))
   })
 
   it('issues the same ids, stamps and JWTs on every run', async () => {

@@ -6,6 +6,7 @@
 // page parameters.
 
 import type { HubState, HubUser } from './hub-state'
+import { decodeUtf8 } from './hub-validate'
 
 export interface HubRequest {
   method: string
@@ -41,7 +42,7 @@ export function isAnswer(value: unknown): value is HubAnswer {
 /** The body as JSON; undefined when it does not parse. */
 export function readJson(req: HubRequest): { value: unknown } | undefined {
   try {
-    return { value: JSON.parse(req.body.toString('utf8')) as unknown }
+    return { value: JSON.parse(decodeUtf8(req.body)) as unknown }
   } catch {
     return undefined
   }

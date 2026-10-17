@@ -48,6 +48,19 @@ const ANALYTICS_ARRAY_FIELDS = [
   'bksMinute', 'bigramTop', 'bigramSlow', 'appUsage', 'wpmByApp',
 ] as const
 
+/** Lower case for the ASCII letters only, as SQLite's `lower()` does: the
+ *  Hub compares display names and pack / key-label names and matches `q`
+ *  searches with it, so `É` and `é` are different names there. */
+export function asciiLower(text: string): string {
+  return text.replace(/[A-Z]/g, (letter) => letter.toLowerCase())
+}
+
+/** Bytes as UTF-8 text without a leading byte order mark, as the Hub's
+ *  `TextDecoder` and `Request.json()` read uploads. */
+export function decodeUtf8(bytes: Buffer): string {
+  return new TextDecoder('utf-8').decode(bytes)
+}
+
 type Checked<T> = { ok: true; value: T } | { ok: false; error: string }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -342,7 +355,7 @@ export function featureJsonError(bytes: Buffer): string | null {
   if (bytes.length > FEATURE_JSON_INSPECT_LIMIT) return null
   let parsed: unknown
   try {
-    parsed = JSON.parse(bytes.toString('utf8'))
+    parsed = JSON.parse(decodeUtf8(bytes))
   } catch {
     return null
   }

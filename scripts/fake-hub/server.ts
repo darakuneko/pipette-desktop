@@ -15,7 +15,10 @@
 //
 // Control endpoints (JSON bodies; every write answers `{}` or the record):
 //   POST /__control/reset                       empty state, clock, counters and faults
-//   POST /__control/faults       Fault          the next `count` requests (of `only`) get this answer
+//   POST /__control/faults       Fault          the next `count` requests (of `only`) get this answer;
+//                                               a bad status, count or route is refused with 400.
+//                                               Requests sent in parallel take a fault in arrival
+//                                               order, so give such a fault `only`
 //   POST /__control/users        {email, displayName: string|null, active?, role?}
 //                                               creates the account, or changes the one with that email
 //   POST /__control/posts        {owner, title, keyboardName?, postType?, updatedAt?}
@@ -42,6 +45,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { listenOnLoopback, readBody, runStandalone } from '../fake-server/server-support'
 import { readForm, type HubAnswer, type HubRequest } from './hub-http'
+import { decodeUtf8 } from './hub-validate'
 import { ACCOUNT_AND_POST_ROUTES, type Route } from './hub-routes'
 import { PACK_AND_KEY_LABEL_ROUTES } from './hub-routes-packs'
 import { HubState, SYSTEM_USER_ID, type Fault, type HubOp, type HubUser, type PackKind } from './hub-state'
@@ -51,7 +55,9 @@ const MAX_BODY_BYTES = 64 * 1024 * 1024
 
 /** What the log keeps of a request body: JSON as its value, a multipart
  *  form as its parts (text fields with their value, files with their
- *  size), anything else as its size. Tokens are not kept. */
+ *  size), anything else as its size. Credentials are not kept: the bearer
+ *  JWT is logged as its account, and JSON fields, form fields and query
+ *  parameters named like a token, secret or password as `[redacted]`. */
 export type LoggedBody =
   | null
   | { json: unknown }
@@ -89,11 +95,23 @@ function send(res: ServerResponse, answer: HubAnswer): void {
   res.end(answer.body)
 }
 
+/** A field or query parameter that carries a credential: `id_token`,
+ *  `token`, `access_token`, `refresh_token` and the like. */
+const SECRET_NAME = /token|secret|password/i
+export const REDACTED = '[redacted]'
+
+/** `value` with every credential field replaced, at any depth. */
+function redact(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redact)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, SECRET_NAME.test(key) ? REDACTED : redact(item)]))
+}
+
 function logBody(request: HubRequest): LoggedBody {
   if (request.body.length === 0) return null
   if (request.contentType.startsWith('application/json')) {
     try {
-      return { json: JSON.parse(request.body.toString('utf8')) as unknown }
+      return { json: redact(JSON.parse(decodeUtf8(request.body))) }
     } catch {
       return { size: request.body.length }
     }
@@ -101,7 +119,7 @@ function logBody(request: HubRequest): LoggedBody {
   if (request.contentType.startsWith('multipart/form-data')) {
     const parts = Object.entries(readForm(request)).map(([name, value]) =>
       typeof value === 'string'
-        ? { name, value, size: Buffer.byteLength(value) }
+        ? { name, value: SECRET_NAME.test(name) ? REDACTED : value, size: Buffer.byteLength(value) }
         : { name, filename: value.filename, contentType: value.contentType, size: value.bytes.length },
     )
     return { parts }
@@ -119,6 +137,20 @@ function route(method: string, path: string): { route: Route; params: string[] }
 }
 
 // --- Control -------------------------------------------------------------------
+
+const OPS = new Set<string>(ROUTES.map((candidate) => candidate.op))
+
+/** A fault body, refused (400) unless `status` is an HTTP status, `count`
+ *  a positive integer, `only` a route name and the strings strings. */
+function checkedFault(body: Record<string, unknown>): Fault {
+  const { status, count, retryAfter, only } = body
+  if (!Number.isInteger(status) || (status as number) < 100 || (status as number) > 599) throw new Error('status must be an HTTP status')
+  if (!Number.isInteger(count) || (count as number) < 1) throw new Error('count must be a positive integer')
+  if (retryAfter !== undefined && retryAfter !== null && typeof retryAfter !== 'string') throw new Error('retryAfter must be a string or null')
+  if (body.body !== undefined && typeof body.body !== 'string') throw new Error('body must be a string')
+  if (only !== undefined && (typeof only !== 'string' || !OPS.has(only))) throw new Error(`only must be a route: ${[...OPS].join(', ')}`)
+  return body as unknown as Fault
+}
 
 /** The account with `email`, created with its local part as its display
  *  name when missing; "system" is the Hub's built-in owner. */
@@ -150,7 +182,7 @@ function control(state: HubState, requests: LoggedRequest[], method: string, pat
       requests.length = 0
       return {}
     case '/__control/faults':
-      state.inject(body as unknown as Fault)
+      state.inject(checkedFault(body))
       return {}
     case '/__control/revoke-tokens':
       state.jwts.clear()
@@ -257,7 +289,7 @@ async function handle(state: HubState, requests: LoggedRequest[], req: IncomingM
   requests.push({
     method,
     path: url.pathname,
-    query: Object.fromEntries(url.searchParams),
+    query: redact(Object.fromEntries(url.searchParams)) as Record<string, string>,
     op: matched?.route.op ?? null,
     account: accountId === undefined ? null : (state.userById(accountId)?.email ?? null),
     contentType: request.contentType ? request.contentType.split(';')[0].trim() : null,

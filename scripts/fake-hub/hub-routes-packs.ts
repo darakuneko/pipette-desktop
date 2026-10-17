@@ -19,7 +19,7 @@ import {
 } from './hub-http'
 import type { Route } from './hub-routes'
 import { SYSTEM_USER_ID, byUpdatedDesc, type HubKeyLabel, type HubPack, type HubState, type HubUser, type PackKind } from './hub-state'
-import { I18N_MAX_BYTES, THEME_MAX_BYTES, parseI18nExport, parseThemePack, validateKeyLabelPayload } from './hub-validate'
+import { I18N_MAX_BYTES, THEME_MAX_BYTES, asciiLower, decodeUtf8, parseI18nExport, parseThemePack, validateKeyLabelPayload } from './hub-validate'
 
 const TIMESTAMPS_MAX_IDS = 100
 const TIMESTAMPS_MAX_BODY_BYTES = 16 * 1024
@@ -30,8 +30,9 @@ const QUERY_MAX_LENGTH = 200
 const PACK_LABEL: Record<PackKind, string> = { i18n: 'i18n pack', theme: 'theme pack' }
 const PACK_FILE_PREFIX: Record<PackKind, string> = { i18n: 'i18n-pack', theme: 'theme-pack' }
 
+/** The Hub's `lower(name) LIKE lower('%q%')`. */
 function containsIgnoringCase(text: string, query: string): boolean {
-  return text.toLowerCase().includes(query.toLowerCase())
+  return asciiLower(text).includes(asciiLower(query))
 }
 
 function downloadFilename(prefix: string, name: string): string {
@@ -88,14 +89,14 @@ function packUpload(kind: PackKind, req: HubRequest): { name: string; version: s
   if (!isFile(json)) return fail(400, 'JSON file is required')
   if (json.bytes.length > maxBytes) return fail(400, `JSON file exceeds ${maxBytes} bytes`)
   if (!json.filename.toLowerCase().endsWith('.json')) return fail(400, 'JSON file must have .json extension')
-  const text = json.bytes.toString('utf8')
+  const text = decodeUtf8(json.bytes)
   const parsed = kind === 'i18n' ? parseI18nExport(text) : parseThemePack(text)
   if (!parsed.ok) return fail(400, parsed.error)
   return { ...parsed.value, packJson: text }
 }
 
 function nameVersionTaken(packs: HubPack[], name: string, version: string, exceptId?: string): boolean {
-  return packs.some((pack) => pack.id !== exceptId && pack.name.toLowerCase() === name.toLowerCase() && pack.version === version)
+  return packs.some((pack) => pack.id !== exceptId && asciiLower(pack.name) === asciiLower(name) && pack.version === version)
 }
 
 function packRoutes(kind: PackKind): Route[] {
@@ -110,7 +111,7 @@ function packRoutes(kind: PackKind): Route[] {
     const query = (req.query.get('q') ?? '').slice(0, QUERY_MAX_LENGTH).trim()
     const name = (req.query.get('name') ?? '').slice(0, QUERY_MAX_LENGTH).trim()
     const matching = byUpdatedDesc(
-      packs(state).filter((pack) => (!query || containsIgnoringCase(pack.name, query)) && (!name || pack.name.toLowerCase() === name.toLowerCase())),
+      packs(state).filter((pack) => (!query || containsIgnoringCase(pack.name, query)) && (!name || asciiLower(pack.name) === asciiLower(name))),
     )
     const items = pageOf(matching, page, perPage).map((pack) => state.packSummary(kind, pack))
     return ok({ items, total: matching.length, page, per_page: perPage })
@@ -191,7 +192,7 @@ function keyLabelById(state: HubState, id: string): HubKeyLabel | undefined {
 }
 
 function keyLabelNameTaken(state: HubState, name: string, exceptId?: string): boolean {
-  return state.keyLabels.some((label) => label.id !== exceptId && label.name.toLowerCase() === name.toLowerCase())
+  return state.keyLabels.some((label) => label.id !== exceptId && asciiLower(label.name) === asciiLower(name))
 }
 
 function listKeyLabels(state: HubState, req: HubRequest): HubAnswer {

@@ -23,6 +23,7 @@ import {
 } from './hub-http'
 import type { HubOp, HubPost, HubState, HubUser } from './hub-state'
 import {
+  decodeUtf8,
   featureJsonError,
   isReservedDisplayName,
   normalizeDisplayName,
@@ -141,7 +142,7 @@ function postContent(form: Record<string, FormValue>, postType: unknown, keyboar
     if (isAnswer(thumbnail)) return thumbnail
     const json = jsonFileOf(form)
     if (isAnswer(json)) return json
-    const parsed = parseAnalyticsExport(json.bytes.toString('utf8'))
+    const parsed = parseAnalyticsExport(decodeUtf8(json.bytes))
     if (!parsed.ok) return fail(400, parsed.error)
     return {
       title,

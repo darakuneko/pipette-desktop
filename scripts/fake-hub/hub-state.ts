@@ -19,7 +19,7 @@
 // The answers' fields are in the order of the Hub's (its SQL columns and
 // response builders).
 
-import { THEME_PREVIEW_KEYS } from './hub-validate'
+import { THEME_PREVIEW_KEYS, asciiLower } from './hub-validate'
 
 /** 2026-01-01T00:00:00.000Z. */
 const CLOCK_START_MS = 1_767_225_600_000
@@ -210,10 +210,10 @@ export class HubState {
     return this.users.find((user) => user.email === email)
   }
 
-  /** Another account with this display name, the case ignored. */
+  /** Another account with this display name, ASCII case ignored. */
   displayNameTaken(name: string, exceptId?: string): boolean {
-    const lower = name.toLowerCase()
-    return this.users.some((user) => user.id !== exceptId && user.display_name?.toLowerCase() === lower)
+    const lower = asciiLower(name)
+    return this.users.some((user) => user.id !== exceptId && user.display_name != null && asciiLower(user.display_name) === lower)
   }
 
   createUser(email: string, displayName: string | null): HubUser {
