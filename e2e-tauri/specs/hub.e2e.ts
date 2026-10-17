@@ -313,8 +313,13 @@ describe('Tauri build Pipette Hub', function () {
       expect(tokens.map((r) => r.body)).toContainEqual({ json: { id_token: '[redacted]', display_name: DISPLAY_NAME } })
       // Clearing the chosen name afterwards drops the JWT it got, as in
       // Electron; the next request takes a token again.
-      const state = await hubState()
-      expect([state.tokenCached, state.displayNamePending]).toEqual([false, false])
+      await browser.waitUntil(
+        async () => {
+          const state = await hubState()
+          return !state.displayNamePending && !state.tokenCached
+        },
+        { timeoutMsg: 'the chosen display name or its JWT stayed' },
+      )
 
       // The other account takes another name, so the test account's own
       // token requests go through again; a name another account has is
