@@ -92,12 +92,12 @@ impl ThemeCheck {
 
 /// A piece of a message: text, or a string of the pack, which may hold a
 /// lone surrogate.
-enum Part<'a> {
+pub(crate) enum Part<'a> {
     T(&'a str),
     J(&'a JsString),
 }
 
-fn message(parts: &[Part<'_>]) -> JsString {
+pub(crate) fn message(parts: &[Part<'_>]) -> JsString {
     let mut units = Vec::new();
     for part in parts {
         match part {
@@ -123,12 +123,12 @@ fn is_digit(unit: u16) -> bool {
     (u16::from(b'0')..=u16::from(b'9')).contains(&unit)
 }
 
-fn is_word(unit: u16) -> bool {
+pub(crate) fn is_word(unit: u16) -> bool {
     u8::try_from(unit).is_ok_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }
 
 /// `/^\d+\.\d+\.\d+(-[\w.]+)?$/`.
-fn is_semver(units: &[u16]) -> bool {
+pub(crate) fn is_semver(units: &[u16]) -> bool {
     let mut at = 0;
     for part in 0..3 {
         let start = at;

@@ -30,6 +30,7 @@
 pub mod handlers;
 pub mod i18n;
 pub mod i18n_handlers;
+pub mod i18n_validate;
 mod import_file;
 mod js_text;
 mod pack_meta;
