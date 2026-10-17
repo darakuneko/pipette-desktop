@@ -51,6 +51,7 @@
     "generate:active-window-fixtures": "vitest run --config scripts/active-window-fixtures/vitest.config.ts",
     "generate:typing-dataset-fixtures": "vitest run --config scripts/typing-dataset-fixtures/vitest.config.ts record-",
     "test:fake-drive": "vitest run --config scripts/fake-drive/vitest.config.ts",
+    "test:fake-hub": "vitest run --config scripts/fake-hub/vitest.config.ts",
     "generate:sync-auth-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-secrets-auth",
     "generate:drive-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-drive",
     "generate:sync-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-",
