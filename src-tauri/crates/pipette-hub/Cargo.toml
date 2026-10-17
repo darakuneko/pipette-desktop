@@ -14,25 +14,40 @@ rust-version.workspace = true
 test-util = []
 
 [dependencies]
+# The timestamps of a pack list in batches of 100, sent at once.
+futures-util = { version = "=0.3.34", default-features = false, features = ["alloc"] }
 # The query strings of the list endpoints: the encoding of URLSearchParams.
 form_urlencoded = "=1.2.2"
 log = "=0.4.34"
+# The favorites, key labels and Analyze filters the Hub handlers read and
+# link to their posts.
+pipette-keyboard-stores = { path = "../pipette-keyboard-stores" }
+# The language and theme packs the Hub handlers read, link and save.
+pipette-pack-stores = { path = "../pipette-pack-stores" }
+# The rows and results of the typing analytics queries the Analyze export
+# reads.
+pipette-typing-analytics = { path = "../pipette-typing-analytics" }
+pipette-typing-analytics-db = { path = "../pipette-typing-analytics-db" }
 # `trim` and `length` of the input checks, with JavaScript's meaning.
 pipette-entry-store = { path = "../pipette-entry-store" }
 # The Hub's JSON as JSON.parse reads it, in JavaScript's property order.
 pipette-js-json = { path = "../pipette-js-json" }
 # The requests, the clients and the Hub API base URL.
 pipette-net = { path = "../pipette-net" }
+serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = "=2.0.21"
-# The wait before the retry of a 429.
-tokio = { version = "=1.53.3", features = ["time"] }
+# The wait before the retry of a 429, and the one Hub token request that
+# concurrent callers share.
+tokio = { version = "=1.53.3", features = ["time", "sync"] }
 # The id_token the Hub token is exchanged for.
 zeroize = "=1.9.0"
 
 [dev-dependencies]
 pipette-hub = { path = ".", features = ["test-util"] }
-serde = { workspace = true }
-serde_json = { workspace = true }
+# Fixed entry ids and clocks for the handlers' store writes.
+pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
+tempfile = { workspace = true }
 tokio = { version = "=1.53.3", features = ["rt", "macros", "time", "test-util"] }
 
 [lints]
