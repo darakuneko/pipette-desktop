@@ -15,6 +15,9 @@
 import { existsSync } from 'node:fs'
 import type { Options } from '@wdio/types'
 import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver } from './helpers/driver'
+import { startSyncDriver, stopSyncHarness } from './helpers/sync-harness'
+
+const SYNC_SPEC = '/specs/sync.e2e.ts'
 
 /** Whether a test of the current session failed; afterTest and afterSession
  *  run in the same worker. */
@@ -51,9 +54,12 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
     }
   },
 
-  async beforeSession() {
+  // The sync spec's app talks to a fake Drive the worker runs
+  // (helpers/sync-harness.ts); every other spec's app has no sync endpoints.
+  async beforeSession(_config, _capabilities, specs) {
     sessionFailed = false
-    await startDriver()
+    if (specs.some((spec) => spec.endsWith(SYNC_SPEC))) await startSyncDriver()
+    else await startDriver()
   },
 
   afterTest(_test, _context, result) {
@@ -62,5 +68,6 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
 
   async afterSession() {
     await stopDriver({ keepUserData: sessionFailed })
+    await stopSyncHarness()
   },
 }
