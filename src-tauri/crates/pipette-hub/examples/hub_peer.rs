@@ -43,6 +43,7 @@ mod common;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use common::object;
 use common::scripted_hub::{ScriptedHub, scripted_hub};
 use pipette_entry_store::{Clock, FixedClock, WriteLocks};
 use pipette_hub::analytics::{PrepareError, Prepared, prepare_analytics_export, preview};
@@ -88,10 +89,6 @@ fn list(value: &Value) -> &[Value] {
         Value::Array(items) => items,
         other => panic!("hub_peer: not an array: {}", stringify(other)),
     }
-}
-
-fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
-    Value::Object(fields.into_iter().collect())
 }
 
 /// An argument as the handler gets it: `None` for a missing one.

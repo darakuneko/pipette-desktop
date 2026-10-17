@@ -35,6 +35,10 @@ pub fn field<'a>(value: &'a Value, key: &str) -> &'a Value {
     get(value, key).unwrap_or_else(|| panic!("no {key} in {}", stringify(value)))
 }
 
+pub fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
+    Value::Object(fields.into_iter().collect())
+}
+
 pub fn array(value: &Value) -> &Vec<Value> {
     match value {
         Value::Array(items) => items,

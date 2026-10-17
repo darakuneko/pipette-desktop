@@ -24,8 +24,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use common::{Clock, block_on};
-use pipette_entry_store::{FixedClock, WriteLocks};
+use common::scripted_hub::scenario_stores;
+use common::{Clock, block_on, field, object};
 use pipette_hub::fake::{CLOCK_START_MS, FAKE_HUB_BASE, FakeHub, PackKind as HubPackKind, RecordKind};
 use pipette_hub::packs::{self, PackKind};
 use pipette_hub::token::HubToken;
@@ -46,14 +46,6 @@ fn out_dir() -> PathBuf {
 fn repo_file(path: &str) -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
     fs::read_to_string(root.join(path)).unwrap()
-}
-
-fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
-    Value::Object(fields.into_iter().collect())
-}
-
-fn field<'a>(value: &'a Value, key: &str) -> &'a Value {
-    value.as_object().and_then(|object| object.get(key)).unwrap_or_else(|| panic!("no {key}"))
 }
 
 /// The id of the meta a pack handler answered.
@@ -118,14 +110,7 @@ fn writes_a_user_data_tree_for_the_typescript_handlers() {
     fs::create_dir_all(user_data.join("local")).unwrap();
     fs::write(user_data.join("local/installation-id"), "00000000-0000-4000-8000-00000000f1f0").unwrap();
 
-    let notified = Arc::new(Mutex::new(Vec::<String>::new()));
-    let record = Arc::clone(&notified);
-    let ctx = StoreContext::new(
-        &user_data,
-        Arc::new(FixedClock::new(STORE_NOW_MS)),
-        Arc::new(WriteLocks::new()),
-        Arc::new(move |unit: &str| record.lock().unwrap().push(unit.to_owned())),
-    );
+    let (ctx, notified) = scenario_stores(&user_data, STORE_NOW_MS as f64);
     let hub = Arc::new(FakeHub::new());
     hub.set_user("alice@example.com", Some("Alice"), None);
     let clock = Arc::new(Clock { now: CLOCK_START_MS as f64, slept: Mutex::new(Vec::new()) });
