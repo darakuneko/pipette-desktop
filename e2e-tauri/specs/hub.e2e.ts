@@ -37,7 +37,6 @@ import {
   changeHubLanguagePack,
   clickWhenEnabled,
   closeFromTools,
-  closeSettings,
   connectAndFindUid,
   dataOf,
   disconnect,
@@ -67,7 +66,7 @@ import {
   injectHubFault,
   switchToGoogleSession,
 } from '../helpers/hub-harness'
-import { fillInput, openSyncSettings, signIn } from '../helpers/sync'
+import { closeSettings, fillInput, openSyncSettings, signIn } from '../helpers/sync'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'

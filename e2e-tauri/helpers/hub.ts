@@ -24,7 +24,7 @@ import {
 } from './app'
 import { userDataPath } from './driver'
 import { fakeHub, hubControl } from './hub-harness'
-import { fillInput } from './sync'
+import { closeSettings, fillInput } from './sync'
 
 export const SAMPLE_PACKS = resolve(dirname(fileURLToPath(import.meta.url)), '../../sample-packs')
 
@@ -38,11 +38,6 @@ export async function openHubSettings(): Promise<void> {
   await $(tid('settings-modal')).waitForDisplayed()
   await clickInPage(tid('settings-tab-data'))
   await $(tid('pipette-hub-title')).waitForDisplayed()
-}
-
-export async function closeSettings(): Promise<void> {
-  await clickInPage(tid('settings-close'))
-  await waitForGone(tid('settings-modal'), 'the Settings modal did not close')
 }
 
 /** Types `name` into the display name field and saves it. */
