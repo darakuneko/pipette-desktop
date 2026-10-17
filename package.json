@@ -45,7 +45,7 @@
     "verify:analytics-rust-user-data": "vitest run --config scripts/analytics-db-fixtures/verify-rust-analytics.config.ts",
     "verify:pack-store-rust-user-data": "vitest run --config scripts/pack-store-fixtures/vitest.config.ts verify-rust-stores",
     "verify:hub-rust-user-data": "vitest run --config scripts/hub-fixtures/vitest.config.ts verify-rust",
-    "test:hub-peer": "vitest run --config scripts/hub-peer/vitest.config.ts && ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/hub-peer/analytics.config.ts",
+    "test:hub-peer": "vitest run --config scripts/hub-peer/vitest.config.ts --disableConsoleIntercept && ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/hub-peer/analytics.config.ts --disableConsoleIntercept",
     "generate:hid-fixtures": "vitest run --config scripts/hid-fixtures/vitest.config.ts",
     "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts record- && tsx scripts/analytics-db-fixtures/run-time-zones.ts",
     "generate:node-identity": "tsx scripts/analytics-db-fixtures/record-node-identity.ts",

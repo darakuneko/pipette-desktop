@@ -20,8 +20,7 @@
 // Run: pnpm run test:hub-peer (PIPETTE_HUB_PEER_USER_DATA for a real
 // userData's copy; see peer.ts)
 
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterAll, afterEach, describe, expect, it } from 'vitest'
 import { clearHubTokenCache, setupHubIpc } from '../../src/main/hub/hub-ipc'
@@ -32,13 +31,15 @@ import { runFavoriteTransfer } from '../../src/tauri-shim/workers/favorite-trans
 import type { FavoriteType } from '../../src/shared/types/favorite-store'
 import { cargoTargetTmpDir } from '../fixture-files'
 import { readTree } from '../rust-user-data-tree'
-import { FIXED_NOW, assertSafePath, writeTree } from '../sync-fixtures/harness'
+import { FIXED_NOW, writeTree } from '../sync-fixtures/harness'
 import { ok, USER } from '../hub-fixtures/handler-scenario'
 import { FAKE_ID_TOKEN, scriptedFetch, setRules, takeRecorded, type HubRule } from '../hub-fixtures/hub-harness'
 import { invokeHandler } from '../hub-fixtures/ipc-handlers'
 import { hubFixturePath } from '../hub-fixtures/paths'
 import {
   comparable,
+  countsOnly,
+  trackedTempDir,
   electronCopy,
   fromLogged,
   liveEntries,
@@ -60,8 +61,7 @@ const HUB_TIME = '2026-10-16 00:00:00.000Z'
 function syntheticSource(): string {
   const tree = resolve(cargoTargetTmpDir('pipette-hub'), 'rust_user_data', 'user-data')
   if (!existsSync(tree)) throw new Error(`${tree} is missing; run cargo test -p pipette-hub --test rust_user_data first`)
-  const dir = assertSafePath(mkdtempSync(join(tmpdir(), 'pipette-hub-peer-source-')))
-  synthetic.push(dir)
+  const dir = trackedTempDir('pipette-hub-peer-source-')
   const golden = JSON.parse(readFileSync(hubFixturePath('ts_hub_handlers_favorite.json'), 'utf8')) as {
     scenarios: Array<{ treeBefore: Record<string, string> }>
   }
@@ -73,8 +73,6 @@ function syntheticSource(): string {
   return dir
 }
 
-const synthetic: string[] = []
-
 function readTextTree(dir: string, prefix = ''): Record<string, string> {
   const out: Record<string, string> = {}
   for (const name of readdirSync(dir, { withFileTypes: true })) {
@@ -85,7 +83,18 @@ function readTextTree(dir: string, prefix = ''): Record<string, string> {
   return out
 }
 
-const source = realSource() ?? syntheticSource()
+const real = realSource()
+const source = real ?? syntheticSource()
+
+/** Whether a handler answered `{ success: true, … }`. */
+function succeeded(answer: unknown): boolean {
+  return (answer as { success?: unknown } | null)?.success === true
+}
+
+/** Writes a line of counts (a passing run shows it too). */
+function report(line: string): void {
+  process.stdout.write(`${line}\n`)
+}
 
 /** The scripted Hub of the uploads: every upload is the post POST_ID, which
  *  the lists name with its uploader and time. */
@@ -155,14 +164,15 @@ afterEach(() => {
 })
 
 afterAll(() => {
-  removePeerDirs()
-  for (const dir of synthetic.splice(0)) rmSync(dir, { recursive: true, force: true })
+  const failed = removePeerDirs()
+  if (failed > 0) report(`hub peer: ${failed} temporary director(ies) could not be removed`)
+  expect(failed).toBe(0)
 })
 
 describe('the Hub handlers of both builds on a copy of a userData', () => {
   setupHubIpc()
 
-  it('upload every entry the same way', async () => {
+  it('upload every entry the same way', () => countsOnly('the uploads', async () => {
     const electron = electronCopy(source)
     const rust = rustCopy(source)
     const calls = uploadCalls(electron)
@@ -213,28 +223,34 @@ describe('the Hub handlers of both builds on a copy of a userData', () => {
       calls: rustCalls,
     })
 
-    const counts: Record<string, { calls: number; same: number }> = {}
+    const counts: Record<string, { calls: number; same: number; ok: number }> = {}
     let sent = 0
     for (const [index, call] of calls.entries()) {
-      const count = (counts[call.kind] ??= { calls: 0, same: 0 })
+      const count = (counts[call.kind] ??= { calls: 0, same: 0, ok: 0 })
       count.calls++
       const failed = readFailures.get(index)
       const rustSide = failed !== undefined ? { answer: failed, requests: [] } : peer.output.results[sent++]
       const mine = electronSide[index]
+      if (succeeded(mine.answer)) count.ok++
       if (sameJson(mine.answer, rustSide.answer) && sameJson(mine.requests, rustSide.requests.map(comparable))) {
         count.same++
       }
     }
     const differing = differingFiles(electron, rust)
-    console.log(
-      `hub peer uploads: ${Object.entries(counts).map(([kind, { calls: n, same }]) => `${kind} ${same}/${n}`).join(', ')}; ` +
+    report(
+      `hub peer uploads: ${Object.entries(counts).map(([kind, { calls: n, same, ok: done }]) => `${kind} ${same}/${n} (${done} ok)`).join(', ')}; ` +
         `files differing after: ${differing}; Electron ${Math.round(electronMs)} ms, Rust ${peer.elapsedMs} ms (max RSS ${peer.maxRssKb ?? '?'} KB)`,
     )
     expect(Object.values(counts).every(({ calls: n, same }) => n === same)).toBe(true)
     expect(differing).toBe(0)
-  })
+    if (real === null) {
+      // The synthetic tree uploads every kind, some of each successfully.
+      expect(Object.keys(counts).sort()).toEqual(['favorite', 'key label', 'language pack', 'theme pack'])
+      expect(Object.values(counts).every(({ ok: done }) => done > 0)).toBe(true)
+    }
+  }))
 
-  it('update the Hub-linked language packs at startup the same way', async () => {
+  it('update the Hub-linked language packs at startup the same way', () => countsOnly('the startup update', async () => {
     const electron = electronCopy(source)
     const rust = rustCopy(source)
     const linked = liveEntries(readJson(electron, 'sync/i18n/index.json')).filter(
@@ -272,7 +288,7 @@ describe('the Hub handlers of both builds on a copy of a userData', () => {
     )
     const sameRequests = sameJson(electronRequests, sortedRequests(peer.output.requests))
     const differing = differingFiles(electron, rust)
-    console.log(
+    report(
       `hub peer startup update: linked ${linked.length}, updated ${result.updated} (Rust ${peer.output.result.updated}), ` +
         `errors ${result.errors.length}; same result ${sameResult}, same requests ${sameRequests}, files differing after: ${differing}; ` +
         `Electron ${Math.round(electronMs)} ms, Rust ${peer.elapsedMs} ms`,
@@ -280,5 +296,9 @@ describe('the Hub handlers of both builds on a copy of a userData', () => {
     expect(sameResult).toBe(true)
     expect(sameRequests).toBe(true)
     expect(differing).toBe(0)
-  })
+    if (real === null) {
+      expect(linked.length).toBeGreaterThan(0)
+      expect(result.updated).toBe(linked.length)
+    }
+  }))
 })

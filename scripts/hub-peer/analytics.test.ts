@@ -20,8 +20,7 @@
 // Run: pnpm run test:hub-peer
 
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import nodeMachineId from 'node-machine-id'
 import { afterAll, describe, expect, it, vi } from 'vitest'
@@ -31,9 +30,9 @@ import { readRows } from '../../src/main/typing-analytics/jsonl/jsonl-reader'
 import { rebuildCacheFromMasterFiles } from '../../src/main/typing-analytics/cache-rebuild'
 import { prepareAnalyticsExport } from '../../src/main/hub/hub-ipc-analytics-prepare'
 import { estimateAnalyticsExportSizeBytes, validateAnalyticsExport } from '../../src/main/hub/hub-analytics'
-import { FIXED_NOW, assertSafePath, writeTree } from '../sync-fixtures/harness'
+import { FIXED_NOW, writeTree } from '../sync-fixtures/harness'
 import { hubFixturePath } from '../hub-fixtures/paths'
-import { electronCopy, liveEntries, readJson, realSource, removePeerDirs, runPeer, rustCopy } from './peer'
+import { countsOnly, electronCopy, liveEntries, readJson, realSource, removePeerDirs, runPeer, rustCopy, trackedTempDir } from './peer'
 
 const { ownHash } = vi.hoisted(() => ({ ownHash: { value: '' } }))
 
@@ -52,11 +51,11 @@ interface Golden {
 }
 
 const real = realSource()
-const temp: string[] = []
 
 afterAll(() => {
-  removePeerDirs()
-  for (const dir of temp.splice(0)) rmSync(dir, { recursive: true, force: true })
+  const failed = removePeerDirs()
+  if (failed > 0) process.stdout.write(`hub peer: ${failed} temporary director(ies) could not be removed\n`)
+  expect(failed).toBe(0)
 })
 
 /** The parameters of a post of every live saved filter of every keyboard. */
@@ -113,7 +112,7 @@ async function electronExport(params: Params): Promise<Record<string, unknown>> 
 }
 
 describe('the Analyze post export of both builds on a copy of a userData', () => {
-  it('builds the same export for every saved filter', async () => {
+  it('builds the same export for every saved filter', () => countsOnly('the Analyze exports', async () => {
     const golden = real === null
       ? (JSON.parse(readFileSync(hubFixturePath('ts_hub_analytics_export.json'), 'utf8')) as Golden)
       : null
@@ -121,8 +120,7 @@ describe('the Analyze post export of both builds on a copy of a userData', () =>
     if (golden === null) {
       source = real as string
     } else {
-      source = assertSafePath(mkdtempSync(join(tmpdir(), 'pipette-hub-peer-source-')))
-      temp.push(source)
+      source = trackedTempDir('pipette-hub-peer-source-')
       writeTree(source, golden.tree)
     }
     const seed = golden === null ? null : hubFixturePath('ts_hub_analytics_export_seed.jsonl')
@@ -131,19 +129,22 @@ describe('the Analyze post export of both builds on a copy of a userData', () =>
     ownHash.value = golden === null ? await machineHashFor(electron) : golden.ownHash
     const params = golden === null ? filterParams(electron) : golden.cases.map((c) => c.params)
 
-    const dbDir = assertSafePath(mkdtempSync(join(tmpdir(), 'pipette-hub-peer-cache-')))
-    temp.push(dbDir)
-    const db = new TypingAnalyticsDB(join(dbDir, 'cache.db'))
-    const started = performance.now()
-    if (seed !== null) applyRowsToCache(db, (await readRows(seed)).rows)
-    else await rebuildCacheFromMasterFiles(db, electron, ownHash.value)
-    setTypingAnalyticsDBForTests(db)
-    const rebuiltMs = performance.now() - started
+    const db = new TypingAnalyticsDB(join(trackedTempDir('pipette-hub-peer-cache-'), 'cache.db'))
     const electronResults: Array<Record<string, unknown>> = []
-    const exportStarted = performance.now()
-    for (const p of params) electronResults.push(await electronExport(p))
-    const electronMs = performance.now() - exportStarted
-    db.close()
+    let rebuiltMs: number
+    let electronMs: number
+    try {
+      const started = performance.now()
+      if (seed !== null) applyRowsToCache(db, (await readRows(seed)).rows)
+      else await rebuildCacheFromMasterFiles(db, electron, ownHash.value)
+      setTypingAnalyticsDBForTests(db)
+      rebuiltMs = performance.now() - started
+      const exportStarted = performance.now()
+      for (const p of params) electronResults.push(await electronExport(p))
+      electronMs = performance.now() - exportStarted
+    } finally {
+      db.close()
+    }
 
     const peer = await runPeer<{ results: Array<Record<string, unknown>> }>(rust, FIXED_NOW, {
       kind: 'analytics',
@@ -157,11 +158,13 @@ describe('the Analyze post export of both builds on a copy of a userData', () =>
       if ('exportJson' in mine) built++
       if (JSON.stringify(mine) === JSON.stringify(peer.output.results[index])) same++
     }
-    console.log(
+    process.stdout.write(
       `hub peer Analyze exports: ${same}/${params.length} the same (${built} built, the rest failures); ` +
         `Electron rebuild ${Math.round(rebuiltMs)} ms + exports ${Math.round(electronMs)} ms (process max RSS ${Math.round(process.resourceUsage().maxRSS / 1024)} MB), ` +
-        `Rust rebuild and exports ${peer.elapsedMs} ms (max RSS ${Math.round((peer.maxRssKb ?? 0) / 1024)} MB)`,
+        `Rust rebuild and exports ${peer.elapsedMs} ms (max RSS ${Math.round((peer.maxRssKb ?? 0) / 1024)} MB)\n`,
     )
     expect(same).toBe(params.length)
-  })
+    // The golden builds some exports, so the comparison is not vacuous.
+    if (golden !== null) expect(built).toBeGreaterThan(0)
+  }))
 })
