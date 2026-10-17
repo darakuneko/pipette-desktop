@@ -1,13 +1,14 @@
 [
   {
-    "member": "hubUploadFavoritePost",
+    "member": "hub-favorite.uploadFavorite",
     "args": [
       {
         "type": "macro",
         "entryId": "e1",
         "title": "T",
         "vialProtocol": 6
-      }
+      },
+      "{}"
     ],
     "command": "hub_upload_favorite_post",
     "invokeArgs": {
@@ -16,12 +17,16 @@
         "entryId": "e1",
         "title": "T",
         "vialProtocol": 6
-      }
+      },
+      "json": "{}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
-    "member": "hubUpdateFavoritePost",
+    "member": "hub-favorite.updateFavorite",
     "args": [
       {
         "type": "macro",
@@ -29,7 +34,8 @@
         "title": "T",
         "postId": "p1",
         "vialProtocol": 6
-      }
+      },
+      "{}"
     ],
     "command": "hub_update_favorite_post",
     "invokeArgs": {
@@ -39,12 +45,16 @@
         "title": "T",
         "postId": "p1",
         "vialProtocol": 6
-      }
+      },
+      "json": "{}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
-    "member": "hubUploadPrivateFavoritePost",
+    "member": "hub-favorite.uploadPrivateFavorite",
     "args": [
       {
         "type": "macro",
@@ -52,7 +62,8 @@
         "title": "T",
         "vialProtocol": 6,
         "expiresInDays": 7
-      }
+      },
+      "{}"
     ],
     "command": "hub_upload_private_favorite_post",
     "invokeArgs": {
@@ -62,21 +73,28 @@
         "title": "T",
         "vialProtocol": 6,
         "expiresInDays": 7
-      }
+      },
+      "json": "{}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hub-favorite.favoriteEntry",
     "args": [
-      "macro",
+      "nope",
       "e1"
     ],
     "command": "hub_favorite_entry",
     "invokeArgs": {
-      "type": "macro",
+      "favoriteType": "nope",
       "entryId": "e1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Invalid favorite type"
+    }
   }
 ]

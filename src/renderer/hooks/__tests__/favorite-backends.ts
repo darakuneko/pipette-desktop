@@ -66,6 +66,8 @@ function installShim(spies: FavoriteSpies): void {
         importCounts = { imported: result.imported, skipped: result.skipped }
         return { plan: { batches: [{ type: 'tapDance', entries: [] }], skipped: 0 } }
       }
+      case 'hubExport':
+        throw new Error('the favorite store members build no Hub post')
     }
   })
 
