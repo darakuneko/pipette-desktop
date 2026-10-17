@@ -346,3 +346,14 @@ async fn a_keymap_post_on_the_in_memory_hub() {
     assert!(gone.starts_with(r#"{"success":false,"error":"Hub delete failed: 404 "#), "{gone}");
     assert_eq!(hub.requests().iter().filter(|r| r.path == "/api/auth/token").count(), 1);
 }
+
+#[tokio::test]
+async fn the_keyboard_name_query_is_encoded_as_encode_uri_component_does() {
+    let (token, script) = scripted(&[(200, TOKEN), (200, r#"{"ok":true,"data":[]}"#)]);
+    let answer = fetch_my_keyboard_posts(&token, Some(" A b+c!*'()~&=/日 ")).await;
+    assert_eq!(text(&answer), r#"{"success":true,"posts":[]}"#);
+    assert_eq!(
+        script.urls()[1].1,
+        "http://127.0.0.1:9/api/files/me/keyboard?name=A%20b%2Bc!*'()~%26%3D%2F%E6%97%A5"
+    );
+}
