@@ -96,9 +96,11 @@ jobs:
 
       # The test above wrote userData trees with the Rust stores (the
       # tests/rust_user_data.rs of pipette-keyboard-stores,
-      # pipette-pack-stores and pipette-typing-datasets); the Electron
-      # build's handlers must read them, answer as the crates do and write
-      # nothing. The tree of pipette-typing-analytics (its
+      # pipette-pack-stores and pipette-typing-datasets) and with the Rust
+      # Hub handlers (that of pipette-hub); the Electron build's handlers
+      # must read them, answer as the crates do and write nothing, and
+      # Electron's startup update must find the Hub-linked language packs
+      # up to date. The tree of pipette-typing-analytics (its
       # tests/rust_user_data.rs) must give the same machine hash, keep or
       # rebuild the same cache and answer every query member the same.
       # The sync interop test runs the Electron sync code and the Rust
@@ -109,6 +111,7 @@ jobs:
         run: |
           pnpm run verify:keyboard-store-rust-user-data
           pnpm run verify:pack-store-rust-user-data
+          pnpm run verify:hub-rust-user-data
           pnpm run verify:typing-dataset-rust-user-data
           pnpm run verify:analytics-rust-user-data
           (cd src-tauri && cargo build -p pipette-sync --example sync_peer)
