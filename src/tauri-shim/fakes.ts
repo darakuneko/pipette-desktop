@@ -11,11 +11,9 @@ import type { VialAPI } from '../shared/types/vial-api'
 
 /** The answer of a Hub member before the backend reaches the Hub. It has
  *  no `error`: without one the renderer shows its own localized failure
- *  message (for the key labels, the search's `keyLabels.errorSearchFailed`
- *  and the row actions' `keyLabels.errorGeneric` through `translateError`;
- *  for the language packs, `i18n.errorGeneric` and the `hub.*Failed`
- *  messages through `localizeHubError`; for the theme packs, the messages
- *  named at their members). */
+ *  message (for the language packs, `i18n.errorGeneric` and the
+ *  `hub.*Failed` messages through `localizeHubError`; for the theme packs,
+ *  the messages named at their members). */
 const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
@@ -52,16 +50,4 @@ export const fakes = {
   hubUploadThemePost: hubUnavailable,
   hubUpdateThemePost: hubUnavailable,
   hubDeleteThemePost: hubUnavailable,
-
-  // Key label Hub. The renderer reads the result of each without a guard
-  // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers
-  // a failure rather than nothing. The Hub detail is read in a try block and
-  // stays a stub.
-  keyLabelHubList: hubUnavailable,
-  keyLabelHubDownload: hubUnavailable,
-  keyLabelHubUpload: hubUnavailable,
-  keyLabelHubUpdate: hubUnavailable,
-  keyLabelHubSync: hubUnavailable,
-  keyLabelHubTimestamps: hubUnavailable,
-  keyLabelHubDelete: hubUnavailable,
 } satisfies Partial<VialAPI>

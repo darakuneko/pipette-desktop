@@ -16,7 +16,11 @@
         "perPage": 20
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "IO_ERROR",
+      "error": "offline"
+    }
   },
   {
     "member": "keyLabelHubDetail",
@@ -27,7 +31,11 @@
     "invokeArgs": {
       "hubPostId": "h1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "IO_ERROR",
+      "error": "offline"
+    }
   },
   {
     "member": "keyLabelHubDownload",
@@ -38,7 +46,11 @@
     "invokeArgs": {
       "hubPostId": "h1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "IO_ERROR",
+      "error": "offline"
+    }
   },
   {
     "member": "keyLabelHubUpload",
@@ -49,7 +61,11 @@
     "invokeArgs": {
       "localId": "l1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
   },
   {
     "member": "keyLabelHubUpdate",
@@ -60,7 +76,11 @@
     "invokeArgs": {
       "localId": "l1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
   },
   {
     "member": "keyLabelHubSync",
@@ -71,7 +91,11 @@
     "invokeArgs": {
       "localId": "l1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
   },
   {
     "member": "keyLabelHubTimestamps",
@@ -86,7 +110,11 @@
         "h1"
       ]
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "IO_ERROR",
+      "error": "offline"
+    }
   },
   {
     "member": "keyLabelHubDelete",
@@ -97,6 +125,10 @@
     "invokeArgs": {
       "localId": "l1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "errorCode": "NOT_FOUND",
+      "error": "Key label not found"
+    }
   }
 ]

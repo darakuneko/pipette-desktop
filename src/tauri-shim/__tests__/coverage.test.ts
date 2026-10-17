@@ -48,13 +48,6 @@ const EXPECTED_FAKES = [
   'hubUploadThemePost',
   'hubUpdateThemePost',
   'hubDeleteThemePost',
-  'keyLabelHubList',
-  'keyLabelHubDownload',
-  'keyLabelHubUpload',
-  'keyLabelHubUpdate',
-  'keyLabelHubSync',
-  'keyLabelHubTimestamps',
-  'keyLabelHubDelete',
 ]
 
 /** The members the keyboard editor needs from the backend, all real. */
