@@ -18,7 +18,7 @@
 import { execFile } from 'node:child_process'
 import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { cargoTargetDir } from '../fixture-files'
 import { assertSafePath, seedUserData } from '../sync-fixtures/harness'
@@ -41,8 +41,14 @@ const tempDirs: string[] = []
 export function realSource(): string | null {
   const source = process.env.PIPETTE_HUB_PEER_USER_DATA
   if (!source) return null
-  const dir = assertSafePath(resolve(source))
-  const links = countLinks(dir)
+  let dir: string
+  let links: number
+  try {
+    dir = assertSafePath(resolve(source))
+    links = countLinks(dir)
+  } catch {
+    throw new Error('hub peer: source check failed')
+  }
   if (links > 0) throw new Error(`hub peer: the source holds ${links} symbolic link(s); refused`)
   return dir
 }
@@ -217,6 +223,29 @@ export function fromLogged(request: LoggedRequest): PeerRequest {
 /** The requests of both sides in one order (for requests sent at once). */
 export function sortedRequests(requests: readonly PeerRequest[]): PeerRequest[] {
   return requests.map(comparable).sort((a, b) => compare(JSON.stringify(a), JSON.stringify(b)))
+}
+
+/** The file `name` (a file name an index gives) in the store directory
+ *  `store` (relative to the copy `root`), or `null` when the name is not a
+ *  non-empty relative path that stays inside that directory: absolute,
+ *  with a `..` part, or resolving outside it. */
+export function storeFile(root: string, store: string, name: unknown): string | null {
+  if (typeof name !== 'string' || name === '' || isAbsolute(name)) return null
+  if (name.split(/[\\/]/).includes('..')) return null
+  const dir = resolve(root, store)
+  const path = resolve(dir, name)
+  const rel = relative(resolve(root), path)
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel) || !path.startsWith(`${dir}${sep}`)) return null
+  return path
+}
+
+/** A JSON file by its absolute path, `null` when missing or not JSON. */
+export function readJsonFile(path: string): unknown {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as unknown
+  } catch {
+    return null
+  }
 }
 
 /** A JSON file of the copy, `null` when missing or not JSON. */

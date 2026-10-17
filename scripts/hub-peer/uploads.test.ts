@@ -44,11 +44,13 @@ import {
   fromLogged,
   liveEntries,
   readJson,
+  readJsonFile,
   realSource,
   removePeerDirs,
   runPeer,
   rustCopy,
   sortedRequests,
+  storeFile,
   type PeerRequest,
 } from './peer'
 
@@ -120,18 +122,34 @@ interface Call {
   args: unknown[]
 }
 
+/** Entries left out because their index names a body file outside the
+ *  store's directory (`storeFile`); counted, never named. */
+let skipped = 0
+
+/** The live entries of the index `store/index.json` whose body file name
+ *  stays inside `store`, each with that file's path. */
+function safeEntries(dir: string, store: string): Array<{ entry: Record<string, unknown>; file: string }> {
+  const out: Array<{ entry: Record<string, unknown>; file: string }> = []
+  for (const entry of liveEntries(readJson(dir, `${store}/index.json`))) {
+    const file = storeFile(dir, store, entry.filename)
+    if (file === null) skipped++
+    else out.push({ entry, file })
+  }
+  return out
+}
+
 function packCalls(dir: string, store: 'i18n' | 'themes', call: Call['call'], kind: Call['kind']): Call[] {
-  return liveEntries(readJson(dir, `sync/${store}/index.json`))
-    .filter((meta) => !String(meta.id).startsWith('builtin-') && typeof meta.filename === 'string')
-    .map((meta) => ({ kind, call, args: [{ entryId: meta.id, pack: readJson(dir, `sync/${store}/${String(meta.filename)}`) }] }))
+  return safeEntries(dir, `sync/${store}`)
+    .filter(({ entry }) => !String(entry.id).startsWith('builtin-'))
+    .map(({ entry, file }) => ({ kind, call, args: [{ entryId: entry.id, pack: readJsonFile(file) }] }))
 }
 
 function uploadCalls(dir: string): Call[] {
-  const labels = liveEntries(readJson(dir, 'sync/key-labels/index.json'))
-    .filter((entry) => entry.id !== 'qwerty')
-    .map((entry): Call => ({ kind: 'key label', call: 'KEY_LABEL_HUB_UPLOAD', args: [entry.id] }))
+  const labels = safeEntries(dir, 'sync/key-labels')
+    .filter(({ entry }) => entry.id !== 'qwerty')
+    .map(({ entry }): Call => ({ kind: 'key label', call: 'KEY_LABEL_HUB_UPLOAD', args: [entry.id] }))
   const favorites = FAVORITE_TYPES.flatMap((type) =>
-    liveEntries(readJson(dir, `sync/favorites/${type}/index.json`)).map((entry): Call => ({
+    safeEntries(dir, `sync/favorites/${type}`).map(({ entry }): Call => ({
       kind: 'favorite',
       call: 'HUB_UPLOAD_FAVORITE_POST',
       args: [{ type, entryId: entry.id, title: 'peer', vialProtocol: VIAL_PROTOCOL }],
@@ -175,6 +193,7 @@ describe('the Hub handlers of both builds on a copy of a userData', () => {
   it('upload every entry the same way', () => countsOnly('the uploads', async () => {
     const electron = electronCopy(source)
     const rust = rustCopy(source)
+    skipped = 0
     const calls = uploadCalls(electron)
     clearHubTokenCache()
     globalThis.fetch = scriptedFetch()
@@ -239,7 +258,7 @@ describe('the Hub handlers of both builds on a copy of a userData', () => {
     const differing = differingFiles(electron, rust)
     report(
       `hub peer uploads: ${Object.entries(counts).map(([kind, { calls: n, same, ok: done }]) => `${kind} ${same}/${n} (${done} ok)`).join(', ')}; ` +
-        `files differing after: ${differing}; Electron ${Math.round(electronMs)} ms, Rust ${peer.elapsedMs} ms (max RSS ${peer.maxRssKb ?? '?'} KB)`,
+        `skipped (file outside its store): ${skipped}; files differing after: ${differing}; Electron ${Math.round(electronMs)} ms, Rust ${peer.elapsedMs} ms (max RSS ${peer.maxRssKb ?? '?'} KB)`,
     )
     expect(Object.values(counts).every(({ calls: n, same }) => n === same)).toBe(true)
     expect(differing).toBe(0)
@@ -253,18 +272,22 @@ describe('the Hub handlers of both builds on a copy of a userData', () => {
   it('update the Hub-linked language packs at startup the same way', () => countsOnly('the startup update', async () => {
     const electron = electronCopy(source)
     const rust = rustCopy(source)
-    const linked = liveEntries(readJson(electron, 'sync/i18n/index.json')).filter(
-      (meta) => typeof meta.hubPostId === 'string' && meta.hubPostId.trim() !== '',
+    skipped = 0
+    const linked = safeEntries(electron, 'sync/i18n').filter(
+      ({ entry }) => typeof entry.hubPostId === 'string' && entry.hubPostId.trim() !== '',
     )
+    // A pack whose file name leaves the store is not compared: neither
+    // side's startup update may read it.
+    if (skipped > 0) throw new Error(`hub peer: ${skipped} language pack(s) name a file outside the store; refused`)
     const rules: HubRule[] = [
       {
         method: 'POST',
         path: '/api/i18n-packs/timestamps',
-        responses: [ok({ items: linked.map((meta) => ({ id: String(meta.hubPostId).trim(), updated_at: HUB_TIME })) })],
+        responses: [ok({ items: linked.map(({ entry }) => ({ id: String(entry.hubPostId).trim(), updated_at: HUB_TIME })) })],
         repeat: true,
       },
-      ...linked.map((meta): HubRule => {
-        const pack = readJson(electron, `sync/i18n/${String(meta.filename)}`) as Record<string, unknown>
+      ...linked.map(({ entry: meta, file }): HubRule => {
+        const pack = readJsonFile(file) as Record<string, unknown>
         const changed = { ...pack, version: '99.0.0' }
         return {
           method: 'GET',

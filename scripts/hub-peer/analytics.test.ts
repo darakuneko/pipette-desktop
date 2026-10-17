@@ -32,7 +32,7 @@ import { prepareAnalyticsExport } from '../../src/main/hub/hub-ipc-analytics-pre
 import { estimateAnalyticsExportSizeBytes, validateAnalyticsExport } from '../../src/main/hub/hub-analytics'
 import { FIXED_NOW, writeTree } from '../sync-fixtures/harness'
 import { hubFixturePath } from '../hub-fixtures/paths'
-import { countsOnly, electronCopy, liveEntries, readJson, realSource, removePeerDirs, runPeer, rustCopy, trackedTempDir } from './peer'
+import { countsOnly, electronCopy, liveEntries, readJson, realSource, storeFile, removePeerDirs, runPeer, rustCopy, trackedTempDir } from './peer'
 
 const { ownHash } = vi.hoisted(() => ({ ownHash: { value: '' } }))
 
@@ -58,7 +58,12 @@ afterAll(() => {
   expect(failed).toBe(0)
 })
 
-/** The parameters of a post of every live saved filter of every keyboard. */
+/** Saved filters left out because their index names a file outside the
+ *  store's directory (`storeFile`); counted, never named. */
+let skipped = 0
+
+/** The parameters of a post of every live saved filter of every keyboard
+ *  whose file stays inside its store. */
 function filterParams(dir: string): Params[] {
   const keyboards = join(dir, 'sync', 'keyboards')
   let uids: string[]
@@ -67,8 +72,14 @@ function filterParams(dir: string): Params[] {
   } catch {
     return []
   }
-  return uids.flatMap((uid) =>
-    liveEntries(readJson(dir, `sync/keyboards/${uid}/analyze_filters/index.json`)).map((entry) => ({
+  return uids.flatMap((uid) => {
+    const store = `sync/keyboards/${uid}/analyze_filters`
+    const safe = liveEntries(readJson(dir, `${store}/index.json`)).filter((entry) => {
+      const inside = storeFile(dir, store, entry.filename) !== null
+      if (!inside) skipped++
+      return inside
+    })
+    return safe.map((entry) => ({
       uid,
       entryId: entry.id,
       title: 'peer',
@@ -76,8 +87,8 @@ function filterParams(dir: string): Params[] {
       keyboard: { productName: 'Peer', vendorId: 0, productId: 0 },
       fingerOverrides: {},
       layoutComparisonInputs: null,
-    })),
-  )
+    }))
+  })
 }
 
 /** The machine hash of this machine for the copy's installation id, or
@@ -159,7 +170,7 @@ describe('the Analyze post export of both builds on a copy of a userData', () =>
       if (JSON.stringify(mine) === JSON.stringify(peer.output.results[index])) same++
     }
     process.stdout.write(
-      `hub peer Analyze exports: ${same}/${params.length} the same (${built} built, the rest failures); ` +
+      `hub peer Analyze exports: ${same}/${params.length} the same (${built} built, the rest failures); skipped (file outside its store): ${skipped}; ` +
         `Electron rebuild ${Math.round(rebuiltMs)} ms + exports ${Math.round(electronMs)} ms (process max RSS ${Math.round(process.resourceUsage().maxRSS / 1024)} MB), ` +
         `Rust rebuild and exports ${peer.elapsedMs} ms (max RSS ${Math.round((peer.maxRssKb ?? 0) / 1024)} MB)\n`,
     )
