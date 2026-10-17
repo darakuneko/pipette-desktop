@@ -248,3 +248,38 @@ async fn the_list_asks_for_page_1_of_20_unless_told() {
     let odd = list(s.token.http(), Some(&json(r#"{"q":5}"#))).await;
     assert_eq!(odd, r#"{"success":false,"errorCode":"IO_ERROR","error":"query.q.trim is not a function"}"#);
 }
+
+#[tokio::test]
+async fn a_rate_limited_download_is_not_retried() {
+    let s = setup();
+    let seeded = s.hub.seed_key_label("bob@example.com", "Eucalyn", json("{}"), None, false, None);
+    let post_id = seeded.as_object().unwrap().get("id").unwrap().as_str().unwrap().to_owned();
+    s.hub.inject(Fault {
+        retry_after: Some("1".to_owned()),
+        only: Some("keyLabels.download".to_owned()),
+        ..Fault::new(429, 1)
+    });
+    let limited = answer(&download(s.token.http(), &s.stores, Some(&Value::from(post_id.as_str()))).await);
+    assert!(text(&limited, &["error"]).starts_with("Hub key-label download failed: 429 "), "{limited:?}");
+    assert_eq!(text(&limited, &["errorCode"]), "IO_ERROR");
+    assert_eq!(s.hub.requests().len(), 1);
+}
+
+#[tokio::test]
+async fn a_stale_jwt_is_replaced_and_a_deactivated_account_is_reported() {
+    let s = setup();
+    local_label(&s.stores, "local-1", "Mine", "{}");
+    let up = answer(&upload(&s.token, &s.stores, Some(&Value::from("local-1"))).await);
+    assert_eq!(get(&up, &["success"]), &Value::Bool(true));
+    s.hub.revoke_tokens();
+    s.hub.clear_requests();
+    let updated = answer(&update(&s.token, &s.stores, Some(&Value::from("local-1"))).await);
+    assert_eq!(get(&updated, &["success"]), &Value::Bool(true), "{updated:?}");
+    let tokens = s.hub.requests().iter().filter(|request| request.path == "/api/auth/token").count();
+    assert_eq!(tokens, 1);
+
+    s.hub.set_user("alice@example.com", Some("Alice"), Some(false));
+    let refused = delete(&s.token, &s.stores, Some(&Value::from("local-1"))).await;
+    assert_eq!(refused, r#"{"success":false,"errorCode":"IO_ERROR","error":"ACCOUNT_DEACTIVATED"}"#);
+    assert!(meta(&s.stores, "local-1").get("hubPostId").is_some());
+}
