@@ -5,15 +5,19 @@
 // an app that is not pointed at it).
 
 import { readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { $, browser, expect } from '@wdio/globals'
 import type { HubPrivateLink } from '../../src/shared/types/hub-private'
 import {
   clickInPage,
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
+  invokeCommand,
   openOverlayTab,
   recordPageErrors,
   recordedPageErrors,
+  restartApp,
   tid,
   vialApi,
   VIRTUAL_DEVICE_NAME,
@@ -23,6 +27,7 @@ import {
 import { readAppConfig, userDataPath } from '../helpers/driver'
 import { HUB_TEST_ACCOUNT } from '../helpers/hub-env'
 import { assertHubSession, fakeHub, hubControl, hubRequestsSince, hubState } from '../helpers/hub-harness'
+import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
 /** The display name the fake Hub gives the test account when it creates
@@ -32,6 +37,14 @@ const TAKEN_NAME = 'Taken Name'
 const POST_LABEL = 'E2E keymap post'
 const POST_RENAMED = 'E2E other post renamed'
 const OTHER_KEYBOARD = 'E2E other keyboard'
+const SAMPLE_PACKS = resolve(dirname(fileURLToPath(import.meta.url)), '../../sample-packs')
+const OTHER_ACCOUNT = 'other@example.com'
+const TAP_DANCE = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
+const FAVORITE_LABEL = 'E2E favorite'
+const ANALYTICS_LABEL = 'E2E analytics'
+const DAY_MS = 86_400_000
+/** Not a picture: the Hub checks a thumbnail's name and size only. */
+const THUMBNAIL_BASE64 = Buffer.from('e2e thumbnail').toString('base64')
 /** The Hub's files of a keymap post, sorted. */
 const KEYMAP_FILE_TYPES = ['c', 'pdf', 'pipette', 'vil']
 
@@ -113,6 +126,27 @@ async function connectAndFindUid(): Promise<string> {
   return uid
 }
 
+/** The `{success, data}` answer of `member`, its data, or a throw. */
+async function dataOf<T>(member: string, ...args: unknown[]): Promise<T> {
+  const answer = await vialApi<{ success: boolean; data?: T; error?: string }>(member, ...args)
+  if (!answer.success) throw new Error(`${member} failed: ${JSON.stringify(answer)}`)
+  return answer.data as T
+}
+
+/** Calls `member` with `paths` queued as the answer of its file dialog
+ *  (`dev_dialog_respond`), and checks that the call took that answer. */
+async function withFilesDialog<T>(paths: string[], member: string, ...args: unknown[]): Promise<T> {
+  const queued = (): Promise<number> => invokeCommand<number>('dev_dialog_queued')
+  if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
+  await invokeCommand('dev_dialog_respond', { paths })
+  const answer = await vialApi<T>(member, ...args)
+  if ((await queued()) !== 0) throw new Error(`${member} opened no file dialog`)
+  return answer
+}
+
+const readSample = (path: string): Record<string, unknown> =>
+  JSON.parse(readFileSync(join(SAMPLE_PACKS, path), 'utf8')) as Record<string, unknown>
+
 async function disconnect(): Promise<void> {
   await clickInPage(tid('disconnect-button'))
   await $(tid('settings-button')).waitForDisplayed()
@@ -176,7 +210,7 @@ describe('Tauri build Pipette Hub', function () {
     it('resolves a display name conflict with the first token, then sets the display name', async () => {
       // Another account has the name the Hub would give the test account,
       // so the first token request is refused until a name is chosen.
-      await hubControl('users', { email: 'other@example.com', displayName: TEST_ACCOUNT_LOCAL_PART })
+      await hubControl('users', { email: OTHER_ACCOUNT, displayName: TEST_ACCOUNT_LOCAL_PART })
       const from = fakeHub().requests.length
       expect((await hubState()).tokenCached).toBe(false)
 
@@ -203,7 +237,7 @@ describe('Tauri build Pipette Hub', function () {
       // The other account takes another name, so the test account's own
       // token requests go through again; a name another account has is
       // refused and shown.
-      await hubControl('users', { email: 'other@example.com', displayName: TAKEN_NAME })
+      await hubControl('users', { email: OTHER_ACCOUNT, displayName: TAKEN_NAME })
       await saveDisplayName(TAKEN_NAME)
       await $(tid('hub-display-name-error')).waitForDisplayed({ timeout: 30_000 })
       expect(hubUser(HUB_TEST_ACCOUNT)?.display_name).toBeNull()
@@ -338,7 +372,154 @@ describe('Tauri build Pipette Hub', function () {
       })
       // A private post the Hub no longer has counts as deleted.
       expect(await vialApi('hubDeletePrivatePost', 'files', second.id)).toEqual({ success: true })
+    })
+
+    it('uploads a favorite as a public post, updates it and uploads it as a private post', async () => {
+      const saved = await vialApi<{ success: boolean; entry: { id: string } }>(
+        'favoriteStoreSave',
+        'tapDance',
+        JSON.stringify({ type: 'tapDance', data: TAP_DANCE }),
+        FAVORITE_LABEL,
+      )
+      expect(saved.success).toBe(true)
+      const params = { type: 'tapDance', entryId: saved.entry.id, title: FAVORITE_LABEL, vialProtocol: 6 }
+
+      const uploaded = await vialApi<{ success: boolean; postId: string }>('hubUploadFavoritePost', params)
+      expect(uploaded.success).toBe(true)
+      const [post] = hubPosts(FAVORITE_LABEL)
+      expect([post.id, post.post_type, post.keyboard_name]).toEqual([uploaded.postId, 'td', null])
+      const sent = fakeHub().requests.filter((r) => r.op === 'files.create').at(-1)?.body as { parts: { name: string; value?: string }[] }
+      expect(sent.parts.find((part) => part.name === 'post_type')?.value).toBe('td')
+
+      const updated = await vialApi<{ success: boolean }>('hubUpdateFavoritePost', { ...params, postId: post.id, title: `${FAVORITE_LABEL} 2` })
+      expect(updated.success).toBe(true)
+      expect(fakeHub().state.posts.find((p) => p.id === post.id)?.title).toBe(`${FAVORITE_LABEL} 2`)
+
+      const shared = await vialApi<{ success: boolean; id: string; url: string; expiresAt: string }>('hubUploadPrivateFavoritePost', {
+        ...params,
+        expiresInDays: 3,
+      })
+      expect(shared.success).toBe(true)
+      const [privatePost] = hubPrivatePosts(FAVORITE_LABEL)
+      expect([shared.id, shared.expiresAt]).toEqual([privatePost.id, privatePost.expires_at])
+      expect(shared.url).toContain(privatePost.token)
+      expect(privatePost.post_type).toBe('td')
       await disconnect()
+    })
+
+    it('previews, uploads and updates an Analyze post from the seeded typing data', async () => {
+      earlierErrors.push(...(await recordedPageErrors()))
+      await restartApp(async () => {
+        await seedDummyTypingAnalytics(userDataPath(), Date.now())
+      })
+      await recordPageErrors()
+      await $(tid('settings-button')).waitForDisplayed({ timeout: 20_000 })
+      await browser.waitUntil(async () => (await vialApi<unknown[]>('typingAnalyticsListItemsLocal', DUMMY_TA_UID)).length > 0, {
+        timeout: 30_000,
+        timeoutMsg: 'the seeded days are not in the cache',
+      })
+      const keyboards = await vialApi<{ uid: string; productName: string; vendorId: number; productId: number }[]>(
+        'typingAnalyticsListKeyboards',
+      )
+      const summary = keyboards.find((kb) => kb.uid === DUMMY_TA_UID)
+      if (!summary) throw new Error('the seeded keyboard is not listed')
+      const keyboard = { productName: summary.productName, vendorId: summary.vendorId, productId: summary.productId }
+      const now = Date.now()
+      const saveFilter = async (label: string, range: { fromMs: number; toMs: number }): Promise<string> => {
+        const json = JSON.stringify({ version: 1, analysisTab: 'summary', range, filters: { deviceScopes: ['own'] } })
+        const saved = await vialApi<{ success: boolean; entry: { id: string } }>('analyzeFilterStoreSave', DUMMY_TA_UID, json, label)
+        expect(saved.success).toBe(true)
+        return saved.entry.id
+      }
+      const week = await saveFilter(ANALYTICS_LABEL, { fromMs: now - 7 * DAY_MS, toMs: now })
+      // An hour long before the seeded days: no keystrokes.
+      const empty = await saveFilter('E2E empty', { fromMs: now - 200 * DAY_MS, toMs: now - 200 * DAY_MS + 3_600_000 })
+      const base = { uid: DUMMY_TA_UID, keyboard, fingerOverrides: {}, layoutComparisonInputs: null }
+
+      type Preview = { success: boolean; preview: { totalKeystrokes: number; estimatedBytes: number; validation: { ok: boolean } } }
+      const tooFew = await vialApi<Preview>('hubPreviewAnalyticsPost', { ...base, entryId: empty })
+      expect(tooFew.success).toBe(true)
+      expect([tooFew.preview.totalKeystrokes, tooFew.preview.validation.ok]).toEqual([0, false])
+      const preview = await vialApi<Preview>('hubPreviewAnalyticsPost', { ...base, entryId: week })
+      expect(preview.preview.validation).toEqual({ ok: true })
+      expect(preview.preview.totalKeystrokes).toBeGreaterThanOrEqual(100)
+
+      const params = { ...base, entryId: week, title: ANALYTICS_LABEL, thumbnailBase64: THUMBNAIL_BASE64 }
+      const uploaded = await vialApi<{ success: boolean; postId: string }>('hubUploadAnalyticsPost', params)
+      expect(uploaded.success).toBe(true)
+      const [post] = hubPosts(ANALYTICS_LABEL)
+      expect([post.id, post.post_type, post.keyboard_uid, post.total_keystrokes]).toEqual([
+        uploaded.postId,
+        'analytics',
+        DUMMY_TA_UID,
+        preview.preview.totalKeystrokes,
+      ])
+      const linked = async (): Promise<string | undefined> =>
+        (await vialApi<{ entries: { id: string; hubPostId?: string }[] }>('analyzeFilterStoreList', DUMMY_TA_UID)).entries.find(
+          (entry) => entry.id === week,
+        )?.hubPostId
+      expect(await linked()).toBe(post.id)
+
+      const updatedAt = post.updated_at
+      const updated = await vialApi<{ success: boolean; postId: string }>('hubUpdateAnalyticsPost', {
+        ...params,
+        postId: post.id,
+        title: `${ANALYTICS_LABEL} 2`,
+      })
+      expect(updated).toEqual({ success: true, postId: post.id })
+      const after = fakeHub().state.posts.find((p) => p.id === post.id)
+      expect([after?.title, after?.updated_at !== updatedAt]).toEqual([`${ANALYTICS_LABEL} 2`, true])
+    })
+
+    it('searches, downloads, uploads, updates, syncs and deletes key labels', async () => {
+      const sample = readSample('key-labels/eucalyn.json') as { name: string; map: Record<string, string> }
+      // Another account's label with the sample's name.
+      const theirs = await hubControl<{ id: string; updated_at: string }>('key-labels', {
+        owner: OTHER_ACCOUNT,
+        name: sample.name,
+        map: sample.map,
+        keymapApplicable: true,
+      })
+      type Meta = { id: string; name: string; hubPostId?: string; uploaderName?: string; hubUpdatedAt?: string }
+      const metas = (): Promise<Meta[]> => dataOf<Meta[]>('keyLabelStoreList')
+
+      await withFilesDialog([join(SAMPLE_PACKS, 'key-labels/eucalyn.json')], 'keyLabelStoreImport')
+      const local = (await metas()).find((meta) => meta.name === sample.name)
+      if (!local) throw new Error('the sample key label was not imported')
+      expect(await vialApi('keyLabelHubUpload', local.id)).toEqual({
+        success: false,
+        errorCode: 'DUPLICATE_NAME',
+        error: 'KEY_LABEL_DUPLICATE',
+      })
+
+      await dataOf('keyLabelStoreRename', local.id, 'E2E Eucalyn')
+      const uploaded = await dataOf<Meta>('keyLabelHubUpload', local.id)
+      const mine = fakeHub().state.keyLabels.find((label) => label.name === 'E2E Eucalyn')
+      expect([uploaded.hubPostId, uploaded.uploaderName, uploaded.hubUpdatedAt]).toEqual([mine?.id, DISPLAY_NAME, mine?.updated_at])
+      const updated = await dataOf<Meta>('keyLabelHubUpdate', local.id)
+      expect(updated.hubUpdatedAt).not.toBe(uploaded.hubUpdatedAt)
+
+      const found = await dataOf<{ items: { id: string }[]; total: number }>('keyLabelHubList', { q: 'eucalyn' })
+      expect(found.items.map((item) => item.id).sort()).toEqual([theirs.id, mine?.id].sort())
+      expect((await dataOf<{ name: string }>('keyLabelHubDetail', theirs.id)).name).toBe(sample.name)
+      const downloaded = await dataOf<Meta>('keyLabelHubDownload', theirs.id)
+      expect([downloaded.id, downloaded.hubPostId, downloaded.uploaderName, downloaded.hubUpdatedAt]).toEqual([
+        theirs.id,
+        theirs.id,
+        TAKEN_NAME,
+        theirs.updated_at,
+      ])
+
+      // Their label changes on the Hub: the timestamps tell, and a sync
+      // takes it.
+      const touched = await hubControl<{ updated_at: string }>('touch', { kind: 'keyLabel', id: theirs.id })
+      const stamps = await dataOf<{ items: { id: string; updated_at: string }[] }>('keyLabelHubTimestamps', [theirs.id, 'missing-id'])
+      expect(stamps.items).toEqual([{ id: theirs.id, updated_at: touched.updated_at }])
+      expect((await dataOf<Meta>('keyLabelHubSync', downloaded.id)).hubUpdatedAt).toBe(touched.updated_at)
+
+      expect(await vialApi('keyLabelHubDelete', local.id)).toEqual({ success: true })
+      expect(fakeHub().state.keyLabels.some((label) => label.id === mine?.id)).toBe(false)
+      expect((await metas()).find((meta) => meta.id === local.id)?.hubPostId).toBeUndefined()
     })
   })
 
