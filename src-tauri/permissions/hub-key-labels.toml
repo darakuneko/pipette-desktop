@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/hub_commands/key_labels.rs.
+
+[[set]]
+identifier = "hub-key-labels"
+description = "Searches, reads, downloads, uploads, updates, syncs and deletes key labels on the Hub, and checks the freshness of the Hub-linked ones."
+permissions = [
+  "allow-key-label-hub-list",
+  "allow-key-label-hub-detail",
+  "allow-key-label-hub-download",
+  "allow-key-label-hub-upload",
+  "allow-key-label-hub-update",
+  "allow-key-label-hub-sync",
+  "allow-key-label-hub-timestamps",
+  "allow-key-label-hub-delete",
+]

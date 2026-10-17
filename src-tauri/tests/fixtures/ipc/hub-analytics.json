@@ -1,0 +1,86 @@
+[
+  {
+    "member": "hubUploadAnalyticsPost",
+    "args": [
+      {
+        "uid": "0xAB",
+        "entryId": "e1",
+        "title": "T",
+        "thumbnailBase64": ""
+      }
+    ],
+    "command": "hub_upload_analytics_post",
+    "invokeArgs": {
+      "params": {
+        "uid": "0xAB",
+        "entryId": "e1",
+        "title": "T",
+        "thumbnailBase64": ""
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubUpdateAnalyticsPost",
+    "args": [
+      {
+        "uid": "0xAB",
+        "entryId": "e1",
+        "title": "T",
+        "thumbnailBase64": "",
+        "postId": "p1"
+      }
+    ],
+    "command": "hub_update_analytics_post",
+    "invokeArgs": {
+      "params": {
+        "uid": "0xAB",
+        "entryId": "e1",
+        "title": "T",
+        "thumbnailBase64": "",
+        "postId": "p1"
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubPreviewAnalyticsPost",
+    "args": [
+      {
+        "uid": "0xAB",
+        "entryId": "e1"
+      }
+    ],
+    "command": "hub_preview_analytics_post",
+    "invokeArgs": {
+      "params": {
+        "uid": "0xAB",
+        "entryId": "e1"
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubUploadPrivateAnalyticsPost",
+    "args": [
+      {
+        "uid": "0xAB",
+        "entryId": "e1",
+        "title": "T",
+        "thumbnailBase64": "",
+        "expiresInDays": 7
+      }
+    ],
+    "command": "hub_upload_private_analytics_post",
+    "invokeArgs": {
+      "params": {
+        "uid": "0xAB",
+        "entryId": "e1",
+        "title": "T",
+        "thumbnailBase64": "",
+        "expiresInDays": 7
+      }
+    },
+    "response": null
+  }
+]

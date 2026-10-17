@@ -2912,6 +2912,7 @@ dependencies = [
  "pipette-fs",
  "pipette-google-auth",
  "pipette-hid",
+ "pipette-hub",
  "pipette-js-json",
  "pipette-keyboard-stores",
  "pipette-logger",

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/hub_commands/posts.rs.
+
+[[set]]
+identifier = "hub-posts"
+description = "Uploads, updates, renames, deletes and lists the keymap posts on the Hub, and uploads and deletes private posts."
+permissions = [
+  "allow-hub-upload-post",
+  "allow-hub-update-post",
+  "allow-hub-patch-post",
+  "allow-hub-delete-post",
+  "allow-hub-fetch-my-posts",
+  "allow-hub-fetch-my-keyboard-posts",
+  "allow-hub-upload-private-post",
+  "allow-hub-delete-private-post",
+]

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/hub_commands/favorite.rs.
+
+[[set]]
+identifier = "hub-favorite"
+description = "Uploads and updates favorite posts on the Hub, publicly or privately, and reads the favorite entry a post is built from."
+permissions = [
+  "allow-hub-upload-favorite-post",
+  "allow-hub-update-favorite-post",
+  "allow-hub-upload-private-favorite-post",
+  "allow-hub-favorite-entry",
+]

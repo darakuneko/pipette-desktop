@@ -51,11 +51,11 @@ fn keystore(user_data: &Path) -> Arc<dyn Keystore> {
 /// Manages the sync's secrets of `user_data` with the key store and the
 /// Google endpoints of this build. Endpoints the environment makes unusable
 /// (a development build with an incomplete or non-loopback set of endpoint
-/// variables) leave no endpoint to go to: every token request is refused,
-/// and nothing falls back to the real Google.
+/// variables, or an e2e run without them) leave no endpoint to go to: every
+/// token request is refused, and nothing falls back to the real Google.
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
     let user_agent = format!("Pipette/{}", app.package_info().version);
-    let config = match pipette_net::google_endpoints() {
+    let config = match crate::e2e_run::google_endpoints() {
         Ok(endpoints) => {
             let http = Arc::new(endpoints.client(Limits::DEFAULT, user_agent));
             auth_config(endpoints.auth, endpoints.token, http)

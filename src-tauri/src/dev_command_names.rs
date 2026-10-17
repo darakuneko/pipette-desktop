@@ -23,6 +23,8 @@ pub const DEV_COMMANDS: &[&str] = &[
     "dev_sync_last_auth_url",
     "dev_sync_run_poll_now",
     "dev_sync_state",
+    "dev_hub_state",
+    "dev_hub_run_startup_sync",
 ];
 
 /// The development commands that exist on Linux only.

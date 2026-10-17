@@ -374,6 +374,8 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         super::sync_auth::dev_sync_last_auth_url,
         super::sync_triggers::dev_sync_run_poll_now,
         super::sync_triggers::dev_sync_state,
+        super::hub::dev_hub_state,
+        super::hub::dev_hub_run_startup_sync,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]

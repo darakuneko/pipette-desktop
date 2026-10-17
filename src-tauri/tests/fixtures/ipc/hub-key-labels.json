@@ -1,0 +1,102 @@
+[
+  {
+    "member": "keyLabelHubList",
+    "args": [
+      {
+        "q": "x",
+        "page": 1,
+        "perPage": 20
+      }
+    ],
+    "command": "key_label_hub_list",
+    "invokeArgs": {
+      "params": {
+        "q": "x",
+        "page": 1,
+        "perPage": 20
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubDetail",
+    "args": [
+      "h1"
+    ],
+    "command": "key_label_hub_detail",
+    "invokeArgs": {
+      "hubPostId": "h1"
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubDownload",
+    "args": [
+      "h1"
+    ],
+    "command": "key_label_hub_download",
+    "invokeArgs": {
+      "hubPostId": "h1"
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubUpload",
+    "args": [
+      "l1"
+    ],
+    "command": "key_label_hub_upload",
+    "invokeArgs": {
+      "localId": "l1"
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubUpdate",
+    "args": [
+      "l1"
+    ],
+    "command": "key_label_hub_update",
+    "invokeArgs": {
+      "localId": "l1"
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubSync",
+    "args": [
+      "l1"
+    ],
+    "command": "key_label_hub_sync",
+    "invokeArgs": {
+      "localId": "l1"
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubTimestamps",
+    "args": [
+      [
+        "h1"
+      ]
+    ],
+    "command": "key_label_hub_timestamps",
+    "invokeArgs": {
+      "ids": [
+        "h1"
+      ]
+    },
+    "response": null
+  },
+  {
+    "member": "keyLabelHubDelete",
+    "args": [
+      "l1"
+    ],
+    "command": "key_label_hub_delete",
+    "invokeArgs": {
+      "localId": "l1"
+    },
+    "response": null
+  }
+]

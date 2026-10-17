@@ -24,6 +24,12 @@ import { syncPasswordApi } from '../api/sync-password'
 import { syncPasswordChangeApi } from '../api/sync-password-change'
 import { syncResetApi } from '../api/sync-reset'
 import { typingAnalyticsRemoteApi } from '../api/typing-analytics-remote'
+import { hubAccountApi, hubAccountReal } from '../api/hub-account'
+import { hubPostsApi, hubPostsReal } from '../api/hub-posts'
+import { hubFavoriteApi, hubFavoriteReal } from '../api/hub-favorite'
+import { hubAnalyticsApi, hubAnalyticsReal } from '../api/hub-analytics'
+import { hubPacksApi, hubPacksReal } from '../api/hub-packs'
+import { keyLabelHubApi, keyLabelHubReal } from '../api/key-label-hub'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
@@ -342,6 +348,26 @@ const SYNC_REAL = [
   'typingAnalyticsFetchRemoteDay',
 ]
 
+/** The members of each Hub module the backend implements (its `…Real`);
+ *  the module's other members stay fakes or stubs. One list per module, so
+ *  each domain moves its own members here. */
+const HUB_ACCOUNT_REAL: string[] = []
+const HUB_POSTS_REAL: string[] = []
+const HUB_FAVORITE_REAL: string[] = []
+const HUB_ANALYTICS_REAL: string[] = []
+const HUB_PACKS_REAL: string[] = []
+const KEY_LABEL_HUB_REAL: string[] = []
+
+/** The Hub members, by the shim module that holds them. */
+const HUB_MODULES = [
+  { module: hubAccountApi, real: hubAccountReal, realMembers: HUB_ACCOUNT_REAL },
+  { module: hubPostsApi, real: hubPostsReal, realMembers: HUB_POSTS_REAL },
+  { module: hubFavoriteApi, real: hubFavoriteReal, realMembers: HUB_FAVORITE_REAL },
+  { module: hubAnalyticsApi, real: hubAnalyticsReal, realMembers: HUB_ANALYTICS_REAL },
+  { module: hubPacksApi, real: hubPacksReal, realMembers: HUB_PACKS_REAL },
+  { module: keyLabelHubApi, real: keyLabelHubReal, realMembers: KEY_LABEL_HUB_REAL },
+]
+
 /** Whether `name` is a member named after the Hub that is not answered
  *  locally: the setters of a store's Hub link (`…SetHubPostId`,
  *  `…SetHubPrivate`) and `hubGetOrigin` (the configured origin) are. The
@@ -367,10 +393,22 @@ describe('shim coverage', () => {
     expect(stores.filter((name) => !members.includes(name))).toEqual([])
   })
 
-  it('leaves the members named after the Hub to fakes or stubs', () => {
+  it('backs only the listed members named after the Hub with backend commands', () => {
     const hub = VIAL_API_MEMBER_NAMES.filter(namedAfterHub)
     expect(hub.length).toBeGreaterThan(0)
-    expect(hub.filter((name) => name in real)).toEqual([])
+    const listed = HUB_MODULES.flatMap(({ realMembers }) => realMembers)
+    expect(hub.filter((name) => name in real).sort()).toEqual(listed.filter((name) => name !== 'hubGetOrigin').sort())
+  })
+
+  it('holds the 39 Hub members in their modules, each real one listed', () => {
+    const members = HUB_MODULES.flatMap(({ module }) => Object.keys(module))
+    expect(new Set(members).size).toBe(39)
+    expect(members.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
+    for (const { module, real: own, realMembers } of HUB_MODULES) {
+      expect(Object.keys(own).sort()).toEqual([...realMembers].sort())
+      expect(realMembers.filter((name) => !(name in module))).toEqual([])
+      expect(realMembers.filter((name) => !(name in real) || name in fakes)).toEqual([])
+    }
   })
 
   it('backs every keyboard member with backend commands', () => {

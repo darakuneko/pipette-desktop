@@ -1,0 +1,156 @@
+[
+  {
+    "member": "hubUploadPost",
+    "args": [
+      {
+        "title": "T",
+        "keyboardName": "KB",
+        "vilJson": "{}",
+        "pipetteJson": "{}",
+        "keymapC": "",
+        "pdfBase64": "",
+        "thumbnailBase64": ""
+      }
+    ],
+    "command": "hub_upload_post",
+    "invokeArgs": {
+      "params": {
+        "title": "T",
+        "keyboardName": "KB",
+        "vilJson": "{}",
+        "pipetteJson": "{}",
+        "keymapC": "",
+        "pdfBase64": "",
+        "thumbnailBase64": ""
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubUpdatePost",
+    "args": [
+      {
+        "postId": "p1",
+        "title": "T",
+        "keyboardName": "KB",
+        "vilJson": "{}",
+        "pipetteJson": "{}",
+        "keymapC": "",
+        "pdfBase64": "",
+        "thumbnailBase64": ""
+      }
+    ],
+    "command": "hub_update_post",
+    "invokeArgs": {
+      "params": {
+        "postId": "p1",
+        "title": "T",
+        "keyboardName": "KB",
+        "vilJson": "{}",
+        "pipetteJson": "{}",
+        "keymapC": "",
+        "pdfBase64": "",
+        "thumbnailBase64": ""
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubPatchPost",
+    "args": [
+      {
+        "postId": "p1",
+        "title": "T"
+      }
+    ],
+    "command": "hub_patch_post",
+    "invokeArgs": {
+      "params": {
+        "postId": "p1",
+        "title": "T"
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubDeletePost",
+    "args": [
+      "p1"
+    ],
+    "command": "hub_delete_post",
+    "invokeArgs": {
+      "postId": "p1"
+    },
+    "response": null
+  },
+  {
+    "member": "hubFetchMyPosts",
+    "args": [
+      {
+        "page": 1,
+        "per_page": 10
+      }
+    ],
+    "command": "hub_fetch_my_posts",
+    "invokeArgs": {
+      "params": {
+        "page": 1,
+        "per_page": 10
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubFetchMyKeyboardPosts",
+    "args": [
+      "KB"
+    ],
+    "command": "hub_fetch_my_keyboard_posts",
+    "invokeArgs": {
+      "keyboardName": "KB"
+    },
+    "response": null
+  },
+  {
+    "member": "hubUploadPrivatePost",
+    "args": [
+      {
+        "title": "T",
+        "keyboardName": "KB",
+        "vilJson": "{}",
+        "pipetteJson": "{}",
+        "keymapC": "",
+        "pdfBase64": "",
+        "thumbnailBase64": "",
+        "expiresInDays": 7
+      }
+    ],
+    "command": "hub_upload_private_post",
+    "invokeArgs": {
+      "params": {
+        "title": "T",
+        "keyboardName": "KB",
+        "vilJson": "{}",
+        "pipetteJson": "{}",
+        "keymapC": "",
+        "pdfBase64": "",
+        "thumbnailBase64": "",
+        "expiresInDays": 7
+      }
+    },
+    "response": null
+  },
+  {
+    "member": "hubDeletePrivatePost",
+    "args": [
+      "files",
+      "p1"
+    ],
+    "command": "hub_delete_private_post",
+    "invokeArgs": {
+      "kind": "files",
+      "id": "p1"
+    },
+    "response": null
+  }
+]

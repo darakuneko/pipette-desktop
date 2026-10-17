@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/hub_commands/packs.rs.
+
+[[set]]
+identifier = "hub-packs"
+description = "Searches, downloads, uploads, updates and deletes language and theme packs on the Hub, and checks the freshness of the Hub-linked packs."
+permissions = [
+  "allow-i18n-pack-hub-timestamps",
+  "allow-hub-list-i18n-posts",
+  "allow-hub-download-i18n-post",
+  "allow-hub-upload-i18n-post",
+  "allow-hub-update-i18n-post",
+  "allow-hub-delete-i18n-post",
+  "allow-theme-pack-hub-timestamps",
+  "allow-hub-list-theme-posts",
+  "allow-hub-download-theme-post",
+  "allow-hub-upload-theme-post",
+  "allow-hub-update-theme-post",
+  "allow-hub-delete-theme-post",
+]

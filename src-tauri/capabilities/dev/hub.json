@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-hub",
+  "description": "Builds with the dev-tools feature only: tells where the Hub requests go and the Hub's state (never its token), and runs the startup sync of the Hub-linked language packs on demand, so the e2e tests need not restart the app.",
+  "windows": ["main"],
+  "permissions": ["allow-dev-hub-state", "allow-dev-hub-run-startup-sync"]
+}
