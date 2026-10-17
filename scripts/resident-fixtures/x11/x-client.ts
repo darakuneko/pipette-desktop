@@ -3,7 +3,7 @@
 // windows and properties on its private server (x-server.ts): InternAtom,
 // CreateWindow (InputOnly, never mapped), DestroyWindow, ChangeProperty and
 // DeleteProperty, with GetInputFocus as the round trip that surfaces errors.
-// Little-endian, over the server's Unix socket, MIT-MAGIC-COOKIE-1 only.
+// Little-endian, over the server's local socket, MIT-MAGIC-COOKIE-1 only.
 
 import { createConnection, type Socket } from 'node:net'
 
@@ -34,11 +34,22 @@ interface Pending {
 export async function connectX(display: string, cookie: Buffer): Promise<XClient> {
   const number = /^:(\d+)$/.exec(display)?.[1]
   if (number === undefined) throw new Error(`x client: unsupported display ${display}`)
-  const socket: Socket = createConnection(`/tmp/.X11-unix/X${number}`)
-  await new Promise<void>((resolve, reject) => {
-    socket.once('connect', resolve)
-    socket.once('error', reject)
-  })
+  // As Xlib does: the abstract socket first (an X server run without root
+  // may be unable to create /tmp/.X11-unix), then the socket file.
+  let found: Socket | null = null
+  for (const path of [`\0/tmp/.X11-unix/X${number}`, `/tmp/.X11-unix/X${number}`]) {
+    const candidate = createConnection(path)
+    const connected = await new Promise<boolean>((resolve) => {
+      candidate.once('connect', () => resolve(true))
+      candidate.once('error', () => resolve(false))
+    })
+    if (connected) {
+      found = candidate
+      break
+    }
+  }
+  if (found === null) throw new Error(`x client: cannot connect to ${display}`)
+  const socket = found
 
   let buffer = Buffer.alloc(0)
   let waiter: (() => void) | null = null

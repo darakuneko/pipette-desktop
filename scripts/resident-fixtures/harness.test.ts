@@ -5,7 +5,7 @@
 //
 // Run: pnpm run test:resident-fixtures-harness
 
-import { mkdirSync, symlinkSync } from 'node:fs'
+import { existsSync, mkdirSync, symlinkSync } from 'node:fs'
 import { homedir as realHomedirOfTest } from 'node:os'
 import { join } from 'node:path'
 import { app, net, shell } from 'electron'
@@ -76,6 +76,7 @@ describe('the resident fixture harness', () => {
     mkdirSync(join(home, '.config'))
     await boot({ isPackaged: true, config: { autoLaunch: true } })
     expect(harnessState().logs).toEqual([{ level: 'info', message: 'Pipette starting' }])
+    expect(existsSync(join(home, '.config', 'autostart', 'pipette.desktop'))).toBe(true)
   })
 
   it('boots index.ts with every resident handler kept', async () => {
