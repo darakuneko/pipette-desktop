@@ -98,12 +98,14 @@ describe('implemented', () => {
     expect(invoke).toHaveBeenCalledWith('app_config_get_all', undefined)
   })
 
-  it('asks the backend for the key labels and answers the key label Hub as unavailable', async () => {
+  it('asks the backend for the key labels and their Hub posts', async () => {
     invoke.mockResolvedValueOnce({ success: true, data: [] })
     const api = createVialApi(implemented)
     await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
     expect(invoke).toHaveBeenCalledWith('key_label_store_list', undefined)
-    await expect(api.keyLabelHubTimestamps([])).resolves.toEqual({ success: false })
+    invoke.mockResolvedValueOnce({ success: true, data: { items: [] } })
+    await expect(api.keyLabelHubTimestamps(['post-1'])).resolves.toEqual({ success: true, data: { items: [] } })
+    expect(invoke).toHaveBeenLastCalledWith('key_label_hub_timestamps', { ids: ['post-1'] })
   })
 
   it('asks the backend for the snapshots of a keyboard', async () => {
