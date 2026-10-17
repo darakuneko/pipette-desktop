@@ -185,9 +185,12 @@ export async function waitForQuietSync(ready: () => Promise<boolean> = async () 
 
 // ---- The Data modal ----
 
+/** Opens the Data modal and waits for the sync its opening runs with Auto
+ *  Sync on: the trash and the resets refuse to act while a sync runs. */
 export async function openDataModal(): Promise<void> {
   await clickInPage(tid('data-button'))
   await $(tid('data-modal')).waitForDisplayed()
+  await waitForQuietSync()
 }
 
 export async function closeDataModal(): Promise<void> {

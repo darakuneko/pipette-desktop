@@ -8,9 +8,9 @@
 // seconds after it is saved; Analyze uploads the typing days of the
 // keyboard it opens; a change saved right before a quit reaches Drive or
 // stays pending. Machine B (another userData directory, so another machine
-// hash) signs in with the same password, polls, lists the keyboard only on
-// Drive and downloads it on connect; a duplicate on Drive goes to the
-// trash and is deleted from the trash screen; A's typing days are fetched
+// hash) signs in with the same password, lists the keyboard only on Drive
+// and downloads it on connect; a poll moves a duplicate on Drive to the
+// trash, which is deleted from the trash screen; A's typing days are fetched
 // when B opens them, and one is deleted; a password change a quit
 // interrupts is resumed after the restart; a newer sync-format marker
 // stops the sync; the three resets clear Drive, the keyboard and the
@@ -35,7 +35,7 @@ import {
   waitForGone,
 } from '../helpers/app'
 import { quitApp, readAppConfig, readPendingUnits, userDataPath } from '../helpers/driver'
-import { fakeDrive, injectDriveFault, switchMachine } from '../helpers/sync-harness'
+import { assertDevToolsBuild, fakeDrive, injectDriveFault, switchMachine } from '../helpers/sync-harness'
 import {
   closeDataModal,
   closeSettings,
@@ -142,6 +142,10 @@ describe('Tauri build Cloud Sync', function () {
     await returnToDeviceList()
   })
 
+  // Without the development tools the app ignores the endpoint variables
+  // and would sync with Google itself.
+  before(assertDevToolsBuild)
+
   let uid = ''
   let hashA = ''
   let hashB = ''
@@ -225,7 +229,7 @@ describe('Tauri build Cloud Sync', function () {
   })
 
   describe('machine B', () => {
-    it('signs in with the same password, polls, lists the keyboard only on Drive and downloads it on connect', async () => {
+    it('signs in with the same password, lists the keyboard only on Drive and downloads it on connect', async () => {
       await switchMachine()
       hashB = await machineHash()
       expect(hashB).not.toBe(hashA)
@@ -237,8 +241,6 @@ describe('Tauri build Cloud Sync', function () {
       await enableAutoSync()
       await closeSettings()
 
-      const meta = userDataPath('sync', 'meta', 'keyboard-names.json')
-      await pollUntil(() => existsSync(meta), 'the poll did not download the keyboard names')
       const favorites = await vialApi<{ entries: { label: string }[] }>('favoriteStoreList', 'tapDance')
       expect(favorites.entries.map((entry) => entry.label)).toContain(FAVORITE_LABEL)
       expect(existsSync(userDataPath('sync', 'keyboards', uid))).toBe(false)
@@ -262,7 +264,7 @@ describe('Tauri build Cloud Sync', function () {
       await disconnect()
     })
 
-    it('moves a duplicate on Drive to the trash and deletes it from the trash screen', async () => {
+    it('polls, which moves a duplicate on Drive to the trash, and deletes it from the trash screen', async () => {
       const [original] = driveFilesNamed(META_FILE)
       fakeDrive().state.create(META_FILE, Buffer.from(original.content), original.mimeType)
       const trashed = (): string[] => driveFileNames().filter((name) => name.startsWith(`${META_FILE}.trash.`))
@@ -286,15 +288,17 @@ describe('Tauri build Cloud Sync', function () {
       const clockBefore = driveClock()
       await openSyncSettings()
       await clickInPage(tid('sync-password-change-btn'))
-      const requestsBefore = fakeDrive().requests.length
-      // The re-encryption's first write waits out a rate limit; the quit
-      // cuts the wait.
-      await injectDriveFault({ status: 429, retryAfter: '30', count: 1, only: 'update' })
+      await waitForQuietSync()
       await submitPassword(NEW_PASSWORD)
+      // From its state file on, the change stops every other sync on this
+      // machine, so the next upload is the re-encryption's first write
+      // (after the lock step's waits of several seconds). It waits out a
+      // rate limit, and the quit cuts the wait.
+      await browser.waitUntil(() => existsSync(statePath), { timeoutMsg: 'the password change did not start' })
+      const requestsBefore = fakeDrive().requests.length
+      await injectDriveFault({ status: 429, retryAfter: '30', count: 1, only: 'update' })
       await browser.waitUntil(
-        () =>
-          existsSync(statePath) &&
-          fakeDrive().requests.slice(requestsBefore).some((r) => r.method === 'PATCH' && r.path.startsWith('/upload/')),
+        () => fakeDrive().requests.slice(requestsBefore).some((r) => r.method === 'PATCH' && r.path.startsWith('/upload/')),
         { timeout: 60_000, timeoutMsg: 'the re-encryption did not start' },
       )
       expect(JSON.parse(readFileSync(statePath, 'utf8')).step).toBe('reencrypting')
@@ -398,8 +402,7 @@ describe('Tauri build Cloud Sync', function () {
 
     it('stops at a sync-format marker newer than its own', async () => {
       fakeDrive().state.create('sync-format-v3.json', Buffer.from('{}'), 'application/json')
-      await invokeCommand('dev_sync_run_poll_now')
-      await $(tid('sync-update-banner')).waitForDisplayed({ timeout: 30_000 })
+      await pollUntil(() => $(tid('sync-update-banner')).isDisplayed(), 'the update banner did not show')
       expect(await vialApi<{ updateRequired: boolean }>('syncFormatStatus')).toEqual(
         expect.objectContaining({ updateRequired: true }),
       )
