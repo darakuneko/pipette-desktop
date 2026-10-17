@@ -41,7 +41,10 @@ export interface FavoriteTransferResults {
   exportCurrent: FavoriteExportBuild
   importToCurrent: { data: unknown } | { error: string }
   import: { plan: FavoriteImportPlan } | { error: string }
-  hubExport: { json: string } | { error: string }
+  /** `thrown`: the message of an `Error` thrown while building, `null` for
+   *  a thrown value that is not one, which the post member answers as the
+   *  Electron handler's `extractError` does. */
+  hubExport: { json: string } | { error: string } | { thrown: string | null }
 }
 
 export type FavoriteTransferResult<R extends FavoriteTransferRequest> = FavoriteTransferResults[R['op']]
@@ -79,6 +82,9 @@ export function runFavoriteTransfer<R extends FavoriteTransferRequest>(request: 
   try {
     return answer(request) as FavoriteTransferResult<R>
   } catch (err) {
+    if (request.op === 'hubExport') {
+      return { thrown: err instanceof Error ? err.message : null } as FavoriteTransferResult<R>
+    }
     return { error: String(err) } as FavoriteTransferResult<R>
   }
 }

@@ -145,6 +145,24 @@ describe('favorite post members on their own', () => {
     })
   })
 
+  it('answers an exception of the worker as extractError does', async () => {
+    mockIPC((cmd) => (cmd === 'hub_favorite_entry' ? entry : null))
+    vi.mocked(transfer).mockImplementationOnce(async (request: FavoriteTransferRequest) =>
+      runFavoriteTransfer({ ...request, entry: { ...entry.entry, body: 'not json' } } as FavoriteTransferRequest),
+    )
+    const answer = await hubFavoriteApi.hubUploadFavoritePost(params)
+    expect(answer.success).toBe(false)
+    expect(answer.error).not.toMatch(/^SyntaxError/)
+    expect(answer.error).toBe((() => {
+      try { JSON.parse('not json') } catch (err) { return (err as Error).message }
+    })())
+    vi.mocked(transfer).mockResolvedValueOnce({ thrown: null })
+    expect(await hubFavoriteApi.hubUpdateFavoritePost({ ...params, postId: 'p' })).toEqual({
+      success: false,
+      error: 'Update failed',
+    })
+  })
+
   it('checks the Vial protocol as isValidHubVialProtocol does (ts_hub_pure.json)', async () => {
     const cases = fixture('ts_hub_pure.json').isValidHubVialProtocol as Array<{ input: unknown; ok: boolean }>
     expect(cases.length).toBeGreaterThanOrEqual(13)

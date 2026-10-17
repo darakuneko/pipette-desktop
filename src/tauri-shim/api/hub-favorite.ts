@@ -60,6 +60,9 @@ async function prepareFavoritePost(params: HubUploadFavoritePostParams): Promise
   if (!read.success) throw new Error(read.error)
   const built = await transfer({ op: 'hubExport', scope: params.type, vialProtocol: params.vialProtocol, entry: read.entry })
   if ('error' in built) throw new Error(built.error)
+  // A thrown value that is not an `Error` is rethrown as one that is not
+  // either, so `extractError` answers the member's fallback.
+  if ('thrown' in built) throw built.thrown === null ? built : new Error(built.thrown)
   return built.json
 }
 
