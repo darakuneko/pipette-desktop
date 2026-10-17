@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { useHubFreshness, hasUpdate } from '../useHubFreshness'
 import { keyLabelHubApi } from '../../../tauri-shim/api/key-label-hub'
@@ -62,9 +62,19 @@ describe.each(backends)('useHubFreshness with the key label timestamps ($name)',
 
   it('keeps nothing when the check fails', async () => {
     keyLabelHubTimestamps.mockResolvedValueOnce({ success: false, errorCode: 'IO_ERROR', error: 'offline' })
-    const { result } = renderHook(() => useHubFreshness({ enabled: true, candidates, fetchTimestamps }))
-    await waitFor(() => expect(keyLabelHubTimestamps).toHaveBeenCalledTimes(1))
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    let settled = false
+    const fetchAndMark = async (ids: string[]) => {
+      try {
+        return await fetchTimestamps(ids)
+      } finally {
+        settled = true
+      }
+    }
+    const { result } = renderHook(() => useHubFreshness({ enabled: true, candidates, fetchTimestamps: fetchAndMark }))
+    await waitFor(() => expect(settled).toBe(true))
+    // Let the hook's continuation after the answer run before looking.
+    await act(async () => {})
+    expect(keyLabelHubTimestamps).toHaveBeenCalledTimes(1)
     expect(result.current.size).toBe(0)
   })
 })
