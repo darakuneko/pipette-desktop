@@ -5,8 +5,11 @@
 // FIXED_NOW and the platform and environment the scenario asks for.
 
 import { vi } from 'vitest'
-import { FIXED_NOW, harnessState, type Display, type Rect } from './harness'
+import { DEFAULT_DISPLAY, FIXED_NOW, harnessState, type Display, type Rect } from './harness'
 
+/** What a boot starts from unless the options say otherwise: the
+ *  DEFAULT_APP_CONFIG, no saved window position, one 1920x1080 display with
+ *  a 40 px panel, an unpackaged build and a 37 px title bar. */
 export interface BootOptions {
   /** AppConfig values over DEFAULT_APP_CONFIG. */
   config?: Record<string, unknown>
@@ -19,11 +22,11 @@ export interface BootOptions {
 /** Starts the app; the clock stays fake until the test ends. */
 export async function boot(options: BootOptions = {}): Promise<void> {
   const state = harnessState()
-  if (options.config !== undefined) state.config = options.config
-  if (options.windowState !== undefined) state.windowState = options.windowState
-  if (options.displays !== undefined) state.displays = options.displays
-  if (options.isPackaged !== undefined) state.isPackaged = options.isPackaged
-  if (options.frame !== undefined) state.frame = options.frame
+  state.config = options.config ?? {}
+  state.windowState = options.windowState ?? { x: -1, y: -1, width: 1320, height: 1080 }
+  state.displays = options.displays ?? [DEFAULT_DISPLAY]
+  state.isPackaged = options.isPackaged ?? false
+  state.frame = options.frame ?? { width: 0, height: 37 }
   // What a previous boot in the same test registered or built.
   state.calls = []
   state.logs = []

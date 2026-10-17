@@ -60,6 +60,8 @@
     "test:sync-fixtures-harness": "vitest run --config scripts/sync-fixtures/vitest.config.ts harness",
     "generate:hub-fixtures": "vitest run --config scripts/hub-fixtures/vitest.config.ts record- && ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/hub-fixtures/analytics-export/vitest.config.ts",
     "test:hub-fixtures-harness": "vitest run --config scripts/hub-fixtures/vitest.config.ts harness",
+    "generate:resident-fixtures": "vitest run --config scripts/resident-fixtures/vitest.config.ts",
+    "test:resident-fixtures-harness": "vitest run --config scripts/resident-fixtures/vitest.config.ts harness",
     "test:sync-interop": "vitest run --config scripts/sync-interop/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",

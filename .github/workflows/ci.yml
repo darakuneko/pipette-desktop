@@ -45,7 +45,8 @@ jobs:
       - run: pnpm build
 
       # The analytics DB generator runs under Electron acting as Node, with
-      # better-sqlite3 rebuilt for Electron by the install above.
+      # better-sqlite3 rebuilt for Electron by the install above. The resident
+      # generator starts its own Xvfb (installed above) for the X11 golden.
       - name: Regenerate the fixtures under src-tauri
         if: inputs.check-fixtures
         run: |
@@ -66,6 +67,7 @@ jobs:
           pnpm generate:typing-dataset-fixtures
           pnpm generate:active-window-fixtures
           pnpm generate:hub-fixtures
+          pnpm generate:resident-fixtures
 
       # ts_random_envelopes.json is recorded with real random salts and IVs,
       # so it differs on every run.
