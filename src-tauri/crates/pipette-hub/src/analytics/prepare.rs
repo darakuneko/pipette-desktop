@@ -65,6 +65,12 @@ fn js_max_zero(n: f64) -> f64 {
     if n.is_nan() { n } else { n.max(0.0) }
 }
 
+/// Runs the file reads of `read` on the blocking pool, off the async
+/// runtime's threads.
+async fn blocking<T: Send + 'static>(read: impl FnOnce() -> T + Send + 'static) -> Result<T, PrepareError> {
+    tokio::task::spawn_blocking(read).await.map_err(|err| PrepareError(err.to_string()))
+}
+
 /// `prepareAnalyticsExport(params)` with `own_hash` as this device and
 /// `now_ms` as the export's time: the saved filters read from `store`,
 /// the snapshot from its userData, the export built on `source`'s cache.
@@ -77,7 +83,11 @@ pub async fn prepare_analytics_export(
 ) -> Result<Prepared, PrepareError> {
     let Some(uid) = text(prop(params, "uid")) else { return Ok(failed("Invalid uid", 0.0)) };
     let Some(entry_id) = text(prop(params, "entryId")) else { return Ok(failed("Invalid entryId", 0.0)) };
-    let data = match load_analyze_filter(store, uid, entry_id) {
+    let loaded = {
+        let (store, uid, entry_id) = (store.clone(), uid.to_owned(), entry_id.to_owned());
+        blocking(move || load_analyze_filter(&store, &uid, &entry_id)).await?
+    };
+    let data = match loaded {
         Ok(data) => data,
         Err(AnalyzeFilterError::NotFound | AnalyzeFilterError::Deleted) => {
             return Ok(failed("Saved filter entry not found", 0.0));
@@ -107,8 +117,11 @@ pub async fn prepare_analytics_export(
     };
 
     // Only this device saves keymap snapshots.
-    let snapshot = get_keymap_snapshot_for_range(store.user_data(), uid, own_hash, from_ms, to_ms)
-        .map_err(|err| PrepareError(err.to_string()))?;
+    let snapshot = {
+        let (user_data, uid, hash) = (store.user_data().to_path_buf(), uid.to_owned(), own_hash.to_owned());
+        blocking(move || get_keymap_snapshot_for_range(&user_data, &uid, &hash, from_ms, to_ms)).await?
+    }
+    .map_err(|err| PrepareError(err.to_string()))?;
     if matches!(snapshot, Value::Null) {
         return Ok(failed("No keymap snapshot recorded for this range", range_ms));
     }
