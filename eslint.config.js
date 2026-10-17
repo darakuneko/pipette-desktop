@@ -7,7 +7,7 @@ export default [
     // under scripts/ and the Tauri e2e tests get the same TypeScript rules
     // as src/. The scripts/ globs must match the include list in
     // tsconfig.scripts.json.
-    files: ['src/**/*.{ts,tsx}', 'scripts/*-fixtures/**/*.ts', 'scripts/fixture-*.ts', 'scripts/fake-drive/**/*.ts', 'scripts/fake-hub/**/*.ts', 'scripts/sync-interop/**/*.ts', 'e2e-tauri/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}', 'scripts/*-fixtures/**/*.ts', 'scripts/fixture-*.ts', 'scripts/fake-drive/**/*.ts', 'scripts/fake-hub/**/*.ts', 'scripts/fake-server/**/*.ts', 'scripts/sync-interop/**/*.ts', 'e2e-tauri/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

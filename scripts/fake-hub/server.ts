@@ -40,8 +40,7 @@
 // prints the URL and the variables as JSON and serves until it is stopped.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import type { AddressInfo } from 'node:net'
-import { pathToFileURL } from 'node:url'
+import { listenOnLoopback, readBody, runStandalone } from '../fake-server/server-support'
 import { readForm, type HubAnswer, type HubRequest } from './hub-http'
 import { ACCOUNT_AND_POST_ROUTES, type Route } from './hub-routes'
 import { PACK_AND_KEY_LABEL_ROUTES } from './hub-routes-packs'
@@ -88,17 +87,6 @@ export function fakeHubEnv(url: string): Record<string, string> {
 function send(res: ServerResponse, answer: HubAnswer): void {
   res.writeHead(answer.status, { 'Content-Type': 'application/json', ...answer.headers })
   res.end(answer.body)
-}
-
-async function readBody(req: IncomingMessage): Promise<Buffer> {
-  const chunks: Buffer[] = []
-  let size = 0
-  for await (const chunk of req) {
-    size += (chunk as Buffer).length
-    if (size > MAX_BODY_BYTES) throw new Error('request body too large')
-    chunks.push(chunk as Buffer)
-  }
-  return Buffer.concat(chunks)
 }
 
 function logBody(request: HubRequest): LoggedBody {
@@ -245,7 +233,7 @@ function control(state: HubState, requests: LoggedRequest[], method: string, pat
 async function handle(state: HubState, requests: LoggedRequest[], req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1')
   const method = req.method ?? 'GET'
-  const body = await readBody(req)
+  const body = await readBody(req, MAX_BODY_BYTES)
   if (url.pathname.startsWith('/__control/')) {
     let result: unknown
     try {
@@ -291,33 +279,13 @@ export async function startFakeHub(options: { port?: number } = {}): Promise<Fak
       else res.destroy()
     })
   })
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(options.port ?? 0, '127.0.0.1', () => resolve())
-  })
-  const { address, port } = server.address() as AddressInfo
-  if (address !== '127.0.0.1') throw new Error(`the fake Hub listens on ${address}`)
+  const { url, close } = await listenOnLoopback(server, options.port, 'fake Hub')
   return {
-    url: `http://127.0.0.1:${port}`,
+    url,
     state,
     requests,
-    close: () =>
-      new Promise((resolve) => {
-        server.closeAllConnections()
-        server.close(() => resolve())
-      }),
+    close,
   }
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const port = process.argv[2] === undefined ? 0 : Number(process.argv[2])
-  startFakeHub({ port }).then((hub) => {
-    console.log(JSON.stringify({ url: hub.url, env: fakeHubEnv(hub.url) }))
-    const stop = (): void => void hub.close().then(() => process.exit(0))
-    process.on('SIGTERM', stop)
-    process.on('SIGINT', stop)
-  }, (err: unknown) => {
-    console.error(err)
-    process.exit(1)
-  })
-}
+runStandalone(import.meta.url, startFakeHub, fakeHubEnv)
