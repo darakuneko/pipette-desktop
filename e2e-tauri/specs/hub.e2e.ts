@@ -26,7 +26,7 @@ import {
 } from '../helpers/app'
 import { readAppConfig, userDataPath } from '../helpers/driver'
 import { HUB_TEST_ACCOUNT } from '../helpers/hub-env'
-import { assertHubSession, fakeHub, hubControl, hubRequestsSince, hubState } from '../helpers/hub-harness'
+import { assertHubSession, fakeHub, hubControl, hubRequestsSince, hubState, injectHubFault } from '../helpers/hub-harness'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
@@ -43,6 +43,10 @@ const TAP_DANCE = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTe
 const FAVORITE_LABEL = 'E2E favorite'
 const ANALYTICS_LABEL = 'E2E analytics'
 const DAY_MS = 86_400_000
+const HUB_LANGUAGE_PACK = 'E2E Hub Japanese'
+const OWN_LANGUAGE_PACK = 'E2E Own Japanese'
+const OWN_THEME_PACK = 'E2E Own Theme'
+const LANGUAGE_PACK_EXPORTED_AT = '2026-01-01T00:00:00.000Z'
 /** Not a picture: the Hub checks a thumbnail's name and size only. */
 const THUMBNAIL_BASE64 = Buffer.from('e2e thumbnail').toString('base64')
 /** The Hub's files of a keymap post, sorted. */
@@ -142,6 +146,55 @@ async function withFilesDialog<T>(paths: string[], member: string, ...args: unkn
   const answer = await vialApi<T>(member, ...args)
   if ((await queued()) !== 0) throw new Error(`${member} opened no file dialog`)
   return answer
+}
+
+interface PackMeta {
+  id: string
+  name: string
+  hubPostId?: string
+  uploaderName?: string
+  hubUpdatedAt?: string
+}
+
+/** Waits until `member` lists a pack for which `match` holds, and
+ *  answers it. */
+async function waitForPack(member: string, match: (meta: PackMeta) => boolean, timeoutMsg: string): Promise<PackMeta> {
+  let found: PackMeta | undefined
+  await browser.waitUntil(
+    async () => {
+      found = (await dataOf<PackMeta[]>(member)).find(match)
+      return found !== undefined
+    },
+    { timeout: 30_000, timeoutMsg },
+  )
+  return found as PackMeta
+}
+
+/** Opens the device selector's settings on the Tools tab and the pack
+ *  modal `modal` from its button `button`. */
+async function openFromTools(button: string, modal: string): Promise<void> {
+  await clickInPage(tid('settings-button'))
+  await $(tid('settings-modal')).waitForDisplayed()
+  await clickInPage(tid('settings-tab-tools'))
+  await clickInPage(tid(button))
+  await $(tid(modal)).waitForDisplayed()
+}
+
+async function closeFromTools(close: string, modal: string): Promise<void> {
+  await clickInPage(tid(close))
+  await waitForGone(tid(modal), `${modal} did not close`)
+  await closeSettings()
+}
+
+/** The language pack the fake Hub keeps under `id`, with `edit` applied to
+ *  its body, and its update time moved on. */
+async function changeHubLanguagePack(id: string, edit: (pack: Record<string, Record<string, string>>) => void): Promise<string> {
+  const stored = fakeHub().state.packs.i18n.find((pack) => pack.id === id)
+  if (!stored) throw new Error(`the fake Hub has no language pack ${id}`)
+  const exported = JSON.parse(stored.pack_json) as { pack: Record<string, Record<string, string>> }
+  edit(exported.pack)
+  stored.pack_json = JSON.stringify(exported)
+  return (await hubControl<{ updated_at: string }>('touch', { kind: 'i18n', id })).updated_at
 }
 
 const readSample = (path: string): Record<string, unknown> =>
@@ -520,6 +573,149 @@ describe('Tauri build Pipette Hub', function () {
       expect(await vialApi('keyLabelHubDelete', local.id)).toEqual({ success: true })
       expect(fakeHub().state.keyLabels.some((label) => label.id === mine?.id)).toBe(false)
       expect((await metas()).find((meta) => meta.id === local.id)?.hubPostId).toBeUndefined()
+    })
+
+    let hubLanguagePack = { id: '', localId: '' }
+
+    it('downloads and applies a language pack from the Hub tab, syncs it, and uploads, updates and removes its own', async () => {
+      const sample = readSample('i18n/i18n-packs-Japanese.json')
+      const theirs = await hubControl<{ id: string; updated_at: string }>('i18n-packs', {
+        owner: OTHER_ACCOUNT,
+        export: { version: 1, kind: 'i18n', exportedAt: LANGUAGE_PACK_EXPORTED_AT, pack: { ...sample, name: HUB_LANGUAGE_PACK } },
+      })
+      const own = await dataOf<PackMeta>('i18nPackImportApply', { ...sample, name: OWN_LANGUAGE_PACK })
+
+      await openFromTools('settings-language-packs-button', 'language-packs-modal')
+      await clickInPage(tid('language-packs-tab-hub'))
+      await fillInput(tid('language-packs-search-input'), 'E2E Hub')
+      await clickInPage(tid('language-packs-search-button'))
+      await $(tid(`language-packs-hub-row-${theirs.id}`)).waitForDisplayed({ timeout: 30_000 })
+      await clickInPage(tid(`language-packs-hub-download-${theirs.id}`))
+      const downloaded = await waitForPack('i18nPackList', (meta) => meta.hubPostId === theirs.id, 'the Hub pack was not downloaded')
+      expect([downloaded.name, downloaded.uploaderName, downloaded.hubUpdatedAt]).toEqual([HUB_LANGUAGE_PACK, TAKEN_NAME, theirs.updated_at])
+      hubLanguagePack = { id: theirs.id, localId: downloaded.id }
+
+      await clickInPage(tid('language-packs-tab-installed'))
+      await clickInPage(tid(`language-packs-select-${downloaded.id}`))
+      await browser.waitUntil(() => readAppConfig().language === `pack:${downloaded.id}`, { timeoutMsg: 'the pack was not applied' })
+      await clickInPage(tid('language-packs-select-builtin:en'))
+      await browser.waitUntil(() => readAppConfig().language === 'builtin:en', { timeoutMsg: 'English was not applied again' })
+
+      await clickInPage(tid(`language-packs-upload-${own.id}`))
+      const uploaded = await waitForPack('i18nPackList', (meta) => meta.id === own.id && meta.hubPostId !== undefined, 'the own pack was not uploaded')
+      const onHub = fakeHub().state.packs.i18n.find((pack) => pack.name === OWN_LANGUAGE_PACK)
+      expect([uploaded.hubPostId, uploaded.uploaderName, uploaded.hubUpdatedAt]).toEqual([onHub?.id, DISPLAY_NAME, onHub?.updated_at])
+      await clickInPage(tid(`language-packs-update-${own.id}`))
+      await waitForPack('i18nPackList', (meta) => meta.id === own.id && meta.hubUpdatedAt !== uploaded.hubUpdatedAt, 'the own pack was not updated')
+      await clickInPage(tid(`language-packs-remove-${own.id}`))
+      await clickInPage(tid(`language-packs-confirm-remove-${own.id}`))
+      await waitForPack('i18nPackList', (meta) => meta.id === own.id && meta.hubPostId === undefined, 'the own pack is still linked')
+      expect(fakeHub().state.packs.i18n.some((pack) => pack.id === onHub?.id)).toBe(false)
+      await closeFromTools('language-packs-modal-close', 'language-packs-modal')
+
+      // The Hub's pack changes: opening the modal shows it, and Sync takes it.
+      const touched = await changeHubLanguagePack(theirs.id, () => {})
+      await openFromTools('settings-language-packs-button', 'language-packs-modal')
+      await $(tid(`language-packs-update-available-${downloaded.id}`)).waitForDisplayed({ timeout: 30_000 })
+      await clickInPage(tid(`language-packs-sync-${downloaded.id}`))
+      await waitForPack('i18nPackList', (meta) => meta.id === downloaded.id && meta.hubUpdatedAt === touched, 'the pack was not synced')
+      await waitForGone(tid(`language-packs-update-available-${downloaded.id}`), 'the pack still shows an update')
+      await closeFromTools('language-packs-modal-close', 'language-packs-modal')
+    })
+
+    it('uploads, lists, updates, downloads and deletes a theme pack', async () => {
+      const own = await dataOf<PackMeta>('themePackImportApply', { ...readSample('themes/catppuccin-mocha.json'), name: OWN_THEME_PACK })
+      const { pack } = await dataOf<{ pack: Record<string, unknown> }>('themePackGet', own.id)
+      const uploaded = await vialApi<{ success: boolean; postId: string }>('hubUploadThemePost', { entryId: own.id, pack })
+      expect(uploaded.success).toBe(true)
+      const linked = await waitForPack('themePackList', (meta) => meta.id === own.id && meta.hubPostId === uploaded.postId, 'the theme was not linked')
+      expect(linked.uploaderName).toBe(DISPLAY_NAME)
+
+      const listed = await vialApi<{ success: boolean; data: { items: { id: string; name: string }[] } }>('hubListThemePosts', { q: 'E2E Own' })
+      expect(listed.data.items.map((item) => [item.id, item.name])).toEqual([[uploaded.postId, OWN_THEME_PACK]])
+      expect(await vialApi('hubUpdateThemePost', { entryId: own.id, postId: uploaded.postId, pack })).toEqual(
+        expect.objectContaining({ success: true }),
+      )
+      const onHub = fakeHub().state.packs.theme.find((p) => p.id === uploaded.postId)
+      await waitForPack('themePackList', (meta) => meta.id === own.id && meta.hubUpdatedAt === onHub?.updated_at, 'the update time was not kept')
+      const stamps = await dataOf<{ items: { id: string; updated_at: string }[] }>('themePackHubTimestamps', [uploaded.postId])
+      expect(stamps.items).toEqual([{ id: uploaded.postId, updated_at: onHub?.updated_at }])
+      const downloaded = await vialApi<{ success: boolean; data: { name: string } }>('hubDownloadThemePost', uploaded.postId)
+      expect(downloaded.data.name).toBe(OWN_THEME_PACK)
+
+      expect(await vialApi('hubDeleteThemePost', uploaded.postId, own.id)).toEqual({ success: true })
+      expect(fakeHub().state.packs.theme).toEqual([])
+      await waitForPack('themePackList', (meta) => meta.id === own.id && meta.hubPostId === undefined, 'the theme is still linked')
+    })
+
+    it('updates the Hub-linked language pack at launch, and on demand with the change event', async () => {
+      const save = (pack: Record<string, Record<string, string>>, text: string): void => {
+        pack.common.save = text
+      }
+      const touched = await changeHubLanguagePack(hubLanguagePack.id, (pack) => save(pack, 'E2E 保存 1'))
+      earlierErrors.push(...(await recordedPageErrors()))
+      await restartApp()
+      await recordPageErrors()
+      await browser.waitUntil(async () => (await hubState()).startupSyncDone, {
+        timeout: 60_000,
+        interval: 500,
+        timeoutMsg: 'the startup update of the language packs did not finish',
+      })
+      expect((await hubState()).startupSync).toEqual({ checked: 1, updated: 1, missingOnHub: 0, errors: 0 })
+      const body = async (): Promise<string> =>
+        (await dataOf<{ pack: { common: { save: string } } }>('i18nPackGet', hubLanguagePack.localId)).pack.common.save
+      expect(await body()).toBe('E2E 保存 1')
+      await waitForPack('i18nPackList', (meta) => meta.id === hubLanguagePack.localId && meta.hubUpdatedAt === touched, 'the update time was not kept')
+
+      await browser.execute(() => {
+        const page = window as unknown as {
+          __e2eI18nChanged: number
+          vialAPI: { i18nPackOnChanged: (callback: () => void) => () => void }
+        }
+        page.__e2eI18nChanged = 0
+        page.vialAPI.i18nPackOnChanged(() => { page.__e2eI18nChanged += 1 })
+      })
+      await changeHubLanguagePack(hubLanguagePack.id, (pack) => save(pack, 'E2E 保存 2'))
+      expect(await invokeCommand('dev_hub_run_startup_sync')).toEqual({ checked: 1, updated: 1, missingOnHub: 0, errors: 0 })
+      await browser.waitUntil(
+        () => browser.execute(() => (window as unknown as { __e2eI18nChanged: number }).__e2eI18nChanged > 0),
+        { timeoutMsg: 'no i18n-pack:changed event came' },
+      )
+      expect(await body()).toBe('E2E 保存 2')
+      // Nothing newer on the Hub: nothing is downloaded.
+      expect(await invokeCommand('dev_hub_run_startup_sync')).toEqual({ checked: 1, updated: 0, missingOnHub: 0, errors: 0 })
+    })
+
+    it('takes a token again after a 401, waits out a 429, and shows a deactivated account after a 403', async () => {
+      const myPosts = (): Promise<{ success: boolean; error?: string }> => vialApi('hubFetchMyPosts')
+      expect((await myPosts()).success).toBe(true)
+      expect((await hubState()).tokenCached).toBe(true)
+
+      let from = fakeHub().requests.length
+      await injectHubFault({ status: 401, count: 1, only: 'files.me' })
+      expect((await myPosts()).success).toBe(true)
+      expect(hubRequestsSince(from).map((r) => r.op)).toEqual(['files.me', 'auth.token', 'files.me'])
+
+      from = fakeHub().requests.length
+      await injectHubFault({ status: 429, count: 1, only: 'files.me', retryAfter: '1' })
+      const started = Date.now()
+      expect((await myPosts()).success).toBe(true)
+      expect(Date.now() - started).toBeGreaterThanOrEqual(900)
+      expect(hubRequestsSince(from).map((r) => r.op)).toEqual(['files.me', 'files.me'])
+
+      // A long wait is not waited out.
+      await injectHubFault({ status: 429, count: 1, only: 'files.me', retryAfter: '3600' })
+      expect(await myPosts()).toEqual({ success: false, error: 'RATE_LIMITED' })
+
+      // The page's own request of the posts at launch gets the 403.
+      await injectHubFault({ status: 403, count: 1, only: 'files.me' })
+      earlierErrors.push(...(await recordedPageErrors()))
+      await restartApp()
+      await recordPageErrors()
+      await openHubSettings()
+      await $(tid('hub-account-deactivated-warning')).waitForDisplayed({ timeout: 30_000 })
+      await closeSettings()
+      expect(await myPosts()).toEqual(expect.objectContaining({ success: true }))
     })
   })
 
