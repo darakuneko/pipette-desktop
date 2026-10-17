@@ -31,12 +31,15 @@ export interface RecordedCall {
   args: unknown[]
 }
 
-export interface ScriptedResponse {
-  status: number
-  /** The response body as text; null for no body. */
-  body: string | null
-  contentType?: string
-}
+export type ScriptedResponse =
+  | {
+      status: number
+      /** The response body as text; null for no body. */
+      body: string | null
+      contentType?: string
+    }
+  /** The request fails before a response, as a network error does. */
+  | { networkError: string }
 
 export interface RecordedRequest {
   url: string
@@ -275,6 +278,7 @@ export async function scriptedFetch(input: string | URL | Request, init?: Reques
     body: typeof init?.body === 'string' ? init.body : String(init?.body),
     hasSignal: init?.signal instanceof AbortSignal,
   })
+  if ('networkError' in next) throw new TypeError(next.networkError)
   return new Response(next.body, {
     status: next.status,
     headers: next.contentType === undefined ? {} : { 'Content-Type': next.contentType },
