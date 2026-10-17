@@ -1,0 +1,380 @@
+{
+  "about": "The cases every fake Hub passes: the Node server of server.ts (conformance.test.ts) and the in-memory Hub of the pipette-hub crate. A case without control steps and without \"localHub\": false also runs against a local pipette-hub in its test mode (local-hub.test.ts, skipped unless PIPETTE_HUB_LOCAL_URL is set). Each case starts on an empty Hub.",
+  "format": [
+    "A step is a control step ({\"control\": …}) or a request step ({\"request\": \"METHOD /path?query\", …}).",
+    "Substitution: in every string of a step, {name} is the value a step saved as name and {run} is the run tag (empty on a fake; on a local Hub a fresh tag per run and case, so cases do not see each other's records). A name nothing saved is an error in the case. Saved ids are put in paths as they are.",
+    "Control steps: user {email, displayName: string|null, active?: boolean} creates the account or changes it; fault {status, count, retryAfter?: string, body?: string, only?: route} makes the next count requests to API routes (of that route only, when given) answer status with that Retry-After and body (the default body is {\"ok\":false,\"error\":<the text for the status: 401 'Invalid or expired token', 403 'Account is deactivated', 404 'Not found', 409 'Conflict', 429 'Too many requests', 500 'Internal server error'>}); keyLabel {owner: email|'system', name, map, save?} creates a key label and saves its id; touch {kind: post|i18n|theme|keyLabel, id} moves its updated_at on; revokeTokens forgets every Hub JWT issued.",
+    "Routes for only: auth.token auth.me auth.patchMe files.me files.meKeyboard files.get files.create files.update files.patch files.delete private.create private.delete, and {i18n,theme,keyLabels}.{list,get,download,timestamps,create,update,delete}.",
+    "Request steps: auth names a saved Hub JWT sent as `Authorization: Bearer <jwt>`; auth starting with ! sends the rest as the bearer as it is. Body: json (sent as JSON.stringify with Content-Type application/json; an object {\"$range\": {\"prefix\": p, \"count\": n}} anywhere in it stands for the strings p1 … pn), raw (the text as it is, Content-Type application/json), or multipart (a list of parts sent as the desktop app's MultipartBuilder does: boundary ----PipetteBoundary1767225600000, a field {name, value}, a file {name, filename, contentType, content | contentBase64 | contentJson} where contentJson is sent as compact JSON with its keys in the order written; a string \"$<template>\" in the list stands for the parts of that template).",
+    "expect: status (required); headers {name: value, null for absent}; json, a pattern the parsed body must match; pretty: true, the body text is its JSON pretty-printed with two spaces. save {name: path} saves values of the body at dotted paths (a number is an array index).",
+    "Patterns: an object matches an object having every key of the pattern with a matching value (other keys allowed); \"$keys\": [...] in an object pattern requires exactly those keys in that order; {\"$length\": n} matches an array of n elements; an array matches an array of the same length element by element; a string \"$any\" matches anything present, \"$absent\" (as a value) requires the key to be missing, \"$string\", \"$number\", \"$uuid\" (8-4-4-4-12 hex), \"$jwt\" (three base64url segments), \"$privateToken\" (pt_v1_ and 43 base64url characters), \"$hubStamp\" (2026-01-01 00:00:01.000Z), \"$postCreatedStamp\" (2026-01-01 00:00:01), \"$isoTimestamp\" (2026-01-01T00:00:01.000Z), \"$saved:<name>\" the saved value, \"$after:<name>\" a string greater than the saved one; any other value must be equal."
+  ],
+  "templates": {
+    "keyboardFiles": [
+      { "name": "vil", "filename": "kb.vil", "contentType": "application/json", "content": "{\"layout\":[]}" },
+      { "name": "pipette", "filename": "kb.pipette", "contentType": "application/json", "content": "{\"version\":1}" },
+      { "name": "c", "filename": "kb.c", "contentType": "text/plain", "content": "// keymap" },
+      { "name": "pdf", "filename": "kb.pdf", "contentType": "application/pdf", "content": "%PDF-1.4" },
+      { "name": "thumbnail", "filename": "kb.jpg", "contentType": "image/jpeg", "contentBase64": "/9j/4AAQSkZJRg==" }
+    ],
+    "analyticsFiles": [
+      { "name": "json", "filename": "analytics-export-v1.json", "contentType": "application/json", "contentJson": {
+        "version": 1, "kind": "analytics", "exportedAt": "2026-01-01T00:00:00.000Z",
+        "snapshot": { "keyboard": { "uid": "0xAB", "productName": "Board{run}" }, "range": { "fromMs": 0, "toMs": 60000 }, "totalKeystrokes": 150, "keymapSnapshot": {}, "appScopes": [] },
+        "filters": {},
+        "data": { "minuteStats": [], "matrixCells": [], "matrixCellsByDay": [], "layerUsage": [], "sessions": [], "bksMinute": [], "bigramTop": [], "bigramSlow": [], "appUsage": [], "wpmByApp": [], "peakRecords": {}, "layoutComparison": null }
+      } },
+      { "name": "thumbnail", "filename": "analytics.jpg", "contentType": "image/jpeg", "contentBase64": "/9j/4AAQSkZJRg==" }
+    ],
+    "themeFile": [
+      { "name": "json", "filename": "theme-pack.json", "contentType": "application/json", "contentJson": {
+        "name": "Theme{run}", "version": "1.0.0", "colorScheme": "dark",
+        "colors": {
+          "surface": "#101010", "surface-alt": "#111111", "surface-dim": "#121212", "surface-raised": "#131313",
+          "content": "#f0f0f0", "content-secondary": "#e0e0e0", "content-muted": "#d0d0d0", "content-inverse": "#000000",
+          "edge": "#202020", "edge-subtle": "#212121", "edge-strong": "#222222",
+          "accent": "#3366ff", "accent-hover": "#4477ff", "accent-alt": "#5588ff", "success": "#22aa22", "warning": "#aaaa22", "danger": "#aa2222", "pending": "#888888",
+          "key-bg": "#303030", "key-bg-hover": "#313131", "key-bg-active": "#323232", "key-border": "#333333", "key-shadow": "#343434",
+          "key-label": "#fafafa", "key-sublabel": "#f5f5f5", "key-label-remap": "#ffcc00", "key-bg-multi-selected": "#404080",
+          "tab-bg-active": "#505050", "tab-text": "#c0c0c0", "tab-text-active": "#ffffff",
+          "picker-bg": "#1a1a1a", "picker-item-bg": "#2a2a2a", "picker-item-hover": "#3a3a3a", "picker-item-text": "#eeeeee", "picker-item-border": "rgb(10, 10, 10)"
+        }
+      } }
+    ]
+  },
+  "cases": [
+    {
+      "name": "token and account",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": {}, "expect": { "status": 400, "json": { "ok": false, "error": "Missing id_token" } } },
+        { "request": "POST /api/auth/token", "raw": "{not json", "expect": { "status": 400, "json": { "ok": false, "error": "Invalid JSON" } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:no-at-sign" }, "expect": { "status": 401, "json": { "ok": false, "error": "Invalid or expired token" } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" },
+          "expect": { "status": 200, "json": { "$keys": ["ok", "data"], "ok": true, "data": { "$keys": ["token", "user"], "token": "$jwt",
+            "user": { "$keys": ["id", "email", "display_name", "role"], "id": "$uuid", "email": "alice{run}@example.com", "display_name": "alice{run}", "role": "user" } } } },
+          "save": { "alice": "data.token", "aliceId": "data.user.id" } },
+        { "request": "GET /api/auth/me", "auth": "alice",
+          "expect": { "status": 200, "json": { "ok": true, "data": { "$keys": ["id", "email", "display_name", "role"], "id": "$saved:aliceId", "display_name": "alice{run}" } } } },
+        { "request": "GET /api/auth/me", "expect": { "status": 401, "json": { "ok": false, "error": "Authentication required" } } },
+        { "request": "GET /api/auth/me", "auth": "!not-a-hub-jwt", "expect": { "status": 401, "json": { "ok": false, "error": "Invalid or expired token" } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com", "display_name": "Alice{run}" },
+          "expect": { "status": 409, "json": { "ok": false, "error": "display_name is already taken" } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com", "display_name": "   " },
+          "expect": { "status": 400, "json": { "ok": false, "error": "display_name must not be empty" } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com", "display_name": "  Bob{run}  " },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "user": { "display_name": "Bob{run}" } } } }, "save": { "bob": "data.token" } },
+        { "request": "PATCH /api/auth/me", "auth": "bob", "json": { "display_name": "admin" }, "expect": { "status": 400, "json": { "ok": false, "error": "display_name is reserved" } } },
+        { "request": "PATCH /api/auth/me", "auth": "bob", "json": { "display_name": "ALICE{run}" }, "expect": { "status": 409, "json": { "ok": false, "error": "display_name is already taken" } } },
+        { "request": "PATCH /api/auth/me", "auth": "bob", "json": {}, "expect": { "status": 400, "json": { "ok": false, "error": "No fields to update" } } },
+        { "request": "PATCH /api/auth/me", "auth": "bob", "json": { "display_name": "x", "role": "admin" }, "expect": { "status": 400, "json": { "ok": false, "error": "Unknown field in request body" } } },
+        { "request": "PATCH /api/auth/me", "auth": "bob", "json": { "display_name": "Robert{run}" },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "display_name": "Robert{run}", "email": "bob{run}@example.com" } } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com", "display_name": "Other{run}" },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "token": "$jwt", "user": { "id": "$saved:aliceId", "display_name": "alice{run}" } } } } }
+      ]
+    },
+    {
+      "name": "accounts without a display name, JWT id_tokens, deactivated accounts",
+      "localHub": false,
+      "steps": [
+        { "control": "user", "email": "carol@example.com", "displayName": null },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:carol@example.com" },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "user": { "email": "carol@example.com", "display_name": null } } } }, "save": { "carol": "data.token" } },
+        { "request": "POST /api/files", "auth": "carol", "multipart": [{ "name": "title", "value": "T" }, { "name": "keyboard_name", "value": "KB" }, "$keyboardFiles"],
+          "expect": { "status": 400, "json": { "ok": false, "error": "Display name is required to upload" } } },
+        { "request": "POST /api/key-labels", "auth": "carol", "json": { "name": "L", "map": {} },
+          "expect": { "status": 400, "json": { "ok": false, "error": "Display name is required to upload" } } },
+        { "request": "PATCH /api/auth/me", "auth": "carol", "json": { "display_name": "Carol" }, "expect": { "status": 200, "json": { "ok": true, "data": { "display_name": "Carol" } } } },
+        { "request": "POST /api/files", "auth": "carol", "multipart": [{ "name": "title", "value": "T" }, { "name": "keyboard_name", "value": "KB" }, "$keyboardFiles"],
+          "expect": { "status": 201, "json": { "ok": true, "data": { "title": "T", "uploader_name": "Carol" } } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJmYWtlLWRyaXZlIiwiYXVkIjoiY2xpZW50Iiwic3ViIjoiZmFrZS1zdWItMSIsImVtYWlsIjoiZGF2ZUBleGFtcGxlLmludmFsaWQiLCJpYXQiOjE3NjcyMjU2MDAsImV4cCI6MTc2NzIyOTIwMH0.fake" },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "token": "$jwt", "user": { "email": "dave@example.invalid", "display_name": null } } } } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJmYWtlLWRyaXZlIiwiYXVkIjoiY2xpZW50Iiwic3ViIjoiZmFrZS1zdWItMiIsImVtYWlsIjoiZXJpbkBleGFtcGxlLmludmFsaWQiLCJpYXQiOjE3NjcyMjU2MDAsImV4cCI6MTc2NzIyOTIwMH0.fake", "display_name": "Erin" },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "user": { "email": "erin@example.invalid", "display_name": "Erin" } } } } },
+        { "control": "user", "email": "frank@example.com", "displayName": "Frank", "active": false },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:frank@example.com" }, "expect": { "status": 403, "json": { "ok": false, "error": "Account is deactivated" } } },
+        { "control": "user", "email": "carol@example.com", "displayName": "Carol", "active": false },
+        { "request": "GET /api/auth/me", "auth": "carol", "expect": { "status": 403, "json": { "ok": false, "error": "Account is deactivated" } } },
+        { "control": "user", "email": "carol@example.com", "displayName": "Carol", "active": true },
+        { "request": "GET /api/auth/me", "auth": "carol", "expect": { "status": 200 } },
+        { "control": "revokeTokens" },
+        { "request": "GET /api/auth/me", "auth": "carol", "expect": { "status": 401, "json": { "ok": false, "error": "Invalid or expired token" } } }
+      ]
+    },
+    {
+      "name": "my posts: pages and the keyboard filter",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token", "aliceId": "data.user.id" } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P1" }, { "name": "keyboard_name", "value": "KB{run}" }, "$keyboardFiles"],
+          "expect": { "status": 201, "json": { "ok": true, "data": {
+            "$keys": ["id", "title", "keyboard_name", "uploaded_by", "download_count", "created_at", "updated_at", "post_type", "keyboard_uid", "total_keystrokes", "range_from_ms", "range_to_ms", "uploader_name", "files"],
+            "id": "$uuid", "title": "P1", "keyboard_name": "KB{run}", "uploaded_by": "$saved:aliceId", "download_count": 0, "created_at": "$postCreatedStamp", "updated_at": "$hubStamp",
+            "post_type": "keyboard", "keyboard_uid": null, "total_keystrokes": null, "range_from_ms": null, "range_to_ms": null, "uploader_name": "alice{run}",
+            "files": [
+              { "$keys": ["file_type", "original_filename", "file_size"], "file_type": "c", "original_filename": "kb.c", "file_size": 9 },
+              { "file_type": "pdf", "original_filename": "kb.pdf", "file_size": 8 },
+              { "file_type": "pipette", "original_filename": "kb.pipette", "file_size": 13 },
+              { "file_type": "vil", "original_filename": "kb.vil", "file_size": 13 }
+            ] } } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P2" }, { "name": "keyboard_name", "value": "KB{run}" }, "$keyboardFiles"], "expect": { "status": 201 } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P3" }, { "name": "keyboard_name", "value": "Other{run}" }, "$keyboardFiles"], "expect": { "status": 201 } },
+        { "request": "GET /api/files/me?page=1&per_page=2", "auth": "alice",
+          "expect": { "status": 200, "json": { "ok": true, "data": { "$keys": ["items", "total", "page", "per_page"], "items": [{ "title": "P3" }, { "title": "P2" }], "total": 3, "page": 1, "per_page": 2 } } } },
+        { "request": "GET /api/files/me?page=2&per_page=2", "auth": "alice",
+          "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "title": "P1" }], "total": 3, "page": 2, "per_page": 2 } } } },
+        { "request": "GET /api/files/me", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": { "items": { "$length": 3 }, "page": 1, "per_page": 20 } } } },
+        { "request": "GET /api/files/me?page=0&per_page=500", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": { "items": { "$length": 3 }, "page": 1, "per_page": 100 } } } },
+        { "request": "GET /api/files/me/keyboard?name=KB{run}", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": [{ "title": "P2" }, { "title": "P1" }] } } },
+        { "request": "GET /api/files/me/keyboard?name=%20%20", "auth": "alice", "expect": { "status": 400, "json": { "ok": false, "error": "Query parameter \"name\" is required" } } },
+        { "request": "GET /api/files/me", "expect": { "status": 401, "json": { "ok": false, "error": "Authentication required" } } }
+      ]
+    },
+    {
+      "name": "multipart create, PUT and PATCH",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token" } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com" }, "expect": { "status": 200 }, "save": { "bob": "data.token" } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P1" }, { "name": "keyboard_name", "value": "KB{run}" }, "$keyboardFiles"],
+          "expect": { "status": 201 }, "save": { "p1": "data.id", "p1Updated": "data.updated_at" } },
+        { "request": "PUT /api/files/{p1}", "auth": "alice", "multipart": [{ "name": "title", "value": "P1 v2" }, { "name": "keyboard_name", "value": "KB{run}" }, "$keyboardFiles"],
+          "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:p1", "title": "P1 v2", "updated_at": "$after:p1Updated" } } }, "save": { "p1Updated": "data.updated_at" } },
+        { "request": "PATCH /api/files/{p1}", "auth": "alice", "json": { "title": "  P1 v3  " },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:p1", "title": "P1 v3", "updated_at": "$after:p1Updated" } } } },
+        { "request": "PATCH /api/files/{p1}", "auth": "alice", "json": {}, "expect": { "status": 400, "json": { "ok": false, "error": "No fields to update" } } },
+        { "request": "PATCH /api/files/{p1}", "auth": "alice", "json": { "title": "" }, "expect": { "status": 400, "json": { "ok": false, "error": "Title must be a non-empty string" } } },
+        { "request": "PUT /api/files/{p1}", "auth": "bob", "multipart": [{ "name": "title", "value": "Mine" }, "$keyboardFiles"], "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "PATCH /api/files/{p1}", "auth": "bob", "json": { "title": "Mine" }, "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "PUT /api/files/00000000-0000-4000-8000-ffffffffffff", "auth": "alice", "multipart": [{ "name": "title", "value": "X" }, "$keyboardFiles"],
+          "expect": { "status": 404, "json": { "ok": false, "error": "Post not found" } } },
+        { "request": "GET /api/files/{p1}", "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:p1", "title": "P1 v3" } } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "keyboard_name", "value": "KB" }, "$keyboardFiles"], "expect": { "status": 400, "json": { "ok": false, "error": "Title is required" } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "T" },
+            { "name": "thumbnail", "filename": "kb.jpg", "contentType": "image/jpeg", "contentBase64": "/9j/" }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "File \"vil\" is required" } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "Macro" }, { "name": "post_type", "value": "macro" },
+            { "name": "json", "filename": "macro.json", "contentType": "application/json", "contentJson": { "version": 3, "vial_protocol": 6, "type": "macro", "data": [] } }],
+          "expect": { "status": 201, "json": { "ok": true, "data": { "title": "Macro", "post_type": "macro", "keyboard_name": null, "files": [{ "file_type": "json", "original_filename": "macro.json" }] } } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "Macro" }, { "name": "post_type", "value": "macro" },
+            { "name": "json", "filename": "macro.json", "contentType": "application/json", "contentJson": { "version": 3, "type": "macro", "data": [] } }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "vial_protocol is required for FavoriteExportFile v3" } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "Stats" }, { "name": "post_type", "value": "analytics" }, "$analyticsFiles"],
+          "expect": { "status": 201, "json": { "ok": true, "data": { "title": "Stats", "post_type": "analytics", "keyboard_name": "Board{run}", "keyboard_uid": "0xAB",
+            "total_keystrokes": 150, "range_from_ms": 0, "range_to_ms": 60000, "files": [{ "file_type": "json", "original_filename": "analytics-export-v1.json" }] } } },
+          "save": { "stats": "data.id" } },
+        { "request": "PUT /api/files/{stats}", "auth": "alice", "multipart": [{ "name": "title", "value": "Stats v2" }, "$analyticsFiles"],
+          "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:stats", "title": "Stats v2", "post_type": "analytics" } } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "Stats" }, { "name": "post_type", "value": "analytics" },
+            { "name": "json", "filename": "analytics-export-v1.json", "contentType": "application/json", "contentJson": { "version": 2 } },
+            { "name": "thumbnail", "filename": "analytics.jpg", "contentType": "image/jpeg", "contentBase64": "/9j/" }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "INVALID_PAYLOAD: unsupported version" } } }
+      ]
+    },
+    {
+      "name": "DELETE, 404 and private posts",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token" } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com" }, "expect": { "status": 200 }, "save": { "bob": "data.token" } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P1" }, { "name": "keyboard_name", "value": "KB{run}" }, "$keyboardFiles"],
+          "expect": { "status": 201 }, "save": { "p1": "data.id" } },
+        { "request": "DELETE /api/files/{p1}", "auth": "bob", "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "DELETE /api/files/{p1}", "auth": "alice", "expect": { "status": 200, "json": { "$keys": ["ok", "data"], "ok": true, "data": { "$keys": ["id"], "id": "$saved:p1" } } } },
+        { "request": "DELETE /api/files/{p1}", "auth": "alice", "expect": { "status": 404, "json": { "ok": false, "error": "Post not found" } } },
+        { "request": "GET /api/files/{p1}", "expect": { "status": 404, "json": { "ok": false, "error": "Post not found" } } },
+        { "request": "POST /api/private/files", "auth": "alice",
+          "multipart": [{ "name": "title", "value": "Secret" }, { "name": "keyboard_name", "value": "KB{run}" }, "$keyboardFiles", { "name": "expires_in_days", "value": "7" }],
+          "expect": { "status": 201, "json": { "ok": true, "data": { "$keys": ["id", "token", "url", "expires_at"], "id": "$uuid", "token": "$privateToken", "url": "$string", "expires_at": "$isoTimestamp" } } },
+          "save": { "secret": "data.id" } },
+        { "request": "POST /api/private/files", "auth": "alice",
+          "multipart": [{ "name": "title", "value": "Secret" }, "$keyboardFiles", { "name": "expires_in_days", "value": "0" }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "expires_in_days must be an integer between 1 and 180" } } },
+        { "request": "POST /api/private/files", "auth": "alice",
+          "multipart": [{ "name": "title", "value": "Tap dance" }, { "name": "post_type", "value": "td" },
+            { "name": "json", "filename": "td.json", "contentType": "application/json", "contentJson": { "version": 3, "vial_protocol": 6, "type": "tapDance", "data": [] } }],
+          "expect": { "status": 201, "json": { "ok": true, "data": { "id": "$uuid", "token": "$privateToken" } } } },
+        { "request": "DELETE /api/private/files/{secret}", "auth": "bob", "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "DELETE /api/private/files/{secret}", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": { "$keys": ["id"], "id": "$saved:secret" } } } },
+        { "request": "DELETE /api/private/files/{secret}", "auth": "alice", "expect": { "status": 404, "json": { "ok": false, "error": "Not found" } } },
+        { "request": "GET /api/no-such-route", "expect": { "status": 404, "json": { "ok": false, "error": "Not found" } } }
+      ]
+    },
+    {
+      "name": "injected ok:false and unwrapped answers",
+      "localHub": false,
+      "steps": [
+        { "control": "fault", "status": 200, "count": 1, "only": "i18n.list", "body": "{\"ok\":false,\"error\":\"boom\"}" },
+        { "request": "GET /api/i18n-packs", "expect": { "status": 200, "json": { "$keys": ["ok", "error"], "ok": false, "error": "boom" } } },
+        { "request": "GET /api/i18n-packs", "expect": { "status": 200, "json": { "ok": true, "data": { "items": [], "total": 0, "page": 1, "per_page": 20 } } } },
+        { "control": "fault", "status": 200, "count": 1, "only": "theme.list", "body": "{\"items\":[],\"total\":0,\"page\":1,\"per_page\":20}" },
+        { "request": "GET /api/theme-packs", "expect": { "status": 200, "json": { "$keys": ["items", "total", "page", "per_page"], "items": [] } } },
+        { "control": "fault", "status": 500, "count": 1 },
+        { "request": "GET /api/key-labels", "expect": { "status": 500, "json": { "ok": false, "error": "Internal server error" } } },
+        { "request": "GET /api/key-labels", "expect": { "status": 200 } }
+      ]
+    },
+    {
+      "name": "429 and Retry-After, injected 401, 403 and 409",
+      "localHub": false,
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token" } },
+        { "control": "fault", "status": 429, "count": 1, "retryAfter": "1" },
+        { "request": "GET /api/key-labels", "expect": { "status": 429, "headers": { "Retry-After": "1" }, "json": { "ok": false, "error": "Too many requests" } } },
+        { "request": "GET /api/key-labels", "expect": { "status": 200, "headers": { "Retry-After": null } } },
+        { "control": "fault", "status": 429, "count": 2, "retryAfter": "86400", "only": "files.create", "body": "{\"ok\":false,\"error\":\"Daily upload limit exceeded\"}" },
+        { "request": "GET /api/key-labels", "expect": { "status": 200 } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P" }, "$keyboardFiles"],
+          "expect": { "status": 429, "headers": { "Retry-After": "86400" }, "json": { "ok": false, "error": "Daily upload limit exceeded" } } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P" }, "$keyboardFiles"], "expect": { "status": 429 } },
+        { "request": "POST /api/files", "auth": "alice", "multipart": [{ "name": "title", "value": "P" }, "$keyboardFiles"], "expect": { "status": 201 } },
+        { "control": "fault", "status": 429, "count": 1, "only": "auth.token" },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice@example.com" }, "expect": { "status": 429, "headers": { "Retry-After": null } } },
+        { "control": "fault", "status": 401, "count": 1, "only": "auth.me" },
+        { "request": "GET /api/auth/me", "auth": "alice", "expect": { "status": 401, "json": { "ok": false, "error": "Invalid or expired token" } } },
+        { "request": "GET /api/auth/me", "auth": "alice", "expect": { "status": 200 } },
+        { "control": "fault", "status": 403, "count": 1, "only": "files.me" },
+        { "request": "GET /api/files/me", "auth": "alice", "expect": { "status": 403, "json": { "ok": false, "error": "Account is deactivated" } } },
+        { "control": "fault", "status": 409, "count": 1, "only": "auth.token", "body": "{\"ok\":false,\"error\":\"display_name is already taken\"}" },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice@example.com" }, "expect": { "status": 409, "json": { "ok": false, "error": "display_name is already taken" } } }
+      ]
+    },
+    {
+      "name": "timestamps: order, missing ids and the 100-id limit",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token" } },
+        { "request": "POST /api/i18n-packs", "auth": "alice",
+          "multipart": [{ "name": "json", "filename": "i18n-export-v1.json", "contentType": "application/json",
+            "contentJson": { "version": 1, "kind": "i18n", "exportedAt": "2026-01-01T00:00:00.000Z", "pack": { "name": "Pack{run}", "version": "1.0.0", "common": { "save": "Save" } } } }],
+          "expect": { "status": 201 }, "save": { "pack": "data.id", "packUpdated": "data.updated_at" } },
+        { "request": "POST /api/theme-packs", "auth": "alice", "multipart": ["$themeFile"], "expect": { "status": 201 }, "save": { "theme": "data.id", "themeUpdated": "data.updated_at" } },
+        { "request": "POST /api/key-labels", "auth": "alice", "json": { "name": "Labels{run}", "map": { "KC_A": "a" } }, "expect": { "status": 201 }, "save": { "labels": "data.id", "labelsUpdated": "data.updated_at" } },
+        { "request": "POST /api/i18n-packs/timestamps", "json": { "ids": ["{pack}", "00000000-0000-4000-8000-ffffffffffff", "{pack}"] },
+          "expect": { "status": 200, "json": { "$keys": ["ok", "data"], "ok": true, "data": { "$keys": ["items"], "items": [{ "$keys": ["id", "updated_at"], "id": "$saved:pack", "updated_at": "$saved:packUpdated" }] } } } },
+        { "request": "POST /api/theme-packs/timestamps", "json": { "ids": ["missing", "{theme}"] },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "id": "$saved:theme", "updated_at": "$saved:themeUpdated" }] } } } },
+        { "request": "POST /api/key-labels/timestamps", "json": { "ids": ["{labels}"] },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "id": "$saved:labels", "updated_at": "$saved:labelsUpdated" }] } } } },
+        { "request": "POST /api/i18n-packs/timestamps", "json": { "ids": { "$range": { "prefix": "id-", "count": 100 } } }, "expect": { "status": 200, "json": { "ok": true, "data": { "items": [] } } } },
+        { "request": "POST /api/i18n-packs/timestamps", "json": { "ids": { "$range": { "prefix": "id-", "count": 101 } } }, "expect": { "status": 400, "json": { "ok": false, "error": "Too many ids (max 100)" } } },
+        { "request": "POST /api/theme-packs/timestamps", "json": { "ids": { "$range": { "prefix": "id-", "count": 101 } } }, "expect": { "status": 400, "json": { "ok": false, "error": "Too many ids (max 100)" } } },
+        { "request": "POST /api/key-labels/timestamps", "json": { "ids": { "$range": { "prefix": "id-", "count": 101 } } }, "expect": { "status": 400, "json": { "ok": false, "error": "Too many ids (max 100)" } } },
+        { "request": "POST /api/key-labels/timestamps", "json": { "ids": [1] }, "expect": { "status": 400, "json": { "ok": false, "error": "ids must be strings (max 64 chars)" } } },
+        { "request": "POST /api/key-labels/timestamps", "json": {}, "expect": { "status": 400, "json": { "ok": false, "error": "ids must be an array" } } },
+        { "request": "POST /api/key-labels/timestamps", "raw": "[", "expect": { "status": 400, "json": { "ok": false, "error": "Invalid JSON" } } }
+      ]
+    },
+    {
+      "name": "language packs",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token", "aliceId": "data.user.id" } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com" }, "expect": { "status": 200 }, "save": { "bob": "data.token" } },
+        { "request": "POST /api/i18n-packs", "auth": "alice",
+          "multipart": [{ "name": "json", "filename": "i18n-export-v1.json", "contentType": "application/json",
+            "contentJson": { "version": 1, "kind": "i18n", "exportedAt": "2026-01-01T00:00:00.000Z", "pack": { "name": "Pack{run}", "version": "1.0.0", "common": { "save": "Save" } } } }],
+          "expect": { "status": 201, "json": { "ok": true, "data": {
+            "$keys": ["id", "name", "version", "uploaded_by", "uploader_name", "created_at", "updated_at", "pack"],
+            "id": "$uuid", "name": "Pack{run}", "version": "1.0.0", "uploaded_by": "$saved:aliceId", "uploader_name": "alice{run}", "created_at": "$hubStamp", "updated_at": "$hubStamp",
+            "pack": { "name": "Pack{run}", "version": "1.0.0", "common": { "save": "Save" } } } } },
+          "save": { "pack": "data.id", "packUpdated": "data.updated_at" } },
+        { "request": "POST /api/i18n-packs", "auth": "alice",
+          "multipart": [{ "name": "json", "filename": "i18n-export-v1.json", "contentType": "application/json",
+            "contentJson": { "version": 1, "kind": "i18n", "exportedAt": "2026-01-01T00:00:00.000Z", "pack": { "name": "PACK{run}", "version": "1.0.0" } } }],
+          "expect": { "status": 409, "json": { "ok": false, "error": "name and version already exist" } } },
+        { "request": "POST /api/i18n-packs", "auth": "alice",
+          "multipart": [{ "name": "json", "filename": "i18n-export-v1.json", "contentType": "application/json",
+            "contentJson": { "version": 1, "kind": "theme", "exportedAt": "2026-01-01T00:00:00.000Z", "pack": { "name": "Pack{run}", "version": "1.0.0" } } }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "INVALID_PAYLOAD: kind mismatch" } } },
+        { "request": "POST /api/i18n-packs", "auth": "alice", "multipart": [{ "name": "title", "value": "no file" }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "JSON file is required" } } },
+        { "request": "GET /api/i18n-packs?name=pack{run}",
+          "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "$keys": ["id", "name", "version", "uploaded_by", "uploader_name", "created_at", "updated_at"], "id": "$saved:pack" }], "total": 1 } } } },
+        { "request": "GET /api/i18n-packs?q=ack{run}&per_page=5", "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "id": "$saved:pack" }], "total": 1, "per_page": 5 } } } },
+        { "request": "GET /api/i18n-packs/{pack}", "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:pack", "pack": { "common": { "save": "Save" } } } } } },
+        { "request": "GET /api/i18n-packs/{pack}/download",
+          "expect": { "status": 200, "pretty": true, "json": { "$keys": ["version", "kind", "exportedAt", "pack"], "version": 1, "kind": "i18n", "pack": { "name": "Pack{run}" } } } },
+        { "request": "PUT /api/i18n-packs/{pack}", "auth": "bob",
+          "multipart": [{ "name": "json", "filename": "i18n-export-v1.json", "contentType": "application/json",
+            "contentJson": { "version": 1, "kind": "i18n", "exportedAt": "2026-01-01T00:00:00.000Z", "pack": { "name": "Pack{run}", "version": "1.0.1" } } }],
+          "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "PUT /api/i18n-packs/{pack}", "auth": "alice",
+          "multipart": [{ "name": "json", "filename": "i18n-export-v1.json", "contentType": "application/json",
+            "contentJson": { "version": 1, "kind": "i18n", "exportedAt": "2026-01-01T00:00:00.000Z", "pack": { "name": "Pack{run}", "version": "1.0.1", "common": { "save": "Keep" } } } }],
+          "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:pack", "version": "1.0.1", "updated_at": "$after:packUpdated", "pack": { "common": { "save": "Keep" } } } } } },
+        { "request": "DELETE /api/i18n-packs/{pack}", "auth": "bob", "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "DELETE /api/i18n-packs/{pack}", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": { "$keys": ["id"], "id": "$saved:pack" } } } },
+        { "request": "DELETE /api/i18n-packs/{pack}", "auth": "alice", "expect": { "status": 404, "json": { "ok": false, "error": "i18n pack not found" } } },
+        { "request": "GET /api/i18n-packs/{pack}", "expect": { "status": 404, "json": { "ok": false, "error": "i18n pack not found" } } },
+        { "request": "GET /api/i18n-packs/{pack}/download", "expect": { "status": 404, "json": { "ok": false, "error": "i18n pack not found" } } }
+      ]
+    },
+    {
+      "name": "theme packs",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token" } },
+        { "request": "POST /api/theme-packs", "auth": "alice", "multipart": ["$themeFile"],
+          "expect": { "status": 201, "json": { "ok": true, "data": {
+            "$keys": ["id", "name", "version", "colorScheme", "preview_colors", "uploaded_by", "uploader_name", "created_at", "updated_at", "pack"],
+            "name": "Theme{run}", "version": "1.0.0", "colorScheme": "dark",
+            "preview_colors": ["#101010", "#f0f0f0", "#3366ff", "#303030", "#fafafa", "#22aa22", "#aa2222"],
+            "pack": { "name": "Theme{run}", "colorScheme": "dark", "colors": { "picker-item-border": "rgb(10, 10, 10)" } } } } },
+          "save": { "theme": "data.id", "themeUpdated": "data.updated_at" } },
+        { "request": "POST /api/theme-packs", "auth": "alice", "multipart": ["$themeFile"], "expect": { "status": 409, "json": { "ok": false, "error": "name and version already exist" } } },
+        { "request": "POST /api/theme-packs", "auth": "alice",
+          "multipart": [{ "name": "json", "filename": "theme-pack.json", "contentType": "application/json", "contentJson": { "name": "Bad{run}", "version": "1.0.0", "colorScheme": "dark", "colors": {} } }],
+          "expect": { "status": 400, "json": { "ok": false, "error": "INVALID_PAYLOAD: missing required color: \"surface\"" } } },
+        { "request": "GET /api/theme-packs?name=theme{run}",
+          "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "$keys": ["id", "name", "version", "colorScheme", "preview_colors", "uploaded_by", "uploader_name", "created_at", "updated_at"], "id": "$saved:theme" }], "total": 1 } } } },
+        { "request": "GET /api/theme-packs/{theme}/download", "expect": { "status": 200, "pretty": true, "json": { "$keys": ["name", "version", "colorScheme", "colors"], "name": "Theme{run}" } } },
+        { "request": "PUT /api/theme-packs/{theme}", "auth": "alice", "multipart": ["$themeFile"],
+          "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:theme", "updated_at": "$after:themeUpdated" } } } },
+        { "request": "DELETE /api/theme-packs/{theme}", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:theme" } } } },
+        { "request": "GET /api/theme-packs/{theme}", "expect": { "status": 404, "json": { "ok": false, "error": "theme pack not found" } } }
+      ]
+    },
+    {
+      "name": "key labels",
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice{run}@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token", "aliceId": "data.user.id" } },
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:bob{run}@example.com" }, "expect": { "status": 200 }, "save": { "bob": "data.token" } },
+        { "request": "POST /api/key-labels", "auth": "alice", "json": { "name": "Labels{run}", "map": { "KC_A": "a", "LT(1,KC_B)": "b" }, "keymap_applicable": true },
+          "expect": { "status": 201, "json": { "ok": true, "data": {
+            "$keys": ["id", "name", "map", "composite_labels", "keymap_applicable", "uploaded_by", "uploader_name", "created_at", "updated_at"],
+            "id": "$uuid", "name": "Labels{run}", "map": { "$keys": ["KC_A", "LT(1,KC_B)"], "KC_A": "a", "LT(1,KC_B)": "b" }, "composite_labels": null, "keymap_applicable": true,
+            "uploaded_by": "$saved:aliceId", "uploader_name": "alice{run}", "created_at": "$hubStamp", "updated_at": "$hubStamp" } } },
+          "save": { "labels": "data.id", "labelsUpdated": "data.updated_at" } },
+        { "request": "POST /api/key-labels", "auth": "bob", "json": { "name": "LABELS{run}", "map": {} }, "expect": { "status": 409, "json": { "ok": false, "error": "name is already taken" } } },
+        { "request": "POST /api/key-labels", "auth": "alice", "json": { "name": "Bad{run}", "map": { "bad key": "x" } },
+          "expect": { "status": 400, "json": { "ok": false, "error": "map key \"bad key\" is not a valid keycode name" } } },
+        { "request": "POST /api/key-labels", "auth": "alice", "json": { "name": "  ", "map": {} }, "expect": { "status": 400, "json": { "ok": false, "error": "name is required" } } },
+        { "request": "GET /api/key-labels?q=abels{run}", "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "id": "$saved:labels" }], "total": 1, "page": 1, "per_page": 20 } } } },
+        { "request": "GET /api/key-labels/{labels}", "expect": { "status": 200, "json": { "ok": true, "data": { "id": "$saved:labels", "keymap_applicable": true } } } },
+        { "request": "GET /api/key-labels/{labels}/download",
+          "expect": { "status": 200, "pretty": true, "json": { "$keys": ["name", "map", "composite_labels", "keymap_applicable"], "name": "Labels{run}", "composite_labels": null, "keymap_applicable": true } } },
+        { "request": "PUT /api/key-labels/{labels}", "auth": "alice", "json": { "name": "Labels{run}", "map": { "KC_A": "A" }, "composite_labels": { "KC_B": "b" } },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "map": { "KC_A": "A" }, "composite_labels": { "KC_B": "b" }, "keymap_applicable": true, "updated_at": "$after:labelsUpdated" } } },
+          "save": { "labelsUpdated": "data.updated_at" } },
+        { "request": "PUT /api/key-labels/{labels}", "auth": "alice", "json": { "name": "Labels{run}", "map": {}, "keymap_applicable": false },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "map": {}, "composite_labels": null, "keymap_applicable": false, "updated_at": "$after:labelsUpdated" } } } },
+        { "request": "PUT /api/key-labels/{labels}", "auth": "bob", "json": { "name": "Mine{run}", "map": {} }, "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "DELETE /api/key-labels/{labels}", "auth": "bob", "expect": { "status": 403, "json": { "ok": false, "error": "Forbidden" } } },
+        { "request": "DELETE /api/key-labels/{labels}", "auth": "alice", "expect": { "status": 200, "json": { "ok": true, "data": { "$keys": ["id"], "id": "$saved:labels" } } } },
+        { "request": "GET /api/key-labels/{labels}", "expect": { "status": 404, "json": { "ok": false, "error": "Key label not found" } } },
+        { "request": "PUT /api/key-labels/{labels}", "auth": "alice", "json": { "name": "x", "map": {} }, "expect": { "status": 404, "json": { "ok": false, "error": "Key label not found" } } }
+      ]
+    },
+    {
+      "name": "built-in key labels and records made directly",
+      "localHub": false,
+      "steps": [
+        { "request": "POST /api/auth/token", "json": { "id_token": "test:alice@example.com" }, "expect": { "status": 200 }, "save": { "alice": "data.token" } },
+        { "control": "keyLabel", "owner": "system", "name": "QWERTY", "map": { "KC_A": "A" }, "save": "builtIn" },
+        { "request": "GET /api/key-labels/{builtIn}", "expect": { "status": 200, "json": { "ok": true, "data": { "name": "QWERTY", "uploaded_by": "00000000-0000-0000-0000-000000000001", "uploader_name": "pipette" } } }, "save": { "builtInUpdated": "data.updated_at" } },
+        { "request": "PUT /api/key-labels/{builtIn}", "auth": "alice", "json": { "name": "QWERTY", "map": {} },
+          "expect": { "status": 403, "json": { "ok": false, "error": "System-seeded key labels cannot be modified" } } },
+        { "request": "DELETE /api/key-labels/{builtIn}", "auth": "alice",
+          "expect": { "status": 403, "json": { "ok": false, "error": "System-seeded key labels cannot be deleted" } } },
+        { "control": "touch", "kind": "keyLabel", "id": "{builtIn}" },
+        { "request": "POST /api/key-labels/timestamps", "json": { "ids": ["{builtIn}"] },
+          "expect": { "status": 200, "json": { "ok": true, "data": { "items": [{ "id": "$saved:builtIn", "updated_at": "$after:builtInUpdated" }] } } } }
+      ]
+    }
+  ]
+}
