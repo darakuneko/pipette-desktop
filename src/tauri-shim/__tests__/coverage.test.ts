@@ -9,10 +9,10 @@
 // the cache, the typing analytics' keymap snapshot, recording, Data modal
 // and Drive members (every typing analytics member), and the pack and
 // label members (key labels, typing test texts, language and theme packs,
-// word lists, datasets and the Aozora Bunko import) are all real; the
-// members named after the Hub are real where their module's `…Real` lists
-// them (`HUB_MODULES`) and stubs otherwise. The Cloud Sync members
-// (each listed with the module that holds it) are all real.
+// word lists, datasets and the Aozora Bunko import) are all real, and so
+// are the Hub members and the Cloud Sync members (each listed with the
+// module that holds it). The fakes left are the tray and the startup
+// notification.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -25,12 +25,12 @@ import { syncPasswordApi } from '../api/sync-password'
 import { syncPasswordChangeApi } from '../api/sync-password-change'
 import { syncResetApi } from '../api/sync-reset'
 import { typingAnalyticsRemoteApi } from '../api/typing-analytics-remote'
-import { hubAccountApi, hubAccountReal } from '../api/hub-account'
-import { hubPostsApi, hubPostsReal } from '../api/hub-posts'
-import { hubFavoriteApi, hubFavoriteReal } from '../api/hub-favorite'
-import { hubAnalyticsApi, hubAnalyticsReal } from '../api/hub-analytics'
-import { hubPacksApi, hubPacksReal } from '../api/hub-packs'
-import { keyLabelHubApi, keyLabelHubReal } from '../api/key-label-hub'
+import { hubAccountApi } from '../api/hub-account'
+import { hubPostsApi } from '../api/hub-posts'
+import { hubFavoriteApi } from '../api/hub-favorite'
+import { hubAnalyticsApi } from '../api/hub-analytics'
+import { hubPacksApi } from '../api/hub-packs'
+import { keyLabelHubApi } from '../api/key-label-hub'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
@@ -330,25 +330,14 @@ const SYNC_REAL = [
   'typingAnalyticsFetchRemoteDay',
 ]
 
-/** The Hub members, by the shim module that holds them, with the ones the
- *  backend implements (each module's `…Real`; its other members stay
- *  fakes or stubs). */
-const HUB_MODULES = [
-  { module: hubAccountApi, real: hubAccountReal },
-  { module: hubPostsApi, real: hubPostsReal },
-  { module: hubFavoriteApi, real: hubFavoriteReal },
-  { module: hubAnalyticsApi, real: hubAnalyticsReal },
-  { module: hubPacksApi, real: hubPacksReal },
-  { module: keyLabelHubApi, real: keyLabelHubReal },
-]
+/** The Hub members, by the shim module that holds them. */
+const HUB_MODULES = [hubAccountApi, hubPostsApi, hubFavoriteApi, hubAnalyticsApi, hubPacksApi, keyLabelHubApi]
 
-/** Whether `name` is a member named after the Hub that is not answered
- *  locally: the setters of a store's Hub link (`…SetHubPostId`,
- *  `…SetHubPrivate`) and `hubGetOrigin` (the configured origin) are. The
- *  word list dataset members and the Aozora Bunko import also reach the
- *  Hub but are real, and are not named after it. */
-const namedAfterHub = (name: string): boolean =>
-  /^hub|Hub/.test(name) && !/SetHub/.test(name) && name !== 'hubGetOrigin'
+/** Whether `name` is a member named after the Hub, other than the setters
+ *  of a store's Hub link (`…SetHubPostId`, `…SetHubPrivate`), which belong
+ *  to the stores. The word list dataset members and the Aozora Bunko
+ *  import also reach the Hub, and are not named after it. */
+const namedAfterHub = (name: string): boolean => /^hub|Hub/.test(name) && !/SetHub/.test(name)
 
 describe('shim coverage', () => {
   it('backs every pack and label member with backend commands', () => {
@@ -367,22 +356,14 @@ describe('shim coverage', () => {
     expect(stores.filter((name) => !members.includes(name))).toEqual([])
   })
 
-  it('backs only the listed members named after the Hub with backend commands', () => {
-    const hub = VIAL_API_MEMBER_NAMES.filter(namedAfterHub)
-    expect(hub.length).toBeGreaterThan(0)
-    const listed = HUB_MODULES.flatMap(({ real: own }) => Object.keys(own))
-    expect(hub.filter((name) => name in real).sort()).toEqual(listed.filter((name) => name !== 'hubGetOrigin').sort())
-  })
-
-  it('holds the 39 Hub members in their modules, each real one backed by a command', () => {
-    const members = HUB_MODULES.flatMap(({ module }) => Object.keys(module))
+  it('holds the 39 Hub members in their modules and backs all of them with backend commands', () => {
+    const members = HUB_MODULES.flatMap((module) => Object.keys(module))
     expect(new Set(members).size).toBe(39)
     expect(members.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
-    for (const { module, real: own } of HUB_MODULES) {
-      const realMembers = Object.keys(own)
-      expect(realMembers.filter((name) => !(name in module))).toEqual([])
-      expect(realMembers.filter((name) => !(name in real) || name in fakes)).toEqual([])
-    }
+    expect(members.filter((name) => !(name in real))).toEqual([])
+    expect(members.filter((name) => name in fakes)).toEqual([])
+    // Every member named after the Hub is one of them.
+    expect(VIAL_API_MEMBER_NAMES.filter(namedAfterHub).sort()).toEqual([...members].sort())
   })
 
   it('backs every keyboard member with backend commands', () => {

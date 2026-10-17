@@ -34,12 +34,12 @@ import { typingAnalyticsRemoteApi } from './api/typing-analytics-remote'
 import { typingDatasetsApi } from './api/typing-datasets'
 import { typingTextsApi } from './api/typing-texts'
 import { windowApi } from './api/window'
-import { hubAccountReal } from './api/hub-account'
-import { hubPostsReal } from './api/hub-posts'
-import { hubFavoriteReal } from './api/hub-favorite'
-import { hubAnalyticsReal } from './api/hub-analytics'
-import { hubPacksReal } from './api/hub-packs'
-import { keyLabelHubReal } from './api/key-label-hub'
+import { hubAccountApi } from './api/hub-account'
+import { hubPostsApi } from './api/hub-posts'
+import { hubFavoriteApi } from './api/hub-favorite'
+import { hubAnalyticsApi } from './api/hub-analytics'
+import { hubPacksApi } from './api/hub-packs'
+import { keyLabelHubApi } from './api/key-label-hub'
 import { fakes } from './fakes'
 
 /** The members backed by backend commands, by domain. */
@@ -73,12 +73,12 @@ export const real = {
   ...syncDataApi,
   ...syncResetApi,
   ...typingAnalyticsRemoteApi,
-  ...hubAccountReal,
-  ...hubPostsReal,
-  ...hubFavoriteReal,
-  ...hubAnalyticsReal,
-  ...hubPacksReal,
-  ...keyLabelHubReal,
+  ...hubAccountApi,
+  ...hubPostsApi,
+  ...hubFavoriteApi,
+  ...hubAnalyticsApi,
+  ...hubPacksApi,
+  ...keyLabelHubApi,
 } satisfies Partial<VialAPI>
 
 export const implemented: Partial<VialAPI> = { ...real, ...fakes }

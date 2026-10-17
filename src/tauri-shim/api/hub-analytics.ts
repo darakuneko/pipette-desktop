@@ -4,8 +4,6 @@
 // `JSON.stringify(params)`, which the backend reads as `JSON.parse` would, so it
 // answers a field of an unexpected type as the Electron handler does. The export
 // is built and sent in the backend; the Hub token stays there.
-// `hubAnalyticsReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
@@ -20,11 +18,4 @@ export const hubAnalyticsApi = {
     call<Answer<'hubPreviewAnalyticsPost'>>('hub_preview_analytics_post', { params: JSON.stringify(params) }),
   hubUploadPrivateAnalyticsPost: (params) =>
     call<Answer<'hubUploadPrivateAnalyticsPost'>>('hub_upload_private_analytics_post', { params: JSON.stringify(params) }),
-} satisfies Partial<VialAPI>
-
-export const hubAnalyticsReal = {
-  hubUploadAnalyticsPost: hubAnalyticsApi.hubUploadAnalyticsPost,
-  hubUpdateAnalyticsPost: hubAnalyticsApi.hubUpdateAnalyticsPost,
-  hubPreviewAnalyticsPost: hubAnalyticsApi.hubPreviewAnalyticsPost,
-  hubUploadPrivateAnalyticsPost: hubAnalyticsApi.hubUploadPrivateAnalyticsPost,
 } satisfies Partial<VialAPI>

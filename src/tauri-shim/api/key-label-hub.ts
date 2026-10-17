@@ -2,8 +2,6 @@
 // The VialAPI members of the key labels on the Hub, each the backend command
 // of src-tauri/src/hub_commands/key_labels.rs with its arguments by name. The
 // Hub token stays in the backend; the answers carry results only.
-// `keyLabelHubReal` holds the members the backend implements, all of them;
-// coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
@@ -19,5 +17,3 @@ export const keyLabelHubApi = {
   keyLabelHubTimestamps: (ids) => call<Answer<'keyLabelHubTimestamps'>>('key_label_hub_timestamps', { ids }),
   keyLabelHubDelete: (localId) => call<Answer<'keyLabelHubDelete'>>('key_label_hub_delete', { localId }),
 } satisfies Partial<VialAPI>
-
-export const keyLabelHubReal = { ...keyLabelHubApi } satisfies Partial<VialAPI>
