@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
@@ -165,6 +166,7 @@ const vialAPI = {
 Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
 
 import { LanguagePacksModal } from '../LanguagePacksModal'
+import { hubPackBackends } from '../../../hooks/__tests__/hub-pack-backends'
 import { downloadJson } from '../../../utils/download-json'
 import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
 import { ERROR_DISMISS_MS } from '../../ui/DismissibleError'
@@ -203,10 +205,11 @@ async function switchToHubTab(): Promise<void> {
   await waitFor(() => expect(screen.getByTestId('language-packs-search-input')).toBeTruthy())
 }
 
-describe('LanguagePacksModal', () => {
+describe.each(hubPackBackends(vialAPI))('LanguagePacksModal ($name)', ({ install }) => {
   beforeEach(() => {
     vi.clearAllMocks()
     storeMetas = []
+    Object.assign(window, { vialAPI: install() })
     mockLanguage = 'builtin:en'
     removeFn.mockResolvedValue({ success: true })
     renameFn.mockResolvedValue({ success: true })
@@ -228,6 +231,7 @@ describe('LanguagePacksModal', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    clearMocks()
   })
 
   it('renders nothing when closed', () => {

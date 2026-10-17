@@ -11,11 +11,8 @@ import type { VialAPI } from '../shared/types/vial-api'
 
 /** The answer of a Hub member before the backend reaches the Hub. It has
  *  no `error`: without one the renderer shows its own localized failure
- *  message (for the key labels, the search's `keyLabels.errorSearchFailed`
- *  and the row actions' `keyLabels.errorGeneric` through `translateError`;
- *  for the language packs, `i18n.errorGeneric` and the `hub.*Failed`
- *  messages through `localizeHubError`; for the theme packs, the messages
- *  named at their members). */
+ *  message (the search's `keyLabels.errorSearchFailed` and the row
+ *  actions' `keyLabels.errorGeneric` through `translateError`). */
 const hubUnavailable = (): Promise<{ success: false }> => Promise.resolve({ success: false })
 
 export const fakes = {
@@ -24,34 +21,6 @@ export const fakes = {
 
   // Startup notification.
   notificationFetch: () => Promise.resolve({ success: false }),
-
-  // Language pack Hub. The renderer reads `success` of these answers
-  // without a guard, on its own (the freshness check of Hub-linked packs
-  // and the Hub tab's list) or after a local change (the sync after
-  // renaming a Hub-linked pack), so each answers a failure rather than
-  // nothing. Every caller falls back to its own message when `error` is
-  // absent; the freshness check reads no message.
-  i18nPackHubTimestamps: hubUnavailable,
-  hubListI18nPosts: hubUnavailable,
-  hubDownloadI18nPost: hubUnavailable,
-  hubUploadI18nPost: hubUnavailable,
-  hubUpdateI18nPost: hubUnavailable,
-  hubDeleteI18nPost: hubUnavailable,
-
-  // Theme pack Hub. The renderer reads `success` of these answers without a
-  // guard (the freshness check of Hub-linked packs, the Hub tab's search
-  // and preview, and the row actions), so each answers a failure rather
-  // than nothing. Every caller falls back to its own message when `error`
-  // is absent (`themePacks.hubEmpty`, `themePacks.parseError`,
-  // `hub.uploadFailed`, `hub.removeFailed`, and `hub.updateFailed` through
-  // `localizeHubError`); the freshness check and the preview read no
-  // message.
-  themePackHubTimestamps: hubUnavailable,
-  hubListThemePosts: hubUnavailable,
-  hubDownloadThemePost: hubUnavailable,
-  hubUploadThemePost: hubUnavailable,
-  hubUpdateThemePost: hubUnavailable,
-  hubDeleteThemePost: hubUnavailable,
 
   // Key label Hub. The renderer reads the result of each without a guard
   // (`useKeyLabels`, `useHubFreshness`, `useHubSearchList`), so each answers

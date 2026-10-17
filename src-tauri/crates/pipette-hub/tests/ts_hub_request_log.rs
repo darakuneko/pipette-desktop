@@ -20,11 +20,11 @@ use pipette_hub::multipart::{
     KeymapFiles, UploadFile, analytics_post_body, feature_post_body, i18n_boundary, keymap_post_body,
     pack_body, post_boundary, theme_boundary,
 };
+use pipette_hub::packs::{i18n_export_file, theme_pack_file};
 use pipette_hub::{Endpoint, ListQuery, ReadMode, RequestBody, node_base64_decode};
 use pipette_js_json::{Object, Value, stringify};
 
-/// `new Date(nowMs).toISOString()` of the recording's clock.
-const RECORDED_NOW_ISO: &str = "2026-10-16T00:00:00.000Z";
+/// The recording's clock.
 const RECORDED_NOW_MS: f64 = 1_792_108_800_000.0;
 
 fn file_arg(v: &Value) -> UploadFile {
@@ -246,14 +246,7 @@ fn call<'a>(
         "hub-i18n.uploadI18nPostToHub" | "hub-i18n.updateI18nPostOnHub" => {
             let (id, pack) =
                 if fn_name.ends_with("uploadI18nPostToHub") { (None, &a[1]) } else { (s(1), &a[2]) };
-            let export = obj(vec![
-                ("version", Value::from(1.0)),
-                ("kind", Value::from("i18n")),
-                ("exportedAt", Value::from(RECORDED_NOW_ISO)),
-                ("pack", pack.clone()),
-            ]);
-            let file =
-                UploadFile { name: "i18n-export-v1.json".into(), data: stringify(&export).into_bytes() };
+            let file = i18n_export_file(Some(pack), RECORDED_NOW_MS);
             let endpoint = match id {
                 None => Endpoint::I18nUpload,
                 Some(id) => Endpoint::I18nUpdate { post_id: id },
@@ -280,7 +273,7 @@ fn call<'a>(
         "hub-theme.uploadThemePostToHub" | "hub-theme.updateThemePostOnHub" => {
             let (id, pack) =
                 if fn_name.ends_with("uploadThemePostToHub") { (None, &a[1]) } else { (s(1), &a[2]) };
-            let file = UploadFile { name: "theme-pack.json".into(), data: stringify(pack).into_bytes() };
+            let file = theme_pack_file(pack);
             let endpoint = match id {
                 None => Endpoint::ThemeUpload,
                 Some(id) => Endpoint::ThemeUpdate { post_id: id },
