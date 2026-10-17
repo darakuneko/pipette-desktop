@@ -12,7 +12,10 @@
         "h1"
       ]
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "offline"
+    }
   },
   {
     "member": "hubListI18nPosts",
@@ -29,7 +32,10 @@
         "page": 1
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "offline"
+    }
   },
   {
     "member": "hubDownloadI18nPost",
@@ -40,39 +46,58 @@
     "invokeArgs": {
       "postId": "h1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "offline"
+    }
   },
   {
     "member": "hubUploadI18nPost",
     "args": [
       {
-        "localPackId": "l1"
+        "entryId": "l1",
+        "pack": {
+          "name": "P",
+          "version": "1.0.0"
+        }
       }
     ],
     "command": "hub_upload_i18n_post",
     "invokeArgs": {
       "params": {
-        "localPackId": "l1"
-      }
+        "entryId": "l1"
+      },
+      "pack": "{\"name\":\"P\",\"version\":\"1.0.0\"}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubUpdateI18nPost",
     "args": [
       {
-        "localPackId": "l1",
+        "entryId": "l1",
+        "pack": {
+          "name": "P",
+          "version": "1.0.0"
+        },
         "postId": "h1"
       }
     ],
     "command": "hub_update_i18n_post",
     "invokeArgs": {
       "params": {
-        "localPackId": "l1",
+        "entryId": "l1",
         "postId": "h1"
-      }
+      },
+      "pack": "{\"name\":\"P\",\"version\":\"1.0.0\"}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubDeleteI18nPost",
@@ -85,7 +110,10 @@
       "postId": "h1",
       "localPackId": "l1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "themePackHubTimestamps",
@@ -100,7 +128,10 @@
         "h1"
       ]
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "offline"
+    }
   },
   {
     "member": "hubListThemePosts",
@@ -117,7 +148,10 @@
         "page": 1
       }
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "offline"
+    }
   },
   {
     "member": "hubDownloadThemePost",
@@ -128,39 +162,58 @@
     "invokeArgs": {
       "postId": "h1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "offline"
+    }
   },
   {
     "member": "hubUploadThemePost",
     "args": [
       {
-        "localPackId": "l1"
+        "entryId": "l1",
+        "pack": {
+          "name": "P",
+          "version": "1.0.0"
+        }
       }
     ],
     "command": "hub_upload_theme_post",
     "invokeArgs": {
       "params": {
-        "localPackId": "l1"
-      }
+        "entryId": "l1"
+      },
+      "pack": "{\"name\":\"P\",\"version\":\"1.0.0\"}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubUpdateThemePost",
     "args": [
       {
-        "localPackId": "l1",
+        "entryId": "l1",
+        "pack": {
+          "name": "P",
+          "version": "1.0.0"
+        },
         "postId": "h1"
       }
     ],
     "command": "hub_update_theme_post",
     "invokeArgs": {
       "params": {
-        "localPackId": "l1",
+        "entryId": "l1",
         "postId": "h1"
-      }
+      },
+      "pack": "{\"name\":\"P\",\"version\":\"1.0.0\"}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   },
   {
     "member": "hubDeleteThemePost",
@@ -173,6 +226,9 @@
       "postId": "h1",
       "localPackId": "l1"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Not authenticated with Google. Please sign in again."
+    }
   }
 ]

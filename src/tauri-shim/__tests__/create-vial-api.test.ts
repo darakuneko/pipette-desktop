@@ -73,24 +73,15 @@ describe('implemented', () => {
     expect(invoke).toHaveBeenLastCalledWith('sync_auth_status', undefined)
   })
 
-  it('answers the Hub requests of the language packs as failed', async () => {
+  it('asks the backend for the Hub requests of the language and theme packs', async () => {
     const api = createVialApi(implemented)
-    const failed = { success: false }
+    const failed = { success: false, error: 'offline' }
+    invoke.mockResolvedValueOnce(failed)
     await expect(api.i18nPackHubTimestamps(['post-1'])).resolves.toEqual(failed)
-    await expect(api.hubListI18nPosts()).resolves.toEqual(failed)
-    await expect(api.hubDownloadI18nPost('post-1')).resolves.toEqual(failed)
-    await expect(api.hubDeleteI18nPost('post-1')).resolves.toEqual(failed)
-  })
-
-  it('answers the Hub requests of the theme packs as failed', async () => {
-    const api = createVialApi(implemented)
-    const failed = { success: false }
-    await expect(api.themePackHubTimestamps(['post-1'])).resolves.toEqual(failed)
-    await expect(api.hubListThemePosts()).resolves.toEqual(failed)
-    await expect(api.hubDownloadThemePost('post-1')).resolves.toEqual(failed)
+    expect(invoke).toHaveBeenLastCalledWith('i18n_pack_hub_timestamps', { ids: ['post-1'] })
+    invoke.mockResolvedValueOnce(failed)
     await expect(api.hubUploadThemePost({ entryId: 'id', pack: {} as never })).resolves.toEqual(failed)
-    await expect(api.hubUpdateThemePost({ postId: 'p', entryId: 'id', pack: {} as never })).resolves.toEqual(failed)
-    await expect(api.hubDeleteThemePost('post-1')).resolves.toEqual(failed)
+    expect(invoke).toHaveBeenLastCalledWith('hub_upload_theme_post', { params: { entryId: 'id' }, pack: '{}' })
   })
 
   it('asks the backend for the run logs of a keyboard', async () => {
