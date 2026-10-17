@@ -33,10 +33,10 @@ import { setupPipetteSettingsStore } from '../../src/main/pipette-settings-store
 const execFileAsync = promisify(execFile)
 
 /** The Rust peer: PIPETTE_SYNC_PEER, or the debug build's. */
-export const PEER = process.env.PIPETTE_SYNC_PEER
+const PEER = process.env.PIPETTE_SYNC_PEER
   ?? resolve(cargoTargetDir, 'debug/examples', process.platform === 'win32' ? 'sync_peer.exe' : 'sync_peer')
 /** The account both machines are signed in to. */
-export const SUB = 'interop-sub'
+const SUB = 'interop-sub'
 const GOOGLE_API_ORIGIN = 'https://www.googleapis.com'
 /** One step of a Rust machine may take this long. */
 const STEP_TIMEOUT_MS = 300_000
