@@ -7,15 +7,14 @@
 //! `{boundary}`; and the result read from the recorded answer.
 //!
 //! The bodies are built here from the call's recorded arguments with the
-//! crate's builders. The JSON of the key label upload (`buildBody` of
-//! src/main/hub/hub-key-labels.ts) and of the language pack export are
-//! written here until their handlers build them.
+//! crate's builders.
 
 #![allow(clippy::unwrap_used)]
 
 mod common;
 
 use common::{array, block_on, field, fixture, get, number, reply, scripted};
+use pipette_hub::key_labels::{KeyLabelInput, build_body};
 use pipette_hub::multipart::{
     KeymapFiles, UploadFile, analytics_post_body, feature_post_body, i18n_boundary, keymap_post_body,
     pack_body, post_boundary, theme_boundary,
@@ -70,18 +69,15 @@ fn obj(fields: Vec<(&str, Value)>) -> Value {
     Value::Object(o)
 }
 
-/// `buildBody` of src/main/hub/hub-key-labels.ts.
+/// The recorded `HubKeyLabelInput` for `key_labels::build_body`.
 fn key_label_body(input: &Value) -> String {
-    let mut fields =
-        vec![("name", get(input, "name").unwrap().clone()), ("map", get(input, "map").unwrap().clone())];
-    if let Some(c) = get(input, "compositeLabels") {
-        fields.push(("composite_labels", c.clone()));
-    }
-    fields.push((
-        "keymap_applicable",
-        Value::Bool(get(input, "keymapApplicable").is_some_and(Value::is_truthy)),
-    ));
-    stringify(&obj(fields))
+    let given = |key: &str| get(input, key).filter(|value| get(value, "$u").is_none()).cloned();
+    build_body(&KeyLabelInput {
+        name: given("name"),
+        map: given("map"),
+        composite_labels: given("compositeLabels"),
+        keymap_applicable: given("keymapApplicable").is_some_and(|value| value.is_truthy()),
+    })
 }
 
 const NORM: &str = "{boundary}";

@@ -11,14 +11,12 @@
     ],
     "command": "hub_upload_analytics_post",
     "invokeArgs": {
-      "params": {
-        "uid": "0xAB",
-        "entryId": "e1",
-        "title": "T",
-        "thumbnailBase64": ""
-      }
+      "params": "{\"uid\":\"0xAB\",\"entryId\":\"e1\",\"title\":\"T\",\"thumbnailBase64\":\"\"}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Saved filter entry not found"
+    }
   },
   {
     "member": "hubUpdateAnalyticsPost",
@@ -33,15 +31,12 @@
     ],
     "command": "hub_update_analytics_post",
     "invokeArgs": {
-      "params": {
-        "uid": "0xAB",
-        "entryId": "e1",
-        "title": "T",
-        "thumbnailBase64": "",
-        "postId": "p1"
-      }
+      "params": "{\"uid\":\"0xAB\",\"entryId\":\"e1\",\"title\":\"T\",\"thumbnailBase64\":\"\",\"postId\":\"p1\"}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Saved filter entry not found"
+    }
   },
   {
     "member": "hubPreviewAnalyticsPost",
@@ -53,12 +48,20 @@
     ],
     "command": "hub_preview_analytics_post",
     "invokeArgs": {
-      "params": {
-        "uid": "0xAB",
-        "entryId": "e1"
-      }
+      "params": "{\"uid\":\"0xAB\",\"entryId\":\"e1\"}"
     },
-    "response": null
+    "response": {
+      "success": true,
+      "preview": {
+        "totalKeystrokes": 0,
+        "rangeMs": 0,
+        "estimatedBytes": 0,
+        "validation": {
+          "ok": false,
+          "reason": "Saved filter entry not found"
+        }
+      }
+    }
   },
   {
     "member": "hubUploadPrivateAnalyticsPost",
@@ -73,14 +76,11 @@
     ],
     "command": "hub_upload_private_analytics_post",
     "invokeArgs": {
-      "params": {
-        "uid": "0xAB",
-        "entryId": "e1",
-        "title": "T",
-        "thumbnailBase64": "",
-        "expiresInDays": 7
-      }
+      "params": "{\"uid\":\"0xAB\",\"entryId\":\"e1\",\"title\":\"T\",\"thumbnailBase64\":\"\",\"expiresInDays\":7}"
     },
-    "response": null
+    "response": {
+      "success": false,
+      "error": "Saved filter entry not found"
+    }
   }
 ]

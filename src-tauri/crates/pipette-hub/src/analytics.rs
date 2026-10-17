@@ -3,17 +3,22 @@
 //! (`src/main/hub/hub-analytics.ts` and `hub-ipc-analytics-prepare.ts`), and
 //! the Analyze post handlers of `hub-ipc-analytics.ts`.
 //!
+//! The handlers ([`AnalyticsPosts`]) prepare the export, send it with its
+//! thumbnail and link the public post to its saved filter.
+//!
 //! The export takes this device's machine hash and the time as inputs, so
 //! the same cache gives the same bytes ([`prepare::prepare_analytics_export`]).
 
 pub mod export;
 pub mod layout;
+mod post;
 pub mod prepare;
 mod source;
 pub mod validate;
 
 pub use export::{AnalyticsExport, DeviceScope, ExportError, ExportInput, build_analytics_export};
 pub use layout::{LayoutComparisonInputs, sanitize_finger_overrides};
+pub use post::AnalyticsPosts;
 pub use prepare::{PrepareError, Prepared, prepare_analytics_export, preview};
 pub use source::TypingAnalyticsSource;
 pub use validate::{

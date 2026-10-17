@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI members of the key labels on the Hub, each the backend command
-// of src-tauri/src/hub_commands/key_labels.rs with its arguments by name.
-// `keyLabelHubReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
+// of src-tauri/src/hub_commands/key_labels.rs with its arguments by name. The
+// Hub token stays in the backend; the answers carry results only.
+// `keyLabelHubReal` holds the members the backend implements, all of them;
+// coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
@@ -19,4 +20,4 @@ export const keyLabelHubApi = {
   keyLabelHubDelete: (localId) => call<Answer<'keyLabelHubDelete'>>('key_label_hub_delete', { localId }),
 } satisfies Partial<VialAPI>
 
-export const keyLabelHubReal = {} satisfies Partial<VialAPI>
+export const keyLabelHubReal = { ...keyLabelHubApi } satisfies Partial<VialAPI>

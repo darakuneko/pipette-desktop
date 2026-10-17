@@ -277,6 +277,889 @@
       }
     },
     {
+      "name": "upload each other favorite type, at both protocols",
+      "rules": [
+        {
+          "method": "POST",
+          "path": "/api/auth/token",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "token": "jwt-1",
+                  "user": {
+                    "id": "u-1",
+                    "email": "user@example.com",
+                    "display_name": "User",
+                    "role": "user"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/files",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "m-post",
+                  "title": "M"
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "c-post",
+                  "title": "C"
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "ko-post",
+                  "title": "KO"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/api/files/c-post",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "c-post",
+                  "title": "C"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/private/files",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "ark-priv",
+                  "token": "tok-1",
+                  "url": "/p/priv-1?token=tok-1",
+                  "expires_at": null
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "treeBefore": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/favorites/altRepeatKey/altRepeatKey_1.json": "{\n  \"type\": \"altRepeatKey\",\n  \"data\": {\n    \"lastKey\": 80,\n    \"altKey\": 79,\n    \"allowedMods\": 0,\n    \"options\": 1,\n    \"enabled\": false\n  }\n}",
+        "sync/favorites/altRepeatKey/index.json": "{\n  \"type\": \"altRepeatKey\",\n  \"entries\": [\n    {\n      \"id\": \"ark-1\",\n      \"filename\": \"altRepeatKey_1.json\",\n      \"savedAt\": 1767225600000\n    }\n  ]\n}",
+        "sync/favorites/combo/combo_1.json": "{\n  \"type\": \"combo\",\n  \"data\": {\n    \"output\": 20736,\n    \"key4\": 0,\n    \"key3\": 31766,\n    \"key2\": 5,\n    \"key1\": 4,\n    \"extra\": \"kept\"\n  }\n}",
+        "sync/favorites/combo/index.json": "{\n  \"type\": \"combo\",\n  \"entries\": [\n    {\n      \"id\": \"c-1\",\n      \"label\": \"Label c-1 \\\"é\\\"\",\n      \"filename\": \"combo_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/keyOverride/index.json": "{\n  \"type\": \"keyOverride\",\n  \"entries\": [\n    {\n      \"id\": \"ko-1\",\n      \"label\": \"Label ko-1 \\\"é\\\"\",\n      \"filename\": \"keyOverride_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/keyOverride/keyOverride_1.json": "{\n  \"type\": \"keyOverride\",\n  \"data\": {\n    \"triggerKey\": 516,\n    \"replacementKey\": 42,\n    \"layers\": 65535,\n    \"triggerMods\": 2,\n    \"negativeMods\": 0,\n    \"suppressedMods\": 2,\n    \"options\": 7,\n    \"enabled\": true\n  }\n}",
+        "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"m-1\",\n      \"label\": \"Macro\\nline\",\n      \"filename\": \"macro_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/macro/macro_1.json": "{\n  \"type\": \"macro\",\n  \"data\": [\n    [\n      \"text\",\n      \"Hi\"\n    ],\n    [\n      \"tap\",\n      4,\n      258\n    ],\n    [\n      \"delay\",\n      100\n    ]\n  ]\n}"
+      },
+      "steps": [
+        {
+          "step": {
+            "call": "HUB_UPLOAD_FAVORITE_POST",
+            "args": [
+              {
+                "type": "macro",
+                "entryId": "m-1",
+                "title": "macro post",
+                "vialProtocol": 6
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "m-post"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/auth/token",
+              "query": [],
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": {
+                "json": {
+                  "id_token": "fixture-google-id-token"
+                },
+                "text": "{\"id_token\":\"fixture-google-id-token\"}"
+              }
+            },
+            {
+              "method": "POST",
+              "path": "/api/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "macro post"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "macro"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"macro.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"macro\":[{\"label\":\"Macro\\nline\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":[[\"text\",\"Hi\"],[\"tap\",4,258],[\"delay\",100]]}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQptYWNybyBwb3N0DQotLXtib3VuZGFyeX0NCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icG9zdF90eXBlIg0KDQptYWNybw0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0ibWFjcm8uanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7ImFwcCI6InBpcGV0dGUiLCJ2ZXJzaW9uIjozLCJzY29wZSI6ImZhdiIsImV4cG9ydGVkQXQiOiIyMDI2LTEwLTE2VDAwOjAwOjAwLjAwMFoiLCJ2aWFsX3Byb3RvY29sIjo2LCJjYXRlZ29yaWVzIjp7Im1hY3JvIjpbeyJsYWJlbCI6Ik1hY3JvXG5saW5lIiwic2F2ZWRBdCI6IjIwMjYtMTAtMDFUMDA6MDA6MDAuMDAwWiIsImRhdGEiOltbInRleHQiLCJIaSJdLFsidGFwIiw0LDI1OF0sWyJkZWxheSIsMTAwXV19XX19DQotLXtib3VuZGFyeX0tLQ0K"
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_FAVORITE_POST",
+            "args": [
+              {
+                "type": "combo",
+                "entryId": "c-1",
+                "title": "combo post",
+                "vialProtocol": 6
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "c-post"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "combo post"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "combo"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"combo.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"combo\":[{\"label\":\"Label c-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"output\":\"LM8(0x0)\",\"key4\":\"KC_NO\",\"key3\":\"KC_GESC\",\"key2\":\"KC_B\",\"key1\":\"KC_A\",\"extra\":\"kept\"}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpjb21ibyBwb3N0DQotLXtib3VuZGFyeX0NCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icG9zdF90eXBlIg0KDQpjb21ibw0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0iY29tYm8uanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7ImFwcCI6InBpcGV0dGUiLCJ2ZXJzaW9uIjozLCJzY29wZSI6ImZhdiIsImV4cG9ydGVkQXQiOiIyMDI2LTEwLTE2VDAwOjAwOjAwLjAwMFoiLCJ2aWFsX3Byb3RvY29sIjo2LCJjYXRlZ29yaWVzIjp7ImNvbWJvIjpbeyJsYWJlbCI6IkxhYmVsIGMtMSBcIsOpXCIiLCJzYXZlZEF0IjoiMjAyNi0xMC0wMVQwMDowMDowMC4wMDBaIiwiZGF0YSI6eyJvdXRwdXQiOiJMTTgoMHgwKSIsImtleTQiOiJLQ19OTyIsImtleTMiOiJLQ19HRVNDIiwia2V5MiI6IktDX0IiLCJrZXkxIjoiS0NfQSIsImV4dHJhIjoia2VwdCJ9fV19fQ0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPDATE_FAVORITE_POST",
+            "args": [
+              {
+                "type": "combo",
+                "entryId": "c-1",
+                "title": "combo post",
+                "vialProtocol": 5,
+                "postId": "c-post"
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "c-post"
+          },
+          "requests": [
+            {
+              "method": "PUT",
+              "path": "/api/files/c-post",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "combo post"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "combo"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"combo.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":5,\"categories\":{\"combo\":[{\"label\":\"Label c-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"output\":\"0x5100\",\"key4\":\"KC_NO\",\"key3\":\"RAG_T(KC_S)\",\"key2\":\"KC_B\",\"key1\":\"KC_A\",\"extra\":\"kept\"}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpjb21ibyBwb3N0DQotLXtib3VuZGFyeX0NCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icG9zdF90eXBlIg0KDQpjb21ibw0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0iY29tYm8uanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7ImFwcCI6InBpcGV0dGUiLCJ2ZXJzaW9uIjozLCJzY29wZSI6ImZhdiIsImV4cG9ydGVkQXQiOiIyMDI2LTEwLTE2VDAwOjAwOjAwLjAwMFoiLCJ2aWFsX3Byb3RvY29sIjo1LCJjYXRlZ29yaWVzIjp7ImNvbWJvIjpbeyJsYWJlbCI6IkxhYmVsIGMtMSBcIsOpXCIiLCJzYXZlZEF0IjoiMjAyNi0xMC0wMVQwMDowMDowMC4wMDBaIiwiZGF0YSI6eyJvdXRwdXQiOiIweDUxMDAiLCJrZXk0IjoiS0NfTk8iLCJrZXkzIjoiUkFHX1QoS0NfUykiLCJrZXkyIjoiS0NfQiIsImtleTEiOiJLQ19BIiwiZXh0cmEiOiJrZXB0In19XX19DQotLXtib3VuZGFyeX0tLQ0K"
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_FAVORITE_POST",
+            "args": [
+              {
+                "type": "keyOverride",
+                "entryId": "ko-1",
+                "title": "keyOverride post",
+                "vialProtocol": 5
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "ko-post"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "keyOverride post"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "ko"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"ko.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":5,\"categories\":{\"ko\":[{\"label\":\"Label ko-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"triggerKey\":\"LSFT(KC_A)\",\"replacementKey\":\"KC_BSPACE\",\"layers\":65535,\"triggerMods\":2,\"negativeMods\":0,\"suppressedMods\":2,\"options\":7,\"enabled\":true}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQprZXlPdmVycmlkZSBwb3N0DQotLXtib3VuZGFyeX0NCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icG9zdF90eXBlIg0KDQprbw0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0ia28uanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7ImFwcCI6InBpcGV0dGUiLCJ2ZXJzaW9uIjozLCJzY29wZSI6ImZhdiIsImV4cG9ydGVkQXQiOiIyMDI2LTEwLTE2VDAwOjAwOjAwLjAwMFoiLCJ2aWFsX3Byb3RvY29sIjo1LCJjYXRlZ29yaWVzIjp7ImtvIjpbeyJsYWJlbCI6IkxhYmVsIGtvLTEgXCLDqVwiIiwic2F2ZWRBdCI6IjIwMjYtMTAtMDFUMDA6MDA6MDAuMDAwWiIsImRhdGEiOnsidHJpZ2dlcktleSI6IkxTRlQoS0NfQSkiLCJyZXBsYWNlbWVudEtleSI6IktDX0JTUEFDRSIsImxheWVycyI6NjU1MzUsInRyaWdnZXJNb2RzIjoyLCJuZWdhdGl2ZU1vZHMiOjAsInN1cHByZXNzZWRNb2RzIjoyLCJvcHRpb25zIjo3LCJlbmFibGVkIjp0cnVlfX1dfX0NCi0te2JvdW5kYXJ5fS0tDQo="
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_PRIVATE_FAVORITE_POST",
+            "args": [
+              {
+                "type": "altRepeatKey",
+                "entryId": "ark-1",
+                "title": "altRepeatKey post",
+                "vialProtocol": 6,
+                "expiresInDays": null
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "id": "ark-priv",
+            "url": "/p/priv-1?token=tok-1",
+            "expiresAt": null
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/private/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "altRepeatKey post"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "ark"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"ark.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"ark\":[{\"savedAt\":1767225600000,\"data\":{\"lastKey\":\"KC_LEFT\",\"altKey\":\"KC_RIGHT\",\"allowedMods\":0,\"options\":1,\"enabled\":false}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQphbHRSZXBlYXRLZXkgcG9zdA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KYXJrDQotLXtib3VuZGFyeX0NCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0ianNvbiI7IGZpbGVuYW1lPSJhcmsuanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7ImFwcCI6InBpcGV0dGUiLCJ2ZXJzaW9uIjozLCJzY29wZSI6ImZhdiIsImV4cG9ydGVkQXQiOiIyMDI2LTEwLTE2VDAwOjAwOjAwLjAwMFoiLCJ2aWFsX3Byb3RvY29sIjo2LCJjYXRlZ29yaWVzIjp7ImFyayI6W3sic2F2ZWRBdCI6MTc2NzIyNTYwMDAwMCwiZGF0YSI6eyJsYXN0S2V5IjoiS0NfTEVGVCIsImFsdEtleSI6IktDX1JJR0hUIiwiYWxsb3dlZE1vZHMiOjAsIm9wdGlvbnMiOjEsImVuYWJsZWQiOmZhbHNlfX1dfX0NCi0te2JvdW5kYXJ5fS0tDQo="
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        }
+      ],
+      "treeAfter": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/favorites/altRepeatKey/altRepeatKey_1.json": "{\n  \"type\": \"altRepeatKey\",\n  \"data\": {\n    \"lastKey\": 80,\n    \"altKey\": 79,\n    \"allowedMods\": 0,\n    \"options\": 1,\n    \"enabled\": false\n  }\n}",
+        "sync/favorites/altRepeatKey/index.json": "{\n  \"type\": \"altRepeatKey\",\n  \"entries\": [\n    {\n      \"id\": \"ark-1\",\n      \"filename\": \"altRepeatKey_1.json\",\n      \"savedAt\": 1767225600000\n    }\n  ]\n}",
+        "sync/favorites/combo/combo_1.json": "{\n  \"type\": \"combo\",\n  \"data\": {\n    \"output\": 20736,\n    \"key4\": 0,\n    \"key3\": 31766,\n    \"key2\": 5,\n    \"key1\": 4,\n    \"extra\": \"kept\"\n  }\n}",
+        "sync/favorites/combo/index.json": "{\n  \"type\": \"combo\",\n  \"entries\": [\n    {\n      \"id\": \"c-1\",\n      \"label\": \"Label c-1 \\\"é\\\"\",\n      \"filename\": \"combo_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/keyOverride/index.json": "{\n  \"type\": \"keyOverride\",\n  \"entries\": [\n    {\n      \"id\": \"ko-1\",\n      \"label\": \"Label ko-1 \\\"é\\\"\",\n      \"filename\": \"keyOverride_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/keyOverride/keyOverride_1.json": "{\n  \"type\": \"keyOverride\",\n  \"data\": {\n    \"triggerKey\": 516,\n    \"replacementKey\": 42,\n    \"layers\": 65535,\n    \"triggerMods\": 2,\n    \"negativeMods\": 0,\n    \"suppressedMods\": 2,\n    \"options\": 7,\n    \"enabled\": true\n  }\n}",
+        "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"m-1\",\n      \"label\": \"Macro\\nline\",\n      \"filename\": \"macro_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/macro/macro_1.json": "{\n  \"type\": \"macro\",\n  \"data\": [\n    [\n      \"text\",\n      \"Hi\"\n    ],\n    [\n      \"tap\",\n      4,\n      258\n    ],\n    [\n      \"delay\",\n      100\n    ]\n  ]\n}"
+      }
+    },
+    {
+      "name": "a favorite post through a renewed token, a short 429 and Hub failures",
+      "rules": [
+        {
+          "method": "POST",
+          "path": "/api/auth/token",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "token": "jwt-1",
+                  "user": {
+                    "id": "u-1",
+                    "email": "user@example.com",
+                    "display_name": "User",
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "token": "jwt-2",
+                  "user": {
+                    "id": "u-1",
+                    "email": "user@example.com",
+                    "display_name": "User",
+                    "role": "user"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/files",
+          "responses": [
+            {
+              "status": 200,
+              "json": {
+                "ok": false,
+                "error": "Bad post"
+              }
+            },
+            {
+              "status": 409,
+              "text": "{\"ok\":false,\"error\":\"Duplicate\"}"
+            },
+            {
+              "status": 403,
+              "text": "{\"ok\":false,\"error\":\"Deactivated\"}"
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/api/files/post-1",
+          "responses": [
+            {
+              "status": 401,
+              "text": "{\"ok\":false,\"error\":\"Expired\"}"
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "post-1",
+                  "title": "TD"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/private/files",
+          "responses": [
+            {
+              "status": 429,
+              "text": "{\"ok\":false,\"error\":\"Slow down\"}",
+              "headers": {
+                "Retry-After": "2"
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ok": true,
+                "data": {
+                  "id": "priv-1",
+                  "token": "tok-1",
+                  "url": "/p/priv-1?token=tok-1",
+                  "expires_at": "2026-11-15T00:00:00.000Z"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "treeBefore": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"td-1\",\n      \"label\": \"Label td-1 \\\"é\\\"\",\n      \"filename\": \"tapDance_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-deleted\",\n      \"label\": \"Label td-deleted \\\"é\\\"\",\n      \"filename\": \"tapDance_2.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-02T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-badname\",\n      \"label\": \"Label td-badname \\\"é\\\"\",\n      \"filename\": \"../escape.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-empty\",\n      \"label\": \"Label td-empty \\\"é\\\"\",\n      \"filename\": \"tapDance_empty.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-mismatch\",\n      \"label\": \"Label td-mismatch \\\"é\\\"\",\n      \"filename\": \"tapDance_macro.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/tapDance/tapDance_1.json": "{\n  \"type\": \"tapDance\",\n  \"data\": {\n    \"onTap\": 4,\n    \"onHold\": 258,\n    \"onDoubleTap\": 20736,\n    \"onTapHold\": 0,\n    \"tappingTerm\": 200\n  }\n}",
+        "sync/favorites/tapDance/tapDance_2.json": "{\n  \"type\": \"tapDance\",\n  \"data\": {\n    \"onTap\": 4,\n    \"onHold\": 258,\n    \"onDoubleTap\": 20736,\n    \"onTapHold\": 0,\n    \"tappingTerm\": 200\n  }\n}",
+        "sync/favorites/tapDance/tapDance_empty.json": "{\n  \"type\": \"tapDance\",\n  \"data\": null\n}",
+        "sync/favorites/tapDance/tapDance_macro.json": "{\n  \"type\": \"macro\",\n  \"data\": []\n}"
+      },
+      "steps": [
+        {
+          "step": {
+            "call": "HUB_UPLOAD_FAVORITE_POST",
+            "args": [
+              {
+                "type": "tapDance",
+                "entryId": "td-1",
+                "title": "Line\r\nbreak",
+                "vialProtocol": 6
+              }
+            ]
+          },
+          "answer": {
+            "success": false,
+            "error": "Hub feature upload failed: Bad post"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/auth/token",
+              "query": [],
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": {
+                "json": {
+                  "id_token": "fixture-google-id-token"
+                },
+                "text": "{\"id_token\":\"fixture-google-id-token\"}"
+              }
+            },
+            {
+              "method": "POST",
+              "path": "/api/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "Line break"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpMaW5lIGJyZWFrDQotLXtib3VuZGFyeX0NCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icG9zdF90eXBlIg0KDQp0ZA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Impzb24iOyBmaWxlbmFtZT0idGQuanNvbiINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7ImFwcCI6InBpcGV0dGUiLCJ2ZXJzaW9uIjozLCJzY29wZSI6ImZhdiIsImV4cG9ydGVkQXQiOiIyMDI2LTEwLTE2VDAwOjAwOjAwLjAwMFoiLCJ2aWFsX3Byb3RvY29sIjo2LCJjYXRlZ29yaWVzIjp7InRkIjpbeyJsYWJlbCI6IkxhYmVsIHRkLTEgXCLDqVwiIiwic2F2ZWRBdCI6IjIwMjYtMTAtMDFUMDA6MDA6MDAuMDAwWiIsImRhdGEiOnsib25UYXAiOiJLQ19BIiwib25Ib2xkIjoiTENUTCgweDIpIiwib25Eb3VibGVUYXAiOiJMTTgoMHgwKSIsIm9uVGFwSG9sZCI6IktDX05PIiwidGFwcGluZ1Rlcm0iOjIwMH19XX19DQotLXtib3VuZGFyeX0tLQ0K"
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_FAVORITE_POST",
+            "args": [
+              {
+                "type": "tapDance",
+                "entryId": "td-1",
+                "title": " TD ",
+                "vialProtocol": 6
+              }
+            ]
+          },
+          "answer": {
+            "success": false,
+            "error": "Hub feature upload failed: 409 {\"ok\":false,\"error\":\"Duplicate\"}"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "TD"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpURA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KdGQNCi0te2JvdW5kYXJ5fQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJqc29uIjsgZmlsZW5hbWU9InRkLmpzb24iDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJhcHAiOiJwaXBldHRlIiwidmVyc2lvbiI6Mywic2NvcGUiOiJmYXYiLCJleHBvcnRlZEF0IjoiMjAyNi0xMC0xNlQwMDowMDowMC4wMDBaIiwidmlhbF9wcm90b2NvbCI6NiwiY2F0ZWdvcmllcyI6eyJ0ZCI6W3sibGFiZWwiOiJMYWJlbCB0ZC0xIFwiw6lcIiIsInNhdmVkQXQiOiIyMDI2LTEwLTAxVDAwOjAwOjAwLjAwMFoiLCJkYXRhIjp7Im9uVGFwIjoiS0NfQSIsIm9uSG9sZCI6IkxDVEwoMHgyKSIsIm9uRG91YmxlVGFwIjoiTE04KDB4MCkiLCJvblRhcEhvbGQiOiJLQ19OTyIsInRhcHBpbmdUZXJtIjoyMDB9fV19fQ0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_FAVORITE_POST",
+            "args": [
+              {
+                "type": "tapDance",
+                "entryId": "td-1",
+                "title": " TD ",
+                "vialProtocol": 6
+              }
+            ]
+          },
+          "answer": {
+            "success": false,
+            "error": "ACCOUNT_DEACTIVATED"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "TD"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpURA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KdGQNCi0te2JvdW5kYXJ5fQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJqc29uIjsgZmlsZW5hbWU9InRkLmpzb24iDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJhcHAiOiJwaXBldHRlIiwidmVyc2lvbiI6Mywic2NvcGUiOiJmYXYiLCJleHBvcnRlZEF0IjoiMjAyNi0xMC0xNlQwMDowMDowMC4wMDBaIiwidmlhbF9wcm90b2NvbCI6NiwiY2F0ZWdvcmllcyI6eyJ0ZCI6W3sibGFiZWwiOiJMYWJlbCB0ZC0xIFwiw6lcIiIsInNhdmVkQXQiOiIyMDI2LTEwLTAxVDAwOjAwOjAwLjAwMFoiLCJkYXRhIjp7Im9uVGFwIjoiS0NfQSIsIm9uSG9sZCI6IkxDVEwoMHgyKSIsIm9uRG91YmxlVGFwIjoiTE04KDB4MCkiLCJvblRhcEhvbGQiOiJLQ19OTyIsInRhcHBpbmdUZXJtIjoyMDB9fV19fQ0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPDATE_FAVORITE_POST",
+            "args": [
+              {
+                "type": "tapDance",
+                "entryId": "td-1",
+                "title": " TD ",
+                "vialProtocol": 6,
+                "postId": "post-1"
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "postId": "post-1"
+          },
+          "requests": [
+            {
+              "method": "PUT",
+              "path": "/api/files/post-1",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-1",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "TD"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpURA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KdGQNCi0te2JvdW5kYXJ5fQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJqc29uIjsgZmlsZW5hbWU9InRkLmpzb24iDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJhcHAiOiJwaXBldHRlIiwidmVyc2lvbiI6Mywic2NvcGUiOiJmYXYiLCJleHBvcnRlZEF0IjoiMjAyNi0xMC0xNlQwMDowMDowMC4wMDBaIiwidmlhbF9wcm90b2NvbCI6NiwiY2F0ZWdvcmllcyI6eyJ0ZCI6W3sibGFiZWwiOiJMYWJlbCB0ZC0xIFwiw6lcIiIsInNhdmVkQXQiOiIyMDI2LTEwLTAxVDAwOjAwOjAwLjAwMFoiLCJkYXRhIjp7Im9uVGFwIjoiS0NfQSIsIm9uSG9sZCI6IkxDVEwoMHgyKSIsIm9uRG91YmxlVGFwIjoiTE04KDB4MCkiLCJvblRhcEhvbGQiOiJLQ19OTyIsInRhcHBpbmdUZXJtIjoyMDB9fV19fQ0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            },
+            {
+              "method": "POST",
+              "path": "/api/auth/token",
+              "query": [],
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": {
+                "json": {
+                  "id_token": "fixture-google-id-token"
+                },
+                "text": "{\"id_token\":\"fixture-google-id-token\"}"
+              }
+            },
+            {
+              "method": "PUT",
+              "path": "/api/files/post-1",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-2",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "TD"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpURA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KdGQNCi0te2JvdW5kYXJ5fQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJqc29uIjsgZmlsZW5hbWU9InRkLmpzb24iDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJhcHAiOiJwaXBldHRlIiwidmVyc2lvbiI6Mywic2NvcGUiOiJmYXYiLCJleHBvcnRlZEF0IjoiMjAyNi0xMC0xNlQwMDowMDowMC4wMDBaIiwidmlhbF9wcm90b2NvbCI6NiwiY2F0ZWdvcmllcyI6eyJ0ZCI6W3sibGFiZWwiOiJMYWJlbCB0ZC0xIFwiw6lcIiIsInNhdmVkQXQiOiIyMDI2LTEwLTAxVDAwOjAwOjAwLjAwMFoiLCJkYXRhIjp7Im9uVGFwIjoiS0NfQSIsIm9uSG9sZCI6IkxDVEwoMHgyKSIsIm9uRG91YmxlVGFwIjoiTE04KDB4MCkiLCJvblRhcEhvbGQiOiJLQ19OTyIsInRhcHBpbmdUZXJtIjoyMDB9fV19fQ0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            }
+          ],
+          "sleeps": [],
+          "notified": [],
+          "events": [],
+          "logs": []
+        },
+        {
+          "step": {
+            "call": "HUB_UPLOAD_PRIVATE_FAVORITE_POST",
+            "args": [
+              {
+                "type": "tapDance",
+                "entryId": "td-1",
+                "title": " TD ",
+                "vialProtocol": 6,
+                "expiresInDays": 7
+              }
+            ]
+          },
+          "answer": {
+            "success": true,
+            "id": "priv-1",
+            "url": "/p/priv-1?token=tok-1",
+            "expiresAt": "2026-11-15T00:00:00.000Z"
+          },
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/api/private/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-2",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "TD"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"expires_in_days\"",
+                      "text": "7"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpURA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KdGQNCi0te2JvdW5kYXJ5fQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJqc29uIjsgZmlsZW5hbWU9InRkLmpzb24iDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJhcHAiOiJwaXBldHRlIiwidmVyc2lvbiI6Mywic2NvcGUiOiJmYXYiLCJleHBvcnRlZEF0IjoiMjAyNi0xMC0xNlQwMDowMDowMC4wMDBaIiwidmlhbF9wcm90b2NvbCI6NiwiY2F0ZWdvcmllcyI6eyJ0ZCI6W3sibGFiZWwiOiJMYWJlbCB0ZC0xIFwiw6lcIiIsInNhdmVkQXQiOiIyMDI2LTEwLTAxVDAwOjAwOjAwLjAwMFoiLCJkYXRhIjp7Im9uVGFwIjoiS0NfQSIsIm9uSG9sZCI6IkxDVEwoMHgyKSIsIm9uRG91YmxlVGFwIjoiTE04KDB4MCkiLCJvblRhcEhvbGQiOiJLQ19OTyIsInRhcHBpbmdUZXJtIjoyMDB9fV19fQ0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImV4cGlyZXNfaW5fZGF5cyINCg0KNw0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            },
+            {
+              "method": "POST",
+              "path": "/api/private/files",
+              "query": [],
+              "headers": {
+                "authorization": "Bearer jwt-2",
+                "content-type": "multipart/form-data"
+              },
+              "body": {
+                "multipart": {
+                  "boundary": "----PipetteBoundary{now}",
+                  "parts": [
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"title\"",
+                      "text": "TD"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"post_type\"",
+                      "text": "td"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"json\"; filename=\"td.json\"\r\nContent-Type: application/json",
+                      "text": "{\"app\":\"pipette\",\"version\":3,\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T00:00:00.000Z\",\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"Label td-1 \\\"é\\\"\",\"savedAt\":\"2026-10-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"LCTL(0x2)\",\"onDoubleTap\":\"LM8(0x0)\",\"onTapHold\":\"KC_NO\",\"tappingTerm\":200}}]}}"
+                    },
+                    {
+                      "headers": "Content-Disposition: form-data; name=\"expires_in_days\"",
+                      "text": "7"
+                    }
+                  ],
+                  "normalized": "LS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRpdGxlIg0KDQpURA0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBvc3RfdHlwZSINCg0KdGQNCi0te2JvdW5kYXJ5fQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJqc29uIjsgZmlsZW5hbWU9InRkLmpzb24iDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJhcHAiOiJwaXBldHRlIiwidmVyc2lvbiI6Mywic2NvcGUiOiJmYXYiLCJleHBvcnRlZEF0IjoiMjAyNi0xMC0xNlQwMDowMDowMC4wMDBaIiwidmlhbF9wcm90b2NvbCI6NiwiY2F0ZWdvcmllcyI6eyJ0ZCI6W3sibGFiZWwiOiJMYWJlbCB0ZC0xIFwiw6lcIiIsInNhdmVkQXQiOiIyMDI2LTEwLTAxVDAwOjAwOjAwLjAwMFoiLCJkYXRhIjp7Im9uVGFwIjoiS0NfQSIsIm9uSG9sZCI6IkxDVEwoMHgyKSIsIm9uRG91YmxlVGFwIjoiTE04KDB4MCkiLCJvblRhcEhvbGQiOiJLQ19OTyIsInRhcHBpbmdUZXJtIjoyMDB9fV19fQ0KLS17Ym91bmRhcnl9DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImV4cGlyZXNfaW5fZGF5cyINCg0KNw0KLS17Ym91bmRhcnl9LS0NCg=="
+                }
+              }
+            }
+          ],
+          "sleeps": [
+            2000
+          ],
+          "notified": [],
+          "events": [],
+          "logs": []
+        }
+      ],
+      "treeAfter": {
+        "local/installation-id": "00000000-0000-4000-8000-00000000f1f0",
+        "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"td-1\",\n      \"label\": \"Label td-1 \\\"é\\\"\",\n      \"filename\": \"tapDance_1.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-deleted\",\n      \"label\": \"Label td-deleted \\\"é\\\"\",\n      \"filename\": \"tapDance_2.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-02T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-badname\",\n      \"label\": \"Label td-badname \\\"é\\\"\",\n      \"filename\": \"../escape.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-empty\",\n      \"label\": \"Label td-empty \\\"é\\\"\",\n      \"filename\": \"tapDance_empty.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"td-mismatch\",\n      \"label\": \"Label td-mismatch \\\"é\\\"\",\n      \"filename\": \"tapDance_macro.json\",\n      \"savedAt\": \"2026-10-01T00:00:00.000Z\",\n      \"updatedAt\": \"2026-10-01T00:00:00.000Z\"\n    }\n  ]\n}",
+        "sync/favorites/tapDance/tapDance_1.json": "{\n  \"type\": \"tapDance\",\n  \"data\": {\n    \"onTap\": 4,\n    \"onHold\": 258,\n    \"onDoubleTap\": 20736,\n    \"onTapHold\": 0,\n    \"tappingTerm\": 200\n  }\n}",
+        "sync/favorites/tapDance/tapDance_2.json": "{\n  \"type\": \"tapDance\",\n  \"data\": {\n    \"onTap\": 4,\n    \"onHold\": 258,\n    \"onDoubleTap\": 20736,\n    \"onTapHold\": 0,\n    \"tappingTerm\": 200\n  }\n}",
+        "sync/favorites/tapDance/tapDance_empty.json": "{\n  \"type\": \"tapDance\",\n  \"data\": null\n}",
+        "sync/favorites/tapDance/tapDance_macro.json": "{\n  \"type\": \"macro\",\n  \"data\": []\n}"
+      }
+    },
+    {
       "name": "the checks of a favorite post, in order",
       "rules": [],
       "treeBefore": {

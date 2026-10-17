@@ -2,17 +2,23 @@
 // The two vialAPI implementations the Analyze filter hooks' tests run
 // against, both answering from the same VialAPI-shaped spies: a
 // preload-like mock (the spies themselves), and the Tauri shim's Analyze
-// filter members over a mocked Tauri IPC, whose commands hand the spies
-// their arguments in the members' order, a private Hub link as the value of
-// the JSON text the shim sends. `extra` holds the other members a test
-// needs, the same in both. The test file clears the IPC mock after each
-// test (`clearMocks`).
+// filter and Analyze post members over a mocked Tauri IPC, whose commands
+// hand the spies their arguments in the members' order, a private Hub link
+// and the post parameters as the value of the JSON text the shim sends.
+// `extra` holds the other members a test needs, the same in both. The test
+// file clears the IPC mock after each test (`clearMocks`).
 
 import { mockIPC } from '@tauri-apps/api/mocks'
 import type { VialAPI } from '../../../shared/types/vial-api'
 import { analyzeFiltersApi } from '../../../tauri-shim/api/analyze-filters'
+import { hubAnalyticsApi } from '../../../tauri-shim/api/hub-analytics'
 
-type AnalyzeFilterMember = Extract<keyof VialAPI, `analyzeFilterStore${string}`>
+type AnalyzeFilterMember =
+  | Extract<keyof VialAPI, `analyzeFilterStore${string}`>
+  | 'hubUploadAnalyticsPost'
+  | 'hubUpdateAnalyticsPost'
+  | 'hubPreviewAnalyticsPost'
+  | 'hubUploadPrivateAnalyticsPost'
 /** A spy per member, called with the member's own arguments. */
 export type AnalyzeFilterSpies = { [K in AnalyzeFilterMember]?: (...args: Parameters<VialAPI[K]>) => unknown }
 
@@ -52,10 +58,15 @@ export function analyzeFilterBackends(spies: AnalyzeFilterSpies, extra: object =
               return spy(spies, 'analyzeFilterStoreSetHubPostId')(a.uid, a.entryId, a.hubPostId)
             case 'analyze_filter_store_set_hub_private':
               return spy(spies, 'analyzeFilterStoreSetHubPrivate')(a.uid, a.entryId, JSON.parse(a.link))
+            case 'hub_upload_analytics_post': return spy(spies, 'hubUploadAnalyticsPost')(JSON.parse(a.params))
+            case 'hub_update_analytics_post': return spy(spies, 'hubUpdateAnalyticsPost')(JSON.parse(a.params))
+            case 'hub_preview_analytics_post': return spy(spies, 'hubPreviewAnalyticsPost')(JSON.parse(a.params))
+            case 'hub_upload_private_analytics_post':
+              return spy(spies, 'hubUploadPrivateAnalyticsPost')(JSON.parse(a.params))
             default: throw new Error(`unexpected command ${cmd}`)
           }
         })
-        installVialAPI({ ...extra, ...analyzeFiltersApi })
+        installVialAPI({ ...extra, ...analyzeFiltersApi, ...hubAnalyticsApi })
       },
     },
   ]
