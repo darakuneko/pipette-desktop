@@ -214,12 +214,22 @@ async function disconnect(): Promise<void> {
   await $(tid('settings-button')).waitForDisplayed()
 }
 
+/** Clicks `selector` once it is enabled: an action button stays disabled
+ *  while the previous Hub operation finishes, and a click on it then does
+ *  nothing. */
+async function clickWhenEnabled(selector: string): Promise<void> {
+  const element = $(selector)
+  await element.waitForExist({ timeout: 30_000 })
+  await browser.waitUntil(() => element.isEnabled(), { timeout: 60_000, timeoutMsg: `${selector} stayed disabled` })
+  await clickInPage(selector)
+}
+
 /** Clicks `button` of the snapshot row in the Import / Save tab, picks
  *  `visibility` in the upload dialog it opens, and confirms it. */
 async function uploadWithVisibility(button: string, visibility: 'public' | 'private'): Promise<void> {
   await openOverlayTab('data')
   await waitForUncovered(tid(button))
-  await clickInPage(tid(button))
+  await clickWhenEnabled(tid(button))
   await $(tid('upload-confirm-submit')).waitForDisplayed()
   await clickInPage(`${tid(`upload-confirm-visibility-${visibility}`)} input`)
   await clickInPage(tid('upload-confirm-submit'))
@@ -294,7 +304,7 @@ describe('Tauri build Pipette Hub', function () {
       expect((await hubState()).tokenCached).toBe(false)
 
       await openHubSettings()
-      await clickInPage(tid('hub-enable-toggle'))
+      await clickWhenEnabled(tid('hub-enable-toggle'))
       await browser.waitUntil(() => readAppConfig().hubEnabled === true, { timeoutMsg: 'the Hub was not enabled' })
       await $(tid('hub-auth-conflict-warning')).waitForDisplayed({ timeout: 30_000 })
       expect((await hubState()).tokenCached).toBe(false)
@@ -394,8 +404,8 @@ describe('Tauri build Pipette Hub', function () {
       await browser.execute((sel: string) => (document.querySelector(sel) as HTMLInputElement).blur(), tid(`hub-rename-input-${renamed.id}`))
       await waitForHub(() => hubPosts(POST_RENAMED).map((p) => p.id).join() === renamed.id, 'the post was not renamed')
       await $(tid(`hub-title-${renamed.id}`)).waitForDisplayed()
-      await clickInPage(tid(`hub-delete-${deleted.id}`))
-      await clickInPage(tid(`hub-confirm-delete-${deleted.id}`))
+      await clickWhenEnabled(tid(`hub-delete-${deleted.id}`))
+      await clickWhenEnabled(tid(`hub-confirm-delete-${deleted.id}`))
       await waitForHub(() => !fakeHub().state.posts.some((p) => p.id === deleted.id), 'the post was not deleted')
       await waitForGone(tid(`hub-post-${deleted.id}`), 'the deleted post is still listed')
       await clickInPage(tid('data-modal-close'))
@@ -404,8 +414,8 @@ describe('Tauri build Pipette Hub', function () {
       // Deleted from the snapshot it was uploaded from.
       await connectAndFindUid()
       await openOverlayTab('data')
-      await clickInPage(tid('layout-store-remove-hub'))
-      await clickInPage(tid('layout-store-hub-remove-confirm'))
+      await clickWhenEnabled(tid('layout-store-remove-hub'))
+      await clickWhenEnabled(tid('layout-store-hub-remove-confirm'))
       await waitForHub(() => !fakeHub().state.posts.some((p) => p.id === post.id), 'the post was not deleted')
       await browser.waitUntil(() => snapshotEntry(uid, POST_LABEL)?.hubPostId === undefined, {
         timeoutMsg: 'the snapshot is still linked to the deleted post',
@@ -448,8 +458,8 @@ describe('Tauri build Pipette Hub', function () {
         timeoutMsg: 'the snapshot was not linked to the new private post',
       })
 
-      await clickInPage(tid('layout-store-remove-hub'))
-      await clickInPage(tid('layout-store-hub-remove-confirm'))
+      await clickWhenEnabled(tid('layout-store-remove-hub'))
+      await clickWhenEnabled(tid('layout-store-hub-remove-confirm'))
       await waitForHub(() => hubPrivatePosts(POST_LABEL).length === 0, 'the private post was not deleted')
       await browser.waitUntil(() => snapshotEntry(uid, POST_LABEL)?.hubPrivate === undefined, {
         timeoutMsg: 'the snapshot is still linked to the deleted private post',
@@ -619,27 +629,27 @@ describe('Tauri build Pipette Hub', function () {
       await openFromTools('settings-language-packs-button', 'language-packs-modal')
       await clickInPage(tid('language-packs-tab-hub'))
       await fillInput(tid('language-packs-search-input'), 'E2E Hub')
-      await clickInPage(tid('language-packs-search-button'))
+      await clickWhenEnabled(tid('language-packs-search-button'))
       await $(tid(`language-packs-hub-row-${theirs.id}`)).waitForDisplayed({ timeout: 30_000 })
-      await clickInPage(tid(`language-packs-hub-download-${theirs.id}`))
+      await clickWhenEnabled(tid(`language-packs-hub-download-${theirs.id}`))
       const downloaded = await waitForPack('i18nPackList', (meta) => meta.hubPostId === theirs.id, 'the Hub pack was not downloaded')
       expect([downloaded.name, downloaded.uploaderName, downloaded.hubUpdatedAt]).toEqual([HUB_LANGUAGE_PACK, TAKEN_NAME, theirs.updated_at])
       hubLanguagePack = { id: theirs.id, localId: downloaded.id }
 
       await clickInPage(tid('language-packs-tab-installed'))
-      await clickInPage(tid(`language-packs-select-${downloaded.id}`))
+      await clickWhenEnabled(tid(`language-packs-select-${downloaded.id}`))
       await browser.waitUntil(() => readAppConfig().language === `pack:${downloaded.id}`, { timeoutMsg: 'the pack was not applied' })
-      await clickInPage(tid('language-packs-select-builtin:en'))
+      await clickWhenEnabled(tid('language-packs-select-builtin:en'))
       await browser.waitUntil(() => readAppConfig().language === 'builtin:en', { timeoutMsg: 'English was not applied again' })
 
-      await clickInPage(tid(`language-packs-upload-${own.id}`))
+      await clickWhenEnabled(tid(`language-packs-upload-${own.id}`))
       const uploaded = await waitForPack('i18nPackList', (meta) => meta.id === own.id && meta.hubPostId !== undefined, 'the own pack was not uploaded')
       const onHub = fakeHub().state.packs.i18n.find((pack) => pack.name === OWN_LANGUAGE_PACK)
       expect([uploaded.hubPostId, uploaded.uploaderName, uploaded.hubUpdatedAt]).toEqual([onHub?.id, DISPLAY_NAME, onHub?.updated_at])
-      await clickInPage(tid(`language-packs-update-${own.id}`))
+      await clickWhenEnabled(tid(`language-packs-update-${own.id}`))
       await waitForPack('i18nPackList', (meta) => meta.id === own.id && meta.hubUpdatedAt !== uploaded.hubUpdatedAt, 'the own pack was not updated')
-      await clickInPage(tid(`language-packs-remove-${own.id}`))
-      await clickInPage(tid(`language-packs-confirm-remove-${own.id}`))
+      await clickWhenEnabled(tid(`language-packs-remove-${own.id}`))
+      await clickWhenEnabled(tid(`language-packs-confirm-remove-${own.id}`))
       await waitForPack('i18nPackList', (meta) => meta.id === own.id && meta.hubPostId === undefined, 'the own pack is still linked')
       expect(fakeHub().state.packs.i18n.some((pack) => pack.id === onHub?.id)).toBe(false)
       await closeFromTools('language-packs-modal-close', 'language-packs-modal')
@@ -648,7 +658,7 @@ describe('Tauri build Pipette Hub', function () {
       const touched = await changeHubLanguagePack(theirs.id, () => {})
       await openFromTools('settings-language-packs-button', 'language-packs-modal')
       await $(tid(`language-packs-update-available-${downloaded.id}`)).waitForDisplayed({ timeout: 30_000 })
-      await clickInPage(tid(`language-packs-sync-${downloaded.id}`))
+      await clickWhenEnabled(tid(`language-packs-sync-${downloaded.id}`))
       await waitForPack('i18nPackList', (meta) => meta.id === downloaded.id && meta.hubUpdatedAt === touched, 'the pack was not synced')
       await waitForGone(tid(`language-packs-update-available-${downloaded.id}`), 'the pack still shows an update')
       await closeFromTools('language-packs-modal-close', 'language-packs-modal')
@@ -762,7 +772,7 @@ describe('Tauri build Pipette Hub', function () {
       await openSyncSettings()
       await signIn()
       const from = fakeHub().requests.length
-      await clickInPage(tid('hub-enable-toggle'))
+      await clickWhenEnabled(tid('hub-enable-toggle'))
       await browser.waitUntil(() => readAppConfig().hubEnabled === true, { timeoutMsg: 'the Hub was not enabled' })
       // A new account, which the Hub has no display name for.
       await waitForHub(
