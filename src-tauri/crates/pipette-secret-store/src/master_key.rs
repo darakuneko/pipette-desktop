@@ -246,10 +246,13 @@ impl MasterKey {
         let cache = Arc::clone(&self.cache);
         // The gate goes with the thread (and is let go when it cannot start).
         let spawned = std::thread::Builder::new().name("pipette-keystore".to_owned()).spawn(move || {
-            let _gate = gate;
+            let result = op(keystore.as_ref(), &account, &cache);
+            // Let go of the gate before answering, so a call the caller
+            // makes once it has the answer finds the gate free.
+            drop(gate);
             // The receiver is gone once the caller gave up; the result is
             // dropped with the send.
-            let _ = sender.send(op(keystore.as_ref(), &account, &cache));
+            let _ = sender.send(result);
         });
         if let Err(err) = spawned {
             return Err(KeystoreError::Unavailable(format!("could not start the key store call: {err}")));
