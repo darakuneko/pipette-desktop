@@ -17,6 +17,8 @@ import { APP_COMMANDS } from '../generated/app-command-names'
 import { typingAnalyticsApi } from '../api/typing-analytics'
 import { typingAnalyticsDataApi } from '../api/typing-analytics-data'
 import { typingAnalyticsRangeApi } from '../api/typing-analytics-range'
+import { syncDataApi } from '../api/sync-data'
+import { syncResetApi } from '../api/sync-reset'
 import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
@@ -65,6 +67,7 @@ interface Shim {
   syncPasswordChange: typeof import('../api/sync-password-change')
   syncExecute: typeof import('../api/sync-execute')
   syncData: typeof import('../api/sync-data')
+  syncReset: typeof import('../api/sync-reset')
   themePacks: typeof import('../api/theme-packs')
   typingAnalytics: typeof import('../api/typing-analytics')
   typingAnalyticsRange: typeof import('../api/typing-analytics-range')
@@ -100,6 +103,7 @@ async function load(): Promise<Shim> {
     syncPasswordChange: await import('../api/sync-password-change'),
     syncExecute: await import('../api/sync-execute'),
     syncData: await import('../api/sync-data'),
+    syncReset: await import('../api/sync-reset'),
     themePacks: await import('../api/theme-packs'),
     typingAnalytics: await import('../api/typing-analytics'),
     typingAnalyticsRange: await import('../api/typing-analytics-range'),
@@ -227,8 +231,8 @@ const CALLERS: Record<string, Caller> = {
     run: ({ syncExecute }, [direction, scope]) =>
       syncExecute.syncExecuteApi.syncExecute(direction as 'download' | 'upload', scope as SyncScope | undefined),
   },
-  exportLocalData: { run: ({ syncData }) => syncData.syncDataApi.exportLocalData() },
-  importLocalData: { run: ({ syncData }) => syncData.syncDataApi.importLocalData() },
+  ...queryCallers((shim) => shim.syncData.syncDataApi, syncDataApi),
+  ...queryCallers((shim) => shim.syncReset.syncResetApi, syncResetApi),
   saveLayout: { run: ({ files }, [json, name]) => files.filesApi.saveLayout(json as string, name as string) },
   loadLayout: {
     run: ({ files }, [title, extensions]) => files.filesApi.loadLayout(title as string, extensions as string[]),

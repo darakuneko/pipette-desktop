@@ -1,5 +1,151 @@
 [
   {
+    "member": "syncScanRemote",
+    "args": [],
+    "command": "sync_scan_remote",
+    "invokeArgs": {},
+    "response": {
+      "keyboards": [],
+      "keyboardNames": {},
+      "favorites": [],
+      "i18nPacks": [],
+      "themePacks": [],
+      "keyLabels": false,
+      "typingTestTexts": false,
+      "hasI18nData": false,
+      "hasThemesData": false,
+      "undecryptable": []
+    }
+  },
+  {
+    "member": "syncFetchRemoteBundle",
+    "args": [
+      "favorites/macro"
+    ],
+    "command": "sync_fetch_remote_bundle",
+    "invokeArgs": {
+      "syncUnit": "favorites/macro"
+    },
+    "response": null
+  },
+  {
+    "member": "syncFetchRemoteBundle",
+    "args": [
+      ""
+    ],
+    "command": "sync_fetch_remote_bundle",
+    "invokeArgs": {
+      "syncUnit": ""
+    },
+    "response": null
+  },
+  {
+    "member": "syncDeleteFiles",
+    "args": [
+      []
+    ],
+    "command": "sync_delete_files",
+    "invokeArgs": {
+      "fileIds": []
+    },
+    "response": {
+      "success": false,
+      "error": "No files specified"
+    }
+  },
+  {
+    "member": "syncDeleteFiles",
+    "args": [
+      [
+        "id-1",
+        2
+      ]
+    ],
+    "command": "sync_delete_files",
+    "invokeArgs": {
+      "fileIds": [
+        "id-1",
+        2
+      ]
+    },
+    "response": {
+      "success": false,
+      "error": "Invalid file ID"
+    }
+  },
+  {
+    "member": "syncListTrash",
+    "args": [],
+    "command": "sync_list_trash",
+    "invokeArgs": {},
+    "response": {
+      "success": false,
+      "error": "sync.readiness.unauthenticated",
+      "reason": "unauthenticated"
+    }
+  },
+  {
+    "member": "syncRestoreTrash",
+    "args": [
+      ""
+    ],
+    "command": "sync_restore_trash",
+    "invokeArgs": {
+      "fileId": ""
+    },
+    "response": {
+      "success": false,
+      "error": "Invalid file ID"
+    }
+  },
+  {
+    "member": "syncRestoreTrash",
+    "args": [
+      "trash-1"
+    ],
+    "command": "sync_restore_trash",
+    "invokeArgs": {
+      "fileId": "trash-1"
+    },
+    "response": {
+      "success": false,
+      "error": "sync.readiness.unauthenticated",
+      "reason": "unauthenticated"
+    }
+  },
+  {
+    "member": "syncDeleteTrash",
+    "args": [
+      []
+    ],
+    "command": "sync_delete_trash",
+    "invokeArgs": {
+      "fileIds": []
+    },
+    "response": {
+      "success": false,
+      "error": "No files specified"
+    }
+  },
+  {
+    "member": "syncDeleteTrash",
+    "args": [
+      [
+        1
+      ]
+    ],
+    "command": "sync_delete_trash",
+    "invokeArgs": {
+      "fileIds": [
+        1
+      ]
+    },
+    "response": {
+      "success": false,
+      "error": "Invalid file ID"
+    }
+  },
+  {
     "member": "exportLocalData",
     "args": [],
     "command": "export_local_data",

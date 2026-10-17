@@ -24,6 +24,8 @@
 //!   marker and the status of the update banner) and [`password`] (the
 //!   guard, the password-check and the password change);
 //! - [`scan`]: what is on Drive, read without merging it;
+//! - [`reset`]: the resets and deletes of synced data, and the trash
+//!   screen's actions ([`trash`]), failing with a [`data_error`];
 //! - [`local_data`]: the export and import of the Data modal's Local Data;
 //! - [`meta_backfill`]: the keyboard names a full download fills in;
 //! - [`flush`] and [`polling`]: the debounced upload of the pending units
@@ -36,6 +38,7 @@ pub mod analytics;
 pub mod bundle;
 pub mod codec;
 pub mod crypto;
+pub mod data_error;
 pub mod dispatch;
 pub mod execute;
 pub mod flush;
@@ -48,6 +51,7 @@ pub mod meta_backfill;
 pub mod password;
 pub mod polling;
 pub mod preflight;
+pub mod reset;
 pub mod scan;
 pub mod scope;
 mod single_flight;

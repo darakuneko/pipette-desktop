@@ -6,6 +6,7 @@
 //! switch). A sync pass also answers what it did (`status`, and why it was
 //! skipped).
 
+use pipette_sync::data_error::DataError;
 use pipette_sync::preflight::PreflightError;
 use serde::Serialize;
 
@@ -55,6 +56,15 @@ impl From<Result<(), PreflightError>> for SyncOperationResult {
                 };
                 Self::failure(err.to_string(), reason)
             }
+        }
+    }
+}
+
+impl From<Result<(), DataError>> for SyncOperationResult {
+    fn from(result: Result<(), DataError>) -> Self {
+        match result {
+            Ok(()) => Self::SUCCESS,
+            Err(err) => Self::failure(err.to_string(), err.reason()),
         }
     }
 }

@@ -15,6 +15,7 @@
     "sync-execute",
     "sync-password-change",
     "sync-data",
+    "sync-reset",
     "files",
     "keyboard-data",
     "favorites",
