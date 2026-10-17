@@ -66,7 +66,7 @@ import {
   injectHubFault,
   switchToGoogleSession,
 } from '../helpers/hub-harness'
-import { closeSettings, fillInput, openSyncSettings, signIn } from '../helpers/sync'
+import { closeSettings, expandBranch, fillInput, openSyncSettings, signIn } from '../helpers/sync'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
@@ -186,7 +186,7 @@ describe('Tauri build Pipette Hub', function () {
     it('uploads a keymap post, lists the posts page by page, updates it, renames and deletes posts', async () => {
       uid = await connectAndFindUid()
       await openOverlayTab('data')
-      await $(tid('layout-store-save-input')).setValue(POST_LABEL)
+      await fillInput(tid('layout-store-save-input'), POST_LABEL)
       await $(tid('layout-store-save-submit')).click()
       await browser.waitUntil(() => snapshotEntry(uid, POST_LABEL) !== undefined, { timeoutMsg: 'the snapshot was not saved' })
 
@@ -228,10 +228,10 @@ describe('Tauri build Pipette Hub', function () {
       await disconnect()
       await clickInPage(tid('data-button'))
       await $(tid('data-modal')).waitForDisplayed()
-      await clickInPage(tid('nav-cloud-hub'))
-      await $(tid('nav-hub-keyboards')).waitForDisplayed({ timeout: 30_000 })
-      if (!(await $(tid(`nav-hub-kb-${OTHER_KEYBOARD}`)).isDisplayed())) await clickInPage(tid('nav-hub-keyboards'))
-      expect(await $(tid(`nav-hub-kb-${VIRTUAL_DEVICE_NAME}`)).isExisting()).toBe(false)
+      await expandBranch('nav-cloud-hub', 'nav-hub-keyboards', 30_000)
+      await expandBranch('nav-hub-keyboards', `nav-hub-kb-${OTHER_KEYBOARD}`)
+      // The modal reads which posts local entries link to after it opens.
+      await waitForGone(tid(`nav-hub-kb-${VIRTUAL_DEVICE_NAME}`), 'the post linked to the snapshot is listed')
       await clickInPage(tid(`nav-hub-kb-${OTHER_KEYBOARD}`))
       await clickInPage(tid(`hub-title-${renamed.id}`))
       await fillInput(tid(`hub-rename-input-${renamed.id}`), POST_RENAMED)

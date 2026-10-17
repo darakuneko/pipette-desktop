@@ -4,8 +4,19 @@
 // without Google endpoints and the Google session with all of them on
 // 127.0.0.1, and goes on only when the app's Hub is the fake Hub.
 
-import { describe, expect, it } from 'vitest'
-import { HUB_TEST_ACCOUNT, assertHubEnv, assertHubState } from '../hub-env'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  DEV_TOOLS_MARKER,
+  HUB_TEST_ACCOUNT,
+  assertDevToolsBinary,
+  assertHubEnv,
+  assertHubState,
+  fileContains,
+  hubSessionEnv,
+} from '../hub-env'
 
 const HUB = 'http://127.0.0.1:4100'
 const GOOGLE = {
@@ -53,6 +64,66 @@ describe('assertHubEnv', () => {
       .toThrow(/PIPETTE_DEV_KEYSTORE/)
     expect(() => assertHubEnv('google', { PIPETTE_HUB_URL: HUB, ...GOOGLE, PIPETTE_DEV_SUPPRESS_BROWSER: '0' }, HUB))
       .toThrow(/PIPETTE_DEV_SUPPRESS_BROWSER/)
+  })
+})
+
+describe('assertHubEnv on hosts', () => {
+  it('refuses localhost and [::1] for the Hub and the Google endpoints', () => {
+    for (const url of ['http://localhost:4100', 'http://[::1]:4100']) {
+      expect(() => assertHubEnv('testAccount', { PIPETTE_HUB_URL: url, PIPETTE_HUB_TEST_ACCOUNT: HUB_TEST_ACCOUNT }, url), url)
+        .toThrow(/127\.0\.0\.1/)
+      expect(() => assertHubEnv('google', { PIPETTE_HUB_URL: HUB, ...GOOGLE, PIPETTE_GOOGLE_TOKEN_URL: `${url}/token` }, HUB), url)
+        .toThrow(/PIPETTE_GOOGLE_TOKEN_URL/)
+    }
+  })
+})
+
+describe('hubSessionEnv', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('answers the app environment of a session it takes', () => {
+    const env = hubSessionEnv('testAccount', '/tmp/u', { PIPETTE_HUB_URL: HUB, PIPETTE_HUB_TEST_ACCOUNT: HUB_TEST_ACCOUNT }, HUB)
+    expect([env.PIPETTE_HUB_URL, env.PIPETTE_E2E, env.PIPETTE_USER_DATA_DIR]).toEqual([HUB, '1', '/tmp/u'])
+  })
+
+  it('refuses a Google endpoint the worker inherits into the test account session', () => {
+    vi.stubEnv('PIPETTE_GOOGLE_TOKEN_URL', 'https://oauth2.googleapis.com/token')
+    expect(() => hubSessionEnv('testAccount', '/tmp/u', { PIPETTE_HUB_URL: HUB, PIPETTE_HUB_TEST_ACCOUNT: HUB_TEST_ACCOUNT }, HUB))
+      .toThrow(/PIPETTE_GOOGLE_TOKEN_URL/)
+  })
+
+  it('refuses a test account the worker inherits into the Google session', () => {
+    vi.stubEnv('PIPETTE_HUB_TEST_ACCOUNT', HUB_TEST_ACCOUNT)
+    expect(() => hubSessionEnv('google', '/tmp/u', { PIPETTE_HUB_URL: HUB, ...GOOGLE }, HUB)).toThrow(/PIPETTE_HUB_TEST_ACCOUNT/)
+  })
+})
+
+describe('assertDevToolsBinary', () => {
+  let dir = ''
+  afterEach(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true })
+    dir = ''
+  })
+
+  it('finds the marker anywhere in the file, across chunk boundaries too', () => {
+    dir = mkdtempSync(join(tmpdir(), 'hub-env-'))
+    const path = join(dir, 'app')
+    const chunk = 8 * 1024 * 1024
+    const bytes = Buffer.alloc(chunk + 64, 0)
+    Buffer.from(DEV_TOOLS_MARKER).copy(bytes, chunk - 4)
+    writeFileSync(path, bytes)
+    expect(fileContains(path, DEV_TOOLS_MARKER)).toBe(true)
+    expect(() => assertDevToolsBinary(path)).not.toThrow()
+  })
+
+  it('refuses a binary without the marker', () => {
+    dir = mkdtempSync(join(tmpdir(), 'hub-env-'))
+    const path = join(dir, 'app')
+    writeFileSync(path, Buffer.from('a release build: dev_hub_stat'))
+    expect(fileContains(path, DEV_TOOLS_MARKER)).toBe(false)
+    expect(() => assertDevToolsBinary(path)).toThrow(/development tools/)
   })
 })
 

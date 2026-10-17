@@ -182,9 +182,10 @@ export async function uploadWithVisibility(button: string, visibility: 'public' 
   await waitForGone(tid('upload-confirm-backdrop'), 'the upload dialog did not close')
 }
 
-/** Waits until the fake Hub has taken no request for a second, twice in a
- *  row: the page's own requests (its refresh of the posts after a launch
- *  or a sign-in) have ended, so the requests that follow are the test's. */
+/** Waits until the fake Hub has taken no request for a second, three
+ *  times in a row: the page's own requests (its refresh of the posts
+ *  after a launch or a sign-in) have ended, so the requests that follow
+ *  are the test's. */
 export async function waitForHubQuiet(): Promise<void> {
   let last = -1
   let quietChecks = 0
@@ -193,7 +194,7 @@ export async function waitForHubQuiet(): Promise<void> {
       const count = fakeHub().requests.length
       quietChecks = count === last ? quietChecks + 1 : 0
       last = count
-      return quietChecks >= 2
+      return quietChecks >= 3
     },
     { timeout: 60_000, interval: 1000, timeoutMsg: 'the page kept sending Hub requests' },
   )

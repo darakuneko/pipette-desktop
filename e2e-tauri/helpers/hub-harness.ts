@@ -6,17 +6,25 @@
 // account the harness creates on the fake Hub beforehand without a display
 // name; the second has no test account and signs in with the fake Google of
 // scripts/fake-drive, which the harness starts for it. Before each launch
-// the harness checks the session's variables (hub-env.ts), and after it
-// that the app is a build with the development tools whose Hub is the fake
-// Hub (`dev_hub_state`), so no session reaches the real Hub or Google.
+// the harness checks that the binary is a build with the development tools
+// and the environment the app will get (hub-env.ts), and after it that the
+// app's Hub is the fake Hub (`dev_hub_state`), so no session reaches the
+// real Hub or Google.
 
 import { browser } from '@wdio/globals'
 import { fakeDriveEnv, startFakeDrive, type FakeDrive } from '../../scripts/fake-drive/server'
 import { startFakeHub, type FakeHub, type LoggedRequest } from '../../scripts/fake-hub/server'
 import type { Fault } from '../../scripts/fake-hub/hub-state'
 import { invokeCommand } from './app'
-import { retireDriver, startDriver } from './driver'
-import { HUB_TEST_ACCOUNT, assertHubEnv, assertHubState, type DevHubState, type HubSessionKind } from './hub-env'
+import { APP_BINARY, retireDriver, startDriver } from './driver'
+import {
+  HUB_TEST_ACCOUNT,
+  assertDevToolsBinary,
+  assertHubState,
+  hubSessionEnv,
+  type DevHubState,
+  type HubSessionKind,
+} from './hub-env'
 
 let hub: FakeHub | null = null
 let drive: FakeDrive | null = null
@@ -27,13 +35,17 @@ export function fakeHub(): FakeHub {
   return hub
 }
 
+const CONTROL_TIMEOUT_MS = 10_000
+
 /** Calls a control endpoint of the fake Hub (`/__control/<path>`, see
- *  scripts/fake-hub/server.ts) and answers its JSON. */
+ *  scripts/fake-hub/server.ts) and answers its JSON; the request and the
+ *  read of its answer give up after {@link CONTROL_TIMEOUT_MS}. */
 export async function hubControl<T = unknown>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${fakeHub().url}/__control/${path}`, {
     method: path === 'state' || path === 'requests' ? 'GET' : 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(CONTROL_TIMEOUT_MS),
   })
   const text = await response.text()
   if (!response.ok) throw new Error(`the fake Hub refused ${path}: ${response.status} ${text}`)
@@ -58,6 +70,20 @@ function sessionEnv(kind: HubSessionKind): Record<string, string> {
   return { ...base, ...fakeDriveEnv(drive.url), PIPETTE_DEV_KEYSTORE: 'file', PIPETTE_DEV_SUPPRESS_BROWSER: '1' }
 }
 
+/** The variables of a session of `kind`, once the binary is a build with
+ *  the development tools and the app's whole environment is that of a Hub
+ *  session of `kind`. */
+function checkSession(kind: HubSessionKind): Record<string, string> {
+  assertDevToolsBinary(APP_BINARY)
+  const env = sessionEnv(kind)
+  hubSessionEnv(kind, '/e2e-hub-env-check', env, fakeHub().url)
+  return env
+}
+
+async function startChecked(kind: HubSessionKind): Promise<void> {
+  await startDriver(checkSession(kind))
+}
+
 /** Starts the fake Hub with the test account (no display name), then
  *  tauri-driver with the test account's session pointed at it. */
 export async function startHubDriver(): Promise<void> {
@@ -65,9 +91,7 @@ export async function startHubDriver(): Promise<void> {
   hub = await startFakeHub()
   try {
     await hubControl('users', { email: HUB_TEST_ACCOUNT, displayName: null })
-    const env = sessionEnv('testAccount')
-    assertHubEnv('testAccount', env, fakeHub().url)
-    await startDriver(env)
+    await startChecked('testAccount')
   } catch (err) {
     // afterSession does not run for a session that never started.
     await stopHubHarness()
@@ -98,13 +122,13 @@ export async function assertHubSession(): Promise<void> {
  *  at the fake Hub and at a fake Google started now. */
 export async function switchToGoogleSession(): Promise<void> {
   if (!drive) drive = await startFakeDrive()
-  const env = sessionEnv('google')
-  assertHubEnv('google', env, fakeHub().url)
+  // Checked before the running session ends, so a refused one leaves it.
+  checkSession('google')
   // Ended while tauri-driver still answers; the reload below then only
   // starts the new session.
   await browser.deleteSession()
   await retireDriver()
-  await startDriver(env)
+  await startChecked('google')
   await browser.reloadSession()
   await assertHubSession()
 }
