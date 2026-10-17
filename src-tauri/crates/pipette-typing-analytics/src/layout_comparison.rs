@@ -38,7 +38,7 @@ fn is_input_layout(value: &Value) -> bool {
 }
 
 /// `/^\d+,\d+$/` (`POS_KEY_RE`, kle-ergonomics.ts): ASCII digits only.
-fn is_pos_key(key: &str) -> bool {
+pub fn is_pos_key(key: &str) -> bool {
     let digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
     key.split_once(',').is_some_and(|(row, col)| digits(row) && digits(col))
 }
@@ -88,8 +88,10 @@ fn layout_map(layout: &Value) -> &Value {
     layout.as_object().and_then(|o| o.get("map")).unwrap_or(&Value::Null)
 }
 
-fn layout_id(layout: &Value) -> Value {
-    layout.as_object().and_then(|o| o.get("id")).cloned().unwrap_or(Value::Null)
+/// The layout's `id`; `None` when it has none, which leaves the key out as
+/// JSON leaves out an undefined property.
+fn layout_id(layout: &Value) -> Option<Value> {
+    layout.as_object().and_then(|o| o.get("id")).cloned()
 }
 
 /// `extractKleKeysFromSnapshot`: the KLE keys of the snapshot's
@@ -170,9 +172,11 @@ impl Accumulator {
     }
 
     /// `finalizeTarget`.
-    fn finish(self, layout_id: Value, metrics: &[&str]) -> Value {
+    fn finish(self, layout_id: Option<Value>, metrics: &[&str]) -> Value {
         let mut out = Object::new();
-        out.insert("layoutId", layout_id);
+        if let Some(id) = layout_id {
+            out.insert("layoutId", id);
+        }
         out.insert("totalEvents", Value::Number(self.total_events));
         out.insert("skippedEvents", Value::Number(self.skipped_events));
         let raw = self.total_events + self.skipped_events;
@@ -218,8 +222,23 @@ pub fn compute(
     snapshot: &Value,
     options: &Options,
 ) -> Result<Value, BadLayoutEntry> {
+    compute_with_keys(counts, snapshot, Some(0), &snapshot_kle_keys(snapshot), options)
+}
+
+/// `computeLayoutComparison` with the keycodes of `snapshot.keymap[layer]`
+/// (none when `layer` is `None` or past the last layer, as for an index
+/// JavaScript finds nothing at) and the KLE keys `keys`. A layout without
+/// an `id` gives a result without the id's key, as JSON leaves out an
+/// undefined property.
+pub fn compute_with_keys(
+    counts: &[MatrixCounts],
+    snapshot: &Value,
+    layer: Option<usize>,
+    keys: &[KleKey],
+    options: &Options,
+) -> Result<Value, BadLayoutEntry> {
     let keymap = snapshot.as_object().and_then(|s| s.get("keymap")).unwrap_or(&Value::Null);
-    let keys = SnapshotKeys::new(keymap, 0, &snapshot_kle_keys(snapshot));
+    let keys = SnapshotKeys::new(keymap, layer.unwrap_or(usize::MAX), keys);
     let source = Layout::new(layout_map(&options.source))?;
     let mut targets = Vec::with_capacity(options.targets.len());
     for target in &options.targets {
@@ -242,7 +261,9 @@ pub fn compute(
         targets.push(accumulator.finish(layout_id(target), &options.metrics));
     }
     let mut out = Object::new();
-    out.insert("sourceLayoutId", layout_id(&options.source));
+    if let Some(id) = layout_id(&options.source) {
+        out.insert("sourceLayoutId", id);
+    }
     out.insert("targets", Value::Array(targets));
     Ok(out.into())
 }
