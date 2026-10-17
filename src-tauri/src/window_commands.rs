@@ -26,7 +26,7 @@ pub fn window_show<R: Runtime>(app: AppHandle<R>) -> bool {
 /// again.
 #[tauri::command]
 pub fn window_hide<R: Runtime>(app: AppHandle<R>) {
-    if !crate::lifecycle::is_tray_active(&app) {
+    if !crate::tray::is_tray_active(&app) {
         return;
     }
     if let Some(window) = main_window::main_window(&app) {

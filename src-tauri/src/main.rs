@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Tauri entry point: one window that loads the renderer build, the HID,
 // definition, app config and window commands its vialAPI shim calls, the
-// typing analytics, and the tray and quit handling of lifecycle.rs. Before
+// typing analytics, the tray of tray.rs, the quit handling of lifecycle.rs
+// and the window geometry of window_ops. Before
 // any of that it settles the userData directory and refuses to start while
 // the Electron build holds it; once no other instance of this build runs, it
 // starts the log in the directory and loads the app config.
@@ -34,9 +35,11 @@ mod shell;
 mod shutdown;
 mod store_commands;
 mod sync_commands;
+mod tray;
 mod typing_dataset_commands;
 mod window_bounds;
 mod window_commands;
+mod window_ops;
 mod window_state;
 
 use std::path::{Path, PathBuf};
@@ -294,6 +297,13 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
     ]
 }
 
+/// The window events: the close request goes to lifecycle.rs, the others to
+/// window_ops.
+fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
+    lifecycle::on_window_event(window, event);
+    window_ops::on_window_event(window, event);
+}
+
 /// The userData directory (`pipette_fs::user_data_dir`), the root of all the
 /// app keeps on disk.
 pub struct UserDataDir(pub PathBuf);
@@ -351,13 +361,14 @@ fn main() {
             sync_commands::triggers::start(app.handle());
             analytics_commands::start(app.handle());
             hub_commands::setup(app.handle());
+            tray::setup(app);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
             hub_commands::setup::start_background(app.handle());
             Ok(())
         })
-        .on_window_event(lifecycle::on_window_event);
+        .on_window_event(on_window_event);
     let builder = dev_commands::install_or_passthrough(builder, app_commands(), lifecycle::on_page_load);
     let built = builder.build(tauri::generate_context!());
     start_log(&user_data);
