@@ -2,10 +2,10 @@
 // Tauri entry point: one window that loads the renderer build, the HID,
 // definition, app config and window commands its vialAPI shim calls, the
 // typing analytics, the tray of tray.rs, the quit handling of lifecycle.rs
-// and the window geometry of window_ops. Before
-// any of that it settles the userData directory and refuses to start while
-// the Electron build holds it; once no other instance of this build runs, it
-// starts the log in the directory and loads the app config.
+// and the window geometry of window_ops. Before any of that it settles the
+// userData directory and refuses to start while the Electron build holds it;
+// once no other instance of this build runs, it starts the log in the
+// directory and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from

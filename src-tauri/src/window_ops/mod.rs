@@ -10,9 +10,7 @@ use tauri::{Runtime, Window, WindowEvent};
 use crate::main_window;
 
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
-    match event {
-        WindowEvent::Moved(_) => main_window::update_min_size(window),
-        WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {}
-        _ => {}
+    if let WindowEvent::Moved(_) = event {
+        main_window::update_min_size(window);
     }
 }

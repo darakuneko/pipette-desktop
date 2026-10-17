@@ -96,24 +96,26 @@ fn build_tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, TRAY_QUIT, "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &separator, &quit])?;
-    let mut tray =
-        TrayIconBuilder::with_id(TRAY_ID).menu(&menu).tooltip("Pipette").on_menu_event(|app, event| {
-            match event.id().as_ref() {
-                TRAY_SHOW => show_main_window(app),
-                TRAY_QUIT => app.exit(0),
-                _ => {}
-            }
-        });
     // A left click shows the window too, as in the Electron tray. Linux
     // (AppIndicator) reports no clicks; the menu is the only way there.
-    tray = tray.on_tray_icon_event(|tray, event| {
-        if let TrayIconEvent::Click {
-            button: MouseButton::Left, button_state: MouseButtonState::Up, ..
-        } = event
-        {
-            show_main_window(tray.app_handle());
-        }
-    });
+    let mut tray = TrayIconBuilder::with_id(TRAY_ID)
+        .menu(&menu)
+        .tooltip("Pipette")
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            TRAY_SHOW => show_main_window(app),
+            TRAY_QUIT => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        });
     if let Some(icon) = app.default_window_icon() {
         tray = tray.icon(icon.clone());
     }
