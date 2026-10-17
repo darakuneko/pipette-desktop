@@ -213,34 +213,37 @@ impl HubHttp {
             }
             return parse_json(&reply.body).map(Some);
         }
-        let mut retried = false;
-        loop {
-            let reply = requester.request(request.clone()).await?;
-            if reply.status == 429 {
-                let retry_after = parse_retry_after(reply.retry_after.as_deref(), self.timing.now_ms());
-                if let Some(seconds) = retry_after.filter(|seconds| !retried && *seconds <= MAX_RETRY_AFTER_S)
-                {
+        // A short 429 is sent once more, as it is: only the first send keeps
+        // a copy of the request.
+        let mut reply = requester.request(request.clone()).await?;
+        if reply.status == 429 {
+            let retry_after = parse_retry_after(reply.retry_after.as_deref(), self.timing.now_ms());
+            match retry_after.filter(|seconds| *seconds <= MAX_RETRY_AFTER_S) {
+                Some(seconds) => {
                     self.timing.sleep(Duration::from_secs_f64(seconds.max(0.0))).await;
-                    retried = true;
-                    continue;
+                    reply = requester.request(request).await?;
                 }
-                return Err(status_error(label, reply, StatusKind::RateLimited, retry_after));
+                None => return Err(status_error(label, reply, StatusKind::RateLimited, retry_after)),
             }
-            if !reply.ok() {
-                let kind = match reply.status {
-                    401 => StatusKind::Unauthorized,
-                    403 => StatusKind::Forbidden,
-                    404 if mode == (ReadMode::Strict { typed_not_found: true }) => StatusKind::NotFound,
-                    409 => StatusKind::Conflict,
-                    _ => StatusKind::Other,
-                };
-                return Err(status_error(label, reply, kind, None));
-            }
-            let json = parse_json(&reply.body)?;
-            return match mode {
-                ReadMode::Lenient => unwrap_lenient(label, json),
-                _ => unwrap_strict(label, json),
+        }
+        if reply.status == 429 {
+            let retry_after = parse_retry_after(reply.retry_after.as_deref(), self.timing.now_ms());
+            return Err(status_error(label, reply, StatusKind::RateLimited, retry_after));
+        }
+        if !reply.ok() {
+            let kind = match reply.status {
+                401 => StatusKind::Unauthorized,
+                403 => StatusKind::Forbidden,
+                404 if mode == (ReadMode::Strict { typed_not_found: true }) => StatusKind::NotFound,
+                409 => StatusKind::Conflict,
+                _ => StatusKind::Other,
             };
+            return Err(status_error(label, reply, kind, None));
+        }
+        let json = parse_json(&reply.body)?;
+        match mode {
+            ReadMode::Lenient => unwrap_lenient(label, json),
+            _ => unwrap_strict(label, json),
         }
     }
 
