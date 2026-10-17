@@ -13,8 +13,7 @@
 
 import { createHash, randomBytes } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import type { AddressInfo } from 'node:net'
-import { pathToFileURL } from 'node:url'
+import { listenOnLoopback, readBody, runStandalone } from '../fake-server/server-support'
 import { DriveState, errorBody, isFailure, notFound, type DriveFailure, type DriveOp, type Fault, type StoredFile } from './drive-state'
 
 export interface FakeAccount {
@@ -132,17 +131,6 @@ function invalidFields(res: ServerResponse): void {
   send(res, 400, errorBody(400, 'Invalid field selection', 'invalidParameter'))
 }
 
-async function readBody(req: IncomingMessage): Promise<Buffer> {
-  const chunks: Buffer[] = []
-  let size = 0
-  for await (const chunk of req) {
-    size += (chunk as Buffer).length
-    if (size > MAX_BODY_BYTES) throw new Error('request body too large')
-    chunks.push(chunk as Buffer)
-  }
-  return Buffer.concat(chunks)
-}
-
 /** The parts of a `multipart/related` body: their headers and content. */
 function multipartParts(body: Buffer, contentType: string): Array<{ type: string; content: Buffer }> | null {
   const boundary = /boundary=([^;]+)/.exec(contentType)?.[1]
@@ -197,7 +185,7 @@ async function handleDrive(ctx: Context, req: IncomingMessage, res: ServerRespon
   if (!/^Bearer \S+$/.test(req.headers.authorization ?? '')) {
     return send(res, 401, errorBody(401, 'Invalid Credentials', 'authError'))
   }
-  const body = await readBody(req)
+  const body = await readBody(req, MAX_BODY_BYTES)
   const fault = ctx.state.takeFault(op)
   if (fault) return sendFailure(res, fault)
   const fields = params.get('fields')
@@ -287,7 +275,7 @@ function handleAuth(ctx: Context, res: ServerResponse, params: URLSearchParams):
 }
 
 async function handleToken(ctx: Context, req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const form = new URLSearchParams((await readBody(req)).toString('utf8'))
+  const form = new URLSearchParams((await readBody(req, MAX_BODY_BYTES)).toString('utf8'))
   const fault = ctx.state.takeFault('token')
   if (fault) return sendFailure(res, fault)
   const accessToken = `fake-access-${randomBytes(8).toString('hex')}`
@@ -322,7 +310,7 @@ async function handleControl(ctx: Context, req: IncomingMessage, res: ServerResp
     return sendJson(res, ctx.state.files.map((file) => ({ ...file, content: file.content.toString('base64') })))
   }
   if (req.method !== 'POST') return send(res, 404, '{}')
-  const body = JSON.parse((await readBody(req)).toString('utf8') || '{}') as unknown
+  const body = JSON.parse((await readBody(req, MAX_BODY_BYTES)).toString('utf8') || '{}') as unknown
   switch (path) {
     case '/__control/faults':
       ctx.state.inject(body as Fault)
@@ -363,33 +351,13 @@ export async function startFakeDrive(options: { port?: number; account?: FakeAcc
       else res.destroy()
     })
   })
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(options.port ?? 0, '127.0.0.1', () => resolve())
-  })
-  const { address, port } = server.address() as AddressInfo
-  if (address !== '127.0.0.1') throw new Error(`the fake Drive listens on ${address}`)
+  const { url, close } = await listenOnLoopback(server, options.port, 'fake Drive')
   return {
-    url: `http://127.0.0.1:${port}`,
+    url,
     state: ctx.state,
     requests,
-    close: () =>
-      new Promise((resolve) => {
-        server.closeAllConnections()
-        server.close(() => resolve())
-      }),
+    close,
   }
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const port = process.argv[2] === undefined ? 0 : Number(process.argv[2])
-  startFakeDrive({ port }).then((drive) => {
-    console.log(JSON.stringify({ url: drive.url, env: fakeDriveEnv(drive.url) }))
-    const stop = (): void => void drive.close().then(() => process.exit(0))
-    process.on('SIGTERM', stop)
-    process.on('SIGINT', stop)
-  }, (err: unknown) => {
-    console.error(err)
-    process.exit(1)
-  })
-}
+runStandalone(import.meta.url, startFakeDrive, fakeDriveEnv)
