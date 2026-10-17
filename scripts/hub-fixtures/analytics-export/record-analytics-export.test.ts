@@ -79,7 +79,12 @@ describe('hub analytics export fixtures', () => {
   })
 
   it('records the export of each case', async () => {
+    // The zone in effect, not only the one asked for: JavaScript's and the
+    // one SQLite's `localtime` groups the days by.
     expect(process.env.TZ).toBe('UTC')
+    expect(new Date(FIXED_NOW).getTimezoneOffset()).toBe(0)
+    const sqlite = (db as unknown as { db: { prepare(sql: string): { get(): unknown } } }).db
+    expect(sqlite.prepare("SELECT strftime('%H:%M', 0, 'unixepoch', 'localtime') AS t").get()).toEqual({ t: '00:00' })
     const tree = exportTree()
     const dir = seedUserData(tree)
     const before = await settledTree(dir)

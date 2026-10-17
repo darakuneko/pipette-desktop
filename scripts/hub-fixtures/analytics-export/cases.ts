@@ -20,10 +20,28 @@ const HOUR = 60 * MINUTE
 const DAY = Date.UTC(2026, 9, 15)
 const t = (h: number, m: number): number => DAY + h * HOUR + m * MINUTE
 
-/** The query seed as this device: its rows of `hash-own` are the fixed
- * machine hash's. */
+/** Minutes of this device in apps whose names order the per-app slices:
+ * a non-ASCII name, and an integer-like one, which a JavaScript object
+ * puts before the other keys whatever the app usage order. */
+function appNameLines(): string[] {
+  const minute = (minuteTs: number, keystrokes: number, appName: string): string => JSON.stringify({
+    id: 'minute-stats',
+    kind: 'minute-stats',
+    updated_at: 1_000,
+    payload: {
+      scopeId: 'scope-own-a', minuteTs, keystrokes, activeMs: keystrokes * 1_000,
+      intervalAvgMs: 100, intervalMinMs: 50, intervalP25Ms: 80, intervalP50Ms: 100, intervalP75Ms: 120, intervalMaxMs: 200,
+      appName,
+    },
+  })
+  return [minute(t(10, 9), 50, 'エディタ'), minute(t(10, 10), 5, '123')]
+}
+
+/** The query seed as this device (its rows of `hash-own` are the fixed
+ * machine hash's), with the minutes of appNameLines. */
 export function buildExportSeed(): string {
-  return buildQuerySeed().split(`"${OWN}"`).join(`"${FIXED_MACHINE_HASH}"`)
+  const seed = buildQuerySeed().split(`"${OWN}"`).join(`"${FIXED_MACHINE_HASH}"`)
+  return seed + appNameLines().join('\n') + '\n'
 }
 
 /** The keymap snapshots of the query tree, under the fixed machine hash. */
