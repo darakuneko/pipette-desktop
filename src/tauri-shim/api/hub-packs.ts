@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI members of the language and theme packs on the Hub, each the backend command
 // of src-tauri/src/hub_commands/packs.rs with its arguments by name.
-// `hubPacksReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 //
 // The pack of an upload or update crosses as the text of `JSON.stringify`,
 // so its key order reaches the Hub as Electron sends it; the rest of the
@@ -38,5 +36,3 @@ export const hubPacksApi = {
   hubUpdateThemePost: (params) => call<Answer<'hubUpdateThemePost'>>('hub_update_theme_post', packArgs(params)),
   hubDeleteThemePost: (postId, localPackId) => call<Answer<'hubDeleteThemePost'>>('hub_delete_theme_post', { postId, localPackId }),
 } satisfies Partial<VialAPI>
-
-export const hubPacksReal = { ...hubPacksApi } satisfies Partial<VialAPI>

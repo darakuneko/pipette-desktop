@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What the golden tests share: reading the fixtures that
 //! scripts/hub-fixtures/ records from the Electron Hub code, their tags,
-//! and a Hub client on scripted replies with a fixed clock.
+//! a Hub client on scripted replies with a fixed clock, and the scripted
+//! Hub and userData trees of the handler scenarios ([`scripted_hub`]).
 //!
 //! The tags: `{"$n": "NaN" | "Infinity" | "-Infinity" | "-0"}` for a number
 //! JSON cannot hold, `{"$u": true}` for `undefined`, and
 //! `{"$repeat": s, "count": n}` for `s` repeated `n` times.
 
 #![allow(dead_code, clippy::unwrap_used)]
+
+pub mod scripted_hub;
 
 use std::collections::VecDeque;
 use std::future::Future;
@@ -30,6 +33,10 @@ pub fn get<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
 
 pub fn field<'a>(value: &'a Value, key: &str) -> &'a Value {
     get(value, key).unwrap_or_else(|| panic!("no {key} in {}", stringify(value)))
+}
+
+pub fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
+    Value::Object(fields.into_iter().collect())
 }
 
 pub fn array(value: &Value) -> &Vec<Value> {

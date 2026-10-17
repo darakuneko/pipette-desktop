@@ -10,8 +10,6 @@
 // the worker, then the command of src-tauri/src/hub_commands/favorite.rs,
 // which checks the post again and sends it with the Hub token. A failure of
 // any step is the handler's `{ success: false, error }`.
-// `hubFavoriteReal` holds the members the backend implements.
-// coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { FavoriteType } from '../../shared/types/favorite-store'
@@ -89,10 +87,4 @@ export const hubFavoriteApi = {
       return { success: false, error: extractError(err, 'Upload failed') }
     }
   },
-} satisfies Partial<VialAPI>
-
-export const hubFavoriteReal = {
-  hubUploadFavoritePost: hubFavoriteApi.hubUploadFavoritePost,
-  hubUpdateFavoritePost: hubFavoriteApi.hubUpdateFavoritePost,
-  hubUploadPrivateFavoritePost: hubFavoriteApi.hubUploadPrivateFavoritePost,
 } satisfies Partial<VialAPI>

@@ -2,8 +2,6 @@
 // The VialAPI members of the keymap posts and the private posts on the Hub, each the backend command
 // of src-tauri/src/hub_commands/posts.rs with its arguments by name. The
 // Hub token stays in the backend; the answers carry results only.
-// `hubPostsReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
@@ -18,15 +16,4 @@ export const hubPostsApi = {
   hubFetchMyKeyboardPosts: (keyboardName) => call<Answer<'hubFetchMyKeyboardPosts'>>('hub_fetch_my_keyboard_posts', { keyboardName }),
   hubUploadPrivatePost: (params) => call<Answer<'hubUploadPrivatePost'>>('hub_upload_private_post', { params }),
   hubDeletePrivatePost: (kind, id) => call<Answer<'hubDeletePrivatePost'>>('hub_delete_private_post', { kind, id }),
-} satisfies Partial<VialAPI>
-
-export const hubPostsReal = {
-  hubUploadPost: hubPostsApi.hubUploadPost,
-  hubUpdatePost: hubPostsApi.hubUpdatePost,
-  hubPatchPost: hubPostsApi.hubPatchPost,
-  hubDeletePost: hubPostsApi.hubDeletePost,
-  hubFetchMyPosts: hubPostsApi.hubFetchMyPosts,
-  hubFetchMyKeyboardPosts: hubPostsApi.hubFetchMyKeyboardPosts,
-  hubUploadPrivatePost: hubPostsApi.hubUploadPrivatePost,
-  hubDeletePrivatePost: hubPostsApi.hubDeletePrivatePost,
 } satisfies Partial<VialAPI>
