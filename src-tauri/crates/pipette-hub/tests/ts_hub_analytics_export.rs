@@ -102,7 +102,52 @@ fn the_export_matches_typescript() {
     assert!(cases.len() > 30);
     for case in cases {
         let params = field(case, "params");
-        let got = runtime.block_on(prepare_analytics_export(params, &store, &source, own_hash, *now as i64));
+        let got = runtime.block_on(prepare_analytics_export(params, &store, &source, *now as i64));
         check(case, got);
     }
+}
+
+/// Typing analytics that never get ready: neither the machine hash nor the
+/// cache can be read.
+struct NotReady;
+
+impl AnalyticsSource for NotReady {
+    fn machine_hash(&self) -> BoxFuture<'_, Result<String, String>> {
+        Box::pin(std::future::ready(Err("analytics not ready".to_owned())))
+    }
+
+    fn with_db(&self, _job: AnalyticsJob) -> BoxFuture<'_, Result<(), String>> {
+        Box::pin(std::future::ready(Err("analytics not ready".to_owned())))
+    }
+}
+
+/// The machine hash is read once the saved filter has a range, as
+/// `getMachineHash()` is in the TS: the checks before it answer without
+/// the analytics, and a saved filter that passes them throws their error.
+#[test]
+fn the_machine_hash_is_read_after_the_saved_filter() {
+    let golden = fixture(FIXTURE);
+    let dir = tempfile::tempdir().unwrap();
+    build_tree(dir.path(), field(&golden, "tree"));
+    let store = StoreContext::new(
+        dir.path(),
+        Arc::new(SystemClock),
+        Arc::new(WriteLocks::new()),
+        Arc::new(|_: &str| {}),
+    );
+    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    let prepare = |params: &Value| runtime.block_on(prepare_analytics_export(params, &store, &NotReady, 0));
+    let failed = |json: &str| match prepare(&pipette_js_json::parse(json).unwrap()) {
+        Ok(Prepared::Failed { error, .. }) => error,
+        other => panic!("{json}: {other:?}"),
+    };
+    assert_eq!(failed("{}"), "Invalid uid");
+    assert_eq!(failed(r#"{"uid":"u"}"#), "Invalid entryId");
+    assert_eq!(failed(r#"{"uid":"u","entryId":"missing"}"#), "Saved filter entry not found");
+    let built = array(field(&golden, "cases"))
+        .iter()
+        .find(|case| case.as_object().unwrap().get("exportJson").is_some())
+        .unwrap();
+    let Err(PrepareError(message)) = prepare(field(built, "params")) else { panic!("did not throw") };
+    assert_eq!(message, "analytics not ready");
 }

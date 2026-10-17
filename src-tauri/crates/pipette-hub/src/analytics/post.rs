@@ -164,12 +164,11 @@ fn expires_in_days(params: &Value) -> Option<f64> {
 }
 
 impl AnalyticsPosts<'_> {
-    /// `prepareAnalyticsExport(params)` with this device's machine hash and
-    /// the Hub client's clock as the export's time.
+    /// `prepareAnalyticsExport(params)` with the Hub client's clock as the
+    /// export's time.
     async fn prepare(&self, params: &Value) -> Result<Prepared, PrepareError> {
-        let own_hash = self.source.machine_hash().await.map_err(PrepareError)?;
         let now_ms = self.token.http().timing().now_ms() as i64;
-        prepare_analytics_export(params, self.store, self.source, &own_hash, now_ms).await
+        prepare_analytics_export(params, self.store, self.source, now_ms).await
     }
 
     /// The export, or the reason it could not be assembled as the
@@ -183,18 +182,24 @@ impl AnalyticsPosts<'_> {
     }
 
     /// The title, the file names and the files of a post, in the TS's
-    /// order, once the export is built.
+    /// order, once the export is built. The export's JSON and the
+    /// thumbnail's bytes, both as large as the post, are made on the
+    /// blocking pool, off the async runtime's threads.
     async fn post_input(&self, params: &Value) -> Result<(String, PostFiles), HubFailure> {
         let export = self.export(params).await?;
         let title = title(params)?;
         // The preparation has accepted `uid` as a non-empty string.
         let uid = prop(params, "uid").and_then(Value::as_str).unwrap_or_default();
         let base = filename_base(params, uid)?;
-        let json = UploadFile { name: format!("{base}.json"), data: export.to_json().into_bytes() };
-        let thumbnail = UploadFile {
-            name: format!("{base}.jpg"),
-            data: thumbnail_bytes(prop(params, "thumbnailBase64"))?,
-        };
+        let thumbnail = prop(params, "thumbnailBase64").cloned();
+        let (json, thumbnail) = tokio::task::spawn_blocking(move || {
+            let thumbnail = thumbnail_bytes(thumbnail.as_ref())?;
+            Ok::<_, HubFailure>((export.to_json().into_bytes(), thumbnail))
+        })
+        .await
+        .map_err(|err| HubFailure::plain(err.to_string()))??;
+        let json = UploadFile { name: format!("{base}.json"), data: json };
+        let thumbnail = UploadFile { name: format!("{base}.jpg"), data: thumbnail };
         Ok((title, PostFiles { json, thumbnail }))
     }
 
