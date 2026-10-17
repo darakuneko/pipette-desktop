@@ -2,7 +2,7 @@
 // The VialAPI members of the Analyze posts on the Hub and their preview, each the backend command
 // of src-tauri/src/hub_commands/analytics.rs with its arguments by name.
 // `hubAnalyticsReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts lists them.
+// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'

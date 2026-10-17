@@ -2,7 +2,7 @@
 // The VialAPI members of the language and theme packs on the Hub, each the backend command
 // of src-tauri/src/hub_commands/packs.rs with its arguments by name.
 // `hubPacksReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts lists them.
+// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'

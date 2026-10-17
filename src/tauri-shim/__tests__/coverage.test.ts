@@ -348,24 +348,16 @@ const SYNC_REAL = [
   'typingAnalyticsFetchRemoteDay',
 ]
 
-/** The members of each Hub module the backend implements (its `…Real`);
- *  the module's other members stay fakes or stubs. One list per module, so
- *  each domain moves its own members here. */
-const HUB_ACCOUNT_REAL: string[] = []
-const HUB_POSTS_REAL: string[] = []
-const HUB_FAVORITE_REAL: string[] = []
-const HUB_ANALYTICS_REAL: string[] = []
-const HUB_PACKS_REAL: string[] = []
-const KEY_LABEL_HUB_REAL: string[] = []
-
-/** The Hub members, by the shim module that holds them. */
+/** The Hub members, by the shim module that holds them, with the ones the
+ *  backend implements (each module's `…Real`; its other members stay
+ *  fakes or stubs). */
 const HUB_MODULES = [
-  { module: hubAccountApi, real: hubAccountReal, realMembers: HUB_ACCOUNT_REAL },
-  { module: hubPostsApi, real: hubPostsReal, realMembers: HUB_POSTS_REAL },
-  { module: hubFavoriteApi, real: hubFavoriteReal, realMembers: HUB_FAVORITE_REAL },
-  { module: hubAnalyticsApi, real: hubAnalyticsReal, realMembers: HUB_ANALYTICS_REAL },
-  { module: hubPacksApi, real: hubPacksReal, realMembers: HUB_PACKS_REAL },
-  { module: keyLabelHubApi, real: keyLabelHubReal, realMembers: KEY_LABEL_HUB_REAL },
+  { module: hubAccountApi, real: hubAccountReal },
+  { module: hubPostsApi, real: hubPostsReal },
+  { module: hubFavoriteApi, real: hubFavoriteReal },
+  { module: hubAnalyticsApi, real: hubAnalyticsReal },
+  { module: hubPacksApi, real: hubPacksReal },
+  { module: keyLabelHubApi, real: keyLabelHubReal },
 ]
 
 /** Whether `name` is a member named after the Hub that is not answered
@@ -396,16 +388,16 @@ describe('shim coverage', () => {
   it('backs only the listed members named after the Hub with backend commands', () => {
     const hub = VIAL_API_MEMBER_NAMES.filter(namedAfterHub)
     expect(hub.length).toBeGreaterThan(0)
-    const listed = HUB_MODULES.flatMap(({ realMembers }) => realMembers)
+    const listed = HUB_MODULES.flatMap(({ real: own }) => Object.keys(own))
     expect(hub.filter((name) => name in real).sort()).toEqual(listed.filter((name) => name !== 'hubGetOrigin').sort())
   })
 
-  it('holds the 39 Hub members in their modules, each real one listed', () => {
+  it('holds the 39 Hub members in their modules, each real one backed by a command', () => {
     const members = HUB_MODULES.flatMap(({ module }) => Object.keys(module))
     expect(new Set(members).size).toBe(39)
     expect(members.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
-    for (const { module, real: own, realMembers } of HUB_MODULES) {
-      expect(Object.keys(own).sort()).toEqual([...realMembers].sort())
+    for (const { module, real: own } of HUB_MODULES) {
+      const realMembers = Object.keys(own)
       expect(realMembers.filter((name) => !(name in module))).toEqual([])
       expect(realMembers.filter((name) => !(name in real) || name in fakes)).toEqual([])
     }

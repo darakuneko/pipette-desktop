@@ -2,7 +2,7 @@
 // The VialAPI members of the Hub account: the Hub origin, the display name of the next Hub token, and the account's own record, each the backend command
 // of src-tauri/src/hub_commands/account.rs with its arguments by name.
 // `hubAccountReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts lists them.
+// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'

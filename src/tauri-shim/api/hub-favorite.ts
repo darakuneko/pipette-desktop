@@ -2,7 +2,7 @@
 // The VialAPI members of the favorite posts on the Hub, each the backend command
 // of src-tauri/src/hub_commands/favorite.rs with its arguments by name.
 // `hubFavoriteReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts lists them.
+// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { FavoriteType } from '../../shared/types/favorite-store'

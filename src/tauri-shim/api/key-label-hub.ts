@@ -2,7 +2,7 @@
 // The VialAPI members of the key labels on the Hub, each the backend command
 // of src-tauri/src/hub_commands/key_labels.rs with its arguments by name.
 // `keyLabelHubReal` holds the members the backend implements; the others stay
-// fakes (fakes.ts) or stubs. coverage.test.ts lists them.
+// fakes (fakes.ts) or stubs. coverage.test.ts checks them.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
