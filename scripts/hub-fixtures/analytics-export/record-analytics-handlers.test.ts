@@ -55,10 +55,12 @@ describe('hub analytics handler fixtures', () => {
     expect(new Date(FIXED_NOW).getTimezoneOffset()).toBe(0)
     const sqlite = (db as unknown as { db: { prepare(sql: string): { get(): unknown } } }).db
     expect(sqlite.prepare("SELECT strftime('%H:%M', 0, 'unixepoch', 'localtime') AS t").get()).toEqual({ t: '00:00' })
-    await recordDomain('analytics', [...ANALYTICS_SCENARIOS, ...ANALYTICS_POST_SCENARIOS], {
+    const file = {
       generator: 'scripts/hub-fixtures/analytics-export/record-analytics-handlers.test.ts',
       about: 'The scenarios on the export golden\'s userData run on its seed (ts_hub_analytics_export_seed.jsonl) with ownHash as this device, in the time zone timeZone.',
       extra: { ownHash: FIXED_MACHINE_HASH, timeZone: 'UTC' },
-    })
+    }
+    // The first post scenario is repeated too: it is the first to carry an export.
+    await recordDomain('analytics', [...ANALYTICS_SCENARIOS, ...ANALYTICS_POST_SCENARIOS], file, [0, ANALYTICS_SCENARIOS.length])
   })
 })
