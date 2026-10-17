@@ -240,6 +240,7 @@ async fn run_step(world: &World, calls: &Calls, codec: &Arc<KeyCachedCodec>, ste
     world.applied.0.lock().unwrap().clear();
 
     let result = run_call(calls, &step["call"]).await;
+    world.settle_flush_chain().await;
     json!({
         "result": result,
         "requests": world.requests().iter().map(|e| request(e)).collect::<Vec<_>>(),

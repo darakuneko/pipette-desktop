@@ -32,6 +32,7 @@ import { REPO_ROOT } from '../fixture-vitest-config'
 import { startFakeDrive, type FakeDrive } from '../fake-drive/server'
 import { logRequest } from './drive-request-log'
 import { FIXED_INSTALLATION_ID, FIXED_NOW, readTree, seedUserData, type Tree } from './harness'
+import { settleFlushChain } from './flush-chain'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-sync/tests/fixtures/ts_analytics_sync.json')
 
@@ -397,6 +398,7 @@ describe('analytics sync fixtures', () => {
         } catch (err) {
           result = { error: err instanceof Error ? err.message : String(err) }
         }
+        await settleFlushChain()
         steps.push({
           step,
           result,
