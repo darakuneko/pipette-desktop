@@ -292,13 +292,37 @@ fn forbidden_roots() -> Vec<PathBuf> {
 }
 
 /// `path` with its symlinks resolved: the deepest ancestor that exists,
-/// canonicalized, with the rest of the path after it.
+/// canonicalized, with the rest of the path after it. An ancestor that is
+/// a dangling symlink is followed to its target (and that target resolved
+/// the same way), so the place a write through it would land is what is
+/// checked, not the directory holding the link.
 fn resolve(path: &Path) -> PathBuf {
+    resolve_within(path, 0)
+}
+
+/// Symlinks followed before a path counts as unresolvable (Linux's
+/// `MAXSYMLINKS`).
+const MAX_LINKS: usize = 40;
+
+fn resolve_within(path: &Path, links: usize) -> PathBuf {
     let mut rest = Vec::new();
     let mut current = path.to_path_buf();
     loop {
+        let rebuilt = |base: PathBuf, rest: &[std::ffi::OsString]| {
+            rest.iter().rev().fold(base, |acc: PathBuf, part| acc.join(part))
+        };
         if let Ok(real) = std::fs::canonicalize(&current) {
-            return rest.into_iter().rev().fold(real, |acc: PathBuf, part| acc.join(part));
+            return rebuilt(real, &rest);
+        }
+        let dangling = std::fs::symlink_metadata(&current).is_ok_and(|meta| meta.file_type().is_symlink());
+        if dangling && links < MAX_LINKS {
+            if let Ok(target) = std::fs::read_link(&current) {
+                let target = match current.parent() {
+                    Some(parent) if target.is_relative() => parent.join(target),
+                    _ => target,
+                };
+                return rebuilt(resolve_within(&target, links + 1), &rest);
+            }
         }
         match (current.file_name().map(ToOwned::to_owned), current.parent()) {
             (Some(name), Some(parent)) => {
@@ -310,23 +334,27 @@ fn resolve(path: &Path) -> PathBuf {
     }
 }
 
-/// Exits before anything is touched when `path` is relative, or is or is
-/// inside a real userData directory (itself or through a symlink).
-fn refuse_unsafe_path(name: &str, path: &Path) {
+/// Why `path` must not be used, given the real userData directories
+/// `roots`: a relative path, a path that is itself a symlink (dangling or
+/// not), or one that is, or resolves to a place, inside one of `roots`.
+fn unsafe_reason(path: &Path, roots: &[PathBuf]) -> Option<&'static str> {
     if !path.is_absolute() {
-        eprintln!("hub_peer: {name} must be an absolute path");
-        std::process::exit(2);
+        return Some("must be an absolute path");
+    }
+    if std::fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_symlink()) {
+        return Some("is a symbolic link");
     }
     let candidates = [path.to_path_buf(), resolve(path)];
-    for root in forbidden_roots() {
-        if candidates.iter().any(|candidate| candidate.starts_with(&root)) {
-            eprintln!(
-                "hub_peer: refused {name} {} inside the real userData {}",
-                path.display(),
-                root.display()
-            );
-            std::process::exit(2);
-        }
+    let inside = roots.iter().any(|root| candidates.iter().any(|candidate| candidate.starts_with(root)));
+    inside.then_some("is inside a real userData")
+}
+
+/// Exits before anything is touched when `path` is unsafe
+/// ([`unsafe_reason`]). The message names the argument only.
+fn refuse_unsafe_path(name: &str, path: &Path) {
+    if let Some(reason) = unsafe_reason(path, &forbidden_roots()) {
+        eprintln!("hub_peer: refused {name}: it {reason}");
+        std::process::exit(2);
     }
 }
 
@@ -334,7 +362,7 @@ fn refuse_unsafe_path(name: &str, path: &Path) {
 fn refuse_non_loopback(base: &str) {
     let host = base.strip_prefix("http://").and_then(|rest| rest.split(['/', ':']).next());
     if host != Some("127.0.0.1") {
-        eprintln!("hub_peer: refused the Hub base {base}: only 127.0.0.1");
+        eprintln!("hub_peer: refused the Hub base: only 127.0.0.1");
         std::process::exit(2);
     }
 }
@@ -372,4 +400,60 @@ fn main() {
         "{{\"elapsedMs\":{elapsed},\"maxRssKb\":{}}}",
         max_rss_kb().map_or("null".to_owned(), |kb| kb.to_string())
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A real userData root and a work directory beside it.
+    fn dirs() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let top = tempfile::tempdir().unwrap();
+        let real = top.path().join("config").join("pipette-desktop");
+        std::fs::create_dir_all(&real).unwrap();
+        let work = top.path().join("work");
+        std::fs::create_dir_all(&work).unwrap();
+        (top, real, work)
+    }
+
+    fn roots(real: &Path) -> Vec<PathBuf> {
+        vec![real.to_path_buf(), resolve(real)]
+    }
+
+    #[test]
+    fn a_plain_path_outside_the_real_user_data_is_safe() {
+        let (_top, real, work) = dirs();
+        assert_eq!(unsafe_reason(&work.join("out.json"), &roots(&real)), None);
+        assert_eq!(unsafe_reason(&work, &roots(&real)), None);
+        assert_eq!(
+            unsafe_reason(Path::new("relative/out.json"), &roots(&real)),
+            Some("must be an absolute path")
+        );
+        assert_eq!(unsafe_reason(&real.join("sync"), &roots(&real)), Some("is inside a real userData"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_symlink_into_the_real_user_data_is_refused() {
+        let (_top, real, work) = dirs();
+        // The output path itself: a link to a file that does not exist yet.
+        let out = work.join("out.json");
+        std::os::unix::fs::symlink(real.join("config.json"), &out).unwrap();
+        assert!(!out.exists());
+        assert_eq!(unsafe_reason(&out, &roots(&real)), Some("is a symbolic link"));
+        // A link to a file outside is refused too: no path may be a link.
+        let elsewhere = work.join("elsewhere.json");
+        std::os::unix::fs::symlink(work.join("missing.json"), &elsewhere).unwrap();
+        assert_eq!(unsafe_reason(&elsewhere, &roots(&real)), Some("is a symbolic link"));
+        // An ancestor that is a dangling link into the real userData.
+        let via = work.join("via");
+        std::os::unix::fs::symlink(real.join("local").join("auth"), &via).unwrap();
+        assert_eq!(unsafe_reason(&via.join("out.json"), &roots(&real)), Some("is inside a real userData"));
+        // A chain of dangling links, relative targets included.
+        std::os::unix::fs::symlink("via", work.join("chain")).unwrap();
+        assert_eq!(
+            unsafe_reason(&work.join("chain").join("deeper").join("out.json"), &roots(&real)),
+            Some("is inside a real userData")
+        );
+    }
 }
