@@ -17,7 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use futures_util::future::join_all;
+use futures_util::future::try_join_all;
 use pipette_js_json::{JsString, Object, Value, js_string, stringify};
 use pipette_keyboard_stores::{
     KeyLabelError, KeyLabelErrorCode, KeyLabelSave, StoreContext, get_key_label, key_label_response,
@@ -236,13 +236,11 @@ pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
         let body: Object = [("ids", Value::Array(ids))].into_iter().collect();
         http.send(&Endpoint::KeyLabelTimestamps, None, RequestBody::Json(stringify(&Value::Object(body))))
     });
-    let mut responses = Vec::new();
-    for response in join_all(requests).await {
-        match response {
-            Ok(response) => responses.push(response),
-            Err(err) => return key_label_response(Err(hub_failure(err))),
-        }
-    }
+    // The first failure answers at once, like `Promise.all`.
+    let responses = match try_join_all(requests).await {
+        Ok(responses) => responses,
+        Err(err) => return key_label_response(Err(hub_failure(err))),
+    };
     let mut by_id: HashMap<&str, &Value> = HashMap::new();
     for response in &responses {
         let listed = match property(response.as_ref(), "items") {
