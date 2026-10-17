@@ -93,3 +93,33 @@ fn faults_apply_in_order_and_only_to_their_route() {
     assert_eq!(send(&hub, Method::Get, "/api/nowhere", None, None).status, 404);
     assert_eq!(send(&hub, Method::Get, "/api/theme-packs", None, None).status, 500);
 }
+
+#[test]
+fn names_fold_the_ascii_case_only_and_jwts_carry_the_fake_clocks_expiry() {
+    let hub = FakeHub::new();
+    hub.set_user("a@example.com", Some("Émile"), None);
+    // `É` and `é` differ for SQLite's `lower()`, `E` and `e` do not.
+    let other = send(
+        &hub,
+        Method::Post,
+        "/api/auth/token",
+        None,
+        Some(r#"{"id_token":"test:b@example.com","display_name":"émile"}"#),
+    );
+    assert_eq!(other.status, 200);
+    let clash = send(
+        &hub,
+        Method::Post,
+        "/api/auth/token",
+        None,
+        Some(r#"{"id_token":"test:c@example.com","display_name":"éMILE"}"#),
+    );
+    assert_eq!(clash.status, 409);
+    // The payload's `exp` follows the fake clock (2026-01-01 plus 7 days),
+    // already past: a client must not read it.
+    let jwt = field(&data(&other), "token");
+    let payload = crate::node_base64_decode(jwt.split('.').nth(1).unwrap());
+    let payload = parse(std::str::from_utf8(&payload).unwrap()).unwrap();
+    let exp = payload.as_object().unwrap().get("exp").cloned();
+    assert_eq!(exp, Some(Value::Number(((CLOCK_START_MS / 1000) + 7 * 24 * 3600) as f64)));
+}

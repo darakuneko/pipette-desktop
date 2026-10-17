@@ -113,9 +113,7 @@ fn pack_upload(kind: PackKind, request: &Request<'_>) -> Result<(NameVersion, St
 
 fn name_version_taken(packs: &[Pack], name: &str, version: &str, except: Option<&str>) -> bool {
     packs.iter().any(|pack| {
-        Some(pack.id.as_str()) != except
-            && pack.name.to_lowercase() == name.to_lowercase()
-            && pack.version == version
+        Some(pack.id.as_str()) != except && pack.name.eq_ignore_ascii_case(name) && pack.version == version
     })
 }
 
@@ -151,15 +149,15 @@ pub fn pack_route(
     match op {
         "list" => {
             let (page, per_page) = pagination(request);
-            let query = query_text(request, "q").to_lowercase();
-            let name = query_text(request, "name").to_lowercase();
+            let query = query_text(request, "q").to_ascii_lowercase();
+            let name = query_text(request, "name").to_ascii_lowercase();
             let matching = by_updated_desc(
                 state
                     .packs(kind)
                     .iter()
                     .filter(|pack| {
-                        (query.is_empty() || pack.name.to_lowercase().contains(&query))
-                            && (name.is_empty() || pack.name.to_lowercase() == name)
+                        (query.is_empty() || pack.name.to_ascii_lowercase().contains(&query))
+                            && (name.is_empty() || pack.name.eq_ignore_ascii_case(&name))
                     })
                     .collect(),
                 |pack| &pack.updated_at,
@@ -240,7 +238,7 @@ fn key_label_name_taken(state: &State, name: &str, except: Option<&str>) -> bool
     state
         .key_labels
         .iter()
-        .any(|label| Some(label.id.as_str()) != except && label.name.to_lowercase() == name.to_lowercase())
+        .any(|label| Some(label.id.as_str()) != except && label.name.eq_ignore_ascii_case(name))
 }
 
 /// The index of the key label `id` of the request's account; the Hub's
@@ -266,12 +264,12 @@ pub fn key_label_route(state: &mut State, request: &Request<'_>, op: &str, id: O
     match op {
         "list" => {
             let (page, per_page) = pagination(request);
-            let query = query_text(request, "q").to_lowercase();
+            let query = query_text(request, "q").to_ascii_lowercase();
             let matching = by_updated_desc(
                 state
                     .key_labels
                     .iter()
-                    .filter(|label| query.is_empty() || label.name.to_lowercase().contains(&query))
+                    .filter(|label| query.is_empty() || label.name.to_ascii_lowercase().contains(&query))
                     .collect(),
                 |label| &label.updated_at,
             );

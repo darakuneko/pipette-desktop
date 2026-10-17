@@ -301,12 +301,12 @@ impl State {
         self.users.iter_mut().find(|user| user.email == email)
     }
 
-    /// Another account with this display name, the case ignored.
+    /// Another account with this display name, the ASCII case ignored (as
+    /// SQLite's `lower()` compares).
     pub fn display_name_taken(&self, name: &str, except_id: Option<&str>) -> bool {
-        let lower = name.to_lowercase();
         self.users.iter().any(|user| {
             Some(user.id.as_str()) != except_id
-                && user.display_name.as_ref().is_some_and(|n| n.to_lowercase() == lower)
+                && user.display_name.as_ref().is_some_and(|n| n.eq_ignore_ascii_case(name))
         })
     }
 
