@@ -62,6 +62,7 @@ impl Hub {
 
     /// What the last startup update of the language packs that ran to its
     /// end did; `None` before one has.
+    #[cfg(any(test, feature = "dev-tools"))]
     pub fn startup_sync_result(&self) -> Option<StartupSyncResult> {
         self.startup_sync.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone()
     }
