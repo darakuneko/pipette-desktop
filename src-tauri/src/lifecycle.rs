@@ -231,6 +231,19 @@ fn respond_to_second_launch<R: Runtime>(
     SecondLaunch::Revealed
 }
 
+/// Whether the quit sequence has started; false before setup has run.
+pub fn is_quitting<R: Runtime>(app: &AppHandle<R>) -> bool {
+    lifecycle_state(app).is_some_and(|lifecycle| lifecycle.quit.is_quitting())
+}
+
+/// Starts quitting as an exit request does, without the quit sequence.
+#[cfg(test)]
+pub fn start_quitting_for_tests<R: Runtime>(app: &AppHandle<R>) {
+    let lifecycle = Arc::new(Lifecycle::default());
+    lifecycle.quit.on_exit_requested();
+    app.manage(lifecycle);
+}
+
 /// Whether the tray icon exists, so a hidden window can be shown again.
 pub fn is_tray_active<R: Runtime>(app: &AppHandle<R>) -> bool {
     lifecycle_state(app).is_some_and(|lifecycle| lifecycle.is_tray_active())

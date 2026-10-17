@@ -354,6 +354,7 @@ fn main() {
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
+            hub_commands::setup::start_background(app.handle());
             Ok(())
         })
         .on_window_event(lifecycle::on_window_event);
