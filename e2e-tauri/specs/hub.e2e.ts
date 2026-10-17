@@ -2,12 +2,26 @@
 //
 // Pipette Hub in the Tauri build, against the Node fake Hub of
 // scripts/fake-hub (helpers/hub-harness.ts starts it and refuses to launch
-// an app that is not pointed at it).
+// an app that is not pointed at it). The first session is the Hub test
+// account, whose account exists on the fake Hub without a display name: a
+// display name conflict resolved with the first token, the display name
+// set (a taken one refused); a keymap snapshot uploaded, updated and
+// deleted from the Import / Save tab, the posts listed page by page and
+// another keyboard's posts renamed and deleted from the Data modal; a
+// private post uploaded, switched to public and back, and deleted; a
+// favorite and an Analyze filter (of the seeded typing data) posted; key
+// labels, a language pack (from the Hub tab) and a theme pack searched,
+// downloaded, uploaded, updated, synced and deleted; the Hub-linked
+// language pack updated at launch; a 401, a 429 and a 403 injected. The
+// second session signs in with the fake Google of scripts/fake-drive, takes
+// a Hub token with its id_token and forgets it on sign-out. The tests share
+// the sessions and run in order.
 
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { $, browser, expect } from '@wdio/globals'
+import { HUB_ERROR_NOT_AUTHENTICATED } from '../../src/shared/types/hub'
 import type { HubPrivateLink } from '../../src/shared/types/hub-private'
 import {
   clickInPage,
@@ -35,7 +49,7 @@ import {
   injectHubFault,
   switchToGoogleSession,
 } from '../helpers/hub-harness'
-import { openSyncSettings, signIn } from '../helpers/sync'
+import { fillInput, openSyncSettings, signIn } from '../helpers/sync'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
@@ -58,27 +72,10 @@ const OWN_THEME_PACK = 'E2E Own Theme'
 const LANGUAGE_PACK_EXPORTED_AT = '2026-01-01T00:00:00.000Z'
 /** The account the fake Google signs in (scripts/fake-drive/server.ts). */
 const GOOGLE_ACCOUNT = 'fake-user@example.invalid'
-const NOT_AUTHENTICATED = 'Not authenticated with Google. Please sign in again.'
 /** Not a picture: the Hub checks a thumbnail's name and size only. */
 const THUMBNAIL_BASE64 = Buffer.from('e2e thumbnail').toString('base64')
 /** The Hub's files of a keymap post, sorted. */
 const KEYMAP_FILE_TYPES = ['c', 'pdf', 'pipette', 'vil']
-
-/** Puts `value` into the input `selector` as React reads an edit: typed
- *  keys reach WebKitGTK's fields unreliably. */
-async function fillInput(selector: string, value: string): Promise<void> {
-  await $(selector).waitForDisplayed()
-  await browser.execute(
-    (sel: string, text: string) => {
-      const input = document.querySelector(sel) as HTMLInputElement
-      input.focus()
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, text)
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-    },
-    selector,
-    value,
-  )
-}
 
 /** The fake Hub's account with `email`. */
 function hubUser(email: string): { display_name: string | null } | undefined {
@@ -760,7 +757,7 @@ describe('Tauri build Pipette Hub', function () {
       await switchToGoogleSession()
       await recordPageErrors()
       await $(tid('settings-button')).waitForDisplayed({ timeout: 20_000 })
-      expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: NOT_AUTHENTICATED })
+      expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: HUB_ERROR_NOT_AUTHENTICATED })
 
       await openSyncSettings()
       await signIn()
@@ -791,7 +788,7 @@ describe('Tauri build Pipette Hub', function () {
 
       await waitForHubQuiet()
       const before = fakeHub().requests.length
-      expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: NOT_AUTHENTICATED })
+      expect(await vialApi('hubFetchAuthMe')).toEqual({ success: false, error: HUB_ERROR_NOT_AUTHENTICATED })
       expect(hubRequestsSince(before)).toEqual([])
       await closeSettings()
     })
