@@ -6,6 +6,13 @@ the autostart entry at itself. Before a user's first launch, the rehearsal
 starts the release on a **copy** of that data and checks that nothing is lost
 or corrupted.
 
+**Never start a Pipette AppImage outside the rehearsal.** Any AppImage run as
+an AppImage counts as a distributed release, a locally built one and
+`dist/Pipette-linux-x86_64.AppImage` included: it opens the real
+`~/.config/pipette-desktop` and takes the real autostart entry over. Start
+one only through `rehearsal.ts`, which gives it a temporary `HOME` and XDG
+directories.
+
 The scripts never copy, move or delete data. The copy is made beforehand by
 the user, or with the user's permission.
 
@@ -18,9 +25,11 @@ the user, or with the user's permission.
   for keys the file lacks (every other key keeps its value), the analytics cache
   (`local/typing-analytics.db` and its `-wal` / `-shm`), the quit marker
   `quit-pending.json`, the autostart entry `pipette.desktop`, Chromium's
-  `lockfile` on Windows, and new files outside the data (the WebView's own
-  directories). Nothing may be removed, except the `-wal` / `-shm` journal and
-  the quit marker.
+  `lockfile` on Windows. Changes outside `.config` (the caches and data the
+  WebView and the toolkit keep under `.cache` and `.local`) and new files
+  anywhere outside the userData and autostart directories are listed only.
+  Nothing may be removed from the data, except the `-wal` / `-shm` journal
+  and the quit marker.
 - **(b) With operations**: start, go through every keyboard, snapshot,
   favorite, setting, language and theme pack, Key Label, Analyze and Typing
   Test, quit, then start again. Every file that is new or changed in the data
@@ -39,23 +48,29 @@ and the macOS privacy permissions (Accessibility, Screen Recording).
 ## Linux
 
 1. Quit the Electron build (from the tray, not just the window).
-2. Make the copy, without the `Singleton*` files:
+2. Make two copies, one for (a) and one for (b), without the `Singleton*`
+   files ((b) must not start from what (a) changed):
 
    ```sh
-   T=$(mktemp -d /tmp/pipette-rehearsal.XXXXXX)
-   mkdir -p "$T/home/.config/autostart"
-   rsync -a --exclude 'Singleton*' ~/.config/pipette-desktop/ "$T/home/.config/pipette-desktop/"
-   cp -p ~/.config/autostart/pipette.desktop "$T/home/.config/autostart/" 2>/dev/null || true
+   for run in a b; do
+     T=/tmp/pipette-rehearsal-$run
+     mkdir -p "$T/home/.config/autostart"
+     rsync -a --exclude 'Singleton*' ~/.config/pipette-desktop/ "$T/home/.config/pipette-desktop/"
+     cp -p ~/.config/autostart/pipette.desktop "$T/home/.config/autostart/" 2>/dev/null || true
+   done
    ```
 
-3. Run (a), then (b) on a fresh copy:
+3. Run (a) on the first copy and (b) on the second:
 
    ```sh
-   npx tsx scripts/takeover-rehearsal/rehearsal.ts launch-only --root "$T" --app /path/to/Pipette-linux-x86_64.AppImage
-   npx tsx scripts/takeover-rehearsal/rehearsal.ts operate     --root "$T" --app /path/to/Pipette-linux-x86_64.AppImage
+   npx tsx scripts/takeover-rehearsal/rehearsal.ts launch-only --root /tmp/pipette-rehearsal-a --app /path/to/Pipette-linux-x86_64.AppImage
+   npx tsx scripts/takeover-rehearsal/rehearsal.ts operate     --root /tmp/pipette-rehearsal-b --app /path/to/Pipette-linux-x86_64.AppImage
    ```
 
-   Add `--firejail` to cut the network off with `firejail --net=none`.
+   `--firejail` runs the app under `firejail --noprofile --net=none` (with
+   `--appimage` for an AppImage), cutting the network off. It has not been
+   tried on a machine with firejail; without it, the rehearsal relies on not
+   signing in and on the loopback destinations below.
 
 The script refuses (exit 2) when the rehearsal root is inside or holds a real
 home directory, when the rehearsal home, userData or autostart directory
@@ -65,14 +80,14 @@ there is no copy.
 
 The app runs with `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`
 and `XDG_STATE_HOME` under the rehearsal home, so its userData directory is
-`$T/home/.config/pipette-desktop` and its autostart directory
-`$T/home/.config/autostart`; no `PIPETTE_*` variable is inherited (so the
+`<root>/home/.config/pipette-desktop` and its autostart directory
+`<root>/home/.config/autostart`; no `PIPETTE_*` variable is inherited (so the
 userData directory and the autostart entry are resolved as for the user);
 `PIPETTE_HUB_TEST=1` with `PIPETTE_HUB_URL=http://127.0.0.1:9` and
 `PIPETTE_E2E=1` keep the Hub and the startup notices off the network; and the
 session bus address points at nothing, so the app does not hand over to a
 Pipette already running and does not reach the user's keyring or tray. The
-app's output and a JSON report go to `$T/reports`.
+app's output and a JSON report go to `<root>/reports`.
 
 ## Windows and macOS
 
@@ -121,8 +136,11 @@ and deleted afterwards. Its own userData directory then holds the copy.
    whose data is a path to `Pipette.exe`) and no value for the Electron
    build left under `Explorer\StartupApproved\Run`; macOS 13+: System Settings › General ›
    Login Items. Record the name of the Electron value that was removed.
-7. (b) Take a new snapshot, start Pipette, go through everything as in the
-   Linux (b), quit, then:
+7. (b) As the real user, replace the temporary user's copy with a fresh one
+   (step 2 again: delete the old copy first), so (b) does not start from what
+   (a) changed. As the temporary user, take a new snapshot
+   (`--out "<dir>/before-b.json"`), start Pipette, go through everything as in
+   the Linux (b), quit, then:
 
    ```sh
    npx tsx scripts/takeover-rehearsal/data-dir.ts compare --data "<userData>" --before "<dir>/before-b.json" --operate

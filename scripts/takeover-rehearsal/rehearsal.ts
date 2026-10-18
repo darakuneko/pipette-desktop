@@ -89,6 +89,13 @@ export function appEnv(layout: Layout, inherited: NodeJS.ProcessEnv): NodeJS.Pro
   }
 }
 
+/** The firejail arguments that run `app` without a network; an AppImage
+ *  needs `--appimage` (firejail mounts it itself). */
+export function firejailArgs(app: string): string[] {
+  const appimage = app.toLowerCase().endsWith('.appimage') ? ['--appimage'] : []
+  return ['--quiet', '--noprofile', '--net=none', ...appimage, app]
+}
+
 /** Runs the app once and waits for it to end: `launch` starts it with the
  *  environment and the file its output goes to, and resolves with its exit
  *  code. */
@@ -97,9 +104,7 @@ export type Launcher = (env: NodeJS.ProcessEnv, outputFile: string) => Promise<n
 export function processLauncher(options: Options): Launcher {
   return (env, outputFile) =>
     new Promise((resolvePromise, reject) => {
-      const [command, args] = options.firejail
-        ? ['firejail', ['--quiet', '--noprofile', '--net=none', options.app]]
-        : [options.app, []]
+      const [command, args] = options.firejail ? ['firejail', firejailArgs(options.app)] : [options.app, []]
       const output = createWriteStream(outputFile)
       const child = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
       child.stdout.pipe(output, { end: false })

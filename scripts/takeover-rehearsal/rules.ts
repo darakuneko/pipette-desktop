@@ -25,7 +25,7 @@ export type ChangeKind = 'added' | 'changed' | 'removed'
 export interface Finding {
   path: string
   change: ChangeKind
-  /** `allowed`: on the list; `outside`: a new file outside the userData
+  /** `allowed`: on the list; `outside`: a change outside the userData
    *  and autostart directories (the WebView's own data), listed only;
    *  `violation`: stops the rehearsal for the user to look at. */
   verdict: 'allowed' | 'outside' | 'violation'
@@ -151,8 +151,11 @@ export function judgeLaunchOnly(
     if (path === AUTOSTART_REL && change === 'added') {
       return { path, change, verdict: 'allowed', reason: 'the autostart directory' }
     }
-    if (change === 'added' && rel === null && inside(path, AUTOSTART_REL) === null) {
-      return { path, change, verdict: 'outside', reason: 'a new file outside the data (the WebView keeps its own)' }
+    // The rest of the home is the WebView's and the toolkit's (caches and
+    // their own data): listed only. Only `.config` holds anything of the
+    // user's there, so a change to an existing file under it still stops.
+    if (rel === null && inside(path, AUTOSTART_REL) === null && (change === 'added' || inside(path, '.config') === null)) {
+      return { path, change, verdict: 'outside', reason: 'outside the data (the WebView and the toolkit keep their own)' }
     }
     return { path, change, verdict: 'violation', reason: 'a change outside the list' }
   })

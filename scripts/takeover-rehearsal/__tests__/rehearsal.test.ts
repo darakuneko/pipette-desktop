@@ -13,7 +13,7 @@ import { dirname, join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { layoutOf, realPathsOf, refusalOf, type Layout, type RealPaths } from '../layout'
-import { appEnv, parseArgs, preflight, rehearse, RefusedError, type Launcher, type Options } from '../rehearsal'
+import { appEnv, firejailArgs, parseArgs, preflight, rehearse, RefusedError, type Launcher, type Options } from '../rehearsal'
 import { checkReadable } from '../rules'
 
 const SCRIPT = resolve(__dirname, '../rehearsal.ts')
@@ -150,6 +150,19 @@ describe('refusals before a launch', () => {
       firejail: true,
       timeoutMinutes: 120,
     })
+  })
+})
+
+describe('firejail', () => {
+  it('mounts an AppImage itself and runs any other executable as it is', () => {
+    expect(firejailArgs('/x/Pipette-linux-x86_64.AppImage')).toEqual([
+      '--quiet',
+      '--noprofile',
+      '--net=none',
+      '--appimage',
+      '/x/Pipette-linux-x86_64.AppImage',
+    ])
+    expect(firejailArgs('/x/squashfs-root/AppRun')).toEqual(['--quiet', '--noprofile', '--net=none', '/x/squashfs-root/AppRun'])
   })
 })
 
@@ -301,6 +314,30 @@ describe('a launch with operations', () => {
     )
     expect(report.readable).toEqual([expect.objectContaining({ verdict: 'unreadable', path: '.config/pipette-desktop/sync/broken.json' })])
     expect(report.passed).toBe(false)
+  })
+
+  it('lists the WebView caches changing or going on the second launch without stopping', async () => {
+    const { layout } = rehearsalRoot()
+    const cache = join(layout.home, '.cache/app.pipette.desktop/WebKitCache/salt')
+    const shader = join(layout.home, '.cache/mesa_shader_cache/index')
+    write(cache, 'old')
+    write(shader, 'old')
+    const report = await rehearse(
+      'operate',
+      layout,
+      fakeApp(layout, (l, launch) => {
+        if (launch !== 2) return
+        write(cache, 'new')
+        unlinkSync(shader)
+        write(join(l.home, '.local/share/app.pipette.desktop/storage/salt'), 's')
+      }),
+      quiet,
+    )
+    const second = report.launches[1].findings
+    expect(second.every((finding) => finding.verdict === 'outside')).toBe(true)
+    expect(second).toContainEqual(expect.objectContaining({ change: 'changed', path: '.cache/app.pipette.desktop/WebKitCache/salt' }))
+    expect(second).toContainEqual(expect.objectContaining({ change: 'removed', path: '.cache/mesa_shader_cache/index' }))
+    expect(report.passed).toBe(true)
   })
 
   it('stops at a change outside the data', async () => {
