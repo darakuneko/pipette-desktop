@@ -11,6 +11,7 @@ import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, readlink
 import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { assertDevToolsBinary } from './hub-env'
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -358,6 +359,10 @@ export type SessionEnv = Record<string, string> | ((userDataDir: string) => Reco
  *  top of the variables every session sets. */
 export async function startDriver(sessionEnv: SessionEnv = {}): Promise<DriverSession> {
   if (session) throw new Error('tauri-driver is already running')
+  // Only a build with the development tools reads PIPETTE_E2E and the
+  // loopback overrides of appEnv; any other build would use the real Hub
+  // and the real notice endpoint, so no session starts one.
+  assertDevToolsBinary(APP_BINARY)
   const userDataDir = mkdtempSync(join(tmpdir(), 'pipette-e2e-tauri-'))
   let env: Record<string, string>
   let driverEnv: NodeJS.ProcessEnv

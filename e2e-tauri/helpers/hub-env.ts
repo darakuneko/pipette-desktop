@@ -98,7 +98,7 @@ export function fileContains(path: string, marker: string): boolean {
  *  tools; checked before it is launched. */
 export function assertDevToolsBinary(path: string): void {
   if (!fileContains(path, DEV_TOOLS_MARKER)) {
-    throw new Error(`${path} is not a build with the development tools (no ${DEV_TOOLS_MARKER}); the Hub spec does not start it`)
+    throw new Error(`${path} is not a build with the development tools (no ${DEV_TOOLS_MARKER}); no e2e session starts it`)
   }
 }
 
