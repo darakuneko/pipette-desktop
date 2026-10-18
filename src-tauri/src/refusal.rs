@@ -34,13 +34,29 @@ pub fn refuse(message: &str) -> ! {
     std::process::exit(1);
 }
 
+/// GTK's message dialog, shown on this (the main) thread. rfd shows its GTK
+/// dialogs from a thread of its own, which waits forever when GTK cannot
+/// start or when this thread already owns GTK's main context.
+#[cfg(target_os = "linux")]
 fn show(message: &str) {
-    // rfd shows its GTK dialogs on a thread of its own that waits forever
-    // when GTK cannot start, so the display is tried here first.
-    #[cfg(target_os = "linux")]
+    use gtk::prelude::*;
     if gtk::init().is_err() {
         return;
     }
+    let dialog = gtk::MessageDialog::new(
+        None::<&gtk::Window>,
+        gtk::DialogFlags::MODAL,
+        gtk::MessageType::Error,
+        gtk::ButtonsType::Ok,
+        message,
+    );
+    dialog.set_title(TITLE);
+    dialog.run();
+    dialog.close();
+}
+
+#[cfg(not(target_os = "linux"))]
+fn show(message: &str) {
     rfd::MessageDialog::new()
         .set_level(rfd::MessageLevel::Error)
         .set_title(TITLE)
