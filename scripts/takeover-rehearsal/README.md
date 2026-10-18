@@ -14,7 +14,8 @@ the user, or with the user's permission.
 - **(a) Launch only**: start, look at the window, quit, with no operation.
   Every file under the rehearsal home is compared by SHA-256 before and after.
   The only changes allowed are: new log files or lines appended to a log,
-  `windowState` in `config.json`, the analytics cache
+  `windowState` in `config.json` and the defaults the config store writes
+  for keys the file lacks (every other key keeps its value), the analytics cache
   (`local/typing-analytics.db` and its `-wal` / `-shm`), the quit marker
   `quit-pending.json`, the autostart entry `pipette.desktop`, Chromium's
   `lockfile` on Windows, and new files outside the data (the WebView's own

@@ -232,6 +232,22 @@ describe('a launch without operations', () => {
     })
   }
 
+  it('lets the config store add defaults and reorder keys', async () => {
+    const { layout } = rehearsalRoot()
+    const report = await rehearse(
+      'launch-only',
+      layout,
+      fakeApp(layout, (l) =>
+        write(join(l.userData, 'config.json'), '{\n\t"theme": "system",\n\t"windowState": {"x": 3},\n\t"autoLaunch": true\n}'),
+      ),
+      quiet,
+    )
+    expect(report.launches[0].findings).toEqual([
+      expect.objectContaining({ verdict: 'allowed', reason: 'windowState; defaults added: theme' }),
+    ])
+    expect(report.passed).toBe(true)
+  })
+
   it('lets the autostart entry go when autoLaunch is off', async () => {
     const { layout } = rehearsalRoot()
     const report = await rehearse('launch-only', layout, fakeApp(layout, (l) => unlinkSync(join(l.autostart, 'pipette.desktop'))), quiet)

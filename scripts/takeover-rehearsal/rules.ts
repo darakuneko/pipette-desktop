@@ -45,23 +45,37 @@ function inside(path: string, dir: string): string | null {
   return path.startsWith(`${dir}/`) ? path.slice(dir.length + 1) : path === dir ? '' : null
 }
 
-/** The config without `windowState`, as JSON text, or null when it is not
- *  an object. */
-function configWithoutWindowState(text: string): string | null {
-  const parsed: unknown = JSON.parse(text)
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
-  const rest: Record<string, unknown> = { ...(parsed as Record<string, unknown>) }
-  delete rest.windowState
-  return JSON.stringify(rest)
+/** `value` as JSON text with the keys of every object sorted. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    return `{${entries.map(([key, inner]) => `${JSON.stringify(key)}:${canonical(inner)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
 }
 
+function configObject(text: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(text)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('not an object')
+  return parsed as Record<string, unknown>
+}
+
+/** A changed config is allowed when every key it had keeps its value
+ *  (`windowState` aside): the store also writes the default of every key
+ *  the file lacks when it opens, as electron-store does, and the key order
+ *  may change. */
 function configVerdict(dataDir: string, change: ChangeKind, configBefore: string | undefined): [boolean, string] {
   if (change === 'removed') return [false, 'the config was removed']
   try {
-    const after = configWithoutWindowState(readFileSync(join(dataDir, 'config.json'), 'utf-8'))
-    const before = configBefore === undefined ? '{}' : configWithoutWindowState(configBefore)
-    if (after !== null && after === before) return [true, 'only windowState changed']
-    return [false, 'a key other than windowState changed']
+    const after = configObject(readFileSync(join(dataDir, 'config.json'), 'utf-8'))
+    const before = configBefore === undefined ? {} : configObject(configBefore)
+    const changed = Object.keys(before).filter(
+      (key) => key !== 'windowState' && (!(key in after) || canonical(before[key]) !== canonical(after[key])),
+    )
+    if (changed.length > 0) return [false, `keys changed or removed: ${changed.join(', ')}`]
+    const added = Object.keys(after).filter((key) => !(key in before))
+    return [true, added.length > 0 ? `windowState; defaults added: ${added.join(', ')}` : 'only windowState changed']
   } catch (err) {
     return [false, `the config cannot be read: ${String(err)}`]
   }
