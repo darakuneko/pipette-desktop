@@ -57,6 +57,12 @@ export function readElement(selector: string, what: ElementRead): string | Eleme
   return { x: box.x, y: box.y, width: box.width, height: box.height }
 }
 
+/** Whether the element `selector` finds is an SVG element (one WebDriver
+ *  refuses to click as an element). */
+export function isSvgElement(selector: string): boolean {
+  return document.querySelector(selector) instanceof SVGElement
+}
+
 /** Sends a bubbling `dblclick` to the element `selector` finds, without
  *  the pointer: Playwright's `dblclick({ force: true })` on an element
  *  that need not be reachable. Answers whether there was one. */

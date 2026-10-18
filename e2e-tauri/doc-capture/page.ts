@@ -12,7 +12,7 @@
 // timeout) and refuses a locator that matches more than one.
 
 import { $, browser } from '@wdio/globals'
-import { dispatchDoubleClick, fillElement, readElement, type ElementBox, type ElementRead } from './page-element'
+import { dispatchDoubleClick, fillElement, isSvgElement, readElement, type ElementBox, type ElementRead } from './page-element'
 import { keyCombo, webdriverKey } from './page-keys'
 import {
   queryPage,
@@ -190,6 +190,10 @@ export class Locator {
       await this.waitFor({ state: 'visible', timeout: Math.max(0, deadline - Date.now()) })
       if ((await this.state()).enabled) {
         try {
+          if (await runInPage(isSvgElement, await this.mark())) {
+            await this.clickWithPointer(opts.position)
+            return
+          }
           const element = await this.markedElement()
           if (opts.position) {
             // WebDriver takes whole pixels from the element's center.
@@ -210,6 +214,18 @@ export class Locator {
       }
       await sleep(POLL_MS)
     }
+  }
+
+  /** Clicks the element with the mouse at `position` from its top-left
+   *  corner, or at its centre: WebKitWebDriver refuses an element click on
+   *  an SVG element (a key of the keymap is a `<g>`), and a click at the
+   *  point reaches the same handlers a user's click does. */
+  private async clickWithPointer(position?: { x: number; y: number }): Promise<void> {
+    const box = await this.boundingBox()
+    if (!box) throw new Error(`${this.description} has no size to click`)
+    const x = Math.round(box.x + (position?.x ?? box.width / 2))
+    const y = Math.round(box.y + (position?.y ?? box.height / 2))
+    await mouseAction().move({ x, y, origin: 'viewport' }).down({ button: 0 }).up({ button: 0 }).perform(true)
   }
 
   /** Picks the option of a `<select>` whose value (or else label) is
@@ -359,7 +375,8 @@ async function pressKeys(keys: string[]): Promise<void> {
   const action = keyAction()
   for (const key of keys) action.down(key)
   action.pause(KEY_HOLD_MS)
-  for (const key of keys) action.up(key)
+  // Released in reverse order, as Playwright does: the modifiers last.
+  for (const key of [...keys].reverse()) action.up(key)
   await action.perform(true)
 }
 
@@ -438,7 +455,9 @@ export class Page {
       const actual = await runInPage(() => ({ width: window.innerWidth, height: window.innerHeight }))
       if (actual.width === size.width && actual.height === size.height) return true
       if (Date.now() >= deadline) {
-        console.log(`  [warn] the page is ${actual.width}x${actual.height}, not ${size.width}x${size.height}`)
+        // Expected where the app keeps its own size (a minimum size, the
+        // keyboard's aspect ratio of the compact window).
+        console.log(`  [info] the page is ${actual.width}x${actual.height}, not ${size.width}x${size.height}: the app keeps its own size limits`)
         return false
       }
       await sleep(POLL_MS)

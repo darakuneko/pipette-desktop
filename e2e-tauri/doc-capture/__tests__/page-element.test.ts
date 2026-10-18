@@ -4,7 +4,7 @@
 // text, value and box reads, and the forced double click.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { dispatchDoubleClick, fillElement, readElement } from '../page-element'
+import { dispatchDoubleClick, fillElement, isSvgElement, readElement } from '../page-element'
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -72,5 +72,15 @@ describe('dispatchDoubleClick', () => {
     expect(dispatchDoubleClick('#k')).toBe(true)
     expect(seen).toEqual(['k'])
     expect(dispatchDoubleClick('#missing')).toBe(false)
+  })
+})
+
+describe('isSvgElement', () => {
+  it('tells an SVG element from an HTML one and a missing one', () => {
+    document.body.innerHTML = '<svg><g id="k"><rect id="r"></rect></g></svg><button id="b"></button>'
+    expect(isSvgElement('#k')).toBe(true)
+    expect(isSvgElement('#r')).toBe(true)
+    expect(isSvgElement('#b')).toBe(false)
+    expect(isSvgElement('#missing')).toBe(false)
   })
 })
