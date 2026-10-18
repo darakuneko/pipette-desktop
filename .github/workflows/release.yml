@@ -1,10 +1,29 @@
 name: Release
 
+# A v* tag builds the Tauri app for Linux, Windows and macOS and publishes the
+# files to a draft release, marked as a pre-release when the version has a
+# pre-release part (0.5.0-beta.1). Run by hand, it builds the same files as
+# artifacts and publishes nothing; the version input builds them under another
+# version (to try a pre-release version before tagging one), and app: electron
+# builds the Electron app instead, as this workflow did before the Tauri app.
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      app:
+        description: The app to build
+        type: choice
+        options:
+          - tauri
+          - electron
+        default: tauri
+      version:
+        description: Build under this version instead of package.json's (Tauri, no release)
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -48,7 +67,257 @@ jobs:
       - name: Verify generated docs are up to date
         run: bash scripts/check-docs-fresh.sh
 
-  build:
+  # The Rust side of the Tauri app: format, clippy in the debug build with the
+  # development tools and in the release build, and the workspace's tests.
+  test-tauri:
+    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - uses: ./.github/actions/setup-rust
+
+      # The tests start the Node fakes; the install scripts only serve the
+      # Electron build.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Format
+        working-directory: src-tauri
+        run: cargo fmt --all --check
+
+      - name: Clippy (debug, with the development tools)
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+
+      # Without the development tools: build.rs rejects them in the release
+      # profile.
+      - name: Clippy (release)
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets --release -- -D warnings
+
+      # The X11 active-window test of pipette-active-window starts a private
+      # Xvfb of its own (the apt index is fresh from setup-rust).
+      - name: Install Xvfb
+        run: sudo apt-get install -y xvfb
+
+      - name: Test
+        working-directory: src-tauri
+        env:
+          PIPETTE_REQUIRE_FAKE_OAUTH: "1"
+          PIPETTE_REQUIRE_XVFB: "1"
+        run: cargo test --workspace --features pipette-app/dev-tools
+
+  build-tauri:
+    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
+    needs: [test, test-tauri]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest supported runner, so the AppImage does not need a newer
+          # glibc than Ubuntu 22.04's.
+          - os: ubuntu-22.04
+            platform: linux
+          # Visual Studio 2022, as the Electron build of this workflow.
+          - os: windows-2022
+            platform: win
+          # Apple silicon, the only macOS build that is released.
+          - os: macos-latest
+            platform: mac
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+      # Sign and notarize the macOS app when the signing secrets exist. A tag
+      # requires them (the step "Require the signing secrets"); a run by hand
+      # without them builds the app unsigned.
+      MAC_SIGN: ${{ secrets.CSC_LINK != '' }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The files as committed: Git for Windows would turn the line ends into
+      # CRLF.
+      - name: Keep the line ends
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - uses: ./.github/actions/setup-rust
+        if: runner.os == 'Linux'
+
+      # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
+      # the Linux packages of the app and runs on Linux only.
+      - name: Install the Rust toolchain
+        if: runner.os != 'Linux'
+        working-directory: src-tauri
+        run: |
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: runner.os != 'Linux'
+        with:
+          workspaces: src-tauri -> target
+
+      # unsquashfs for scripts/repack-appimage.sh.
+      - name: Install squashfs-tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y squashfs-tools
+
+      # The install scripts only serve the Electron build; the Tauri CLI and
+      # the frontend build need none.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Set the version
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        env:
+          VERSION: ${{ inputs.version }}
+        run: npm pkg set version="$VERSION"
+
+      - name: Require the signing secrets
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=0
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The secret $name is not set"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      # The certificate Tauri imports must hold the identity it is told to
+      # sign with, a Developer ID Application one (the only kind Gatekeeper
+      # accepts outside the App Store). Checked in a keychain of its own,
+      # deleted afterwards; nothing of the certificate is printed.
+      - name: Check the signing certificate
+        if: runner.os == 'macOS' && env.MAC_SIGN == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.CSC_LINK }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          keychain="$RUNNER_TEMP/check-signing.keychain-db"
+          p12="$RUNNER_TEMP/check-signing.p12"
+          trap 'rm -f "$p12"; security delete-keychain "$keychain" 2>/dev/null || true' EXIT
+          if ! printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$p12"; then
+            echo "::error::CSC_LINK is not a base64-encoded .p12 certificate"
+            exit 1
+          fi
+          security create-keychain -p "" "$keychain"
+          if ! security import "$p12" -k "$keychain" -f pkcs12 -P "$APPLE_CERTIFICATE_PASSWORD" >/dev/null; then
+            echo "::error::CSC_LINK cannot be imported with CSC_KEY_PASSWORD"
+            exit 1
+          fi
+          if [[ "$APPLE_SIGNING_IDENTITY" != "Developer ID Application: "* ]]; then
+            echo "::error::APPLE_SIGNING_IDENTITY is not a Developer ID Application identity"
+            exit 1
+          fi
+          if ! security find-identity -v -p codesigning "$keychain" | grep -qF "\"$APPLE_SIGNING_IDENTITY\""; then
+            echo "::error::The certificate of CSC_LINK has no valid identity named APPLE_SIGNING_IDENTITY"
+            exit 1
+          fi
+
+      # Tauri's names for the secrets of the Electron build: the certificate
+      # (base64 of the .p12) and its password, and the Apple ID, app-specific
+      # password and team the app is notarized with. Tauri signs, notarizes
+      # and staples the app before it builds the dmg.
+      - name: Build (macOS, signed)
+        if: runner.os == 'macOS' && env.MAC_SIGN == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.CSC_LINK }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm exec tauri build --ci
+
+      - name: Build (macOS, unsigned)
+        if: runner.os == 'macOS' && env.MAC_SIGN != 'true'
+        run: |
+          echo "::warning::No signing secrets: the macOS app is not signed or notarized"
+          pnpm exec tauri build --ci --no-sign
+
+      # Windows is not code-signed, as the Electron build was not.
+      - name: Build (Linux, Windows)
+        if: runner.os != 'macOS'
+        run: pnpm exec tauri build --ci
+
+      # The release file names of the Electron build, which the README links
+      # to and the AppImage update information names.
+      - name: Collect the files
+        run: |
+          bundle=src-tauri/target/release/bundle
+          one() {
+            local matches=("$@")
+            if [ "${#matches[@]}" -ne 1 ] || [ ! -f "${matches[0]}" ]; then
+              echo "::error::Expected one file, found: ${matches[*]}"
+              exit 1
+            fi
+            echo "${matches[0]}"
+          }
+          mkdir -p dist
+          case "${{ matrix.platform }}" in
+            linux)
+              src=$(one "$bundle"/appimage/*.AppImage)
+              bash scripts/repack-appimage.sh "$src"
+              ;;
+            win)
+              src=$(one "$bundle"/nsis/*-setup.exe)
+              cp "$src" dist/Pipette-win-x64.exe
+              ;;
+            mac)
+              src=$(one "$bundle"/dmg/*.dmg)
+              cp "$src" dist/Pipette-mac-arm64.dmg
+              ;;
+          esac
+          ls -l dist
+
+      # The app in the dmg is the one users get: signed with the hardened
+      # runtime, notarized, the ticket stapled, and accepted by Gatekeeper.
+      - name: Verify the signature and the notarization
+        if: runner.os == 'macOS' && env.MAC_SIGN == 'true'
+        run: |
+          mnt="$RUNNER_TEMP/dmg"
+          mkdir -p "$mnt"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dist/Pipette-mac-arm64.dmg
+          trap 'hdiutil detach "$mnt"' EXIT
+          app="$mnt/Pipette.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          details=$(codesign --display --verbose=2 "$app" 2>&1)
+          grep -qE 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$details"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose=4 "$app"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: artifact-${{ matrix.platform }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.AppImage.zsync
+          if-no-files-found: error
+
+  build-electron:
+    if: github.event_name == 'workflow_dispatch' && inputs.app == 'electron'
     needs: test
     strategy:
       fail-fast: false
@@ -110,20 +379,23 @@ jobs:
             dist/*.AppImage.zsync
 
   release:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: build
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
+    needs: build-tauri
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           merge-multiple: true
 
+      # A version with a pre-release part (0.5.0-alpha.1) is a pre-release.
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
-            *.dmg
-            *.exe
-            *.AppImage
-            *.AppImage.zsync
+            Pipette-mac-arm64.dmg
+            Pipette-win-x64.exe
+            Pipette-linux-x86_64.AppImage
+            Pipette-linux-x86_64.AppImage.zsync
