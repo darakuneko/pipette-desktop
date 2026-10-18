@@ -263,19 +263,28 @@ impl ChangeStateFile {
 
     /// `hasChangeState`: whether the file is there, readable or not.
     pub async fn has(&self) -> bool {
-        let generation = {
-            let cache = self.cache();
-            if let Some(present) = cache.0 {
-                return present;
-            }
-            cache.1
+        let generation = match self.cached() {
+            Ok(present) => return present,
+            Err(generation) => generation,
         };
         let present = self.read().await != ChangeStateRead::None;
+        self.keep(generation, present);
+        present
+    }
+
+    /// The cached answer, or the generation a read starting now belongs to.
+    fn cached(&self) -> Result<bool, u64> {
+        let cache = self.cache();
+        cache.0.ok_or(cache.1)
+    }
+
+    /// Caches the answer of a read that started at `generation`, unless a
+    /// write, clear or forget happened since.
+    fn keep(&self, generation: u64, present: bool) {
         let mut cache = self.cache();
         if cache.1 == generation {
             cache.0 = Some(present);
         }
-        present
     }
 
     /// `forgetChangeStateCache`: whatever writes or removes the file (or
@@ -395,7 +404,6 @@ pub async fn clear_change_keys(secrets: &SecretStore) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use std::future::Future;
     use std::sync::Arc;
 
     use pipette_secret_store::MemoryKeystore;
@@ -476,14 +484,18 @@ mod tests {
     async fn a_read_that_overlapped_a_forget_is_not_kept() {
         let dir = tempfile::tempdir().unwrap();
         let file = ChangeStateFile::new(dir.path());
-        let mut reading = std::pin::pin!(file.has());
-        let mut context = std::task::Context::from_waker(std::task::Waker::noop());
-        // The first poll takes the generation and starts the read.
-        assert!(reading.as_mut().poll(&mut context).is_pending());
+        // The steps of `has`, with a forget and a new file between the start
+        // of the read and its answer.
+        let generation = file.cached().unwrap_err();
+        let present = file.read().await != ChangeStateRead::None;
+        assert!(!present);
         file.forget_cache();
-        assert!(!reading.await);
         std::fs::write(dir.path().join(CHANGE_STATE_FILE), "{}").unwrap();
+        file.keep(generation, present);
+        assert_eq!(file.cached(), Err(generation + 1), "the stale answer is dropped");
         assert!(file.has().await);
+        // Without an overlap the answer is kept.
+        assert_eq!(file.cached(), Ok(true));
     }
 
     #[tokio::test]
