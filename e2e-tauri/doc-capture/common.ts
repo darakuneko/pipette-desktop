@@ -106,18 +106,13 @@ export async function prepareCapture(page: Page): Promise<void> {
   await dismissNotificationModal(page)
 }
 
-/** Reads the JSON file at `path` (an empty object when it does not exist),
- *  lets `edit` change it, and writes it back. */
-export function editJsonFile(path: string, edit: (data: Record<string, unknown>) => void, indent: string | number = 2): void {
-  const data = existsSync(path) ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>) : {}
-  edit(data)
-  writeFileSync(path, JSON.stringify(data, null, indent), 'utf-8')
-}
-
-/** Edits the app's config.json of the session (tab-indented, as the app
- *  writes it). */
+/** Edits the app's config.json of the session (an empty object when it
+ *  does not exist), written back tab-indented, as the app writes it. */
 export function editAppConfig(edit: (config: Record<string, unknown>) => void): void {
-  editJsonFile(userDataPath('config.json'), edit, '\t')
+  const path = userDataPath('config.json')
+  const config = existsSync(path) ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>) : {}
+  edit(config)
+  writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
 }
 
 /** The virtual keyboard's PipetteSettings file of the session. */

@@ -18,7 +18,7 @@ import { editAppConfig, prepareCapture, relaunchApp } from './common'
 import type { Page } from './page'
 
 /** The display name of the Hub test account in the screenshots. */
-export const CAPTURE_DISPLAY_NAME = 'pipette'
+const CAPTURE_DISPLAY_NAME = 'pipette'
 /** The account the fake Hub's language and theme packs are uploaded by;
  *  its display name is the local part. */
 const COMMUNITY_ACCOUNT = 'community@example.com'

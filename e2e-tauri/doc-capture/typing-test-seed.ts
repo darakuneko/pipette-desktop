@@ -78,6 +78,17 @@ function withBaseline(settings: Record<string, unknown>): Record<string, unknown
   return settings
 }
 
+/** Writes `results` as the `typingTestResults` of the settings file
+ *  `settingsBackup` snapshotted, on top of the content it had then. */
+function writeTypingTestResults(settingsBackup: FileBackup, results: Record<string, unknown>[]): void {
+  mkdirSync(dirname(settingsBackup.path), { recursive: true })
+  const settings = withBaseline(settingsBackup.content != null
+    ? (JSON.parse(settingsBackup.content) as Record<string, unknown>)
+    : {})
+  settings.typingTestResults = results
+  writeFileSync(settingsBackup.path, JSON.stringify(settings), 'utf-8')
+}
+
 /** Seeds the Accuracy Trend seed runs above into the virtual device's
  *  pipette_settings.json, so the Accuracy Trend chart (History → Data
  *  section) has a real trend line to screenshot, and — since every run
@@ -85,13 +96,9 @@ function withBaseline(settings: Record<string, unknown>): Record<string, unknown
  *  shows real figures instead of its empty state. Merged onto
  *  whatever the file had before the capture (`settingsBackup`). */
 export function seedAccuracyTrendHistory(settingsBackup: FileBackup): void {
-  mkdirSync(dirname(settingsBackup.path), { recursive: true })
-  const existing = withBaseline(settingsBackup.content != null
-    ? (JSON.parse(settingsBackup.content) as Record<string, unknown>)
-    : {})
   const now = Date.now()
   const DAY_MS = 24 * 60 * 60 * 1000
-  existing.typingTestResults = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars], i) => {
+  const results = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars], i) => {
     // All-or-nothing error-class group (see TypingTestResult.errorSubstitutions
     // et al.) — errorTargetChars stands in for Σ target length the same way
     // analyze-seed.ts's dummy History rows do (correctChars + incorrectChars
@@ -109,7 +116,7 @@ export function seedAccuracyTrendHistory(settingsBackup: FileBackup): void {
       errorTargetChars,
     }
   })
-  writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
+  writeTypingTestResults(settingsBackup, results)
 }
 
 /** Seeds a fresh `typingTestResults` array onto the settings the virtual
@@ -117,12 +124,7 @@ export function seedAccuracyTrendHistory(settingsBackup: FileBackup): void {
  *  Training captures: History is read when the keyboard connects, so each
  *  of them runs after a relaunch with its own seed. */
 export function seedWeakSpotHistory(settingsBackup: FileBackup, results: Record<string, unknown>[]): void {
-  mkdirSync(dirname(settingsBackup.path), { recursive: true })
-  const existing = withBaseline(settingsBackup.content != null
-    ? (JSON.parse(settingsBackup.content) as Record<string, unknown>)
-    : {})
-  existing.typingTestResults = results
-  writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
+  writeTypingTestResults(settingsBackup, results)
 }
 
 /** The run log files of the session's virtual keyboard, by run id. */

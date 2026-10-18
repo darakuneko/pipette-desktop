@@ -116,10 +116,6 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
       if (await portInUse(DRIVER_HOST, DRIVER_PORT)) {
         throw new Error(`something already listens on ${DRIVER_HOST}:${DRIVER_PORT}; stop it before the capture`)
       }
-    } catch (err) {
-      refuse(err)
-    }
-    try {
       if (specs.some((spec) => HUB_SPECS.some((hubSpec) => spec.endsWith(hubSpec)))) await startHubDriver()
       else await startDriver()
     } catch (err) {

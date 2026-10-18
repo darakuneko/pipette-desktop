@@ -261,17 +261,14 @@ export class Locator {
     return (await this.read('box')) as ElementBox | null
   }
 
-  /** Double-clicks the element; with `force`, sends the `dblclick` event
-   *  in the page without waiting for it to be visible and uncovered. */
-  async dblclick(opts: { force?: boolean } = {}): Promise<void> {
-    if (opts.force) {
-      await this.waitFor({ state: 'attached' })
-      if (!(await runInPage(dispatchDoubleClick, await this.mark()))) {
-        throw new Error(`${this.description}: ${REPLACED_MESSAGE}`)
-      }
-      return
+  /** Sends the `dblclick` event in the page without waiting for the
+   *  element to be visible and uncovered: Playwright's forced double click,
+   *  the only one the capture uses. */
+  async dblclick(_opts: { force: true }): Promise<void> {
+    await this.waitFor({ state: 'attached' })
+    if (!(await runInPage(dispatchDoubleClick, await this.mark()))) {
+      throw new Error(`${this.description}: ${REPLACED_MESSAGE}`)
     }
-    await this.withElement('visible', (element) => element.doubleClick())
   }
 
   async scrollIntoViewIfNeeded(): Promise<void> {
@@ -359,11 +356,15 @@ export class Locator {
  *  order, held for {@link KEY_HOLD_MS}, then up. Keys a `down` holds stay
  *  held. */
 async function pressKeys(keys: string[]): Promise<void> {
-  const action = browser.action('key', { id: KEYBOARD_SOURCE })
+  const action = keyAction()
   for (const key of keys) action.down(key)
   action.pause(KEY_HOLD_MS)
   for (const key of keys) action.up(key)
   await action.perform(true)
+}
+
+function keyAction() {
+  return browser.action('key', { id: KEYBOARD_SOURCE })
 }
 
 function mouseAction() {
@@ -385,10 +386,10 @@ export class Page {
       }
     },
     down: async (key: string): Promise<void> => {
-      await browser.action('key', { id: KEYBOARD_SOURCE }).down(webdriverKey(key)).perform(true)
+      await keyAction().down(webdriverKey(key)).perform(true)
     },
     up: async (key: string): Promise<void> => {
-      await browser.action('key', { id: KEYBOARD_SOURCE }).up(webdriverKey(key)).perform(true)
+      await keyAction().up(webdriverKey(key)).perform(true)
     },
   }
 
