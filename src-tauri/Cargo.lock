@@ -3055,10 +3055,12 @@ version = "0.0.0"
 dependencies = [
  "auto-launch",
  "log",
+ "pipette-fs",
  "rustix",
  "serde",
  "serde_json",
  "tempfile",
+ "windows-registry",
 ]
 
 [[package]]

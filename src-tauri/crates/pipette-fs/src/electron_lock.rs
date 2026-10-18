@@ -9,6 +9,14 @@
 //! `<host name>-<pid>`. The link stays behind after a crash, so it counts
 //! as held only when it names this host and a process that is alive. Windows
 //! has no such link; there the check never finds a holder.
+//!
+//! On Windows Chromium keeps `lockfile` in the userData directory open,
+//! sharing it for reading only, while it runs. [`hold_lockfile`] opens the
+//! same file sharing nothing and keeps it open: it fails while Electron
+//! holds the file, and while this build holds it, an Electron build started
+//! later cannot open it and gives up its single-instance lock. On Linux and
+//! macOS the check is one way: an Electron build started later is not
+//! stopped.
 
 use std::path::Path;
 
@@ -76,6 +84,48 @@ fn is_alive(pid: u32) -> bool {
 #[cfg(not(unix))]
 fn is_alive(_pid: u32) -> bool {
     false
+}
+
+/// The name of the file Chromium keeps open in the userData directory on
+/// Windows while it runs.
+pub const ELECTRON_LOCKFILE: &str = "lockfile";
+
+/// Why [`hold_lockfile`] could not take the file.
+#[derive(Debug, thiserror::Error)]
+pub enum LockfileError {
+    /// Another process has the file open: a running Electron build.
+    #[error("the file is in use")]
+    InUse,
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+}
+
+/// `ERROR_SHARING_VIOLATION`: the file is open in a way this open does not
+/// share.
+#[cfg(any(windows, test))]
+const SHARING_VIOLATION: i32 = 32;
+
+/// The error of an open of the lock file that failed with `err`.
+#[cfg(any(windows, test))]
+fn classify(err: std::io::Error) -> LockfileError {
+    if err.raw_os_error() == Some(SHARING_VIOLATION) { LockfileError::InUse } else { LockfileError::Io(err) }
+}
+
+/// Opens `lockfile` in `user_data` (creating both when missing, an existing
+/// file is neither truncated nor deleted) sharing nothing, and returns it to
+/// be kept open as long as the app runs.
+#[cfg(windows)]
+pub fn hold_lockfile(user_data: &Path) -> Result<std::fs::File, LockfileError> {
+    use std::os::windows::fs::OpenOptionsExt;
+    std::fs::create_dir_all(user_data)?;
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .share_mode(0)
+        .open(user_data.join(ELECTRON_LOCKFILE))
+        .map_err(classify)
 }
 
 #[cfg(test)]
@@ -152,5 +202,62 @@ mod tests {
         lock(&dir, &format!("not-{}-{}", host_name().unwrap(), std::os::unix::process::parent_id()));
         assert_eq!(electron_lock_holder(&dir), None);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod lockfile_tests {
+    use super::*;
+
+    #[test]
+    fn only_a_sharing_violation_means_the_file_is_in_use() {
+        assert!(matches!(classify(std::io::Error::from_raw_os_error(32)), LockfileError::InUse));
+        // ERROR_ACCESS_DENIED and a plain error stay what they are.
+        assert!(matches!(classify(std::io::Error::from_raw_os_error(5)), LockfileError::Io(_)));
+        assert!(matches!(classify(std::io::Error::other("x")), LockfileError::Io(_)));
+    }
+
+    /// Chromium's open of the file: write access, shared for reading only.
+    #[cfg(windows)]
+    fn open_as_chromium(dir: &Path) -> std::io::Result<std::fs::File> {
+        use std::os::windows::fs::OpenOptionsExt;
+        const FILE_SHARE_READ: u32 = 1;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .share_mode(FILE_SHARE_READ)
+            .open(dir.join(ELECTRON_LOCKFILE))
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_held_file_keeps_chromium_out_until_it_is_closed() {
+        let dir = tempfile::tempdir().unwrap();
+        let user_data = dir.path().join("pipette-desktop");
+        let held = hold_lockfile(&user_data).unwrap();
+        let refused = open_as_chromium(&user_data).unwrap_err();
+        assert_eq!(refused.raw_os_error(), Some(SHARING_VIOLATION));
+        drop(held);
+        open_as_chromium(&user_data).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_file_chromium_holds_is_in_use() {
+        let dir = tempfile::tempdir().unwrap();
+        let chromium = open_as_chromium(dir.path()).unwrap();
+        assert!(matches!(hold_lockfile(dir.path()), Err(LockfileError::InUse)));
+        drop(chromium);
+        hold_lockfile(dir.path()).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn an_existing_file_keeps_its_content() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(ELECTRON_LOCKFILE), b"left behind").unwrap();
+        drop(hold_lockfile(dir.path()).unwrap());
+        assert_eq!(std::fs::read(dir.path().join(ELECTRON_LOCKFILE)).unwrap(), b"left behind");
     }
 }

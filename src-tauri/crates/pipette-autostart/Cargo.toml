@@ -10,12 +10,21 @@ rust-version.workspace = true
 
 [dependencies]
 log = "=0.4.34"
+# The variable of an isolated userData directory, which keeps a build away
+# from the real entry.
+pipette-fs = { path = "../pipette-fs" }
 
-# The login item of Windows (the Run key of the current user) and macOS
-# (SMAppService), Electron's app.setLoginItemSettings. MIT. Linux writes the
-# desktop entry itself (src/linux.rs), byte for byte the one Electron writes.
-[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+# The login item of macOS (SMAppService), Electron's
+# app.setLoginItemSettings. MIT. Linux writes the desktop entry itself
+# (src/linux.rs), byte for byte the one Electron writes.
+[target.'cfg(target_os = "macos")'.dependencies]
 auto-launch = { version = "=0.6.0", default-features = false }
+
+# The Windows Run key (src/windows_run.rs), written as Electron writes it,
+# with the Electron build's values found by their data. MIT or Apache-2.0;
+# the version the auto-launch crate also uses.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-registry = "=0.6.1"
 
 # The user id of the process, for its line in /etc/passwd (src/passwd.rs),
 # and the directory-relative calls of a development directory's entry

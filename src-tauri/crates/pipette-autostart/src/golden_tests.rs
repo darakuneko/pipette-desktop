@@ -192,6 +192,7 @@ fn every_scenario_registers_as_the_electron_build_does() {
             current_exe: Ok(PathBuf::from(&fixture.exec_path)),
             dev_dir: None,
             user_data: home.path().join("user-data"),
+            user_data_override: false,
         };
         for (index, step) in std::iter::once(&scenario.boot).chain(&scenario.steps).enumerate() {
             let on = enabled(&step.action);

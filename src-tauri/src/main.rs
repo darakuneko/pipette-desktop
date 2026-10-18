@@ -3,9 +3,10 @@
 // definition, app config and window commands its vialAPI shim calls, the
 // typing analytics, the tray of tray.rs, the quit handling of lifecycle.rs
 // and the window geometry of window_ops. Before any of that it settles the
-// userData directory and refuses to start while the Electron build holds it;
-// once no other instance of this build runs, it starts the log in the
-// directory and loads the app config.
+// userData directory (the Electron build's for a distributed build) and
+// refuses to start while the Electron build holds it; once no other instance
+// of this build runs, it locks the directory against the Electron build on
+// Windows, starts the log in the directory and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
 // console next to the window on Windows. build.rs sets `release_profile`, from
@@ -32,6 +33,7 @@ mod lifecycle;
 mod main_window;
 mod navigation;
 mod notification_commands;
+mod refusal;
 mod shell;
 mod shutdown;
 mod store_commands;
@@ -44,7 +46,7 @@ mod window_ops;
 mod window_state;
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use pipette_hid::{HidService, VirtualDeviceMode};
 use tauri::ipc::Invoke;
@@ -317,35 +319,55 @@ fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 /// app keeps on disk.
 pub struct UserDataDir(pub PathBuf);
 
-/// The userData directory, or the reason the app cannot start, for stderr.
-/// Runs before the log exists, so nothing is written to the directory of a
-/// running Electron build.
-fn startup_user_data() -> Result<PathBuf, String> {
-    let dir = pipette_fs::user_data_dir().map_err(|err| format!("cannot start: {err}"))?;
-    refuse_if_electron_holds(&dir)?;
-    Ok(dir)
+/// Whether this is a distributed build (`pipette_fs::is_distributed_build`):
+/// a release build without the development tools, run from the executable a
+/// release ships. It decides the default userData directory and whether
+/// the app registers itself to start at sign-in (app_config.rs).
+pub fn distributed_build() -> bool {
+    static DISTRIBUTED: OnceLock<bool> = OnceLock::new();
+    *DISTRIBUTED.get_or_init(|| {
+        pipette_fs::is_distributed_build(cfg!(release_profile) && !cfg!(feature = "dev-tools"))
+    })
 }
 
-fn refuse_if_electron_holds(dir: &Path) -> Result<(), String> {
-    match pipette_fs::electron_lock_holder(dir) {
-        Some(holder) => Err(format!(
-            "cannot start: the Electron build of Pipette (pid {}) is running with the data directory {}. \
-             Quit it first.",
-            holder.pid,
-            dir.display()
-        )),
-        None => Ok(()),
+/// The userData directory. Exits when there is none or a running Electron
+/// build holds it (Linux and macOS); runs before the log exists, so nothing
+/// is written to the directory of a running Electron build.
+fn startup_user_data() -> PathBuf {
+    let dir = match pipette_fs::user_data_dir(distributed_build()) {
+        Ok(dir) => dir,
+        Err(err) => {
+            eprintln!("cannot start: {err}");
+            std::process::exit(1);
+        }
+    };
+    if let Some(holder) = pipette_fs::electron_lock_holder(&dir) {
+        refusal::refuse(&refusal::electron_running(&dir, Some(holder.pid)));
+    }
+    dir
+}
+
+/// On Windows, opens the Electron build's `lockfile` in `dir` sharing
+/// nothing and keeps it open until the process ends: a running Electron
+/// build makes the open fail, and an Electron build started later cannot
+/// take the directory. Runs after the single-instance check, so a second
+/// launch of this build hands over to the first instead of finding the
+/// file in use, and before the log, so nothing is written to the directory
+/// of a running Electron build.
+#[cfg(target_os = "windows")]
+fn lock_against_electron(dir: &Path) {
+    static HELD: OnceLock<std::fs::File> = OnceLock::new();
+    match pipette_fs::hold_lockfile(dir) {
+        Ok(file) => {
+            let _ = HELD.set(file);
+        }
+        Err(pipette_fs::LockfileError::InUse) => refusal::refuse(&refusal::electron_running(dir, None)),
+        Err(err) => refusal::refuse(&refusal::lock_failed(dir, &err)),
     }
 }
 
 fn main() {
-    let user_data = match startup_user_data() {
-        Ok(dir) => dir,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(1);
-        }
-    };
+    let user_data = startup_user_data();
     // The single-instance plugin, registered first, runs while the app is
     // built: a second launch hands over to the running app there and exits
     // with 0. So the log, the app config and the HID service, which the
@@ -383,6 +405,8 @@ fn main() {
         .on_window_event(on_window_event);
     let builder = dev_commands::install_or_passthrough(builder, app_commands(), lifecycle::on_page_load);
     let built = builder.build(tauri::generate_context!());
+    #[cfg(target_os = "windows")]
+    lock_against_electron(&user_data);
     start_log(&user_data);
     let app = match built {
         Ok(app) => app,
