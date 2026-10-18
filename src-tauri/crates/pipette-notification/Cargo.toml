@@ -17,8 +17,14 @@ pipette-js-json = { path = "../pipette-js-json" }
 pipette-time = { path = "../pipette-time" }
 log = "=0.4.34"
 serde = { workspace = true }
+# The 10-second limit of the whole fetch (src/lib.rs).
+tokio = { version = "=1.53.3", features = ["time"] }
+
+[dev-dependencies]
+# The tests' runtime, with paused time for the time limit.
+tokio = { version = "=1.53.3", features = ["rt", "macros", "time", "test-util"] }
+# Reads the golden file and checks the result's JSON form.
 serde_json = { workspace = true }
-thiserror = "=2.0.21"
 
 [lints]
 workspace = true

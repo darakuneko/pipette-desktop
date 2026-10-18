@@ -35,10 +35,6 @@ fn usable_in_run(endpoints: GoogleEndpoints, e2e_run: bool) -> Result<GoogleEndp
 /// an e2e run (`e2e_run`, from [`is_e2e_run`]), and in one only from
 /// 127.0.0.1 or ::1. The error is the `error` of the notice command's
 /// failed result; nothing is sent then.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the startup-notice command that calls it is not registered yet")
-)]
 pub fn notification_destination_allowed(url: &str, e2e_run: bool) -> Result<(), String> {
     if e2e_run && !is_loopback_url(url) {
         return Err(
