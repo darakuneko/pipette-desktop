@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The registrations against tests/fixtures/autostart.json, recorded from
 //! the Electron build (scripts/resident-fixtures/record-autostart-fixtures.test.ts):
-//! each scenario's launch and `autoLaunch` changes, run with the build
-//! allowed to register itself and a temporary HOME standing in for the
-//! user's. What is compared: the login-item calls, the log lines (only the
+//! each scenario's launch and `autoLaunch` changes, run on a temporary
+//! HOME standing in for the user's. What is compared: the login-item calls, the log lines (only the
 //! start of a message that carries the system's error text) and the files
 //! of `$HOME/.config/autostart` (and of `XDG_CONFIG_HOME`) after each step.
 
@@ -192,12 +191,13 @@ fn every_scenario_registers_as_the_electron_build_does() {
             current_exe: Ok(PathBuf::from(&fixture.exec_path)),
             dev_dir: None,
             user_data: home.path().join("user-data"),
+            user_data_override: false,
         };
         for (index, step) in std::iter::once(&scenario.boot).chain(&scenario.steps).enumerate() {
             let on = enabled(&step.action);
             capture();
             let mut calls = Vec::new();
-            match target(true, &env) {
+            match target(&env) {
                 // The login item is the OS's: recorded, not made.
                 Target::LoginItem => {
                     calls.push(json!({"call": "app.setLoginItemSettings", "args": [{"openAtLogin": on}]}))

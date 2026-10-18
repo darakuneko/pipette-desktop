@@ -1,23 +1,31 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Starting the app at sign-in, which the Electron build sets up in
 //! `applyAutoLaunch` of src/main/app-behavior.ts: on Linux the desktop entry
-//! `$HOME/.config/autostart/pipette.desktop` (src/linux.rs), on Windows and
-//! macOS the OS's login item (src/other.rs).
+//! `$HOME/.config/autostart/pipette.desktop` (src/linux.rs), on Windows the
+//! current user's Run key (src/windows_run.rs), on macOS the login item
+//! (src/macos.rs). The entry is the one the Electron build writes, taken
+//! over on purpose: a distributed build points it at itself, or removes it.
 //!
-//! [`AUTOSTART_APPLIES`] keeps every build away from the real autostart
-//! entry: while it is false, the only place an entry is written to or
-//! removed from is the directory a development tools' build is given in
-//! `PIPETTE_DEV_AUTOSTART_DIR` (src/dev_dir.rs), and every other build logs
-//! a warning and does nothing.
+//! Only a distributed build reaches the real entry (`packaged`, from
+//! `is_distributed_build` of pipette-fs), and not while
+//! `PIPETTE_USER_DATA_DIR` names a userData directory of its own (a run on
+//! a copy of the data, an isolated session). A development tools' build
+//! writes only into the directory it is given in `PIPETTE_DEV_AUTOSTART_DIR`
+//! (src/dev_dir.rs); every other build logs a warning and does nothing.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+use pipette_fs::{USER_DATA_DIR_ENV, user_data_override};
+
 mod dev_dir;
 mod linux;
-#[cfg(any(target_os = "windows", target_os = "macos"))]
-mod other;
+#[cfg(target_os = "macos")]
+mod macos;
 mod passwd;
+// The plan is pure and tested everywhere; the registry calls are Windows only.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+mod windows_run;
 
 #[cfg(test)]
 mod golden_tests;
@@ -26,45 +34,24 @@ mod tests;
 
 pub use dev_dir::VARIABLE as DEV_DIR_VARIABLE;
 
-/// Whether a build may register itself to start at sign-in. False: the
-/// Electron build owns the shared entry, and a Tauri build must neither
-/// write nor remove it. It turns true in the same change that makes the
-/// Tauri build take over the Electron build's userData directory
-/// (`MIGRATION_USER_DATA_NAME` of pipette-fs), so that from then on the
-/// entry points at the Tauri build.
-pub const AUTOSTART_APPLIES: bool = false;
+/// The operating system, which decides how the app is registered
+/// (`Other`: a system the Electron build registers nothing on).
+pub use pipette_fs::Platform as Os;
 
-/// The operating system, which decides how the app is registered.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Os {
-    Linux,
-    Windows,
-    MacOs,
-    /// Every other system, where the Electron build registers nothing.
-    Other,
-}
-
-impl Os {
-    pub const fn current() -> Self {
-        if cfg!(target_os = "linux") {
-            Self::Linux
-        } else if cfg!(target_os = "windows") {
-            Self::Windows
-        } else if cfg!(target_os = "macos") {
-            Self::MacOs
-        } else {
-            Self::Other
-        }
-    }
-}
+/// The product name: the login item's name on Windows and macOS.
+const PRODUCT_NAME: &str = "Pipette";
 
 /// What deciding and writing the registration reads from the process.
 #[derive(Clone, Debug)]
 pub struct Environment {
     pub os: Os,
-    /// Whether this is a build that gets bundled. The Electron build skips
-    /// unpackaged builds, whose executable is not the app.
+    /// Whether this is a distributed build (`is_distributed_build` of
+    /// pipette-fs). The Electron build skips unpackaged builds, whose
+    /// executable is not the app.
     pub packaged: bool,
+    /// Whether `PIPETTE_USER_DATA_DIR` is set to a value: the app runs on a
+    /// userData directory of its own and leaves the real entry alone.
+    pub user_data_override: bool,
     /// The home directory: `$HOME`, else the user's entry in the system's
     /// user database (Node's `os.homedir()`). The real entry lives in its
     /// `.config/autostart`; `XDG_CONFIG_HOME` does not move it.
@@ -92,7 +79,7 @@ pub struct Environment {
 
 impl Environment {
     /// The environment of this process. `packaged` is whether this is a
-    /// build that gets bundled, `dev_tools` whether it has the development
+    /// distributed build, `dev_tools` whether it has the development
     /// tools, the only builds that read `PIPETTE_DEV_AUTOSTART_DIR`.
     pub fn of_process(packaged: bool, dev_tools: bool, user_data: &Path) -> Self {
         Self {
@@ -114,6 +101,7 @@ impl Environment {
         Self {
             os: Os::current(),
             packaged,
+            user_data_override: user_data_override(var(USER_DATA_DIR_ENV)).is_some(),
             home: None,
             home_var: var("HOME"),
             passwd_home: None,
@@ -180,7 +168,7 @@ enum Target {
     /// through a temporary file and a rename, and only over (or removing)
     /// a regular file with no other link (src/linux.rs).
     DevDirectory(dev_dir::Checked),
-    /// The login item of Windows or macOS.
+    /// The login item of Windows (the Run key) or macOS.
     LoginItem,
     /// Nowhere, with this warning.
     Skip(String),
@@ -194,14 +182,14 @@ enum Target {
 /// it, as `applyAutoLaunch` does: at every launch and on every change of
 /// `autoLaunch`. Failures are logged, never returned.
 pub fn apply(enabled: bool, env: &Environment) {
-    run(target(AUTOSTART_APPLIES, env), enabled, env);
+    run(target(env), enabled, env);
 }
 
-/// The target for `env` when the build may register itself (`applies`).
-/// A development directory comes first, so a build that has one never
+/// The target for `env`. A development directory comes first, so a build that has one never
 /// reaches the real entry; a directory that is refused is not replaced by
-/// the real one.
-fn target(applies: bool, env: &Environment) -> Target {
+/// the real one. Then only a distributed build without
+/// `PIPETTE_USER_DATA_DIR` reaches it.
+fn target(env: &Environment) -> Target {
     if let Some(dir) = &env.dev_dir {
         if env.os != Os::Linux {
             return Target::Skip(format!("auto-launch skipped: {DEV_DIR_VARIABLE} is read on Linux only"));
@@ -212,8 +200,8 @@ fn target(applies: bool, env: &Environment) -> Target {
             Err(reason) => Target::Refused(format!("auto-launch: {reason}")),
         };
     }
-    if !applies {
-        return Target::Skip("auto-launch skipped: this build does not start at sign-in".to_owned());
+    if env.user_data_override {
+        return Target::Skip(format!("auto-launch skipped: {USER_DATA_DIR_ENV} is set"));
     }
     if !env.packaged {
         return Target::Skip("auto-launch skipped: unpackaged build".to_owned());
@@ -246,7 +234,11 @@ fn login_item(enabled: bool, env: &Environment) {
     if cfg!(test) {
         panic!("a test reached the OS's login item");
     }
-    other::apply(enabled, env.current_exe.as_deref().map_err(String::as_str));
+    let exe = env.current_exe.as_deref().map_err(String::as_str);
+    #[cfg(target_os = "windows")]
+    windows_run::system::apply(enabled, exe);
+    #[cfg(target_os = "macos")]
+    macos::apply(enabled, exe);
 }
 
 /// No build for these systems resolves to a login item ([`Os::current`]).

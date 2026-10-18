@@ -71,9 +71,9 @@ pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
 /// `trayResident` adds or removes the tray, `autoSync` starts or stops the
 /// polling and the flush (sync_commands/triggers.rs), `autoLaunch`
 /// registers or unregisters the app to start at sign-in (pipette-autostart,
-/// which writes nothing outside a development directory while
-/// `AUTOSTART_APPLIES` is false). Then applies the stored `autoLaunch`, as
-/// the Electron build does at every launch.
+/// which reaches the real entry only in a distributed build without
+/// `PIPETTE_USER_DATA_DIR`). Then applies the stored `autoLaunch`, as the
+/// Electron build does at every launch.
 ///
 /// The listener runs under the store lock, once per set in the order the
 /// sets were saved. The zoom, the tray and the sign-in changes are queued
@@ -112,13 +112,14 @@ pub fn listen_for_changes(app: &AppHandle) {
     }
 }
 
-/// Registers the app to start at sign-in, or unregisters it. A build that
-/// gets bundled is the release profile's; only a build with the
+/// Registers the app to start at sign-in, or unregisters it. Only a
+/// distributed build counts as packaged (the same build that takes the
+/// Electron build's userData directory over); only a build with the
 /// development tools reads `PIPETTE_DEV_AUTOSTART_DIR`, which must be
 /// inside `user_data`.
 fn apply_auto_launch(enabled: bool, user_data: &Path) {
     let env = pipette_autostart::Environment::of_process(
-        cfg!(release_profile),
+        crate::distributed_build(),
         cfg!(feature = "dev-tools"),
         user_data,
     );

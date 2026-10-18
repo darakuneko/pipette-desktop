@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The autostart tests of src/main/__tests__/app-behavior.test.ts, and the
-//! guards that keep a build away from the real entry: nothing is written
-//! or removed while `AUTOSTART_APPLIES` is false, wherever userData lives,
-//! and a development directory is refused when it reaches a real autostart
+//! guards that keep a build away from the real entry: only a distributed
+//! build without an isolated userData directory writes or removes it, and a
+//! development directory is refused when it reaches a real autostart
 //! directory. Every test runs on a temporary HOME.
 
 use std::cell::RefCell;
@@ -13,10 +13,8 @@ use std::path::{Path, PathBuf};
 
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
-use crate::linux::FAILURE;
-#[cfg(unix)]
-use crate::linux::desktop_entry;
-use crate::{AUTOSTART_APPLIES, DEV_DIR_VARIABLE, Environment, Os, Target, apply, run, target};
+use crate::linux::{FAILURE, desktop_entry};
+use crate::{DEV_DIR_VARIABLE, Environment, Os, Target, apply, target};
 
 thread_local! {
     static RECORDS: RefCell<Vec<(Level, String)>> = const { RefCell::new(Vec::new()) };
@@ -67,16 +65,12 @@ fn linux_env(home: &Path) -> Environment {
         current_exe: Ok(PathBuf::from(EXE)),
         dev_dir: None,
         user_data: home.join("session"),
+        user_data_override: false,
     }
 }
 
 fn real_entry(home: &Path) -> PathBuf {
     home.join(".config").join("autostart").join("pipette.desktop")
-}
-
-/// Runs a change as a build allowed to register itself would.
-fn apply_allowed(enabled: bool, env: &Environment) {
-    run(target(true, env), enabled, env);
 }
 
 /// Every file and directory under `root` with the files' bytes, symbolic
@@ -112,7 +106,7 @@ fn is_a_no_op_when_unpackaged() {
     let home = tempfile::tempdir().expect("HOME");
     let env = Environment { packaged: false, ..linux_env(home.path()) };
     capture();
-    apply_allowed(true, &env);
+    apply(true, &env);
     assert!(!real_entry(home.path()).exists());
     assert_eq!(records(), [(Level::Warn, "auto-launch skipped: unpackaged build".to_owned())]);
 }
@@ -122,7 +116,7 @@ fn windows_and_macos_use_the_login_item_and_write_no_file() {
     for os in [Os::Windows, Os::MacOs] {
         let home = tempfile::tempdir().expect("HOME");
         let env = Environment { os, ..linux_env(home.path()) };
-        assert_eq!(target(true, &env), Target::LoginItem);
+        assert_eq!(target(&env), Target::LoginItem);
         assert!(snapshot(home.path()).is_empty());
     }
 }
@@ -131,7 +125,7 @@ fn windows_and_macos_use_the_login_item_and_write_no_file() {
 fn writes_the_entry_with_the_executable_by_default() {
     let home = tempfile::tempdir().expect("HOME");
     capture();
-    apply_allowed(true, &linux_env(home.path()));
+    apply(true, &linux_env(home.path()));
     let entry = fs::read(real_entry(home.path())).expect("the entry");
     assert_eq!(
         entry,
@@ -147,7 +141,7 @@ fn prefers_appimage_over_the_executable_even_when_empty() {
     {
         let home = tempfile::tempdir().expect("HOME");
         let env = Environment { appimage: Some(OsString::from(appimage)), ..linux_env(home.path()) };
-        apply_allowed(true, &env);
+        apply(true, &env);
         let entry = fs::read_to_string(real_entry(home.path())).expect("the entry");
         assert!(entry.contains(exec), "{entry}");
     }
@@ -157,9 +151,9 @@ fn prefers_appimage_over_the_executable_even_when_empty() {
 fn removes_the_entry_when_disabled() {
     let home = tempfile::tempdir().expect("HOME");
     let env = linux_env(home.path());
-    apply_allowed(true, &env);
+    apply(true, &env);
     assert!(real_entry(home.path()).exists());
-    apply_allowed(false, &env);
+    apply(false, &env);
     assert!(!real_entry(home.path()).exists());
 }
 
@@ -167,7 +161,7 @@ fn removes_the_entry_when_disabled() {
 fn disabling_an_entry_that_never_existed_logs_nothing() {
     let home = tempfile::tempdir().expect("HOME");
     capture();
-    apply_allowed(false, &linux_env(home.path()));
+    apply(false, &linux_env(home.path()));
     assert!(records().is_empty());
 }
 
@@ -176,7 +170,7 @@ fn an_executable_that_cannot_be_found_is_logged() {
     let home = tempfile::tempdir().expect("HOME");
     let env = Environment { current_exe: Err("gone".to_owned()), ..linux_env(home.path()) };
     capture();
-    apply_allowed(true, &env);
+    apply(true, &env);
     assert!(!real_entry(home.path()).exists());
     assert_eq!(records(), [(Level::Error, format!("{FAILURE}gone"))]);
 }
@@ -190,16 +184,7 @@ fn the_path_bytes_are_written_as_they_are() {
     assert!(desktop_entry(&exec).windows(needle.len()).any(|w| w == needle));
 }
 
-// --- AUTOSTART_APPLIES = false ---
-
-#[test]
-#[expect(
-    clippy::assertions_on_constants,
-    reason = "the tests below rely on the build not registering itself"
-)]
-fn builds_do_not_register_themselves() {
-    assert!(!AUTOSTART_APPLIES);
-}
+// --- Which builds reach the real entry ---
 
 /// A HOME holding the user's real entry, another program's entry, the
 /// userData directories of both builds, and `session`, the userData
@@ -218,62 +203,126 @@ fn populated_home() -> tempfile::TempDir {
     home
 }
 
+/// The environment of a Linux build on `home` that is `packaged` or not,
+/// with or without the development tools, given `PIPETTE_USER_DATA_DIR`
+/// (`user_data`) and `XDG_CONFIG_HOME` (`xdg`).
+fn process_env(
+    home: &Path,
+    packaged: bool,
+    dev_tools: bool,
+    user_data: Option<&Path>,
+    xdg: Option<&Path>,
+) -> Environment {
+    let vars: BTreeMap<&str, OsString> = [
+        ("HOME", Some(home.as_os_str().to_owned())),
+        ("PIPETTE_USER_DATA_DIR", user_data.map(|dir| dir.as_os_str().to_owned())),
+        ("XDG_CONFIG_HOME", xdg.map(|dir| dir.as_os_str().to_owned())),
+    ]
+    .into_iter()
+    .filter_map(|(name, value)| Some((name, value?)))
+    .collect();
+    let env = Environment::from_vars(
+        packaged,
+        dev_tools,
+        |name| vars.get(name).cloned(),
+        user_data.unwrap_or(home),
+    );
+    Environment { os: Os::Linux, home: Some(home.to_path_buf()), current_exe: Ok(PathBuf::from(EXE)), ..env }
+}
+
+/// Applies on, off and on again and checks that nothing under `home`
+/// changed and `warning` was logged each time.
+fn assert_untouched(env: &Environment, home: &Path, warning: &str) {
+    let before = snapshot(home);
+    for enabled in [true, false, true] {
+        capture();
+        apply(enabled, env);
+        assert_eq!(records(), [(Level::Warn, warning.to_owned())]);
+        assert_eq!(snapshot(home), before, "{env:?}");
+    }
+}
+
 #[test]
-fn a_build_writes_and_removes_nothing_wherever_user_data_lives() {
+fn a_build_that_is_not_distributed_writes_and_removes_nothing() {
     let home = populated_home();
-    let before = snapshot(home.path());
     let config = home.path().join(".config");
-    let user_data = [
-        None,
-        Some(config.join("app.pipette.desktop")),
-        Some(config.join("pipette-desktop")),
-        Some(config.join("custom-user-data")),
-    ];
-    for user_data in user_data {
-        for (packaged, dev_tools) in [(true, false), (false, false), (false, true)] {
-            for xdg in [None, Some(config.clone())] {
-                let vars: BTreeMap<&str, OsString> = [
-                    ("HOME", Some(home.path().as_os_str().to_owned())),
-                    ("PIPETTE_USER_DATA_DIR", user_data.clone().map(PathBuf::into_os_string)),
-                    ("XDG_CONFIG_HOME", xdg.clone().map(PathBuf::into_os_string)),
-                ]
-                .into_iter()
-                .filter_map(|(name, value)| Some((name, value?)))
-                .collect();
-                let env = Environment::from_vars(
-                    packaged,
-                    dev_tools,
-                    |name| vars.get(name).cloned(),
-                    user_data.as_deref().unwrap_or(home.path()),
-                );
-                let env = Environment {
-                    os: Os::Linux,
-                    home: Some(home.path().to_path_buf()),
-                    current_exe: Ok(PathBuf::from(EXE)),
-                    ..env
-                };
-                for enabled in [true, false, true] {
-                    capture();
-                    apply(enabled, &env);
-                    assert_eq!(
-                        records(),
-                        [(
-                            Level::Warn,
-                            "auto-launch skipped: this build does not start at sign-in".to_owned()
-                        )]
-                    );
-                    assert_eq!(snapshot(home.path()), before, "{user_data:?} {packaged} {dev_tools}");
-                }
+    for dev_tools in [false, true] {
+        for xdg in [None, Some(config.as_path())] {
+            let env = process_env(home.path(), false, dev_tools, None, xdg);
+            assert_untouched(&env, home.path(), "auto-launch skipped: unpackaged build");
+        }
+    }
+}
+
+#[test]
+fn a_build_on_a_user_data_directory_of_its_own_writes_and_removes_nothing() {
+    // Wherever the variable points, the Electron directory included: a run
+    // on a copy of the data or an isolated session never reaches the
+    // entry of the user it runs as.
+    let home = populated_home();
+    let config = home.path().join(".config");
+    for user_data in ["app.pipette.desktop", "pipette-desktop", "custom-user-data"] {
+        for packaged in [true, false] {
+            for xdg in [None, Some(config.as_path())] {
+                let env = process_env(home.path(), packaged, false, Some(&config.join(user_data)), xdg);
+                assert_untouched(&env, home.path(), "auto-launch skipped: PIPETTE_USER_DATA_DIR is set");
+            }
+        }
+    }
+    for os in [Os::Windows, Os::MacOs] {
+        let env = Environment { os, ..process_env(home.path(), true, false, Some(&config.join("x")), None) };
+        assert_eq!(
+            target(&env),
+            Target::Skip("auto-launch skipped: PIPETTE_USER_DATA_DIR is set".to_owned())
+        );
+    }
+}
+
+#[test]
+fn an_empty_user_data_variable_counts_as_unset() {
+    let home = populated_home();
+    let vars = |name: &str| (name == "PIPETTE_USER_DATA_DIR").then(OsString::new);
+    let env = Environment::from_vars(true, false, vars, home.path());
+    assert!(!env.user_data_override);
+}
+
+#[test]
+fn only_a_distributed_build_without_an_isolated_user_data_reaches_the_login_item() {
+    let home = populated_home();
+    let isolated = home.path().join("session");
+    for os in [Os::Windows, Os::MacOs] {
+        for packaged in [true, false] {
+            for user_data in [None, Some(isolated.as_path())] {
+                let env = Environment { os, ..process_env(home.path(), packaged, false, user_data, None) };
+                let reaches = target(&env) == Target::LoginItem;
+                assert_eq!(reaches, packaged && user_data.is_none(), "{os:?} {packaged} {user_data:?}");
             }
         }
     }
 }
 
 #[test]
+fn the_distributed_build_takes_the_shared_entry_over() {
+    let home = populated_home();
+    let before = snapshot(home.path());
+    let env = process_env(home.path(), true, false, None, None);
+    capture();
+    apply(true, &env);
+    assert!(records().is_empty(), "{:?}", records());
+    assert_eq!(fs::read(real_entry(home.path())).expect("the entry"), desktop_entry(EXE.as_ref()));
+    apply(false, &env);
+    assert!(!real_entry(home.path()).exists());
+    // Nothing else changed: another program's entry, the userData
+    // directories.
+    let mut expected = before;
+    expected.remove(&Path::new(".config").join("autostart").join("pipette.desktop"));
+    assert_eq!(snapshot(home.path()), expected);
+}
+
+#[test]
 fn a_build_without_the_development_tools_ignores_the_directory_variable() {
     let home = populated_home();
-    let dev = home.path().join("dev-autostart");
-    let before = snapshot(home.path());
+    let dev = home.path().join("session").join("dev-autostart");
     let vars = |name: &str| (name == DEV_DIR_VARIABLE).then(|| dev.clone().into_os_string());
     let env = Environment::from_vars(true, false, vars, home.path());
     assert_eq!(env.dev_dir, None);
@@ -283,9 +332,11 @@ fn a_build_without_the_development_tools_ignores_the_directory_variable() {
         current_exe: Ok(PathBuf::from(EXE)),
         ..env
     };
+    // A distributed build: the real entry, never the variable's directory.
+    assert_eq!(target(&env), Target::Directory(home.path().join(".config").join("autostart")));
     apply(true, &env);
     apply(false, &env);
-    assert_eq!(snapshot(home.path()), before);
+    assert!(!dev.exists());
 }
 
 // --- PIPETTE_DEV_AUTOSTART_DIR ---
@@ -314,9 +365,8 @@ fn assert_refused(env: &Environment, home: &Path, reason: &str) {
         assert!(logs[0].1.starts_with(&format!("auto-launch: {DEV_DIR_VARIABLE} {reason}")), "{}", logs[0].1);
         assert_eq!(snapshot(home), before);
     }
-    // Even a build allowed to register itself does not fall back to the
-    // real entry.
-    assert!(matches!(target(true, env), Target::Refused(_)));
+    // A distributed build does not fall back to the real entry either.
+    assert!(matches!(target(env), Target::Refused(_)));
 }
 
 /// Applies a target checked earlier on and off and checks that nothing
@@ -327,7 +377,7 @@ fn assert_not_used(checked: &crate::dev_dir::Checked, env: &Environment, home: &
     let before = snapshot(home);
     for enabled in [true, false] {
         capture();
-        run(Target::DevDirectory(checked.clone()), enabled, env);
+        crate::run(Target::DevDirectory(checked.clone()), enabled, env);
         let logs = records();
         assert_eq!(logs.len(), 1, "{logs:?}");
         assert!(logs[0].1.starts_with(FAILURE) && logs[0].1.contains(reason), "{logs:?}");
@@ -337,7 +387,7 @@ fn assert_not_used(checked: &crate::dev_dir::Checked, env: &Environment, home: &
 
 #[cfg(target_os = "linux")]
 fn checked_target(env: &Environment) -> crate::dev_dir::Checked {
-    match target(false, env) {
+    match target(env) {
         Target::DevDirectory(checked) => checked,
         other => panic!("the directory is refused: {other:?}"),
     }
