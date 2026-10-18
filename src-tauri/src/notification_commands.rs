@@ -9,9 +9,11 @@
 //! on the first fetch from the process's environment and kept: the real
 //! endpoint, or in a build with the development tools a
 //! `PIPETTE_NOTIFICATION_URL` override with a client limited to the
-//! loopback interface. In an e2e run (`crate::e2e_run`) a destination off
-//! the loopback interface gets no request at all; this check is compiled
-//! into every build and is a no-op where `is_e2e_run` is false.
+//! loopback interface. While `PIPETTE_E2E` is in the environment, in any
+//! build (`crate::e2e_run::e2e_mark_present`), a destination off the
+//! loopback interface gets no request at all: a build without the
+//! development tools ignores the override, so it sends nothing in an e2e
+//! session.
 
 use std::sync::Arc;
 
@@ -70,7 +72,7 @@ fn source<R: Runtime>(app: &AppHandle<R>) -> Option<Arc<NoticeSource>> {
 #[tauri::command]
 pub async fn notification_fetch<R: Runtime>(app: AppHandle<R>) -> NotificationFetchResult {
     match source(&app) {
-        Some(source) => source.fetch(crate::e2e_run::is_e2e_run(), pipette_time::now_ms()).await,
+        Some(source) => source.fetch(crate::e2e_run::e2e_mark_present(), pipette_time::now_ms()).await,
         None => NotificationFetchResult::failed("the notice source is not set up"),
     }
 }
@@ -160,16 +162,19 @@ mod tests {
     }
 
     #[test]
-    fn a_build_without_the_tools_ignores_the_override_and_the_e2e_mark() {
-        // The release build reads neither variable: the destination is the
-        // real endpoint, and the fetch is not refused (`is_e2e_run` is
-        // false without the tools). The requester here sends nothing.
+    fn a_build_without_the_tools_ignores_the_override_and_sends_nothing_with_the_e2e_mark() {
+        // The release build does not read the override: the destination is
+        // the real endpoint. With the e2e mark in the environment it sends
+        // nothing; without it, it fetches (the requester here sends
+        // nothing).
         let destination =
             destination(false, &[("PIPETTE_E2E", "1"), ("PIPETTE_NOTIFICATION_URL", "http://127.0.0.1:9")]);
         assert_eq!(destination.url, NOTIFICATION_ENDPOINT);
-        assert!(!pipette_hub::is_e2e_run(false, &|_| Some("1".to_owned())));
         let count = Arc::new(AtomicUsize::new(0));
         let source = NoticeSource::new(destination, counting(&count));
+        let result = block_on(source.fetch(true, 0));
+        assert!(!result.success && result.error.is_some(), "{result:?}");
+        assert_eq!(count.load(Ordering::SeqCst), 0);
         assert!(block_on(source.fetch(false, 0)).success);
         assert_eq!(count.load(Ordering::SeqCst), 1);
     }
