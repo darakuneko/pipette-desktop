@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// Shared seed/restore helpers for the Analyze page. Used by both the
-// screenshot-capture workflow (doc-capture.ts) and the Analyze e2e tests.
+// Shared seed/restore helpers for the Analyze page. Used by the screenshot
+// capture (e2e-tauri/doc-capture), the Analyze e2e tests and the
+// typing-analytics DB fixture generator.
 //
-// Strategy: write JSONL / JSON master files under the Playwright-managed
-// userData directory, then let Electron's `ensureCacheIsFresh` rebuild the
-// SQLite cache on next launch. Cleanup deletes the cache + sync_state so
-// the next launch starts from empty — restoring them would race against
-// the Electron process's own shutdown writes.
+// Strategy: write JSONL / JSON master files under the userData directory
+// while the app is stopped, then let the app's startup cache check rebuild
+// the SQLite cache on the next launch (removing sync_state.json asks for
+// the rebuild). Cleanup deletes the cache + sync_state so the next launch
+// starts from empty — restoring them would race against the app's own
+// shutdown writes.
 
 import { mkdirSync, writeFileSync, readFileSync, rmSync, unlinkSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -140,7 +142,7 @@ const TOP_EXTRA_WEIGHTS = [2, 3, 3, 2] as const
 
 export interface TypingAnalyticsSeedBackup {
   /** One JSONL master per day of the 21-day current window — see
-   * `buildCurrentWindowDayContent`. */
+   * `buildCurrentWindowDayRows`. */
   currentWindowJsonlPaths: string[]
   /** Per-day jsonl masters seeded for the Ergonomic Learning Curve so the
    * `analyze-ergonomics-learning` screenshot has multiple weekly buckets to
@@ -221,7 +223,7 @@ function distributeHistoricalCells(weekIdx: number): HistoricalCellRow[] {
   return out
 }
 
-function buildScopeRow(machineHash: string, nowMs: number): Record<string, unknown> {
+function buildScopeRow(machineHash: string, nowMs: number): SeedRow {
   return {
     id: `scope|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}`,
     kind: 'scope',
@@ -242,13 +244,9 @@ function buildScopeRow(machineHash: string, nowMs: number): Record<string, unkno
 
 const NOON_OFFSET_MS = 12 * 3_600_000
 
-function buildHistoricalDayJsonlContent(machineHash: string, dayMs: number, weekIdx: number, nowMs: number): string {
-  // Match the FK-resolution dance in apply-to-cache: each historical
-  // day file ships its own scope row at the top so the matrix-minute
-  // rows below resolve their FK target even when this file is the
-  // first one ingested in the rebuild order.
+function buildHistoricalDayRows(dayMs: number, weekIdx: number, nowMs: number): SeedRow[] {
   const minuteTs = Math.floor((dayMs + NOON_OFFSET_MS) / 60_000) * 60_000
-  const matrixRows = distributeHistoricalCells(weekIdx).map((cell) => ({
+  return distributeHistoricalCells(weekIdx).map((cell) => ({
     id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|${cell.matrixRow}|${cell.col}|0`,
     kind: 'matrix-minute',
     updated_at: nowMs,
@@ -265,9 +263,43 @@ function buildHistoricalDayJsonlContent(machineHash: string, dayMs: number, week
       appName: 'Code',
     },
   }))
-  return [buildScopeRow(machineHash, nowMs), ...matrixRows]
-    .map((r) => JSON.stringify(r))
-    .join('\n') + '\n'
+}
+
+/** A JSONL row of a day file. */
+interface SeedRow {
+  id: string
+  kind: string
+  updated_at: number
+  payload: Record<string, unknown>
+}
+
+/** The time a row's day file is picked by: a session's start, or the
+ * minute start of every other row. */
+function rowTimeMs(row: SeedRow): number {
+  return (row.kind === 'session' ? row.payload.startMs : row.payload.minuteTs) as number
+}
+
+/** Writes `rows` into one file per UTC day of their times, each led by the
+ * scope row so its rows resolve their FK target even when the file is the
+ * first one ingested in the rebuild order. The app reads a day file only
+ * for rows inside that UTC day (the file name), so a local day of a zone
+ * other than UTC can spread over two files. Returns the written paths. */
+function writeUtcDayFiles(deviceDir: string, scopeRow: SeedRow, rows: readonly SeedRow[]): string[] {
+  const byDay = new Map<string, SeedRow[]>()
+  for (const row of rows) {
+    const day = toUtcDate(rowTimeMs(row))
+    const dayRows = byDay.get(day)
+    if (dayRows) dayRows.push(row)
+    else byDay.set(day, [row])
+  }
+  const paths: string[] = []
+  for (const [day, dayRows] of byDay) {
+    const path = join(deviceDir, `${day}.jsonl`)
+    if (existsSync(path)) throw new Error(`the seed wrote ${day} twice`)
+    writeFileSync(path, [scopeRow, ...dayRows].map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf-8')
+    paths.push(path)
+  }
+  return paths
 }
 
 function readMachineHashFromSyncState(syncStatePath: string): string | null {
@@ -592,8 +624,8 @@ function buildMinuteRows(
   keystrokesTarget: number,
   appName: string | null,
   tag: MinuteTag,
-): unknown[] {
-  const rows: unknown[] = []
+): SeedRow[] {
+  const rows: SeedRow[] = []
   let total = 0
 
   // `centerBucket` defaults to 2 (the 80-109ms duration bucket) — the
@@ -718,23 +750,22 @@ function buildMinuteRows(
 }
 
 interface CurrentWindowDayResult {
-  content: string
+  rows: SeedRow[]
   /** `runId -> session start ms`, used to date the History entries
    * `buildPipetteSettingsContent` writes for this day's tagged runs. */
   runDates: Map<string, number>
 }
 
-/** Builds one day's JSONL master: up to `DAILY_SESSION_HOURS.length`
- * fixed-hour sessions (skipped once their start would land in the
+/** Builds one local day's rows (without the scope row): up to
+ * `DAILY_SESSION_HOURS.length` fixed-hour sessions (skipped once their start would land in the
  * future — only relevant for the last, "today" day), plus a recent-
  * minute tail on the last day so very-recent activity always exists. */
-function buildCurrentWindowDayContent(
+function buildCurrentWindowDayRows(
   dayIndex: number,
   dayStartMs: number,
   nowMs: number,
-  machineHash: string,
 ): CurrentWindowDayResult {
-  const rows: unknown[] = [buildScopeRow(machineHash, nowMs)]
+  const rows: SeedRow[] = []
   const runDates = new Map<string, number>()
   let firstMinuteTs: number | null = null
   let lastMinuteTs: number | null = null
@@ -780,7 +811,7 @@ function buildCurrentWindowDayContent(
     })
   }
 
-  return { content: rows.map((r) => JSON.stringify(r)).join('\n') + '\n', runDates }
+  return { rows, runDates }
 }
 
 interface DummyTypingTestHistoryEntry {
@@ -973,18 +1004,19 @@ export async function seedDummyTypingAnalytics(
   mkdirSync(deviceDir, { recursive: true })
   mkdirSync(keymapsDir, { recursive: true })
 
-  // Per-day current-window jsonl masters, plus the runId -> start-ms map
+  const scopeRow = buildScopeRow(machineHash, nowMs)
+
+  // Per-UTC-day current-window jsonl masters, plus the runId -> start-ms map
   // used to date the pipette_settings History entries below.
-  const currentWindowJsonlPaths: string[] = []
+  const currentWindowRows: SeedRow[] = []
   const runDates = new Map<string, number>()
   for (let dayIndex = 0; dayIndex < CURRENT_WINDOW_DAYS; dayIndex += 1) {
     const dayStartMs = localMidnightMs(currentWindowStartMs, dayIndex)
-    const { content, runDates: dayRunDates } = buildCurrentWindowDayContent(dayIndex, dayStartMs, nowMs, machineHash)
-    const path = join(deviceDir, `${toUtcDate(dayStartMs)}.jsonl`)
-    writeFileSync(path, content, 'utf-8')
-    currentWindowJsonlPaths.push(path)
+    const { rows, runDates: dayRunDates } = buildCurrentWindowDayRows(dayIndex, dayStartMs, nowMs)
+    currentWindowRows.push(...rows)
     for (const [runId, startMs] of dayRunDates) runDates.set(runId, startMs)
   }
+  const currentWindowJsonlPaths = writeUtcDayFiles(deviceDir, scopeRow, currentWindowRows)
 
   writeFileSync(
     snapshotPath,
@@ -1002,16 +1034,14 @@ export async function seedDummyTypingAnalytics(
   // pivot's [olderSavedAt, snapshotSavedAt) range stays exclusively
   // historical. Each file holds rows for its own UTC day, matching the v7
   // layout the cache rebuild expects.
-  const historicalJsonlPaths: string[] = []
+  const historicalRows: SeedRow[] = []
   for (let weekIdx = 0; weekIdx < HISTORICAL_WEEKS; weekIdx += 1) {
     const weekStartMs = currentWindowStartMs - (HISTORICAL_WEEKS - weekIdx) * 7 * DAY_MS
     for (const dayOffset of HISTORICAL_DAY_OFFSETS_PER_WEEK) {
-      const dayMs = weekStartMs + dayOffset * DAY_MS
-      const path = join(deviceDir, `${toUtcDate(dayMs)}.jsonl`)
-      writeFileSync(path, buildHistoricalDayJsonlContent(machineHash, dayMs, weekIdx, nowMs), 'utf-8')
-      historicalJsonlPaths.push(path)
+      historicalRows.push(...buildHistoricalDayRows(weekStartMs + dayOffset * DAY_MS, weekIdx, nowMs))
     }
   }
+  const historicalJsonlPaths = writeUtcDayFiles(deviceDir, scopeRow, historicalRows)
 
   // Typing-test History entries for the seeded runs — back up whatever
   // file is there (should be none for this dummy uid) so cleanup
