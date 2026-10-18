@@ -1,0 +1,754 @@
+{
+  "source": "applyAutoLaunch of src/main/app-behavior.ts through src/main/index.ts booted on scripts/resident-fixtures",
+  "execPath": "/opt/Pipette/pipette",
+  "autostartPath": "$HOME/.config/autostart/pipette.desktop",
+  "scenarios": [
+    {
+      "name": "linux: enable at boot, then off, off again, on",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "autostart": {}
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "autostart": {}
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "autostart": {
+            "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "linux: disabled at boot with no entry",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": false
+          }
+        },
+        "calls": [],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "autostart": {
+            "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+          }
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "autostart": {
+            "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "linux: HOME with .config",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "HOME with .config",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: XDG_CONFIG_HOME elsewhere is not read",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "XDG_CONFIG_HOME": "<a temporary directory apart from HOME>"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+        },
+        "xdgConfigHome": []
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "autostart": {},
+          "xdgConfigHome": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "autostart": {
+            "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+          },
+          "xdgConfigHome": []
+        }
+      ]
+    },
+    {
+      "name": "linux: an entry already there",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "an entry already there",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "other.desktop": "someone else\n",
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "autostart": {
+            "other.desktop": "someone else\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "linux: disabled at boot over an entry",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "an entry already there",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": false
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "other.desktop": "someone else\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"/home/user/Applications/Pipette-1.2.3.AppImage\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": "/home/user/Applications/Pipette-1.2.3.AppImage"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/home/user/Applications/Pipette-1.2.3.AppImage\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"/home/user/My Apps/Pipette 1.2.3.AppImage\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": "/home/user/My Apps/Pipette 1.2.3.AppImage"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/home/user/My Apps/Pipette 1.2.3.AppImage\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"/home/user/\\\"quoted\\\"/Pipette.AppImage\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": "/home/user/\"quoted\"/Pipette.AppImage"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/home/user/\"quoted\"/Pipette.AppImage\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"/home/user/$HOME/back\\\\slash/100%/Pipette.AppImage\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": "/home/user/$HOME/back\\slash/100%/Pipette.AppImage"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/home/user/$HOME/back\\slash/100%/Pipette.AppImage\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"/home/user/アプリ/Pipette.AppImage\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": "/home/user/アプリ/Pipette.AppImage"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/home/user/アプリ/Pipette.AppImage\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"/home/user/line\\nbreak/Pipette.AppImage\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": "/home/user/line\nbreak/Pipette.AppImage"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/home/user/line\nbreak/Pipette.AppImage\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: APPIMAGE \"\"",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "APPIMAGE": ""
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"\"\nX-GNOME-Autostart-enabled=true\n"
+        }
+      },
+      "steps": []
+    },
+    {
+      "name": "linux: autostart is a file",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "autostart is a file",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "logs": [
+          {
+            "level": "error",
+            "message": "auto-launch: failed to update Linux autostart entry: ",
+            "osErrorFollows": true
+          }
+        ],
+        "autostart": "not a directory"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "logs": [
+            {
+              "level": "error",
+              "message": "auto-launch: failed to update Linux autostart entry: ",
+              "osErrorFollows": true
+            }
+          ],
+          "autostart": "not a directory"
+        }
+      ]
+    },
+    {
+      "name": "linux: pipette.desktop is a directory",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {},
+      "before": "pipette.desktop is a directory",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": false
+          }
+        },
+        "calls": [],
+        "logs": [
+          {
+            "level": "error",
+            "message": "auto-launch: failed to update Linux autostart entry: ",
+            "osErrorFollows": true
+          }
+        ],
+        "autostart": {
+          "pipette.desktop": null
+        }
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "logs": [
+            {
+              "level": "error",
+              "message": "auto-launch: failed to update Linux autostart entry: ",
+              "osErrorFollows": true
+            }
+          ],
+          "autostart": {
+            "pipette.desktop": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "linux: unpackaged build",
+      "platform": "linux",
+      "isPackaged": false,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "logs": [
+          {
+            "level": "warn",
+            "message": "auto-launch skipped: unpackaged build"
+          }
+        ],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "logs": [
+            {
+              "level": "warn",
+              "message": "auto-launch skipped: unpackaged build"
+            }
+          ],
+          "autostart": "missing"
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "logs": [
+            {
+              "level": "warn",
+              "message": "auto-launch skipped: unpackaged build"
+            }
+          ],
+          "autostart": "missing"
+        }
+      ]
+    },
+    {
+      "name": "win32: login item",
+      "platform": "win32",
+      "isPackaged": true,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [
+          {
+            "t": 0,
+            "call": "app.setLoginItemSettings",
+            "args": [
+              {
+                "openAtLogin": true
+              }
+            ]
+          }
+        ],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "app.setLoginItemSettings",
+              "args": [
+                {
+                  "openAtLogin": false
+                }
+              ]
+            }
+          ],
+          "autostart": "missing"
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "app.setLoginItemSettings",
+              "args": [
+                {
+                  "openAtLogin": true
+                }
+              ]
+            }
+          ],
+          "autostart": "missing"
+        }
+      ]
+    },
+    {
+      "name": "win32: unpackaged build",
+      "platform": "win32",
+      "isPackaged": false,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "logs": [
+          {
+            "level": "warn",
+            "message": "auto-launch skipped: unpackaged build"
+          }
+        ],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "logs": [
+            {
+              "level": "warn",
+              "message": "auto-launch skipped: unpackaged build"
+            }
+          ],
+          "autostart": "missing"
+        }
+      ]
+    },
+    {
+      "name": "darwin: login item",
+      "platform": "darwin",
+      "isPackaged": true,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [
+          {
+            "t": 0,
+            "call": "app.setLoginItemSettings",
+            "args": [
+              {
+                "openAtLogin": true
+              }
+            ]
+          }
+        ],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "app.setLoginItemSettings",
+              "args": [
+                {
+                  "openAtLogin": false
+                }
+              ]
+            }
+          ],
+          "autostart": "missing"
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [
+            {
+              "t": 0,
+              "call": "app.setLoginItemSettings",
+              "args": [
+                {
+                  "openAtLogin": true
+                }
+              ]
+            }
+          ],
+          "autostart": "missing"
+        }
+      ]
+    },
+    {
+      "name": "darwin: unpackaged build",
+      "platform": "darwin",
+      "isPackaged": false,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "logs": [
+          {
+            "level": "warn",
+            "message": "auto-launch skipped: unpackaged build"
+          }
+        ],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "logs": [
+            {
+              "level": "warn",
+              "message": "auto-launch skipped: unpackaged build"
+            }
+          ],
+          "autostart": "missing"
+        }
+      ]
+    },
+    {
+      "name": "freebsd: nothing",
+      "platform": "freebsd",
+      "isPackaged": true,
+      "env": {},
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": "missing"
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "autostart": "missing"
+        }
+      ]
+    }
+  ]
+}

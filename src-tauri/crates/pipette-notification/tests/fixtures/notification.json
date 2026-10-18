@@ -1,0 +1,963 @@
+{
+  "source": "fetchNotifications of src/main/notification-store.ts through src/main/index.ts booted on scripts/resident-fixtures; nothing was sent",
+  "requests": [
+    {
+      "now": 1792281600000,
+      "request": {
+        "url": "https://getnotifications-svtx62766a-uc.a.run.app",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"deviceId\":\"all\",\"type\":\"notification\",\"collection\":\"pipette-notification\",\"filters\":[{\"field\":\"publishedAt\",\"op\":\"<=\",\"value\":1792281600000}],\"orderBy\":{\"field\":\"publishedAt\",\"direction\":\"desc\"},\"limit\":10}",
+        "hasSignal": true
+      }
+    },
+    {
+      "now": 0,
+      "request": {
+        "url": "https://getnotifications-svtx62766a-uc.a.run.app",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"deviceId\":\"all\",\"type\":\"notification\",\"collection\":\"pipette-notification\",\"filters\":[{\"field\":\"publishedAt\",\"op\":\"<=\",\"value\":0}],\"orderBy\":{\"field\":\"publishedAt\",\"direction\":\"desc\"},\"limit\":10}",
+        "hasSignal": true
+      }
+    },
+    {
+      "now": 1,
+      "request": {
+        "url": "https://getnotifications-svtx62766a-uc.a.run.app",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"deviceId\":\"all\",\"type\":\"notification\",\"collection\":\"pipette-notification\",\"filters\":[{\"field\":\"publishedAt\",\"op\":\"<=\",\"value\":1}],\"orderBy\":{\"field\":\"publishedAt\",\"direction\":\"desc\"},\"limit\":10}",
+        "hasSignal": true
+      }
+    },
+    {
+      "now": 8640000000000,
+      "request": {
+        "url": "https://getnotifications-svtx62766a-uc.a.run.app",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"deviceId\":\"all\",\"type\":\"notification\",\"collection\":\"pipette-notification\",\"filters\":[{\"field\":\"publishedAt\",\"op\":\"<=\",\"value\":8640000000000}],\"orderBy\":{\"field\":\"publishedAt\",\"direction\":\"desc\"},\"limit\":10}",
+        "hasSignal": true
+      }
+    },
+    {
+      "now": 1893501296789,
+      "request": {
+        "url": "https://getnotifications-svtx62766a-uc.a.run.app",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"deviceId\":\"all\",\"type\":\"notification\",\"collection\":\"pipette-notification\",\"filters\":[{\"field\":\"publishedAt\",\"op\":\"<=\",\"value\":1893501296789}],\"orderBy\":{\"field\":\"publishedAt\",\"direction\":\"desc\"},\"limit\":10}",
+        "hasSignal": true
+      }
+    }
+  ],
+  "cases": [
+    {
+      "name": "two notices, an ISO date and a Firestore timestamp",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"Release 1.2\",\"body\":\"Line 1\\nLine 2\",\"type\":\"release\",\"publishedAt\":\"2026-10-17T09:00:00.000Z\"},{\"title\":\"お知らせ\",\"body\":\"本文 😀\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1760000000,\"_nanoseconds\":123456789}}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": true,
+        "notifications": [
+          {
+            "title": "Release 1.2",
+            "body": "Line 1\nLine 2",
+            "type": "release",
+            "publishedAt": "2026-10-17T09:00:00.000Z"
+          },
+          {
+            "title": "お知らせ",
+            "body": "本文 😀",
+            "type": "info",
+            "publishedAt": "2025-10-09T08:53:20.000Z"
+          }
+        ]
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "an empty list",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": true,
+        "notifications": []
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "twelve notices kept in the order given",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"N0\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"N1\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-02T00:00:00Z\"},{\"title\":\"N2\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-03T00:00:00Z\"},{\"title\":\"N3\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-04T00:00:00Z\"},{\"title\":\"N4\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-05T00:00:00Z\"},{\"title\":\"N5\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-06T00:00:00Z\"},{\"title\":\"N6\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-07T00:00:00Z\"},{\"title\":\"N7\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-08T00:00:00Z\"},{\"title\":\"N8\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-09T00:00:00Z\"},{\"title\":\"N9\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-10T00:00:00Z\"},{\"title\":\"N10\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-11T00:00:00Z\"},{\"title\":\"N11\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-12T00:00:00Z\"}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": true,
+        "notifications": [
+          {
+            "title": "N0",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-01T00:00:00Z"
+          },
+          {
+            "title": "N1",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-02T00:00:00Z"
+          },
+          {
+            "title": "N2",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-03T00:00:00Z"
+          },
+          {
+            "title": "N3",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-04T00:00:00Z"
+          },
+          {
+            "title": "N4",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-05T00:00:00Z"
+          },
+          {
+            "title": "N5",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-06T00:00:00Z"
+          },
+          {
+            "title": "N6",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-07T00:00:00Z"
+          },
+          {
+            "title": "N7",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-08T00:00:00Z"
+          },
+          {
+            "title": "N8",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-09T00:00:00Z"
+          },
+          {
+            "title": "N9",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-10T00:00:00Z"
+          },
+          {
+            "title": "N10",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-11T00:00:00Z"
+          },
+          {
+            "title": "N11",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-12T00:00:00Z"
+          }
+        ]
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "items that are not notices are dropped",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[null,1,\"x\",[],{},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"body\":\"b\",\"type\":\"t\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"t\",\"type\":\"t\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"t\",\"body\":\"b\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"t\",\"body\":\"b\",\"type\":\"t\"},{\"title\":1,\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"Title\",\"body\":null,\"type\":\"info\",\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"Title\",\"body\":\"Body\",\"type\":false,\"publishedAt\":\"2026-10-01T00:00:00Z\"},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":1760000000000},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":null},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":\"1760000000\",\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1760000000,\"_nanoseconds\":\"0\"}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1760000000}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"\"},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"not a date\"},{\"title\":\"\",\"body\":\"\",\"type\":\"\",\"publishedAt\":\"2026-10-02T00:00:00Z\",\"extra\":\"dropped\",\"id\":7}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": true,
+        "notifications": [
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2026-10-01T00:00:00Z"
+          },
+          {
+            "title": "",
+            "body": "",
+            "type": "",
+            "publishedAt": "2026-10-02T00:00:00Z"
+          }
+        ]
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "a Firestore timestamp with extra fields",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":0,\"_nanoseconds\":999999999,\"other\":true}}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": true,
+        "notifications": [
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "1970-01-01T00:00:00.000Z"
+          }
+        ]
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "Firestore seconds: fractions, negatives and the ends of the Date range",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1760000000.5,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1760000000.0001,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1760000000.9999,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":0,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":-1,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":-62198755200,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":253402300800,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":8640000000000,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":-8640000000000,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1e-300,\"_nanoseconds\":0}}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": true,
+        "notifications": [
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2025-10-09T08:53:20.500Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2025-10-09T08:53:20.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "2025-10-09T08:53:20.999Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "1970-01-01T00:00:00.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "1969-12-31T23:59:59.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "-000001-01-01T00:00:00.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "+010000-01-01T00:00:00.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "+275760-09-13T00:00:00.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "-271821-04-20T00:00:00.000Z"
+          },
+          {
+            "title": "Title",
+            "body": "Body",
+            "type": "info",
+            "publishedAt": "1970-01-01T00:00:00.000Z"
+          }
+        ]
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "Firestore seconds past the end of the Date range",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":8640000000000.001,\"_nanoseconds\":0}},{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-01T00:00:00Z\"}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "RangeError: Invalid time value"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "Firestore seconds before the start of the Date range",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":-8640000000001,\"_nanoseconds\":0}}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "RangeError: Invalid time value"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "Firestore seconds of 1e300",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":{\"_seconds\":1e+300,\"_nanoseconds\":0}}]}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "RangeError: Invalid time value"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "notifications is an object",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":{}}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "notifications is null",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":null}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "notifications is a string",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":\"x\"}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "notifications is missing",
+      "response": {
+        "status": 200,
+        "body": "{}",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "the body is an array",
+      "response": {
+        "status": 200,
+        "body": "[{\"title\":\"Title\",\"body\":\"Body\",\"type\":\"info\",\"publishedAt\":\"2026-10-01T00:00:00Z\"}]",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "the body is a string",
+      "response": {
+        "status": 200,
+        "body": "\"notifications\"",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "the body is a number",
+      "response": {
+        "status": 200,
+        "body": "1",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "Invalid response format"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "the body is null",
+      "response": {
+        "status": 200,
+        "body": "null",
+        "contentType": "application/json"
+      },
+      "result": {
+        "success": false,
+        "error": "TypeError: Cannot read properties of null (reading 'notifications')"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "the body is not JSON",
+      "response": {
+        "status": 200,
+        "body": "not json",
+        "contentType": "text/plain"
+      },
+      "result": {
+        "success": false,
+        "error": "SyntaxError: Unexpected token 'o', \"not json\" is not valid JSON"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "the body is empty",
+      "response": {
+        "status": 200,
+        "body": ""
+      },
+      "result": {
+        "success": false,
+        "error": "SyntaxError: Unexpected end of JSON input"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "the body starts with a byte order mark",
+      "response": {
+        "status": 200,
+        "body": "﻿{\"notifications\":[]}"
+      },
+      "result": {
+        "success": true,
+        "notifications": []
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "the body has trailing whitespace",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[]}\n\t "
+      },
+      "result": {
+        "success": true,
+        "notifications": []
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "the content type is text/plain",
+      "response": {
+        "status": 200,
+        "body": "{\"notifications\":[]}",
+        "contentType": "text/plain"
+      },
+      "result": {
+        "success": true,
+        "notifications": []
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "201",
+      "response": {
+        "status": 201,
+        "body": "{\"notifications\":[]}"
+      },
+      "result": {
+        "success": true,
+        "notifications": []
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "299",
+      "response": {
+        "status": 299,
+        "body": "{\"notifications\":[]}"
+      },
+      "result": {
+        "success": true,
+        "notifications": []
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "204 without a body",
+      "response": {
+        "status": 204,
+        "body": null
+      },
+      "result": {
+        "success": false,
+        "error": "SyntaxError: Unexpected end of JSON input"
+      },
+      "compare": "success"
+    },
+    {
+      "name": "300",
+      "response": {
+        "status": 300,
+        "body": "{\"notifications\":[]}"
+      },
+      "result": {
+        "success": false,
+        "error": "HTTP 300"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "304 without a body",
+      "response": {
+        "status": 304,
+        "body": null
+      },
+      "result": {
+        "success": false,
+        "error": "HTTP 304"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "404",
+      "response": {
+        "status": 404,
+        "body": "Not Found"
+      },
+      "result": {
+        "success": false,
+        "error": "HTTP 404"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "429",
+      "response": {
+        "status": 429,
+        "body": "{\"notifications\":[]}"
+      },
+      "result": {
+        "success": false,
+        "error": "HTTP 429"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "500",
+      "response": {
+        "status": 500,
+        "body": "{\"error\":\"internal\"}"
+      },
+      "result": {
+        "success": false,
+        "error": "HTTP 500"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "503 without a body",
+      "response": {
+        "status": 503,
+        "body": null
+      },
+      "result": {
+        "success": false,
+        "error": "HTTP 503"
+      },
+      "compare": "exact"
+    },
+    {
+      "name": "a network error",
+      "response": {
+        "networkError": "fetch failed"
+      },
+      "result": {
+        "success": false,
+        "error": "TypeError: fetch failed"
+      },
+      "compare": "success"
+    }
+  ],
+  "dates": [
+    {
+      "input": "2026-10-18T00:00:00Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00.000Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00.1Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00.123456Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T09:00:00+09:00",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T09:00:00-09:30",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "+002026-10-18T00:00:00Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "-000001-01-01T00:00:00Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "+275760-09-13T00:00:00.000Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "+275760-09-13T00:00:00.001Z",
+      "category": "es",
+      "kept": false
+    },
+    {
+      "input": "-271821-04-20T00:00:00.000Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "-271821-04-19T23:59:59.999Z",
+      "category": "es",
+      "kept": false
+    },
+    {
+      "input": "-000000-01-01T00:00:00Z",
+      "category": "es",
+      "kept": false
+    },
+    {
+      "input": "2026-10-18T24:00:00Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T24:00:01Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-18T23:59:60Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-02-29T00:00:00Z",
+      "category": "es",
+      "kept": true
+    },
+    {
+      "input": "2026-02-30T00:00:00Z",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-02-31T00:00:00Z",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-04-31T00:00:00Z",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-13-01T00:00:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-00-01T00:00:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-32T00:00:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-00T00:00:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-18T25:00:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-18T00:60:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-18t00:00:00z",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00+0900",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00+09",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "20261018T000000Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": " 2026-10-18T00:00:00Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "2026-10-18T00:00:00Z ",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "Sun, 18 Oct 2026 00:00:00 GMT",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "Sun, 18 Oct 2026 00:00:00 +0900",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "Sun, 18 Oct 2026 00:00:00 -0000",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "18 Oct 2026 00:00:00 GMT",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "Sun, 18 Oct 2026 00:00 GMT",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "Mon, 18 Oct 2026 00:00:00 GMT",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "Sun, 18 Oct 26 00:00:00 GMT",
+      "category": "rfc2822",
+      "kept": true
+    },
+    {
+      "input": "Sun, 32 Oct 2026 00:00:00 GMT",
+      "category": "rfc2822",
+      "kept": false
+    },
+    {
+      "input": "Sun, 18 Foo 2026 00:00:00 GMT",
+      "category": "rfc2822",
+      "kept": false
+    },
+    {
+      "input": "2026/10/18",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026/10/18 12:34:56",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "10/18/2026",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "Oct 18 2026",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "October 18, 2026 10:00",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18 00:00:00",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18 00:00:00Z",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "Sun Oct 18 2026 09:00:00 GMT+0900 (Japan Standard Time)",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "0",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "1",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "12",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "13",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "32",
+      "category": "other",
+      "kept": true
+    },
+    {
+      "input": "2026-10-18T00:00:00 Z",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "tomorrow",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "not a date",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": " ",
+      "category": "other",
+      "kept": false
+    },
+    {
+      "input": "",
+      "category": "other",
+      "kept": false
+    }
+  ]
+}
