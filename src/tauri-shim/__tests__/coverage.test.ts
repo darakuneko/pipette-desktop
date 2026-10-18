@@ -11,8 +11,8 @@
 // label members (key labels, typing test texts, language and theme packs,
 // word lists, datasets and the Aozora Bunko import) are all real, and so
 // are the Hub members and the Cloud Sync members (each listed with the
-// module that holds it), the tray and the startup notification. No member
-// is faked, and none falls back to a stub.
+// module that holds it), the tray, the startup notification and the window
+// operations. No member is faked, and none falls back to a stub.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -327,6 +327,19 @@ const SYNC_REAL = [
   'typingAnalyticsFetchRemoteDay',
 ]
 
+/** The tray status, the startup notification and the Typing Test view-only
+ *  window operations, all real. */
+const RESIDENT_MEMBERS = [
+  'trayStatusUpdate',
+  'notificationFetch',
+  'setWindowCompactMode',
+  'setWindowAspectRatio',
+  'setWindowAlwaysOnTop',
+  'setWindowOpacity',
+  'setWindowMinSize',
+  'isAlwaysOnTopSupported',
+]
+
 /** The Hub members, by the shim module that holds them. */
 const HUB_MODULES = [hubAccountApi, hubPostsApi, hubFavoriteApi, hubAnalyticsApi, hubPacksApi, keyLabelHubApi]
 
@@ -432,9 +445,15 @@ describe('shim coverage', () => {
     expect(VIAL_API_MEMBER_NAMES.filter((name) => !(name in implemented))).toEqual([])
   })
 
-  it('backs the startup notification with a backend command', () => {
-    expect('notificationFetch' in real).toBe(true)
-    expect('notificationFetch' in fakes).toBe(false)
+  it('backs the tray, the startup notification and the window operations with backend commands', () => {
+    expect(new Set(RESIDENT_MEMBERS).size).toBe(8)
+    expect(RESIDENT_MEMBERS.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
+    expect(RESIDENT_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(RESIDENT_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
+  it('backs every VialAPI member with backend commands', () => {
+    expect(VIAL_API_MEMBER_NAMES.filter((name) => !(name in real))).toEqual([])
   })
 
   it('implements only VialAPI members, each either real or fake', () => {
