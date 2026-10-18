@@ -11,7 +11,7 @@
 // label members (key labels, typing test texts, language and theme packs,
 // word lists, datasets and the Aozora Bunko import) are all real, and so
 // are the Hub members and the Cloud Sync members (each listed with the
-// module that holds it). The fakes left are the tray and the startup
+// module that holds it), and the tray. The fake left is the startup
 // notification.
 
 import { describe, expect, it, vi } from 'vitest'
@@ -35,7 +35,6 @@ import { keyLabelHubApi } from '../api/key-label-hub'
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
 const EXPECTED_FAKES = [
-  'trayStatusUpdate',
   'notificationFetch',
 ]
 
