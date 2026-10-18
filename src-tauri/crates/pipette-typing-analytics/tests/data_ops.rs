@@ -17,7 +17,7 @@ use common::{ManualTimer, table_rows};
 use pipette_entry_store::{Clock, FixedClock, RandomUuid, SequenceIds, WriteLocks};
 use pipette_typing_analytics::cache_rebuild::rebuild_cache_from_master_files;
 use pipette_typing_analytics::db_actor::db_path;
-use pipette_typing_analytics::deleted_ranges::{DeletedRangeEntry, read_applied_ids};
+use pipette_typing_analytics::deleted_ranges::DeletedRangeEntry;
 use pipette_typing_analytics::fingerprint::OsInfo;
 use pipette_typing_analytics::jsonl::{deleted_ranges_applied_path, device_day_jsonl_path};
 use pipette_typing_analytics::{
@@ -187,6 +187,8 @@ async fn nothing_is_applied_while_a_reset_holds_the_keyboard_even_from_the_queue
 #[tokio::test]
 async fn a_failed_apply_records_nothing_and_the_next_one_applies() {
     use std::os::unix::fs::PermissionsExt;
+
+    use pipette_typing_analytics::deleted_ranges::read_applied_ids;
 
     let dir = TempDir::new().unwrap();
     let clock = Arc::new(FixedClock::new(T + 10 * MINUTE));
