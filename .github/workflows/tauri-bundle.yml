@@ -2,11 +2,11 @@ name: Tauri bundle (Windows, macOS)
 
 # Builds the Tauri app on Windows and macOS, which no other job compiles:
 # clippy over the whole workspace in the debug build with the development
-# tools and in the release build, the tests of the crates with code of
-# their own on these systems, and an unsigned bundle of each as an
-# artifact. Run by hand. GitHub dispatches only a workflow it knows, and it
-# learns of one on a branch other than the default from a push that runs
-# it, so a push that changes this file runs it too.
+# tools and in the release build, the workspace's tests, and an unsigned
+# bundle of each as an artifact. Run by hand. GitHub dispatches only a
+# workflow it knows, and it learns of one on a branch other than the
+# default from a push that runs it, so a push that changes this file runs
+# it too.
 on:
   workflow_dispatch:
   push:
@@ -29,6 +29,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The image release.yml builds the Windows release on (Visual
+          # Studio 2022).
           - os: windows-2022
             bundles: nsis
             artifact: src-tauri/target/release/bundle/nsis/*.exe
@@ -73,15 +75,16 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --workspace --all-targets --release -- -D warnings
 
-      # The crates whose code differs on these systems, every test binary
-      # run even after one fails. None of them reaches the OS's login item
-      # (pipette-autostart panics in a test that would) or its key store
-      # (the os_keystore test of pipette-secret-store skips without
-      # PIPETTE_KEYSTORE_IT; the keystore job of tauri-migration.yml runs it
-      # on purpose).
+      # The whole workspace, so the code each crate has for systems other
+      # than Linux runs too, every test binary even after one fails. The
+      # Linux-only tests are not built here, the Node fakes listen on the
+      # loopback interface only, the OS's key store test skips without
+      # PIPETTE_KEYSTORE_IT (the keystore job of tauri-migration.yml runs it
+      # on purpose), and no test reaches the OS's login item
+      # (pipette-autostart panics in a test that would).
       - name: Test
         working-directory: src-tauri
-        run: cargo test --no-fail-fast -p pipette-autostart -p pipette-notification -p pipette-active-window -p pipette-secret-store
+        run: cargo test --workspace --no-fail-fast
 
       # The release build, unsigned. The bundles are given here because
       # tauri.conf.json lists the Linux ones.
