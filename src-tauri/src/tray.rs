@@ -390,6 +390,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        target_os = "macos",
+        ignore = "muda makes menus on the main thread only, and libtest runs tests on others"
+    )]
     fn a_menu_holds_the_rows_of_its_status() {
         let app = mock_app();
         let rec = status(Some("GPK60-63R"), true, 1234.0, 57.5);
@@ -431,6 +435,10 @@ mod tests {
     /// menu as the Electron tray's, and only a status that adds or removes
     /// rows replaces it.
     #[test]
+    #[cfg_attr(
+        target_os = "macos",
+        ignore = "muda makes menus on the main thread only, and libtest runs tests on others"
+    )]
     fn a_menu_changes_text_and_is_replaced_only_when_rows_come_or_go() {
         let app = mock_app();
         let mut menu = TrayMenu::build(&app, &TrayStatus::default()).unwrap();
@@ -460,6 +468,10 @@ mod tests {
     /// A menu with other rows is built aside: the one the icon holds stays
     /// as it was until the icon takes the new one.
     #[test]
+    #[cfg_attr(
+        target_os = "macos",
+        ignore = "muda makes menus on the main thread only, and libtest runs tests on others"
+    )]
     fn a_new_layout_leaves_the_current_menu_alone() {
         let app = mock_app();
         let menu = TrayMenu::build(&app, &status(Some("K"), false, 0.0, 0.0)).unwrap();
@@ -470,6 +482,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        target_os = "macos",
+        ignore = "muda makes menus on the main thread only, and libtest runs tests on others"
+    )]
     fn a_replaced_menu_keeps_the_ids_its_handler_goes_by() {
         let app = mock_app();
         let menu = TrayMenu::build(&app, &TrayStatus::default()).unwrap();
