@@ -31,4 +31,4 @@ pub const DEV_COMMANDS: &[&str] = &[
 ];
 
 /// The development commands that exist on Linux only.
-pub const LINUX_DEV_COMMANDS: &[&str] = &["dev_screenshot"];
+pub const LINUX_DEV_COMMANDS: &[&str] = &["dev_screenshot", "dev_tray_menu_click"];

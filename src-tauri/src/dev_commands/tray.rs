@@ -19,3 +19,32 @@ pub fn dev_tray_state(app: AppHandle<Wry>) -> Result<TraySnapshot, CommandError>
 pub fn dev_tray_activate(app: AppHandle<Wry>, id: String) -> Result<(), CommandError> {
     tray::activate(&app, &id).map_err(CommandError::new)
 }
+
+/// Activates the enabled GTK menu item labelled `label` of the tray's menu,
+/// as a click on it in the desktop's tray does: the item sends its menu
+/// event, which reaches every menu listener of the app through Tauri's
+/// event loop. `dev_tray_activate` calls the handler itself instead, so
+/// only this shows how many listeners a click runs. A synchronous command,
+/// so it runs on the main thread, where GTK may be used.
+///
+/// Every GTK menu still alive is searched, a menu the tray dropped when it
+/// was rebuilt among them; such a menu's item sends the same menu id as the
+/// current one, so activating either is the same click.
+#[cfg(target_os = "linux")]
+#[tauri::command]
+pub fn dev_tray_menu_click(app: AppHandle<Wry>, label: String) -> Result<(), CommandError> {
+    use gtk::prelude::*;
+
+    if !tray::is_tray_active(&app) {
+        return Err(CommandError::new("the tray icon does not exist"));
+    }
+    let item = gtk::Window::list_toplevels()
+        .into_iter()
+        .filter_map(|widget| widget.downcast::<gtk::Window>().ok()?.child()?.downcast::<gtk::Menu>().ok())
+        .flat_map(|menu| menu.children())
+        .filter_map(|child| child.downcast::<gtk::MenuItem>().ok())
+        .find(|item| item.is_sensitive() && item.label().is_some_and(|text| text == label.as_str()))
+        .ok_or_else(|| CommandError::new(format!("no enabled tray menu item is labelled {label}")))?;
+    item.activate();
+    Ok(())
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-tray-linux",
+  "description": "Builds with the dev-tools feature on Linux only, where the command exists: activates a tray menu item through GTK, so the click reaches the app's menu listeners the way a click in the desktop's tray does.",
+  "platforms": ["linux"],
+  "windows": ["main"],
+  "permissions": ["allow-dev-tray-menu-click"]
+}
