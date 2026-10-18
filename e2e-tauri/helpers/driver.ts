@@ -208,7 +208,7 @@ export const AUTOSTART_DIR_VARIABLE = 'PIPETTE_DEV_AUTOSTART_DIR'
 /** `path` with every symbolic link resolved, the part that does not exist
  *  yet appended as it is (the app creates the directory). Throws when an
  *  existing part cannot be resolved, a dangling link among them. */
-function resolveExisting(path: string): string {
+export function resolveExisting(path: string): string {
   const missing: string[] = []
   let existing = path
   for (;;) {
@@ -226,7 +226,7 @@ function resolveExisting(path: string): string {
 }
 
 /** Whether `path` is `dir` or inside it; both already resolved. */
-function isWithin(path: string, dir: string): boolean {
+export function isWithin(path: string, dir: string): boolean {
   const rel = relative(dir, path)
   return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
 }

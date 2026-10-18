@@ -2,7 +2,7 @@
 //
 // The typing analytics in the Tauri build: a keyboard's data seeded as day
 // files under this device's machine hash (the seed of the Electron build's
-// Analyze e2e, e2e/helpers/analyze-seed.ts) and another device's day file,
+// Analyze e2e, helpers/analyze-seed.ts) and another device's day file,
 // rebuilt into the cache at launch, and every Analyze tab drawn from it; an
 // Analyze filter saved, loaded, renamed and deleted; a restart that keeps
 // the cache, and one without sync_state.json and the cache that rebuilds
@@ -37,7 +37,7 @@ import {
   waitForGone,
 } from '../helpers/app'
 import { readPendingUnits, userDataPath } from '../helpers/driver'
-import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
+import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../helpers/analyze-seed'
 
 const REMOTE_HASH = 'e2e-remote-device-hash'
 const REMOTE_SCOPE = 'e2e-remote-scope'

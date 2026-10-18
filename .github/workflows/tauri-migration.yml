@@ -169,6 +169,26 @@ jobs:
       - name: e2e (Tauri)
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e:tauri
 
+      # The operation guide's screenshots (e2e-tauri/doc-capture) on the same
+      # build. The screen is exactly the window's default size, which the
+      # capture requires. They go into a temporary directory, not the
+      # committed docs/screenshots, and are uploaded for review.
+      - name: Doc screenshots (Tauri)
+        id: doc-screenshots
+        run: |
+          out="$(mktemp -d)/doc-screenshots"
+          echo "dir=$out" >> "$GITHUB_OUTPUT"
+          PIPETTE_DOC_SCREENSHOT_DIR="$out" xvfb-run --auto-servernum --server-args="-screen 0 1440x1024x24" dbus-run-session -- pnpm doc:screenshots
+
+      - name: Upload the doc screenshots
+        if: always() && steps.doc-screenshots.outputs.dir != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: doc-screenshots
+          path: ${{ steps.doc-screenshots.outputs.dir }}
+          if-no-files-found: warn
+          retention-days: 7
+
   # The machine hash and the OS strings of the typing-analytics fingerprint
   # must be the values the Electron build computes on the same machine, or
   # the same PC shows as another device. Node reports them on each OS and
