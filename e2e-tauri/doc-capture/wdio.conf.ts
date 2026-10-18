@@ -16,14 +16,28 @@
 //
 // They go to docs/screenshots, or to PIPETTE_DOC_SCREENSHOT_DIR when that
 // names a directory inside the temporary directory (capture-paths.ts).
+//
+// `pnpm doc:screenshots` runs every spec: the main capture
+// (specs/doc-capture.ts, numbered and named screenshots) and the captures
+// of one area each (the other specs, named screenshots only). One area
+// alone:
+//
+//   pnpm doc:screenshots --spec e2e-tauri/doc-capture/specs/<area>.ts
 
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { connect } from 'node:net'
 import { join } from 'node:path'
 import type { Options } from '@wdio/types'
-import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver, type DriverSession } from '../helpers/driver'
+import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver, userDataPath } from '../helpers/driver'
+import { startHubDriver, stopHubHarness } from '../helpers/hub-harness'
 import { assertCaptureUserData, screenshotDir } from './capture-paths'
+
+/** The specs whose app talks to the fake Hub of scripts/fake-hub, signed in
+ *  as the Hub test account (helpers/hub-harness.ts): their screenshots show
+ *  the Hub's actions and search results. Every other spec's app has a Hub
+ *  address nothing listens on. */
+const HUB_SPECS = ['hub.ts', 'key-labels.ts', 'language-packs.ts', 'theme-packs.ts'].map((name) => `/specs/${name}`)
 
 const PORT_CHECK_TIMEOUT_MS = 2_000
 
@@ -94,7 +108,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   // session's directory is made, and for that directory itself), and a
   // port another server already listens on (it would start the app without
   // the session's directory).
-  async beforeSession() {
+  async beforeSession(_config, _capabilities, specs) {
     sessionFailed = false
     try {
       screenshotDir()
@@ -105,14 +119,14 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
     } catch (err) {
       refuse(err)
     }
-    let session: DriverSession
     try {
-      session = await startDriver()
+      if (specs.some((spec) => HUB_SPECS.some((hubSpec) => spec.endsWith(hubSpec)))) await startHubDriver()
+      else await startDriver()
     } catch (err) {
       refuse(err)
     }
     try {
-      assertCaptureUserData(session.userDataDir)
+      assertCaptureUserData(userDataPath())
     } catch (err) {
       await stopDriver({ keepUserData: true })
       refuse(err)
@@ -124,6 +138,10 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   },
 
   async afterSession() {
-    await stopDriver({ keepUserData: sessionFailed })
+    try {
+      await stopDriver({ keepUserData: sessionFailed })
+    } finally {
+      await stopHubHarness()
+    }
   },
 }

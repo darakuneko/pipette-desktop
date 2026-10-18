@@ -1,14 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The steps the screenshot captures share: saving a screenshot, connecting
-// the virtual keyboard and clearing its unlock dialog, getting back to the
-// keymap editor, the keycodes overlay, the startup notice, and picking a
-// keyboard or a keymap snapshot in Analyze.
+// The steps the screenshot captures share: saving a screenshot, starting
+// from the device-selection screen at the capture's page size, starting the
+// app again with seeded files, connecting the virtual keyboard and clearing
+// its unlock dialog, getting back to the keymap editor, the keycodes
+// overlay, the startup notice and other overlays, and picking a keyboard or
+// a keymap snapshot in Analyze.
 
-import { mkdirSync } from 'node:fs'
-import { UNLOCK_KEYS, virtualDevice } from '../helpers/app'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { browser } from '@wdio/globals'
+import { DUMMY_TA_UID } from '../helpers/analyze-seed'
+import { restartApp, UNLOCK_KEYS, vialApi, VIRTUAL_DEVICE_NAME, virtualDevice } from '../helpers/app'
+import { userDataPath } from '../helpers/driver'
 import { screenshotDir, screenshotPath } from './capture-paths'
 import type { Locator, Page } from './page'
+
+/** The virtual keyboard's uid as the app stores it on disk: the u64
+ *  little-endian hex of its UID bytes ("VIRTGPK\0"). */
+export const VIRTUAL_DEVICE_UID = '0x004b504754524956'
+
+const STARTUP_TIMEOUT_MS = 30_000
 
 export async function isAvailable(locator: Locator): Promise<boolean> {
   return (await locator.count()) > 0
@@ -63,6 +74,91 @@ export async function captureNamed(page: Page, name: string, opts?: ShotOptions)
   await takeScreenshot(page, `${name}.png`, '--', opts)
 }
 
+// --- Start of a capture ------------------------------------------------------
+
+/** The page size every screenshot is taken at: the window's default size
+ *  on a screen of exactly that size (an Xvfb screen of 1440x1024, where the
+ *  window has no frame), at scale 1. */
+const VIEWPORT = { width: 1440, height: 1024, scale: 1 }
+
+async function assertViewport(): Promise<void> {
+  const actual = await browser.execute(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    scale: window.devicePixelRatio,
+  }))
+  if (actual.width !== VIEWPORT.width || actual.height !== VIEWPORT.height || actual.scale !== VIEWPORT.scale) {
+    throw new Error(
+      `the capture needs a ${VIEWPORT.width}x${VIEWPORT.height} page at scale ${VIEWPORT.scale} ` +
+        `(run it under an Xvfb screen of ${VIEWPORT.width}x${VIEWPORT.height}), not ` +
+        `${actual.width}x${actual.height} at scale ${actual.scale}`,
+    )
+  }
+}
+
+/** Checks the page size, waits until the device list shows the virtual
+ *  keyboard, and closes a stray startup notice: the state every capture
+ *  starts from. */
+export async function prepareCapture(page: Page): Promise<void> {
+  await assertViewport()
+  await deviceButton(page, VIRTUAL_DEVICE_NAME).waitFor({ state: 'visible', timeout: STARTUP_TIMEOUT_MS })
+  await page.waitForTimeout(1000)
+  await dismissNotificationModal(page)
+}
+
+/** Reads the JSON file at `path` (an empty object when it does not exist),
+ *  lets `edit` change it, and writes it back. */
+export function editJsonFile(path: string, edit: (data: Record<string, unknown>) => void, indent: string | number = 2): void {
+  const data = existsSync(path) ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>) : {}
+  edit(data)
+  writeFileSync(path, JSON.stringify(data, null, indent), 'utf-8')
+}
+
+/** Edits the app's config.json of the session (tab-indented, as the app
+ *  writes it). */
+export function editAppConfig(edit: (config: Record<string, unknown>) => void): void {
+  editJsonFile(userDataPath('config.json'), edit, '\t')
+}
+
+/** The virtual keyboard's PipetteSettings file of the session. */
+export function virtualDeviceSettingsPath(): string {
+  return userDataPath('sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json')
+}
+
+/**
+ * Quits the app and starts it again with the same userData directory,
+ * running `whileStopped` (the seed of the files the next launch reads) in
+ * between. The last connected device is cleared first: with it the app
+ * would connect again on launch and skip the device-selection screen every
+ * capture starts from.
+ */
+export async function relaunchApp(whileStopped?: () => void | Promise<void>): Promise<void> {
+  await restartApp(async () => {
+    editAppConfig((config) => {
+      config.lastDevice = null
+    })
+    await whileStopped?.()
+  })
+}
+
+/** Waits until the first launch has written this device's machine hash
+ *  (sync_state.json), which the typing analytics seed reads. */
+export async function waitForMachineHash(): Promise<void> {
+  await browser.waitUntil(() => existsSync(userDataPath('local', 'typing-analytics', 'sync_state.json')), {
+    timeout: STARTUP_TIMEOUT_MS,
+    timeoutMsg: 'the app did not write sync_state.json',
+  })
+}
+
+/** Waits until the cache the app rebuilt on launch has the seeded typing
+ *  analytics. */
+export async function waitForSeededAnalytics(): Promise<void> {
+  await browser.waitUntil(
+    async () => (await vialApi<unknown[]>('typingAnalyticsListItemsLocal', DUMMY_TA_UID)).length > 0,
+    { timeout: STARTUP_TIMEOUT_MS, timeoutMsg: 'the seeded typing analytics are not in the cache' },
+  )
+}
+
 // --- Device and unlock -------------------------------------------------------
 
 /** The device-selector button of the device named exactly `deviceName`. */
@@ -106,6 +202,19 @@ export async function connectToDevice(page: Page, deviceName: string): Promise<b
   await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
   await page.waitForTimeout(2000)
   return true
+}
+
+/** Connects the virtual keyboard, clears the Unlock dialog it can show
+ *  (it is locked on every launch), and gets back to the keymap editor, so
+ *  every capture of the editor starts from the same state. Throws when the
+ *  keyboard does not show up. */
+export async function connectToEditor(page: Page): Promise<void> {
+  if (!(await connectToDevice(page, VIRTUAL_DEVICE_NAME))) {
+    throw new Error(`could not connect to ${VIRTUAL_DEVICE_NAME}`)
+  }
+  console.log(`Connected to ${VIRTUAL_DEVICE_NAME}`)
+  await waitForUnlockDialog(page)
+  await resetToEditorMode(page)
 }
 
 /** Clears the unlock dialog, if it is up, by holding the virtual keyboard's
@@ -205,6 +314,28 @@ export async function dismissNotificationModal(page: Page): Promise<void> {
     await closeBtn.click()
   } else {
     await backdrop.click({ position: { x: 10, y: 10 } })
+  }
+  await page.waitForTimeout(500)
+}
+
+/**
+ * Close an overlay if it's up: its close button when it has one, else
+ * `fallback` (a backdrop click, Escape).
+ */
+export async function dismissOverlay(
+  page: Page,
+  backdropId: string,
+  closeId: string,
+  fallback: () => Promise<void>,
+): Promise<void> {
+  const backdrop = page.locator(`[data-testid="${backdropId}"]`)
+  if (!(await backdrop.isVisible())) return
+
+  const closeBtn = page.locator(`[data-testid="${closeId}"]`)
+  if (await isAvailable(closeBtn)) {
+    await closeBtn.click()
+  } else {
+    await fallback()
   }
   await page.waitForTimeout(500)
 }
