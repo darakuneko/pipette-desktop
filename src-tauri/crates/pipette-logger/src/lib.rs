@@ -12,12 +12,15 @@
 //! (targets starting with `pipette`) are kept from DEBUG up; those of other
 //! crates (Tauri, the WebView) from WARN up, so their debug output does not
 //! fill the files. A panic is logged as an ERROR before the default panic
-//! output. When the log directory cannot be created the logger still
-//! writes to stderr.
+//! output, except one raised inside [`expecting_panics`], which its caller
+//! catches and reports itself: that one is logged as a DEBUG record only.
+//! When the log directory cannot be created the logger still writes to
+//! stderr.
 
 mod format;
 mod rotating_file;
 
+use std::cell::Cell;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -89,14 +92,54 @@ pub fn init(log_dir: PathBuf) -> Result<(), InitError> {
 fn install_panic_hook() {
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
+        if panics_are_expected() {
+            log::debug!("caught panic: {info}");
+            return;
+        }
         log::error!("panic: {info}");
         previous(info);
     }));
 }
 
+thread_local! {
+    /// Whether this thread is inside [`expecting_panics`].
+    static EXPECTING_PANICS: Cell<bool> = const { Cell::new(false) };
+}
+
+fn panics_are_expected() -> bool {
+    EXPECTING_PANICS.with(Cell::get)
+}
+
+/// Runs `f`, whose panics the caller catches (`catch_unwind`) and reports
+/// itself: the panic hook logs a panic of this thread inside `f` as a DEBUG
+/// record and leaves out the default panic output. Panics elsewhere, and on
+/// other threads, are reported as usual.
+pub fn expecting_panics<T>(f: impl FnOnce() -> T) -> T {
+    /// Restores the flag when `f` returns or unwinds.
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            EXPECTING_PANICS.with(|flag| flag.set(self.0));
+        }
+    }
+    let _restore = Restore(EXPECTING_PANICS.with(|flag| flag.replace(true)));
+    f()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn panics_are_expected_only_inside_the_scope() {
+        assert!(!panics_are_expected());
+        assert!(expecting_panics(|| expecting_panics(panics_are_expected) && panics_are_expected()));
+        assert!(!panics_are_expected());
+        let caught = std::panic::catch_unwind(|| expecting_panics(|| panic!("expected")));
+        assert!(caught.is_err());
+        assert!(!panics_are_expected());
+        assert!(!expecting_panics(|| std::thread::spawn(panics_are_expected).join().unwrap()));
+    }
 
     #[test]
     fn the_app_crates_log_from_debug_up() {
