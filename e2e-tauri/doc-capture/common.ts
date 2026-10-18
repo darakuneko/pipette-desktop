@@ -6,9 +6,8 @@
 // keyboard or a keymap snapshot in Analyze.
 
 import { mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { UNLOCK_KEYS, virtualDevice } from '../helpers/app'
-import { screenshotDir } from './capture-paths'
+import { screenshotDir, screenshotPath } from './capture-paths'
 import type { Locator, Page } from './page'
 
 export async function isAvailable(locator: Locator): Promise<boolean> {
@@ -42,7 +41,7 @@ interface ShotOptions {
 }
 
 async function takeScreenshot(page: Page, filename: string, label: string, opts?: ShotOptions): Promise<void> {
-  const path = resolve(outputDirectory(), filename)
+  const path = screenshotPath(outputDirectory(), filename)
   if (opts?.element) {
     await opts.element.screenshot({ path })
   } else {
