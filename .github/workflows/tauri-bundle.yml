@@ -45,6 +45,12 @@ jobs:
       run:
         shell: bash
     steps:
+      # The files as committed: Git for Windows would turn the line ends of
+      # the fixtures and sample packs the tests compare byte for byte into
+      # CRLF.
+      - name: Keep the line ends
+        run: git config --global core.autocrlf false
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup-node-pnpm
