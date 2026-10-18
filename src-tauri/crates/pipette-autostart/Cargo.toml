@@ -11,8 +11,23 @@ rust-version.workspace = true
 [dependencies]
 log = "=0.4.34"
 
+# The login item of Windows (the Run key of the current user) and macOS
+# (SMAppService), Electron's app.setLoginItemSettings. MIT. Linux writes the
+# desktop entry itself (src/linux.rs), byte for byte the one Electron writes.
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+auto-launch = { version = "=0.6.0", default-features = false }
+
+# The user id of the process, for its line in /etc/passwd (src/passwd.rs),
+# and the directory-relative calls of a development directory's entry
+# (src/linux.rs), without unsafe code.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "=1.1.2", features = ["process", "fs"] }
+
 [dev-dependencies]
 tempfile = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { version = "=0.4.34", features = ["std"] }
 
 [lints]
 workspace = true
