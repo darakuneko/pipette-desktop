@@ -53,6 +53,7 @@ import {
   waitForVisible,
   waitForWindow,
   windowState,
+  type WindowSize,
   type WindowState,
 } from '../helpers/resident'
 import { fakeNotices, firstLaunchAt, startupNotices } from '../helpers/resident-harness'
@@ -169,7 +170,7 @@ async function cycleTray(): Promise<void> {
   await waitForTray((state) => state.active, 'the tray icon did not come back after trayResident turned on')
 }
 
-const sameSize = (a: { width: number; height: number } | null, b: { width: number; height: number } | null): boolean =>
+const sameSize = (a: WindowSize | null, b: WindowSize | null): boolean =>
   a !== null && b !== null && a.width === b.width && a.height === b.height
 const MIN_COMPACT = { width: 300, height: 100 }
 
