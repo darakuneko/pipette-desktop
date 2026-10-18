@@ -250,7 +250,13 @@ export function assertAutostartDir(dir: string, sessionDir: string, realDirs: st
     throw new Error(`the session's directory ${sessionDir} for ${AUTOSTART_DIR_VARIABLE} cannot be resolved: ${String(err)}`)
   }
   const normalized = resolve(dir)
-  const resolved = resolveExisting(normalized)
+  let resolved: string
+  try {
+    resolved = resolveExisting(normalized)
+  } catch (err) {
+    // A dangling link, a loop or a part it may not read: nothing to check.
+    throw new Error(`${AUTOSTART_DIR_VARIABLE} cannot be resolved, not ${dir}: ${(err as NodeJS.ErrnoException).code ?? String(err)}`)
+  }
   if (resolved === session || !isWithin(resolved, session)) {
     throw new Error(`${AUTOSTART_DIR_VARIABLE} must be inside the session's directory ${session}, not ${dir} (${resolved})`)
   }

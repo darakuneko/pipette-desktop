@@ -136,10 +136,17 @@ describe('appEnv: the autostart directory', () => {
     symlinkSync(outsideDir, toOutside)
     expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: toOutside })).toThrow(/inside the session/)
     expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: join(toOutside, 'autostart') })).toThrow(/inside the session/)
-    // The link is only read, never written through.
+    // The link is only read, never written through. It is refused whether
+    // the real directory exists (the link leads outside) or not (dangling).
     const toReal = join(sessionDir, 'to-real')
     symlinkSync(join(homedir(), '.config', 'autostart'), toReal)
     expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: toReal })).toThrow(new RegExp(AUTOSTART_DIR_VARIABLE))
+    const home = join(outsideDir, 'home')
+    const toHome = join(sessionDir, 'to-home')
+    symlinkSync(join(home, '.config', 'autostart'), toHome)
+    expect(() => appEnv(sessionDir, { HOME: home, [AUTOSTART_DIR_VARIABLE]: toHome })).toThrow(/cannot be resolved/)
+    mkdirSync(join(home, '.config', 'autostart'), { recursive: true })
+    expect(() => appEnv(sessionDir, { HOME: home, [AUTOSTART_DIR_VARIABLE]: toHome })).toThrow(/inside the session/)
   })
 
   it('refuses . and .. components, which a link could carry out of the session', () => {
@@ -168,8 +175,15 @@ describe('appEnv: the autostart directory', () => {
   it('refuses a dangling link', () => {
     const dangling = join(sessionDir, 'dangling')
     symlinkSync(join(outsideDir, 'missing'), dangling)
-    expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: dangling })).toThrow()
-    expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: join(dangling, 'autostart') })).toThrow()
+    expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: dangling })).toThrow(/PIPETTE_DEV_AUTOSTART_DIR cannot be resolved/)
+    expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: join(dangling, 'autostart') }))
+      .toThrow(/PIPETTE_DEV_AUTOSTART_DIR cannot be resolved/)
+  })
+
+  it('refuses a link loop', () => {
+    const loop = join(sessionDir, 'loop')
+    symlinkSync(loop, loop)
+    expect(() => appEnv(sessionDir, { [AUTOSTART_DIR_VARIABLE]: join(loop, 'autostart') })).toThrow(/PIPETTE_DEV_AUTOSTART_DIR cannot be resolved/)
   })
 
   it('refuses the autostart directory of the home the app gets, directly or through a link', () => {
