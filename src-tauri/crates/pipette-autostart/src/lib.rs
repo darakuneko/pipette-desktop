@@ -241,6 +241,11 @@ fn run(target: Target, enabled: bool, env: &Environment) {
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 fn login_item(enabled: bool, env: &Environment) {
+    // The login item is the signed-in user's own, so a test run on Windows
+    // or macOS must stop before it; the tests compare the call instead.
+    if cfg!(test) {
+        panic!("a test reached the OS's login item");
+    }
     other::apply(enabled, env.current_exe.as_deref().map_err(String::as_str));
 }
 

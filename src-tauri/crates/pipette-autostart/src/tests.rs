@@ -13,7 +13,9 @@ use std::path::{Path, PathBuf};
 
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
-use crate::linux::{FAILURE, desktop_entry};
+use crate::linux::FAILURE;
+#[cfg(unix)]
+use crate::linux::desktop_entry;
 use crate::{AUTOSTART_APPLIES, DEV_DIR_VARIABLE, Environment, Os, Target, apply, run, target};
 
 thread_local! {
@@ -287,6 +289,9 @@ fn a_build_without_the_development_tools_ignores_the_directory_variable() {
 }
 
 // --- PIPETTE_DEV_AUTOSTART_DIR ---
+// Only Linux writes into a development directory (the guarded module of
+// src/linux.rs), so the tests that reach the write run there alone; the
+// checks before it run everywhere.
 
 fn dev_env(home: &Path, dir: impl Into<OsString>) -> Environment {
     Environment { dev_dir: Some(dir.into()), ..linux_env(home) }
@@ -317,6 +322,7 @@ fn assert_refused(env: &Environment, home: &Path, reason: &str) {
 /// Applies a target checked earlier on and off and checks that nothing
 /// under `home` changed and each time an error containing `reason` was
 /// logged.
+#[cfg(target_os = "linux")]
 fn assert_not_used(checked: &crate::dev_dir::Checked, env: &Environment, home: &Path, reason: &str) {
     let before = snapshot(home);
     for enabled in [true, false] {
@@ -329,6 +335,7 @@ fn assert_not_used(checked: &crate::dev_dir::Checked, env: &Environment, home: &
     }
 }
 
+#[cfg(target_os = "linux")]
 fn checked_target(env: &Environment) -> crate::dev_dir::Checked {
     match target(false, env) {
         Target::DevDirectory(checked) => checked,
@@ -336,6 +343,7 @@ fn checked_target(env: &Environment) -> crate::dev_dir::Checked {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[test]
 fn the_development_directory_gets_the_entry_and_loses_it() {
     let home = populated_home();
@@ -516,7 +524,7 @@ fn the_development_directory_is_read_on_linux_only() {
     }
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn an_entry_swapped_for_a_link_after_the_check_is_not_written_through() {
     use std::os::unix::fs::symlink;
@@ -529,7 +537,7 @@ fn an_entry_swapped_for_a_link_after_the_check_is_not_written_through() {
     assert_not_used(&checked, &env, home.path(), "not a regular file of its own");
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn a_directory_swapped_for_a_link_after_the_check_is_not_used() {
     use std::os::unix::fs::symlink;
@@ -541,7 +549,7 @@ fn a_directory_swapped_for_a_link_after_the_check_is_not_used() {
     assert_not_used(&checked, &env, home.path(), "");
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn a_parent_swapped_for_a_link_after_the_check_is_not_used() {
     use std::os::unix::fs::symlink;
@@ -567,7 +575,7 @@ fn a_parent_swapped_for_a_link_after_the_check_is_not_used() {
     assert_not_used(&checked, &fresh, home.path(), "changed after it was checked");
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn a_hard_linked_entry_is_refused() {
     let home = populated_home();
@@ -585,6 +593,7 @@ fn a_hard_linked_entry_is_refused() {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[test]
 fn the_entry_replaces_a_plain_file_and_leaves_no_temporary_file() {
     let home = populated_home();
