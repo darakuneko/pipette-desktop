@@ -39,7 +39,7 @@ export function screenshotDir(env: NodeJS.ProcessEnv = process.env, tempDir: str
 /** The configuration directories of the user (where the installed app and
  *  the Electron build keep their userData), for the home and
  *  configuration directories of this process and of `env`. */
-export function realConfigDirs(env: NodeJS.ProcessEnv = process.env): string[] {
+function realConfigDirs(env: NodeJS.ProcessEnv = process.env): string[] {
   const homes = [homedir(), env.HOME, process.env.HOME]
   const configs = [env.XDG_CONFIG_HOME, process.env.XDG_CONFIG_HOME]
   const dirs = [

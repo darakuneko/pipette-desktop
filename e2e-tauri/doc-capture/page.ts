@@ -26,8 +26,6 @@ const POLL_MS = 100
 /** The WebDriver codes of the keys the capture presses. */
 const KEY_CODES: Record<string, string> = {
   Escape: '\uE00C',
-  Enter: '\uE007',
-  Tab: '\uE004',
 }
 
 /** The selectors of the roles the capture looks up with `getByRole`. */
@@ -39,7 +37,7 @@ const ROLE_SELECTORS: Record<string, string> = {
 
 /** Runs `fn` in the page with `args` and returns its answer. The function
  *  goes as its source text, so it may use only its own body. */
-export function runInPage<A extends unknown[], R>(fn: (...args: A) => R, ...args: A): Promise<Awaited<R>> {
+function runInPage<A extends unknown[], R>(fn: (...args: A) => R, ...args: A): Promise<Awaited<R>> {
   return browser.execute(fn as (...innerArgs: unknown[]) => R, ...args) as Promise<Awaited<R>>
 }
 
@@ -80,7 +78,7 @@ function isRetryableClickError(err: unknown): boolean {
   return err instanceof Error && /intercepted|not interactable|stale element|no such element/i.test(err.message)
 }
 
-export interface ClickOptions {
+interface ClickOptions {
   timeout?: number
   /** Clicks in the page without waiting for the element to be visible,
    *  enabled and uncovered. */
@@ -89,7 +87,7 @@ export interface ClickOptions {
   position?: { x: number; y: number }
 }
 
-export type WaitState = 'attached' | 'detached' | 'visible' | 'hidden'
+type WaitState = 'attached' | 'detached' | 'visible'
 
 export class Locator {
   constructor(
@@ -141,13 +139,13 @@ export class Locator {
     return state.visible
   }
 
-  async isEnabled(opts: { timeout?: number } = {}): Promise<boolean> {
-    await this.waitFor({ state: 'attached', timeout: opts.timeout })
+  async isEnabled(): Promise<boolean> {
+    await this.waitFor({ state: 'attached' })
     return (await this.state()).enabled
   }
 
-  async getAttribute(name: string, opts: { timeout?: number } = {}): Promise<string | null> {
-    await this.waitFor({ state: 'attached', timeout: opts.timeout })
+  async getAttribute(name: string): Promise<string | null> {
+    await this.waitFor({ state: 'attached' })
     return query<string | null>(this.chain, 'attribute', name)
   }
 
@@ -156,13 +154,8 @@ export class Locator {
     const deadline = Date.now() + (opts.timeout ?? DEFAULT_TIMEOUT_MS)
     for (;;) {
       const state = await this.state()
-      if (state.count > 1 && (wanted === 'attached' || wanted === 'visible')) throw this.strictError(state.count)
-      const reached =
-        wanted === 'attached' ? state.count === 1
-        : wanted === 'detached' ? state.count === 0
-        : wanted === 'visible' ? state.count === 1 && state.visible
-        : state.count === 0 || !state.visible
-      if (reached) return
+      if (state.count > 1 && wanted !== 'detached') throw this.strictError(state.count)
+      if (this.reached(wanted, state)) return
       if (Date.now() >= deadline) throw new Error(`timed out waiting for ${this.description} to be ${wanted}`)
       await sleep(POLL_MS)
     }
@@ -243,6 +236,17 @@ export class Locator {
   async screenshot(opts: { path: string }): Promise<void> {
     await this.waitFor({ state: 'visible' })
     await (await $(await this.mark())).saveScreenshot(opts.path)
+  }
+
+  private reached(wanted: WaitState, state: ElementState): boolean {
+    switch (wanted) {
+      case 'attached':
+        return state.count === 1
+      case 'detached':
+        return state.count === 0
+      case 'visible':
+        return state.count === 1 && state.visible
+    }
   }
 
   private state(): Promise<ElementState> {

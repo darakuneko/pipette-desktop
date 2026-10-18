@@ -17,8 +17,8 @@ import { DUMMY_TA_UID } from '../../helpers/analyze-seed'
 import { userDataPath } from '../../helpers/driver'
 import {
   connectToDevice,
+  deviceButton,
   dismissNotificationModal,
-  escapeRegex,
   outputDirectory,
   resetToEditorMode,
   waitForUnlockDialog,
@@ -73,15 +73,12 @@ async function assertViewport(): Promise<void> {
 /** Waits until the device list shows the virtual keyboard, so the first
  *  screenshot has it. */
 async function waitForDeviceList(page: Page): Promise<void> {
-  await page
-    .locator('[data-testid="device-button"]')
-    .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(VIRTUAL_DEVICE_NAME)}$`) }) })
-    .waitFor({ state: 'visible', timeout: STARTUP_TIMEOUT_MS })
+  await deviceButton(page, VIRTUAL_DEVICE_NAME).waitFor({ state: 'visible', timeout: STARTUP_TIMEOUT_MS })
   await page.waitForTimeout(1000)
 }
 
 async function connectDevice(page: Page): Promise<void> {
-  if (!(await connectToDevice(page, VIRTUAL_DEVICE_NAME, { raceNoDeviceMessage: true }))) {
+  if (!(await connectToDevice(page, VIRTUAL_DEVICE_NAME))) {
     throw new Error(`could not connect to ${VIRTUAL_DEVICE_NAME}`)
   }
   console.log(`Connected to ${VIRTUAL_DEVICE_NAME}`)
