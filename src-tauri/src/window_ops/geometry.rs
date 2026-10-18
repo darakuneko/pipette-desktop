@@ -20,7 +20,8 @@
 //! to the size less the base size (ICCCM `WM_NORMAL_HINTS`), and GTK fills
 //! in the minimum size as the base size when the hints give none, so a set
 //! with an aspect ratio also gives a base size of 0 × 0. Windows and macOS
-//! take the minimum size through tao and have no aspect ratio in this build.
+//! take the minimum size through tao and the aspect ratio through
+//! pipette-native, the content's in both cases (native.rs).
 
 use crate::window_bounds::Size;
 

@@ -20,12 +20,11 @@
 //! monitor's origin can differ from Chromium's, so a position saved by one
 //! build can open elsewhere, or centered, in the other.
 //!
-//! The saved size is the size inside the window frame, which is also what
-//! the builder sets, so a window keeps its size from launch to launch.
-//! Electron's bounds include the frame where the window system draws one
-//! into the window (Windows, macOS), so with a config.json shared with the
-//! Electron build the window opens one frame larger or smaller once, and
-//! keeps that size from then on.
+//! The saved size is the size Electron's bounds have: the size inside the
+//! window frame on Linux, the outer size, frame included, on Windows and
+//! macOS. The builder sets the content size, so there the window takes its
+//! outer size once it exists and its frame is known
+//! (`window_ops::native::fit_opening_frame`).
 
 use std::sync::{Mutex, PoisonError};
 
@@ -142,6 +141,12 @@ pub fn open_main_window<R: Runtime>(
         builder.center()
     };
     let window = builder.build()?;
+    window_ops::native::fit_opening_frame(
+        &window.as_ref().window(),
+        placement.bounds.size(),
+        placement.min_size,
+        !placement.positioned,
+    );
     app.manage(MainWindowState {
         started_hidden: start_hidden,
         min_size: Mutex::new(AppliedMinSize { monitor: None, min_size: placement.min_size }),
@@ -181,10 +186,14 @@ fn dip_rect(position: PhysicalPosition<i32>, size: PhysicalSize<u32>, scale: f64
     window_state::to_dip(position.x.into(), position.y.into(), size.width.into(), size.height.into(), scale)
 }
 
-/// The bounds of `window` in DIP: its outer position and its content size.
+/// The bounds of `window` in DIP, as Electron's `getBounds` reads them: its
+/// outer position, and its content size on Linux, where Electron's bounds
+/// have no frame, or its outer size on Windows and macOS.
 pub fn window_bounds<R: Runtime>(window: &Window<R>) -> tauri::Result<Rect> {
     let scale = window.scale_factor()?;
-    Ok(dip_rect(window.outer_position()?, window.inner_size()?, scale))
+    let size =
+        if window_ops::native::is_native::<R>() { window.outer_size()? } else { window.inner_size()? };
+    Ok(dip_rect(window.outer_position()?, size, scale))
 }
 
 /// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:

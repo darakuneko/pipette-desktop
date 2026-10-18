@@ -63,6 +63,9 @@ pipette-time = { path = "crates/pipette-time" }
 # sign-in (src/app_config.rs).
 pipette-notification = { path = "crates/pipette-notification" }
 pipette-autostart = { path = "crates/pipette-autostart" }
+# The opacity and the aspect ratio of the window on Windows and macOS
+# (src/window_ops/native.rs).
+pipette-native = { path = "crates/pipette-native" }
 log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).
@@ -168,6 +171,8 @@ lzma-rs = "=0.3.0"
 tempfile = "=3.23.0"
 
 [workspace.lints.rust]
+# Every crate takes these lints but crates/pipette-native, the one crate
+# with unsafe code (its own [lints] deny it outside its system modules).
 unsafe_code = "forbid"
 
 [workspace.lints.clippy]

@@ -22,7 +22,9 @@ mod appkit {
     use objc2_app_kit::{NSApplication, NSBackingStoreType, NSWindow, NSWindowStyleMask};
     use objc2_foundation::{NSPoint, NSRect, NSSize};
     use pipette_native::{Error, set_content_aspect_ratio, set_opacity};
-    use raw_window_handle::{AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle, WindowHandle};
+    use raw_window_handle::{
+        AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle, WindowHandle,
+    };
 
     /// The content view of a window that outlives every use of the handle.
     struct View(usize);

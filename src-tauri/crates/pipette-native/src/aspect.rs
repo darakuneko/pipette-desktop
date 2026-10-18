@@ -115,17 +115,24 @@ mod tests {
         let right = 900;
         let bottom = 350;
         assert_eq!(fit(Edge::Top, 2.0, NONE, NONE, start), Bounds { left: 100, top: 50, right: 700, bottom });
-        assert_eq!(fit(Edge::TopRight, 2.0, NONE, NONE, start), Bounds { left: 100, top: 50, right: 700, bottom });
-        assert_eq!(fit(Edge::Left, 2.0, NONE, NONE, start), Bounds { left: 100, top: 50, right, bottom: 450 });
-        assert_eq!(fit(Edge::BottomLeft, 2.0, NONE, NONE, start), Bounds { left: 300, top: 50, right, bottom });
+        assert_eq!(
+            fit(Edge::TopRight, 2.0, NONE, NONE, start),
+            Bounds { left: 100, top: 50, right: 700, bottom }
+        );
+        assert_eq!(
+            fit(Edge::Left, 2.0, NONE, NONE, start),
+            Bounds { left: 100, top: 50, right, bottom: 450 }
+        );
+        assert_eq!(
+            fit(Edge::BottomLeft, 2.0, NONE, NONE, start),
+            Bounds { left: 300, top: 50, right, bottom }
+        );
         assert_eq!(fit(Edge::TopLeft, 2.0, NONE, NONE, start), Bounds { left: 300, top: 50, right, bottom });
         assert_eq!(fit(Edge::Top, 1.0, NONE, NONE, bounds(0, 0, 100, 300)), bounds(0, 0, 300, 300));
-        assert_eq!(fit(Edge::TopLeft, 3.0, NONE, NONE, bounds(0, 0, 100, 100)), Bounds {
-            left: -200,
-            top: 0,
-            right: 100,
-            bottom: 100
-        });
+        assert_eq!(
+            fit(Edge::TopLeft, 3.0, NONE, NONE, bounds(0, 0, 100, 100)),
+            Bounds { left: -200, top: 0, right: 100, bottom: 100 }
+        );
     }
 
     #[test]

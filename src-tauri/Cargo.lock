@@ -3005,6 +3005,7 @@ dependencies = [
  "pipette-js-json",
  "pipette-keyboard-stores",
  "pipette-logger",
+ "pipette-native",
  "pipette-net",
  "pipette-notification",
  "pipette-pack-stores",

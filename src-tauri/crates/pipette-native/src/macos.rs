@@ -19,7 +19,10 @@ use crate::Error;
 
 /// The NSWindow of `window`; `_main_thread` proves this runs on the main
 /// thread.
-fn ns_window(window: &impl HasWindowHandle, _main_thread: MainThreadMarker) -> Result<Retained<NSWindow>, Error> {
+fn ns_window(
+    window: &impl HasWindowHandle,
+    _main_thread: MainThreadMarker,
+) -> Result<Retained<NSWindow>, Error> {
     let handle = window.window_handle().map_err(|err| Error::NoHandle(err.to_string()))?;
     let RawWindowHandle::AppKit(handle) = handle.as_raw() else {
         return Err(Error::WrongHandle("AppKit"));
@@ -42,7 +45,10 @@ pub(crate) fn set_opacity(window: &impl HasWindowHandle, opacity: f64) -> Result
     Ok(())
 }
 
-pub(crate) fn set_content_aspect_ratio(window: &impl HasWindowHandle, ratio: Option<f64>) -> Result<(), Error> {
+pub(crate) fn set_content_aspect_ratio(
+    window: &impl HasWindowHandle,
+    ratio: Option<f64>,
+) -> Result<(), Error> {
     let ns_window = ns_window(window, main_thread()?)?;
     match ratio {
         Some(ratio) => ns_window.setContentAspectRatio(NSSize::new(ratio, 1.0)),

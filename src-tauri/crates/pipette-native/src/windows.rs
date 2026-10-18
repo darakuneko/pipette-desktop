@@ -96,7 +96,10 @@ pub(crate) fn set_opacity(window: &impl HasWindowHandle, opacity: f64) -> Result
     Ok(())
 }
 
-pub(crate) fn set_content_aspect_ratio(window: &impl HasWindowHandle, ratio: Option<f64>) -> Result<(), Error> {
+pub(crate) fn set_content_aspect_ratio(
+    window: &impl HasWindowHandle,
+    ratio: Option<f64>,
+) -> Result<(), Error> {
     let hwnd = hwnd(window)?;
     match ratio.map(|ratio| ratio as f32).filter(|ratio| ratio.is_finite() && *ratio > 0.0) {
         Some(ratio) => {

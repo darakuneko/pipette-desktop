@@ -86,8 +86,8 @@ pub fn set_window_always_on_top<R: Runtime>(window: WebviewWindow<R>, enabled: b
 /// Sets the opacity, clamped as `clampViewOnlyOpacity` does; anything but a
 /// number is the default.
 #[tauri::command]
-pub fn set_window_opacity(opacity: Option<serde_json::Value>) {
-    window_ops::opacity::set_opacity(&opacity.unwrap_or_default());
+pub fn set_window_opacity<R: Runtime>(window: WebviewWindow<R>, opacity: Option<serde_json::Value>) {
+    window_ops::opacity::set_opacity(&window.as_ref().window(), &opacity.unwrap_or_default());
 }
 
 /// Sets the minimum size, each side at least 1.
