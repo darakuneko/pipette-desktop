@@ -72,6 +72,15 @@ struct Received {
 /// response) and hands back what it received. Gives up after 10 seconds
 /// without a connection.
 fn serve_once(response: String) -> (String, JoinHandle<Received>) {
+    serve_once_holding(response, None)
+}
+
+/// [`serve_once`], keeping the connection open after the response until
+/// `hold` gets a message or is dropped (at most 10 seconds).
+fn serve_once_holding(
+    response: String,
+    hold: Option<std::sync::mpsc::Receiver<()>>,
+) -> (String, JoinHandle<Received>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|err| panic!("bind: {err}"));
     let url = format!("http://{}/", listener.local_addr().unwrap_or_else(|err| panic!("address: {err}")));
     listener.set_nonblocking(true).unwrap_or_else(|err| panic!("nonblocking: {err}"));
@@ -114,6 +123,9 @@ fn serve_once(response: String) -> (String, JoinHandle<Received>) {
         received.body = vec![0; length];
         reader.read_exact(&mut received.body).unwrap_or_else(|err| panic!("read body: {err}"));
         reader.get_mut().write_all(response.as_bytes()).unwrap_or_else(|err| panic!("write: {err}"));
+        if let Some(hold) = hold {
+            let _ = hold.recv_timeout(Duration::from_secs(10));
+        }
         received
     });
     (url, handle)
@@ -175,4 +187,36 @@ async fn an_override_off_the_loopback_interface_is_refused_before_connecting() {
         let reply = destination.requester("pipette-test").request(notice_request(&destination.url, 0)).await;
         assert!(matches!(reply, Err(HttpError::Refused(_))), "{url}: {reply:?}");
     }
+}
+
+#[tokio::test]
+async fn a_status_outside_2xx_settles_without_waiting_for_its_body() {
+    // The server promises a body and sends none until released.
+    let (release, hold) = std::sync::mpsc::channel();
+    let (url, server) = serve_once_holding(
+        "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 100\r\n\r\n".to_owned(),
+        Some(hold),
+    );
+    let destination = overridden(&url);
+    let started = std::time::Instant::now();
+    let result = fetch_notifications(&*destination.requester("pipette-test"), &destination.url, 0).await;
+    assert_eq!(result, NotificationFetchResult::failed("HTTP 500"));
+    assert!(started.elapsed() < Duration::from_secs(5), "{:?}", started.elapsed());
+    let _ = release.send(());
+    server.join().unwrap_or_else(|_| panic!("the server panicked"));
+}
+
+#[tokio::test]
+async fn a_body_over_1_mib_fails_the_fetch() {
+    let length = 1024 * 1024 + 1;
+    let (release, hold) = std::sync::mpsc::channel();
+    let (url, server) = serve_once_holding(
+        format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {length}\r\n\r\n"),
+        Some(hold),
+    );
+    let destination = overridden(&url);
+    let result = fetch_notifications(&*destination.requester("pipette-test"), &destination.url, 0).await;
+    assert!(!result.success && result.notifications.is_none(), "{result:?}");
+    let _ = release.send(());
+    server.join().unwrap_or_else(|_| panic!("the server panicked"));
 }

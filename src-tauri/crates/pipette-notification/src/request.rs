@@ -14,8 +14,10 @@ use pipette_net::{HttpRequest, Limits, Method};
 pub const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The client's bounds: the default ones with the whole request cut at
-/// [`FETCH_TIMEOUT`].
-pub const NOTICE_LIMITS: Limits = Limits { total_timeout: FETCH_TIMEOUT, ..Limits::DEFAULT };
+/// [`FETCH_TIMEOUT`] and the body at 1 MiB. The query asks for ten
+/// notices, a few kilobytes; Electron takes a body of any size.
+pub const NOTICE_LIMITS: Limits =
+    Limits { total_timeout: FETCH_TIMEOUT, max_body_bytes: 1024 * 1024, ..Limits::DEFAULT };
 
 /// How many notices the query asks for.
 const LIMIT: f64 = 10.0;
@@ -79,8 +81,8 @@ mod tests {
     }
 
     #[test]
-    fn the_whole_request_is_cut_at_ten_seconds() {
+    fn the_whole_request_is_cut_at_ten_seconds_and_the_body_at_1_mib() {
         assert_eq!(NOTICE_LIMITS.total_timeout, Duration::from_secs(10));
-        assert_eq!(NOTICE_LIMITS.max_body_bytes, Limits::DEFAULT.max_body_bytes);
+        assert_eq!(NOTICE_LIMITS.max_body_bytes, 1024 * 1024);
     }
 }

@@ -10,7 +10,9 @@
 //! - the error text of a failed request or of a body that is not JSON is
 //!   this build's own (the renderer reads only `success`);
 //! - the proxy comes from the environment (reqwest), not Chromium's
-//!   settings.
+//!   settings;
+//! - a body over 1 MiB fails the fetch ([`NOTICE_LIMITS`]); Electron reads
+//!   any size. Ten notices are a few kilobytes.
 
 mod date_parse;
 mod destination;
@@ -30,9 +32,12 @@ pub use request::{FETCH_TIMEOUT, NOTICE_LIMITS, notice_request, request_body};
 pub const TIMED_OUT: &str = "the request timed out";
 
 /// `fetchNotifications`: posts the notice query to `url` through
-/// `requester` with `now_ms` as `Date.now()`, and reads the response. The
-/// whole fetch ends after [`FETCH_TIMEOUT`] whatever the requester's own
-/// bounds. Logs a failure with its error and a success with the number of
+/// `requester` with `now_ms` as `Date.now()`, and reads the response. A
+/// status outside 2xx settles once the headers are in, without its body
+/// (Electron stops at `!response.ok` too). The whole fetch ends after
+/// [`FETCH_TIMEOUT`] whatever the requester's own bounds. The body is at
+/// most [`NOTICE_LIMITS`]'s 1 MiB, which parses in milliseconds, so the
+/// parse and the checks run in place. Logs a failure with its error and a success with the number of
 /// notices only: the notices themselves are never logged. Run on the Tokio
 /// runtime.
 pub async fn fetch_notifications(
@@ -40,7 +45,11 @@ pub async fn fetch_notifications(
     url: &str,
     now_ms: i64,
 ) -> NotificationFetchResult {
-    let reply = tokio::time::timeout(FETCH_TIMEOUT, requester.request(notice_request(url, now_ms))).await;
+    let reply = tokio::time::timeout(
+        FETCH_TIMEOUT,
+        requester.request_without_error_body(notice_request(url, now_ms)),
+    )
+    .await;
     let result = match reply {
         Ok(Ok(reply)) => result_from_reply(&reply),
         Ok(Err(err)) => NotificationFetchResult::failed(err.to_string()),

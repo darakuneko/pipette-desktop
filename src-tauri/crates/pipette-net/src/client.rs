@@ -143,6 +143,15 @@ pub type RequestFuture<'a> = Pin<Box<dyn Future<Output = Result<HttpReply, HttpE
 /// runtime.
 pub trait HttpRequester: Send + Sync {
     fn request(&self, request: HttpRequest) -> RequestFuture<'_>;
+
+    /// [`HttpRequester::request`], except that a response outside 2xx
+    /// settles as soon as its headers are in, with an empty body: for
+    /// callers that stop at `!response.ok` and never read that body, so a
+    /// server that stalls in it cannot hold them up. The default reads it
+    /// as `request` does.
+    fn request_without_error_body(&self, request: HttpRequest) -> RequestFuture<'_> {
+        self.request(request)
+    }
 }
 
 /// A closure answers at once, for the tests of the code that takes a
@@ -364,7 +373,9 @@ impl ReqwestClient {
         Ok(HttpResponse { status, body })
     }
 
-    async fn send(&self, request: HttpRequest) -> Result<HttpReply, HttpError> {
+    /// Sends `request`; the body of a response outside 2xx is read up to
+    /// [`ERROR_BODY_LIMIT`] when `error_body`, else left unread.
+    async fn send(&self, request: HttpRequest, error_body: bool) -> Result<HttpReply, HttpError> {
         self.check_destination(&request.url)?;
         let method = match request.method {
             Method::Get => reqwest::Method::GET,
@@ -388,8 +399,10 @@ impl ReqwestClient {
         let content_type = header(reqwest::header::CONTENT_TYPE);
         let body = if response.status().is_success() {
             self.read_body(&mut response, self.limits.max_body_bytes, Overflow::Fail).await?
-        } else {
+        } else if error_body {
             self.read_body(&mut response, ERROR_BODY_LIMIT as u64, Overflow::Truncate).await?
+        } else {
+            Vec::new()
         };
         Ok(HttpReply { status, retry_after, content_type, body })
     }
@@ -453,20 +466,29 @@ impl HttpClient for ReqwestClient {
     }
 }
 
+impl ReqwestClient {
+    /// [`ReqwestClient::send`], logging the failures that say something
+    /// about the request rather than the network.
+    async fn send_logged(&self, request: HttpRequest, error_body: bool) -> Result<HttpReply, HttpError> {
+        // The path only: a query may carry a token.
+        let target = request.url.split('?').next().unwrap_or("").to_owned();
+        let method = request.method;
+        let result = self.send(request, error_body).await;
+        if let Err(err @ (HttpError::Timeout | HttpError::TooLarge { .. } | HttpError::Refused(_))) = &result
+        {
+            log::warn!("{method:?} {target}: {err}");
+        }
+        result
+    }
+}
+
 impl HttpRequester for ReqwestClient {
     fn request(&self, request: HttpRequest) -> RequestFuture<'_> {
-        Box::pin(async move {
-            // The path only: a query may carry a token.
-            let target = request.url.split('?').next().unwrap_or("").to_owned();
-            let method = request.method;
-            let result = self.send(request).await;
-            if let Err(err @ (HttpError::Timeout | HttpError::TooLarge { .. } | HttpError::Refused(_))) =
-                &result
-            {
-                log::warn!("{method:?} {target}: {err}");
-            }
-            result
-        })
+        Box::pin(self.send_logged(request, true))
+    }
+
+    fn request_without_error_body(&self, request: HttpRequest) -> RequestFuture<'_> {
+        Box::pin(self.send_logged(request, false))
     }
 }
 
