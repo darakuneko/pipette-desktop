@@ -3,9 +3,10 @@
 //! Test's view-only window (compact mode, aspect ratio, always on top,
 //! opacity, minimum size; the commands of window_commands.rs) and the window
 //! system's changes to it. Every window event but the close request
-//! (src/lifecycle.rs) comes here: after a move the window gets the minimum
-//! size of the display it is on (`main_window::update_min_size`), and a
-//! change of the displays or of the scale factor fits it into its work area
+//! (src/lifecycle.rs) comes here: after a move or a change of the scale
+//! factor the window gets the minimum size of the display it is on
+//! (`main_window::update_min_size`), and a change of the displays, seen on
+//! the window's events and on a slow poll, fits it into its work area
 //! (display.rs).
 //!
 //! The decisions are compact.rs's and geometry.rs's; this module reads the
@@ -36,6 +37,11 @@ use geometry::{ApplyHints, Change, Hints};
 /// The frame of the window's bounds: none (see the module comment).
 const NO_FRAME: Size = Size { width: 0.0, height: 0.0 };
 
+/// How often the displays are looked at while the window sits still.
+/// Electron hears `display-metrics-changed`; Tauri has no such event, and
+/// GDK none for a work area that changes.
+const DISPLAY_POLL: Duration = Duration::from_secs(2);
+
 /// What the handlers keep about the window.
 #[derive(Default)]
 struct WindowOps(Mutex<Inner>);
@@ -46,6 +52,9 @@ struct Inner {
     controller: Option<Controller>,
     displays: DisplayWatch,
     always_on_top: bool,
+    /// The hints the window has, as last applied to it.
+    applied_hints: Option<Hints>,
+    polling: bool,
 }
 
 /// The handlers' state, managed on first use.
@@ -57,13 +66,76 @@ fn lock<R: Runtime>(window: &Window<R>) -> MutexGuard<'_, Inner> {
 }
 
 /// Runs `f` on the controller, which starts from the minimum size the
-/// window opened with.
-fn with_controller<R: Runtime, T>(window: &Window<R>, f: impl FnOnce(&mut Controller) -> T) -> T {
+/// window opened with, then gives the window the hints the controller now
+/// wants.
+fn with_controller<R: Runtime, T>(window: &Window<R>, f: impl FnOnce(&mut Controller, &Port<R>) -> T) -> T {
+    let port = Port(window.clone());
+    let result = {
+        let mut inner = lock(window);
+        let controller = inner
+            .controller
+            .get_or_insert_with(|| Controller::new(main_window::opening_min_size(window.app_handle())));
+        f(controller, &port)
+    };
+    sync_hints(window);
+    result
+}
+
+/// Gives the window the hints of the controller's state at the time they
+/// are applied, on the main thread as every GTK call. A queued sync that
+/// runs late reads the newest state, so the last one applied is always the
+/// current set.
+fn sync_hints<R: Runtime>(window: &Window<R>) {
+    if !has_gtk_window::<R>() {
+        return apply_current_hints(window);
+    }
+    let target = window.clone();
+    if let Err(err) = window.run_on_main_thread(move || apply_current_hints(&target)) {
+        log::error!("[window] failed to set the window's geometry hints: {err}");
+    }
+}
+
+fn apply_current_hints<R: Runtime>(window: &Window<R>) {
     let mut inner = lock(window);
-    let controller = inner
-        .controller
-        .get_or_insert_with(|| Controller::new(main_window::opening_min_size(window.app_handle())));
-    f(controller)
+    let Some(hints) = inner.controller.map(|controller| controller.window_hints()) else {
+        return;
+    };
+    if inner.applied_hints == Some(hints) {
+        return;
+    }
+    log::debug!("[window] geometry hints {hints:?}");
+    match apply_native_hints(window, hints) {
+        Ok(()) => inner.applied_hints = Some(hints),
+        Err(err) => log::error!("[window] failed to set the window's geometry hints: {err}"),
+    }
+}
+
+fn apply_native_hints<R: Runtime>(window: &Window<R>, hints: Hints) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    if has_gtk_window::<R>() {
+        return gtk_apply_hints(window, hints);
+    }
+    if hints.aspect.is_some() && cfg!(not(target_os = "linux")) {
+        log::warn!("[window] this build does not set an aspect ratio on this system");
+    }
+    let min_size = hints.min_size.map(|(width, height)| LogicalSize::new(width, height));
+    window.set_min_size(min_size).map_err(|err| err.to_string())
+}
+
+/// Runs `f` on the main thread and answers what it returns; None when it
+/// could not be run there.
+async fn on_main<R: Runtime, T: Send + 'static>(
+    window: &Window<R>,
+    f: impl FnOnce() -> T + Send + 'static,
+) -> Option<T> {
+    let (sender, mut receiver) = tauri::async_runtime::channel(1);
+    if let Err(err) = window.run_on_main_thread(move || {
+        let _ = sender.try_send(f());
+    }) {
+        log::error!("[window] failed to reach the main thread: {err}");
+        return None;
+    }
+    receiver.recv().await
 }
 
 /// The size compact mode keeps to go back to, while it is on.
@@ -78,44 +150,97 @@ pub fn in_compact_mode<R: Runtime>(window: &Window<R>) -> bool {
 
 /// Applies `min_size` unless it is the minimum size applied last.
 pub fn apply_min_size<R: Runtime>(window: &Window<R>, min_size: Size) -> Result<(), String> {
-    let port = Port(window.clone());
-    with_controller(window, |controller| controller.geometry.apply_min_size_if_changed(&port, min_size))
+    with_controller(window, |controller, port| controller.geometry.apply_min_size_if_changed(port, min_size))
 }
 
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     if window.label() != MAIN_WINDOW {
         return;
     }
+    if let WindowEvent::Destroyed = event {
+        *lock(window) = Inner::default();
+        return;
+    }
+    start_display_poll(window);
     match event {
-        WindowEvent::Moved(_) => {
+        WindowEvent::Moved(_) | WindowEvent::ScaleFactorChanged { .. } => {
             main_window::update_min_size(window);
-            check_displays(window, false);
+            check_displays(window);
         }
-        WindowEvent::Resized(_) => check_displays(window, false),
-        WindowEvent::ScaleFactorChanged { .. } => check_displays(window, true),
-        WindowEvent::Destroyed => *lock(window) = Inner::default(),
+        WindowEvent::Resized(_) => check_displays(window),
         _ => {}
     }
 }
 
+/// Looks at the displays every [`DISPLAY_POLL`] while the window exists, so
+/// a still window takes a changed work area too. Only the app's runtime
+/// lists monitors.
+fn start_display_poll<R: Runtime>(window: &Window<R>) {
+    if !is_app_runtime::<R>() {
+        return;
+    }
+    {
+        let mut inner = lock(window);
+        if inner.polling {
+            return;
+        }
+        inner.polling = true;
+    }
+    let port = Port(window.clone());
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(DISPLAY_POLL).await;
+            if port.is_destroyed() {
+                return;
+            }
+            let window = port.0.clone();
+            if port.0.run_on_main_thread(move || check_displays(&window)).is_err() {
+                return;
+            }
+        }
+    });
+}
+
 /// Fits the window into its work area when the displays changed since the
-/// last look, or `scale_changed`.
-fn check_displays<R: Runtime>(window: &Window<R>, scale_changed: bool) {
-    let (displays, primary) = main_window::displays(window.app_handle());
+/// last look.
+fn check_displays<R: Runtime>(window: &Window<R>) {
+    let (displays, primary) = displays(window);
     let changed = lock(window).displays.changed(&displays);
-    if !changed && !scale_changed {
+    if !changed {
         return;
     }
     let Some(bounds) = read_bounds(window) else {
         return;
     };
-    let display = pick_display(&displays, primary, bounds);
+    let display = display_of(window, &displays, primary, bounds);
     let maximized_or_full_screen =
         window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false);
-    let port = Port(window.clone());
-    with_controller(window, |controller| {
-        controller.work_area_changed(&port, bounds, display.as_ref(), maximized_or_full_screen);
+    with_controller(window, |controller, port| {
+        controller.work_area_changed(port, bounds, display.as_ref(), maximized_or_full_screen);
     });
+}
+
+/// The monitors in DIP and the primary one; none on the runtime of
+/// tauri::test, which cannot list monitors (it panics when asked).
+fn displays<R: Runtime>(window: &Window<R>) -> (Vec<Display>, Option<usize>) {
+    if is_app_runtime::<R>() { main_window::displays(window.app_handle()) } else { (Vec::new(), None) }
+}
+
+/// The display of the window at `bounds`: the one they overlap most, or
+/// the window's current monitor where the window cannot read its position
+/// (Wayland, where `bounds` start at 0, 0).
+fn display_of<R: Runtime>(
+    window: &Window<R>,
+    displays: &[Display],
+    primary: Option<usize>,
+    bounds: Rect,
+) -> Option<Display> {
+    if !position_known(window)
+        && let Ok(Some(monitor)) = window.current_monitor()
+    {
+        return Some(main_window::display(&monitor));
+    }
+    pick_display(displays, primary, bounds)
 }
 
 /// `screen.getDisplayMatching(bounds)`: the display `bounds` overlap most,
@@ -147,61 +272,84 @@ impl From<Size> for WindowSize {
     }
 }
 
+/// What entering or leaving decided, and the animation to run on.
+struct CompactStep {
+    answer: Option<WindowSize>,
+    animation: Option<Animation>,
+}
+
 /// Enters or leaves compact mode (the WINDOW_SET_COMPACT_MODE handler).
 /// Entering answers None at once and animates on; leaving answers the size
-/// before it, once its animation has ended.
+/// before it, once its animation has ended. Every step runs on the main
+/// thread, where the window's close also runs: a close between two steps
+/// sees the bounds and the normal size of the same step.
 pub async fn set_compact_mode<R: Runtime>(
     window: &Window<R>,
     enabled: bool,
     compact_size: Option<Size>,
 ) -> Option<WindowSize> {
-    let bounds = read_bounds(window)?;
-    let port = Port(window.clone());
-    if enabled {
-        let started = with_controller(window, |controller| {
-            let mut animation = controller.enter(&port, bounds, NO_FRAME, compact_size)?;
-            Some((controller.tick(&port, &mut animation), animation))
-        });
-        if let Some((Tick::Continue, animation)) = started {
-            tauri::async_runtime::spawn(animate(port, animation));
+    let target = window.clone();
+    let step = on_main(window, move || compact_step(&target, enabled, compact_size)).await??;
+    if let Some(animation) = step.animation {
+        if enabled {
+            let window = window.clone();
+            tauri::async_runtime::spawn(async move { animate(&window, animation).await });
+        } else {
+            animate(window, animation).await;
         }
-        return None;
     }
-    let (displays, primary) = main_window::displays(window.app_handle());
-    let display = pick_display(&displays, primary, bounds);
-    let (leave, first) = with_controller(window, |controller| {
-        let mut leave = controller.leave(&port, bounds, display.as_ref());
-        let first = leave.animation.as_mut().map(|animation| controller.tick(&port, animation));
-        (leave, first)
-    });
-    if let (Some(animation), Some(Tick::Continue)) = (leave.animation, first) {
-        animate(port, animation).await;
-    }
-    Some(leave.size.into())
+    step.answer
 }
 
-/// The steps of `animation` after its first, one every [`STEP_MS`], until
-/// it is done.
-async fn animate<R: Runtime>(port: Port<R>, mut animation: Animation) {
+/// The decision of entering or leaving and the animation's first step.
+fn compact_step<R: Runtime>(
+    window: &Window<R>,
+    enabled: bool,
+    compact_size: Option<Size>,
+) -> Option<CompactStep> {
+    let bounds = read_bounds(window)?;
+    let (displays, primary) = displays(window);
+    let display = if enabled { None } else { display_of(window, &displays, primary, bounds) };
+    Some(with_controller(window, |controller, port| {
+        let (answer, animation) = if enabled {
+            (None, controller.enter(port, bounds, NO_FRAME, compact_size))
+        } else {
+            let leave = controller.leave(port, bounds, display.as_ref());
+            (Some(leave.size.into()), leave.animation)
+        };
+        let animation = animation.and_then(|mut animation| {
+            (controller.tick(port, &mut animation) == Tick::Continue).then_some(animation)
+        });
+        CompactStep { answer, animation }
+    }))
+}
+
+/// The steps of `animation` after its first, one every [`STEP_MS`] on the
+/// main thread, until it is done.
+async fn animate<R: Runtime>(window: &Window<R>, mut animation: Animation) {
     loop {
         tokio::time::sleep(Duration::from_millis(STEP_MS)).await;
-        let tick = with_controller(&port.0, |controller| controller.tick(&port, &mut animation));
-        if let Tick::Done { .. } = tick {
-            return;
+        let target = window.clone();
+        let step = on_main(window, move || {
+            let tick = with_controller(&target, |controller, port| controller.tick(port, &mut animation));
+            (tick, animation)
+        })
+        .await;
+        match step {
+            Some((Tick::Continue, next)) => animation = next,
+            _ => return,
         }
     }
 }
 
 /// Sets or releases the aspect ratio (the WINDOW_SET_ASPECT_RATIO handler).
 pub fn set_aspect_ratio<R: Runtime>(window: &Window<R>, ratio: f64) {
-    let port = Port(window.clone());
-    with_controller(window, |controller| controller.geometry.set_aspect_ratio(&port, ratio, NO_FRAME));
+    with_controller(window, |controller, port| controller.set_aspect_ratio(port, ratio, NO_FRAME));
 }
 
 /// The WINDOW_SET_MIN_SIZE handler.
 pub fn set_min_size<R: Runtime>(window: &Window<R>, width: f64, height: f64) {
-    let port = Port(window.clone());
-    with_controller(window, |controller| controller.set_min_size(&port, width, height));
+    with_controller(window, |controller, port| controller.set_min_size(port, width, height));
 }
 
 pub fn set_always_on_top<R: Runtime>(window: &Window<R>, enabled: bool) {
@@ -218,13 +366,15 @@ pub struct WindowReport {
     /// The content size.
     pub size: WindowSize,
     pub min_size: Option<WindowSize>,
+    /// The aspect ratio asked for, whether the window has it now or not.
+    pub aspect_ratio: Option<f64>,
     pub hints: HintsReport,
     pub always_on_top: bool,
     pub compact: bool,
     pub normal_size: Option<WindowSize>,
 }
 
-/// The geometry hints last applied, in whole logical pixels.
+/// The geometry hints the window has, in whole logical pixels.
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HintsReport {
@@ -238,11 +388,13 @@ pub fn report<R: Runtime>(window: &Window<R>) -> Result<WindowReport, String> {
         .scale_factor()
         .and_then(|scale| Ok(window.inner_size()?.to_logical::<f64>(scale)))
         .map_err(|err| err.to_string())?;
-    let controller = with_controller(window, |controller| *controller);
-    let hints = geometry::hints(&controller.geometry);
+    let controller = with_controller(window, |controller, _| *controller);
+    let inner = lock(window);
+    let hints = inner.applied_hints.unwrap_or_else(|| controller.window_hints());
     Ok(WindowReport {
         size: WindowSize { width: size.width, height: size.height },
         min_size: controller.geometry.min_size.map(Into::into),
+        aspect_ratio: controller.geometry.aspect_ratio,
         hints: HintsReport {
             mask: hints.mask(),
             min_size: hints
@@ -250,39 +402,36 @@ pub fn report<R: Runtime>(window: &Window<R>) -> Result<WindowReport, String> {
                 .map(|(width, height)| WindowSize { width: width.into(), height: height.into() }),
             aspect: hints.aspect,
         },
-        always_on_top: lock(window).always_on_top,
+        always_on_top: inner.always_on_top,
         compact: controller.in_compact_mode(),
         normal_size: controller.normal_size().map(Into::into),
     })
 }
 
-/// The window as the decisions see it.
+/// The window as the decisions see it. The hints are not applied through
+/// it: [`sync_hints`] applies the controller's current set after each
+/// change.
 struct Port<R: Runtime>(Window<R>);
 
-/// Whether the window is a GTK one: the runtime of tauri::test has none
-/// (its windows panic when asked for one), and takes the changes through
-/// Tauri's own calls.
-#[cfg(target_os = "linux")]
-fn has_gtk_window<R: Runtime>() -> bool {
+/// Whether `R` is the app's runtime. The runtime of tauri::test has no GTK
+/// window and cannot list monitors (its windows panic when asked), so it
+/// takes the changes through Tauri's own calls.
+fn is_app_runtime<R: Runtime>() -> bool {
     std::any::TypeId::of::<R>() == std::any::TypeId::of::<tauri::Wry>()
 }
 
+fn has_gtk_window<R: Runtime>() -> bool {
+    cfg!(target_os = "linux") && is_app_runtime::<R>()
+}
+
+/// Whether the window system lets the window read and set its position.
+fn position_known<R: Runtime>(window: &Window<R>) -> bool {
+    !has_gtk_window::<R>() || main_window::position_known(window)
+}
+
 impl<R: Runtime> ApplyHints for Port<R> {
-    fn apply_hints(&self, hints: Hints, change: Change) -> Result<(), String> {
-        log::debug!("[window] geometry {change:?}: {hints:?}");
-        #[cfg(target_os = "linux")]
-        if has_gtk_window::<R>() {
-            let window = self.0.clone();
-            return self
-                .0
-                .run_on_main_thread(move || gtk_apply_hints(&window, hints))
-                .map_err(|err| err.to_string());
-        }
-        if hints.aspect.is_some() && cfg!(not(target_os = "linux")) {
-            log::warn!("[window] this build does not set an aspect ratio on this system");
-        }
-        let min_size = hints.min_size.map(|(width, height)| LogicalSize::new(width, height));
-        self.0.set_min_size(min_size).map_err(|err| err.to_string())
+    fn apply_hints(&self, _hints: Hints, _change: Change) -> Result<(), String> {
+        Ok(())
     }
 }
 
@@ -310,17 +459,13 @@ impl<R: Runtime> WindowPort for Port<R> {
     }
 }
 
-/// Applies `hints` as the GTK window's one set of geometry hints. On the
-/// main thread, as every GTK call; the window's moves and resizes go the
-/// same way, so they keep their order with it.
+/// Applies `hints` as the GTK window's one set of geometry hints, on the
+/// main thread.
 #[cfg(target_os = "linux")]
-fn gtk_apply_hints<R: Runtime>(window: &Window<R>, hints: Hints) {
+fn gtk_apply_hints<R: Runtime>(window: &Window<R>, hints: Hints) -> Result<(), String> {
     use gtk::gdk::{Geometry, Gravity, WindowHints};
     use gtk::prelude::GtkWindowExt;
-    let gtk_window = match window.gtk_window() {
-        Ok(gtk_window) => gtk_window,
-        Err(err) => return log::error!("[window] failed to get the GTK window: {err}"),
-    };
+    let gtk_window = window.gtk_window().map_err(|err| err.to_string())?;
     let mut mask = WindowHints::empty();
     if hints.min_size.is_some() {
         mask |= WindowHints::MIN_SIZE;
@@ -333,6 +478,7 @@ fn gtk_apply_hints<R: Runtime>(window: &Window<R>, hints: Hints) {
     // The base size (0 × 0) is the fifth and sixth argument.
     let geometry = Geometry::new(min_width, min_height, 0, 0, 0, 0, 0, 0, aspect, aspect, Gravity::Center);
     gtk_window.set_geometry_hints(None::<&gtk::Window>, Some(&geometry), mask);
+    Ok(())
 }
 
 /// Resizes the GTK window to the content size of `bounds`, and moves it to
@@ -371,10 +517,11 @@ mod tests {
         assert_eq!(pick_display(&[], Some(0), on_second), None);
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
-    fn only_the_app_runtime_has_gtk_windows() {
-        assert!(has_gtk_window::<tauri::Wry>());
+    fn only_the_app_runtime_lists_monitors_and_has_gtk_windows() {
+        assert!(is_app_runtime::<tauri::Wry>());
+        assert!(!is_app_runtime::<tauri::test::MockRuntime>());
+        assert_eq!(has_gtk_window::<tauri::Wry>(), cfg!(target_os = "linux"));
         assert!(!has_gtk_window::<tauri::test::MockRuntime>());
     }
 }

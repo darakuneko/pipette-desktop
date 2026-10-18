@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Changes of the displays, which Electron hears as `display-metrics-changed`
 //! (a monitor plugged in or out, a work area resized by a panel). Tauri has
-//! no such event, so the displays are compared on the window's own events:
-//! a change seen then, or a change of the window's scale factor, makes the
-//! window take the new work area (`Controller::work_area_changed` of
-//! compact.rs). A change while the window sits still shows only at its next
-//! move or resize.
+//! no such event, so the displays are compared on the window's own events
+//! and on a slow poll (mod.rs): a change seen then makes the window take the
+//! new work area (`Controller::work_area_changed` of compact.rs).
 
 use crate::window_state::Display;
 

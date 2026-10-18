@@ -166,7 +166,7 @@ pub fn displays<R: Runtime>(app: &AppHandle<R>) -> (Vec<Display>, Option<usize>)
     (monitors.iter().map(display).collect(), primary)
 }
 
-fn display(monitor: &Monitor) -> Display {
+pub fn display(monitor: &Monitor) -> Display {
     let scale = monitor.scale_factor();
     let work_area = monitor.work_area();
     Display {

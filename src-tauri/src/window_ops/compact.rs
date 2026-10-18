@@ -14,7 +14,7 @@
 use crate::window_bounds::{MIN_SIZE, Rect, Size, clamp_bounds_to_work_area, effective_min_size, js_max};
 use crate::window_state::Display;
 
-use super::geometry::{ApplyHints, Geometry};
+use super::geometry::{ApplyHints, Geometry, Hints, hints};
 
 /// The minimum size while compact mode is on.
 pub const COMPACT_MIN_SIZE: Size = Size { width: 300.0, height: 100.0 };
@@ -86,6 +86,11 @@ pub struct Controller {
     /// Bumped by each animation that starts; an older one stops at its next
     /// step.
     generation: u64,
+    /// While an animation runs, and after leaving compact mode until the
+    /// next aspect ratio arrives, the window's own hints leave the aspect
+    /// ratio out ([`Controller::window_hints`]).
+    animating: bool,
+    aspect_held: bool,
 }
 
 /// The minimum size the work area of `display` allows; the nominal one
@@ -123,7 +128,27 @@ impl Controller {
         self.normal_size.is_some()
     }
 
+    /// The geometry hints the window gets now: those of `geometry`, without
+    /// the aspect ratio while an animation runs or since compact mode was
+    /// left. GTK constrains the app's own resizes to the aspect ratio
+    /// (Chromium leaves it to the window manager, which applies it to the
+    /// user's resizes only), so with it the animation and the size it ends
+    /// at would be bent to the ratio; the renderer releases the ratio only
+    /// once leaving has answered.
+    pub fn window_hints(&self) -> Hints {
+        let hints = hints(&self.geometry);
+        if self.animating || self.aspect_held { Hints { aspect: None, ..hints } } else { hints }
+    }
+
+    /// Sets or releases the aspect ratio (`Geometry::set_aspect_ratio`); the
+    /// window takes it again after leaving compact mode.
+    pub fn set_aspect_ratio(&mut self, port: &dyn WindowPort, ratio: f64, frame: Size) {
+        self.aspect_held = false;
+        self.geometry.set_aspect_ratio(port, ratio, frame);
+    }
+
     fn animate(&mut self, from: Rect, to: Rect, duration: f64, finish: Finish) -> Animation {
+        self.animating = true;
         self.generation += 1;
         let steps = js_max(1.0, js_round(duration / STEP_MS as f64)) as u32;
         Animation { generation: self.generation, from, to, steps, step: 0, finish }
@@ -163,6 +188,7 @@ impl Controller {
     /// completes. Without a normal size, the minimum size of `display`, and
     /// the window grown to it only when it is smaller.
     pub fn leave(&mut self, port: &dyn WindowPort, bounds: Rect, display: Option<&Display>) -> Leave {
+        self.aspect_held = true;
         let size = bounds.size();
         let min_size = min_size_for(display);
         let Some(normal) = self.normal_size else {
@@ -208,10 +234,13 @@ impl Controller {
         if animation.step < animation.steps {
             return Tick::Continue;
         }
+        // After the last bounds, as Electron's `onComplete` follows its last
+        // `setBounds`: a close in between saves the normal size.
         if let Finish::Leave { min_size } = animation.finish {
             self.apply_min_size(port, min_size);
             self.normal_size = None;
         }
+        self.animating = false;
         Tick::Done { completed: true }
     }
 
@@ -470,11 +499,7 @@ pub(crate) mod tests {
                         }
                     }
                     "WINDOW_SET_ASPECT_RATIO" => {
-                        self.controller.geometry.set_aspect_ratio(
-                            &self.window,
-                            args[0].as_f64().unwrap(),
-                            self.frame,
-                        );
+                        self.controller.set_aspect_ratio(&self.window, args[0].as_f64().unwrap(), self.frame);
                         undefined
                     }
                     "WINDOW_SET_ALWAYS_ON_TOP" => {
@@ -618,5 +643,85 @@ pub(crate) mod tests {
             Rect { x: 600.0, y: 442.0, width: 1400.0, height: 1040.0 }
         );
         assert_eq!(bounds_to_save(bounds, None), bounds);
+    }
+
+    /// A window that records nothing, for the hints the window gets.
+    struct Quiet;
+
+    impl ApplyHints for Quiet {
+        fn apply_hints(&self, _hints: Hints, _change: Change) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    impl WindowPort for Quiet {
+        fn set_bounds(&self, _bounds: Rect) {}
+        fn is_destroyed(&self) -> bool {
+            false
+        }
+    }
+
+    fn run_to_end(controller: &mut Controller, mut animation: Animation) {
+        while controller.tick(&Quiet, &mut animation) == Tick::Continue {}
+    }
+
+    const WINDOW: Rect = Rect { x: 100.0, y: 0.0, width: 1400.0, height: 1040.0 };
+    const NO_FRAME: Size = Size { width: 0.0, height: 0.0 };
+
+    #[test]
+    fn the_aspect_ratio_waits_for_the_animation_into_compact_mode() {
+        let mut controller = Controller::new(Some(MIN_SIZE));
+        controller.set_aspect_ratio(&Quiet, 2.0, NO_FRAME);
+        let animation =
+            controller.enter(&Quiet, WINDOW, NO_FRAME, Some(Size { width: 400.0, height: 200.0 })).unwrap();
+        assert_eq!(controller.window_hints().aspect, None);
+        controller.set_aspect_ratio(&Quiet, 2.5, NO_FRAME);
+        assert_eq!(controller.window_hints().aspect, None);
+        run_to_end(&mut controller, animation);
+        assert_eq!(controller.window_hints(), Hints { min_size: Some((300, 100)), aspect: Some(2.5) });
+    }
+
+    #[test]
+    fn leaving_compact_mode_holds_the_aspect_ratio_back_until_the_next_one() {
+        let mut controller = Controller::new(Some(MIN_SIZE));
+        let animation =
+            controller.enter(&Quiet, WINDOW, NO_FRAME, Some(Size { width: 400.0, height: 200.0 })).unwrap();
+        run_to_end(&mut controller, animation);
+        controller.set_aspect_ratio(&Quiet, 2.0, NO_FRAME);
+        assert_eq!(controller.window_hints().aspect, Some(2.0));
+        let bounds = Rect { x: 600.0, y: 420.0, width: 400.0, height: 200.0 };
+        let leave = controller.leave(&Quiet, bounds, None);
+        assert_eq!(controller.window_hints().aspect, None);
+        run_to_end(&mut controller, leave.animation.unwrap());
+        assert_eq!(controller.window_hints(), Hints { min_size: Some((1280, 1024)), aspect: None });
+        assert_eq!(controller.geometry.aspect_ratio, Some(2.0));
+        controller.set_aspect_ratio(&Quiet, 1.5, NO_FRAME);
+        assert_eq!(controller.window_hints().aspect, Some(1.5));
+    }
+
+    #[test]
+    fn a_superseded_animation_leaves_the_newer_one_holding_the_aspect_ratio() {
+        let mut controller = Controller::new(Some(MIN_SIZE));
+        controller.set_aspect_ratio(&Quiet, 2.0, NO_FRAME);
+        let size = Some(Size { width: 400.0, height: 200.0 });
+        let mut first = controller.enter(&Quiet, WINDOW, NO_FRAME, size).unwrap();
+        let second = controller.enter(&Quiet, WINDOW, NO_FRAME, size).unwrap();
+        assert_eq!(controller.tick(&Quiet, &mut first), Tick::Done { completed: false });
+        assert_eq!(controller.window_hints().aspect, None);
+        run_to_end(&mut controller, second);
+        assert_eq!(controller.window_hints().aspect, Some(2.0));
+    }
+
+    #[test]
+    fn the_normal_size_stays_until_the_last_step_of_leaving() {
+        let mut controller = Controller::new(Some(MIN_SIZE));
+        let animation =
+            controller.enter(&Quiet, WINDOW, NO_FRAME, Some(Size { width: 400.0, height: 200.0 })).unwrap();
+        run_to_end(&mut controller, animation);
+        let mut leave = controller.leave(&Quiet, WINDOW, None).animation.unwrap();
+        while controller.tick(&Quiet, &mut leave) == Tick::Continue {
+            assert_eq!(controller.normal_size(), Some(WINDOW.size()));
+        }
+        assert_eq!(controller.normal_size(), None);
     }
 }
