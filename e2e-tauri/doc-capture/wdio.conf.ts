@@ -19,10 +19,36 @@
 
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { connect } from 'node:net'
 import { join } from 'node:path'
 import type { Options } from '@wdio/types'
-import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver } from '../helpers/driver'
+import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver, type DriverSession } from '../helpers/driver'
 import { assertCaptureUserData, screenshotDir } from './capture-paths'
+
+const PORT_CHECK_TIMEOUT_MS = 2_000
+
+/** Whether something accepts connections on `host:port`. No answer within
+ *  {@link PORT_CHECK_TIMEOUT_MS} counts as in use. */
+function portInUse(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = connect({ host, port })
+    const done = (inUse: boolean): void => {
+      socket.destroy()
+      resolve(inUse)
+    }
+    socket.setTimeout(PORT_CHECK_TIMEOUT_MS, () => done(true))
+    socket.once('connect', () => done(true))
+    socket.once('error', () => done(false))
+  })
+}
+
+/** Ends the worker for a refused run, so WebdriverIO never creates a
+ *  session. The driver harness's exit handler stops what the session
+ *  started. */
+function refuse(err: unknown): never {
+  console.error(`doc capture refused: ${err instanceof Error ? err.message : String(err)}`)
+  process.exit(1)
+}
 
 /** Whether a test of the current session failed; afterTest and afterSession
  *  run in the same worker. */
@@ -60,23 +86,36 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   },
 
   // The app starts only when the session is created, after this hook, and
-  // only through the tauri-driver it starts. A failed hook does not stop
-  // WebdriverIO from creating the session, so every refusal leaves no
-  // tauri-driver running: the session then cannot be created and no app
-  // opens anything. Refused: a screenshot directory the capture may not
-  // write, and a userData directory under a real configuration directory
-  // (checked for the temporary directory before the session's directory
-  // is made, and for that directory itself).
+  // only through a WebDriver server on DRIVER_HOST:DRIVER_PORT. A failed
+  // hook does not stop WebdriverIO from creating the session, so a refusal
+  // ends the worker instead ({@link refuse}). Refused: a screenshot
+  // directory the capture may not write, a userData directory under a real
+  // configuration directory (checked for the temporary directory before the
+  // session's directory is made, and for that directory itself), and a
+  // port another server already listens on (it would start the app without
+  // the session's directory).
   async beforeSession() {
     sessionFailed = false
-    screenshotDir()
-    assertCaptureUserData(join(tmpdir(), 'pipette-doc-capture-check'))
-    const session = await startDriver()
+    try {
+      screenshotDir()
+      assertCaptureUserData(join(tmpdir(), 'pipette-doc-capture-check'))
+      if (await portInUse(DRIVER_HOST, DRIVER_PORT)) {
+        throw new Error(`something already listens on ${DRIVER_HOST}:${DRIVER_PORT}; stop it before the capture`)
+      }
+    } catch (err) {
+      refuse(err)
+    }
+    let session: DriverSession
+    try {
+      session = await startDriver()
+    } catch (err) {
+      refuse(err)
+    }
     try {
       assertCaptureUserData(session.userDataDir)
     } catch (err) {
       await stopDriver({ keepUserData: true })
-      throw err
+      refuse(err)
     }
   },
 
