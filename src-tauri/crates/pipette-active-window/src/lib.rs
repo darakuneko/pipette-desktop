@@ -33,7 +33,7 @@ pub use gnome::{
 pub use normalize::{MAX_NAME_LENGTH, normalize};
 use pipette_js_json::JsString;
 #[cfg(target_os = "linux")]
-pub use x11::{NO_ACTIVE_WINDOW, X11Backend};
+pub use x11::X11Backend;
 
 /// The active window as a native lookup reports it, either part possibly
 /// empty.
@@ -121,7 +121,9 @@ impl ActiveWindow {
     }
 
     /// The normalized name of the active application. Blocks for up to
-    /// [`GDBUS_TIMEOUT`] when it runs the GNOME Shell query.
+    /// [`GDBUS_TIMEOUT`] when it runs the GNOME Shell query; an X server
+    /// that stops answering holds the X11 lookup for a read timeout of two
+    /// seconds.
     pub fn app_name(&mut self) -> Option<JsString> {
         match self.native().map(|native| native.active_window()) {
             Some(Ok(Some(info))) => {

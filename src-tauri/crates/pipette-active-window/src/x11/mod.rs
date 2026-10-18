@@ -20,7 +20,7 @@ use self::text::TitleEncoding;
 use crate::{NativeBackend, NativeError, WindowInfo};
 
 /// The error of a lookup that finds no active window, in the binding's words.
-pub const NO_ACTIVE_WINDOW: &str = "Failed to get active window";
+const NO_ACTIVE_WINDOW: &str = "Failed to get active window";
 
 /// How much of each property is read, in 4-byte units, as Xlib asks:
 /// `sizeof(Window)` for `_NET_ACTIVE_WINDOW` (only the first window is used),
