@@ -31,6 +31,14 @@ export async function clickInPage(selector: string): Promise<void> {
   }, selector)
 }
 
+/** The text content of the first element matching `selector`, read in the
+ *  page, or null when there is none. A truncated element's rendered text
+ *  can read empty or cut short through WebKitWebDriver; its text content
+ *  is the whole text. */
+export function textContentOf(selector: string): Promise<string | null> {
+  return browser.execute((sel: string) => document.querySelector(sel)?.textContent ?? null, selector)
+}
+
 /** Calls a backend command from the page through the IPC entry Tauri
  *  injects into every window (`window.__TAURI_INTERNALS__`, present with
  *  `withGlobalTauri: false` too), the same entry `@tauri-apps/api` uses. The

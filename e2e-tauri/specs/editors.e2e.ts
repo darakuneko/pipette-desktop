@@ -13,6 +13,7 @@ import {
   clickInPage,
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
+  textContentOf,
   tid,
   VIRTUAL_DEVICE_NAME,
   waitForGone,
@@ -118,10 +119,7 @@ describe('Tauri build editors', () => {
       let shown: string | null = null
       await browser.waitUntil(
         async () => {
-          shown = await browser.execute(
-            (sel: string) => document.querySelector(sel)?.textContent ?? null,
-            tid('status-device-name'),
-          )
+          shown = await textContentOf(tid('status-device-name'))
           return (shown ?? '').includes(VIRTUAL_DEVICE_NAME)
         },
         { timeoutMsg: "the status bar does not show the keyboard's name" },

@@ -29,6 +29,7 @@ import {
   recordPageErrors,
   recordedPageErrors,
   restartApp,
+  textContentOf,
   tid,
   unlockIfAsked,
   vialApi,
@@ -343,11 +344,7 @@ describe('Tauri build typing analytics', () => {
     // The label is truncated, and the rendered text of a truncated element
     // can read empty, so its content is compared.
     await browser.waitUntil(
-      async () =>
-        (await browser.execute(
-          (sel: string) => document.querySelector(sel)?.textContent ?? null,
-          tid(`analyze-filter-store-entry-label-${entry.id}`),
-        )) === FILTER_RENAMED,
+      async () => (await textContentOf(tid(`analyze-filter-store-entry-label-${entry.id}`))) === FILTER_RENAMED,
       { timeoutMsg: 'the panel did not show the renamed filter' },
     )
     const confirmDelete = tid(`analyze-filter-store-delete-confirm-${entry.id}`)
