@@ -342,7 +342,8 @@ fn startup_user_data() -> PathBuf {
         }
     };
     if let Some(holder) = pipette_fs::electron_lock_holder(&dir) {
-        refusal::refuse(&refusal::electron_running(&dir, Some(holder.pid)));
+        let lock = dir.join(pipette_fs::ELECTRON_LOCK_FILE);
+        refusal::refuse(&refusal::electron_running(&dir, Some(holder.pid), &lock));
     }
     dir
 }
@@ -357,12 +358,15 @@ fn startup_user_data() -> PathBuf {
 #[cfg(target_os = "windows")]
 fn lock_against_electron(dir: &Path) {
     static HELD: OnceLock<std::fs::File> = OnceLock::new();
+    let lock = dir.join(pipette_fs::ELECTRON_LOCKFILE);
     match pipette_fs::hold_lockfile(dir) {
         Ok(file) => {
             let _ = HELD.set(file);
         }
-        Err(pipette_fs::LockfileError::InUse) => refusal::refuse(&refusal::electron_running(dir, None)),
-        Err(err) => refusal::refuse(&refusal::lock_failed(dir, &err)),
+        Err(pipette_fs::LockfileError::InUse) => {
+            refusal::refuse(&refusal::electron_running(dir, None, &lock))
+        }
+        Err(err) => refusal::refuse(&refusal::lock_failed(&lock, &err)),
     }
 }
 

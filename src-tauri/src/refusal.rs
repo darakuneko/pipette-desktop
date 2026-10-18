@@ -10,21 +10,26 @@ use std::path::Path;
 const TITLE: &str = "Pipette";
 
 /// Why the app does not start: the Electron build (process `pid`, when
-/// known) holds `dir`.
-pub fn electron_running(dir: &Path, pid: Option<u32>) -> String {
+/// known) holds `dir`, as its lock file `lock` says.
+pub fn electron_running(dir: &Path, pid: Option<u32>, lock: &Path) -> String {
     let process = pid.map(|pid| format!(" (process {pid})")).unwrap_or_default();
     format!(
         "Pipette can't start because an older version of Pipette{process} is running with the same data \
-         folder:\n{}\n\nQuit the older version, then start Pipette again.",
-        dir.display()
+         folder:\n{}\n\nQuit the older version, then start Pipette again. If no older version of Pipette is \
+         running, its lock file was left behind: remove\n{}\nand start Pipette again.",
+        dir.display(),
+        lock.display()
     )
 }
 
-/// Why the app does not start: `dir` could not be locked against the
-/// Electron build.
+/// Why the app does not start: the lock file `lock` in the data folder could
+/// not be opened to lock the folder against the Electron build.
 #[cfg(target_os = "windows")]
-pub fn lock_failed(dir: &Path, err: &dyn std::fmt::Display) -> String {
-    format!("Pipette can't start because its data folder can't be locked:\n{}\n\n{err}", dir.display())
+pub fn lock_failed(lock: &Path, err: &dyn std::fmt::Display) -> String {
+    format!(
+        "Pipette can't start because it can't open the lock file of its data folder:\n{}\n\n{err}",
+        lock.display()
+    )
 }
 
 /// Reports `message` and ends the process.
@@ -70,11 +75,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_message_names_the_folder_and_the_process() {
+    fn the_message_names_the_folder_the_process_and_the_lock_file() {
         let dir = std::env::temp_dir().join("pipette-desktop");
-        let message = electron_running(&dir, Some(4242));
+        let lock = dir.join("SingletonLock");
+        let message = electron_running(&dir, Some(4242), &lock);
         assert!(message.contains(" (process 4242) "), "{message}");
-        assert!(message.contains(&dir.display().to_string()), "{message}");
-        assert!(!electron_running(&dir, None).contains("process"));
+        assert!(message.contains(&format!("{}\n", dir.display())), "{message}");
+        assert!(message.contains(&format!("remove\n{}\n", lock.display())), "{message}");
+        assert!(!electron_running(&dir, None, &lock).contains("(process"));
     }
 }

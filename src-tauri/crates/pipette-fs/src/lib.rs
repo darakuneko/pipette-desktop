@@ -18,7 +18,9 @@ pub use atomic::{MAX_NAME_BYTES, temp_file_name};
 pub use distribution::{Platform, is_distributed_build};
 #[cfg(windows)]
 pub use electron_lock::hold_lockfile;
-pub use electron_lock::{ELECTRON_LOCKFILE, LockHolder, LockfileError, electron_lock_holder};
+pub use electron_lock::{
+    ELECTRON_LOCK_FILE, ELECTRON_LOCKFILE, LockHolder, LockfileError, electron_lock_holder,
+};
 pub use user_data::{
     ELECTRON_USER_DATA_NAME, MIGRATION_USER_DATA_NAME, USER_DATA_DIR_ENV, UserDataError, user_data_dir,
     user_data_override,
