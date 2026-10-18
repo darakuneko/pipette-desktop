@@ -131,7 +131,7 @@ fn reveal_app(app: &AppHandle<Wry>) {
         }
     });
     if let Err(err) = result {
-        log::error!("[app] failed to open the main window again: {err}");
+        log::error!("[app] failed to hand opening the main window over to the main thread: {err}");
     }
 }
 
@@ -236,8 +236,8 @@ fn close_probe_on_page_load(hid: &HidService, label: &str, event: PageLoadEvent)
 pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
     match event {
         RunEvent::ExitRequested { code, api, .. } => {
-            let tray_active = tray::is_tray_active(app);
-            if keeps_running_without_windows(code, is_quitting(app), cfg!(target_os = "macos"), tray_active) {
+            let macos = cfg!(target_os = "macos");
+            if keeps_running_without_windows(code, is_quitting(app), macos, tray::is_tray_active(app)) {
                 api.prevent_exit();
                 log::info!("[app] the last window closed; the app keeps running");
                 return;
