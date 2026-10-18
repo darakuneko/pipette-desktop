@@ -113,9 +113,20 @@ fn the_scenarios_match_the_typescript_handlers() {
         let scenario = scenario.as_object().unwrap();
         let name = text(scenario, "name");
         let mut h = Harness::new();
+        let Some(Value::Array(steps)) = scenario.get("steps") else { panic!("{name}: no steps") };
+        // A language is stored as `<name>.json`.
+        let unheld = steps
+            .iter()
+            .filter_map(|step| {
+                step.as_object().unwrap().get("name")?.as_str().map(|name| format!("{name}.json"))
+            })
+            .find(|file| !pipette_fs::test_util::host_holds_name(file));
+        if let Some(file) = unheld {
+            eprintln!("SKIPPED {name}: the file system cannot hold the name {file:?}");
+            continue;
+        }
         build(h.user_data(), &tree_of(scenario.get("tree").unwrap()));
 
-        let Some(Value::Array(steps)) = scenario.get("steps") else { panic!("{name}: no steps") };
         let Some(Value::Array(outcomes)) = scenario.get("outcomes") else { panic!("{name}: no outcomes") };
         assert_eq!(steps.len(), outcomes.len(), "{name}");
         for (at, (step, want)) in steps.iter().zip(outcomes).enumerate() {

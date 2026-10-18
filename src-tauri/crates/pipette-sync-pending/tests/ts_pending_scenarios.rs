@@ -114,7 +114,14 @@ fn the_scenarios_match_the_typescript_store() {
         let scenario = scenario.as_object().unwrap();
         let name = text(scenario.get("name").unwrap());
         let h = Harness::new();
-        build(h.user_data(), &tree_of(scenario.get("tree").unwrap()));
+        let tree = tree_of(scenario.get("tree").unwrap());
+        let symlinks = tree.values().any(|node| matches!(node, Node::Symlink(_)));
+        let paths = tree.keys().map(String::as_str);
+        if let Some(reason) = pipette_fs::test_util::unsupported_tree(h.user_data(), paths, symlinks) {
+            eprintln!("SKIPPED {name}: {reason}");
+            continue;
+        }
+        build(h.user_data(), &tree);
 
         let store = h.restore();
         h.scheduler.advance();

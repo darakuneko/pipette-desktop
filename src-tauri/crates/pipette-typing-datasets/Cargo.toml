@@ -30,6 +30,8 @@ thiserror = "=2.0.21"
 tokio = { version = "=1.53.3", features = ["rt", "sync"] }
 
 [dev-dependencies]
+# The scenarios whose recorded files this host cannot hold.
+pipette-fs = { path = "../pipette-fs", features = ["test-util"] }
 # A fixed clock and fixed new ids for the typing test texts an Aozora
 # Bunko import saves.
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }

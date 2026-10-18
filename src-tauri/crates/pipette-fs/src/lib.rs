@@ -4,6 +4,8 @@
 
 mod atomic;
 mod electron_lock;
+#[cfg(any(test, feature = "test-util"))]
+pub mod test_util;
 mod user_data;
 
 pub use atomic::{write_file_atomic, write_file_atomic_keeping_owner, write_file_atomic_private};

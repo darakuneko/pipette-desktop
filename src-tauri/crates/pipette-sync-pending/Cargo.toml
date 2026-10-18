@@ -19,6 +19,8 @@ log = "=0.4.34"
 thiserror = "=2.0.21"
 
 [dev-dependencies]
+# The scenarios whose recorded files this host cannot hold.
+pipette-fs = { path = "../pipette-fs", features = ["test-util"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tempfile = { workspace = true }

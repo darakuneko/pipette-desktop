@@ -126,6 +126,13 @@ pub fn tree_of(value: &Value) -> Vec<(String, Node)> {
         .collect()
 }
 
+/// Why this host cannot build `tree` under `dir` as it was recorded, if it
+/// cannot (pipette_fs::test_util).
+pub fn unsupported(dir: &Path, tree: &[(String, Node)]) -> Option<String> {
+    let symlinks = tree.iter().any(|(_, node)| matches!(node, Node::Symlink(_)));
+    pipette_fs::test_util::unsupported_tree(dir, tree.iter().map(|(path, _)| path.as_str()), symlinks)
+}
+
 /// Builds `tree` under `dir`, in its order.
 pub fn build(dir: &Path, tree: &[(String, Node)]) {
     for (path, node) in tree {

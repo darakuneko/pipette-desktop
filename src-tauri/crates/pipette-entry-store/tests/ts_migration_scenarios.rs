@@ -125,7 +125,14 @@ fn every_scenario_leaves_the_same_result_and_files() {
     for scenario in list(&scenarios) {
         let name = text(get(scenario, "name"));
         let tmp = TempDir::new().unwrap();
-        build(tmp.path(), &expected_tree(get(scenario, "tree")));
+        let tree = expected_tree(get(scenario, "tree"));
+        if let Some(reason) =
+            pipette_fs::test_util::unsupported_tree(tmp.path(), tree.keys().map(String::as_str), false)
+        {
+            eprintln!("SKIPPED {name}: {reason}");
+            continue;
+        }
+        build(tmp.path(), &tree);
         let result = run(scenario, tmp.path());
         expect_eq(&mut failures, format!("{name}: result"), result, json(get(scenario, "result").clone()));
         let mut after = Tree::new();

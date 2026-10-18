@@ -195,7 +195,13 @@ pub fn replay(name: &str, play_step: &mut PlayStep<'_>) {
         let name = text(scenario.get("name").unwrap());
         let h = Harness::new();
         h.clock.set(ms(&text(scenario.get("time").unwrap())));
-        build(h.user_data(), &tree_of(scenario.get("tree").unwrap()));
+        let tree = tree_of(scenario.get("tree").unwrap());
+        let paths = tree.iter().map(|(path, _)| path.as_str());
+        if let Some(reason) = pipette_fs::test_util::unsupported_tree(h.user_data(), paths, false) {
+            eprintln!("SKIPPED {name}: {reason}");
+            continue;
+        }
+        build(h.user_data(), &tree);
         for (path, ns) in scenario.get("mtimesNs").unwrap().as_object().unwrap().iter() {
             set_mtime(&h.path(&path.to_string_lossy()), &text(ns));
         }
