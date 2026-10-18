@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use common::{array, build_tree, field, fixture, text, tree_of, untag};
 use pipette_js_json::Value;
-use pipette_time::test_util::in_each_time_zone;
+use pipette_time::test_util::{in_each_time_zone, sqlite_time_zones};
 use pipette_typing_analytics::bigram_aggregate::{RECORDED_ID_ORDER, collate};
 use pipette_typing_analytics::queries::{Context, Query, local_device_days};
 use pipette_typing_analytics_db::TypingAnalyticsDb;
@@ -90,6 +90,7 @@ fn local_time_members_match_typescript_in_each_time_zone() {
         paths.iter().map(|p| pipette_js_json::parse(&std::fs::read_to_string(p).unwrap()).unwrap()).collect();
     let zones: Vec<&str> = fixtures.iter().map(|f| text(f, "timeZone")).collect();
     assert_eq!(zones.len(), 5);
+    let zones = sqlite_time_zones(&zones);
     let Some(zone) = in_each_time_zone("local_time_members_match_typescript_in_each_time_zone", &zones)
     else {
         return;

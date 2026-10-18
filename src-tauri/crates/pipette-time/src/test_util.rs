@@ -40,3 +40,12 @@ pub fn in_each_time_zone(test_path: &str, zones: &[&str]) -> Option<String> {
     }
     None
 }
+
+/// The zones of `zones` in which SQLite's `localtime` can run on this host.
+/// SQLite reads the zone through the C library, and the one of Windows
+/// takes `TZ` only in its own form (`PST8PDT`), not an IANA name: there only
+/// `UTC` gives the same days as JavaScript. Without `TZ`, as the app runs,
+/// both read the system's zone.
+pub fn sqlite_time_zones<'a>(zones: &[&'a str]) -> Vec<&'a str> {
+    zones.iter().copied().filter(|zone| !cfg!(windows) || *zone == "UTC").collect()
+}
