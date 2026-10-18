@@ -159,6 +159,13 @@ fn every_scenario_registers_as_the_electron_build_does() {
     assert_eq!(fixture.autostart_path, "$HOME/.config/autostart/pipette.desktop");
     assert_eq!(fixture.scenarios.len(), 21);
     for scenario in &fixture.scenarios {
+        // Removing the entry through an `autostart` that is a file fails
+        // with ENOTDIR on Linux and macOS, but Windows reports the path as
+        // missing, which counts as already removed. The Linux entry is never
+        // written on Windows, so that host is left out of this one scenario.
+        if cfg!(windows) && scenario.before == "autostart is a file" {
+            continue;
+        }
         let home = tempfile::tempdir().expect("temporary HOME");
         let xdg = tempfile::tempdir().expect("temporary XDG_CONFIG_HOME");
         prepare(home.path(), &scenario.before);
