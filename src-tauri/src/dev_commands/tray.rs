@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The tray seen and driven from the e2e tests, which cannot reach the tray
-//! icon through WebDriver. Builds with the development tools only. Neither
-//! command is available in this build yet: both fail.
+//! icon through WebDriver. Builds with the development tools only.
+
+use tauri::{AppHandle, Wry};
 
 use crate::command_error::CommandError;
+use crate::tray::{self, TraySnapshot};
 
-/// Whether the tray icon exists, its tooltip and its menu items.
+/// Whether the tray icon exists, the tooltip it was given and its menu
+/// items as `{id, label, enabled, kind}`, read back from the menu.
 #[tauri::command]
-pub fn dev_tray_state() -> Result<(), CommandError> {
-    Err(CommandError::new("dev_tray_state is not implemented"))
+pub fn dev_tray_state(app: AppHandle<Wry>) -> Result<TraySnapshot, CommandError> {
+    Ok(tray::snapshot(&app)?)
 }
 
-/// Runs what a click on the tray menu item `id` runs.
+/// Runs what a click on the tray menu item `id` runs (`show`, `quit`).
 #[tauri::command]
-pub fn dev_tray_activate(id: String) -> Result<(), CommandError> {
-    Err(CommandError::new(format!("dev_tray_activate({id}) is not implemented")))
+pub fn dev_tray_activate(app: AppHandle<Wry>, id: String) -> Result<(), CommandError> {
+    tray::activate(&app, &id).map_err(CommandError::new)
 }

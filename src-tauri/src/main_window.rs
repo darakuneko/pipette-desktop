@@ -113,8 +113,9 @@ pub fn main_window_builder<R: Runtime, M: Manager<R>>(
 
 /// Opens the main window, and keeps what the handlers need about it. The window starts
 /// hidden when the config's `startInTray` and `trayResident` are both on
-/// (`Boolean()` of each, as the Electron build reads them): the tray, set up
-/// from the same `trayResident`, is then the way to show it.
+/// (`Boolean()` of each, as the Electron build reads them) and the tray icon,
+/// set up before this from the same `trayResident`, exists to show it
+/// ([`crate::tray::window_starts_hidden`]).
 pub fn open_main_window<R: Runtime>(
     app: &AppHandle<R>,
     config: &AppConfigStore,
@@ -128,7 +129,7 @@ pub fn open_main_window<R: Runtime>(
     let saved = window_state::load_window_state(stored.get("windowState"), &bounds);
     let placement = window_state::place(saved, &displays, primary);
     let truthy = |key| stored.get(key).is_some_and(Value::is_truthy);
-    let start_hidden = truthy("startInTray") && truthy("trayResident");
+    let start_hidden = crate::tray::window_starts_hidden(app, truthy("startInTray"), truthy("trayResident"));
 
     let Size { width: min_width, height: min_height } = placement.min_size;
     let builder = main_window_builder(app)?

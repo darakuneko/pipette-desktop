@@ -1,24 +1,32 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
+// Runs against both vialAPI implementations (tray-backends.ts): a
+// preload-like mock, and the Tauri shim's tray member over a mocked Tauri
+// IPC. Both hand the same spy the reported status.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useTrayStatus } from '../useTrayStatus'
+import { trayBackends } from './tray-backends'
 
-let trayStatusUpdate: ReturnType<typeof vi.fn>
+let trayStatusUpdate: Mock<(status: unknown) => Promise<void>>
 
 beforeEach(() => {
   vi.useFakeTimers()
   trayStatusUpdate = vi.fn().mockResolvedValue(undefined)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(window as any).vialAPI = { trayStatusUpdate }
 })
 
 afterEach(() => {
   vi.useRealTimers()
+  clearMocks()
 })
 
-describe('useTrayStatus', () => {
+describe.each(trayBackends((status) => trayStatusUpdate(status)))('useTrayStatus ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   it('sends immediately on mount', () => {
     renderHook(() => useTrayStatus({ keyboardName: 'GPK-63R', recording: false, getCount: () => 0, getKpm: () => 0 }))
     expect(trayStatusUpdate).toHaveBeenCalledTimes(1)
