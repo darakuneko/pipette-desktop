@@ -3,27 +3,33 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useTypingTestPaneWindow } from '../use-typing-test-pane-window'
+import { windowBackends } from './window-backends'
 
 type Props = { viewOnly: boolean; viewOnlyOpacity?: number }
 
-let setWindowOpacity: ReturnType<typeof vi.fn>
+const setWindowOpacity = vi.fn()
+const spies = {
+  isAlwaysOnTopSupported: vi.fn(),
+  setWindowAlwaysOnTop: vi.fn(),
+  setWindowAspectRatio: vi.fn(),
+  setWindowCompactMode: vi.fn(),
+  setWindowOpacity,
+}
 
 beforeEach(() => {
-  setWindowOpacity = vi.fn().mockResolvedValue(undefined)
-  window.vialAPI = {
-    isAlwaysOnTopSupported: vi.fn().mockResolvedValue(false),
-    setWindowAlwaysOnTop: vi.fn().mockResolvedValue(undefined),
-    setWindowAspectRatio: vi.fn().mockResolvedValue(undefined),
-    setWindowCompactMode: vi.fn().mockResolvedValue(null),
-    setWindowOpacity,
-  } as unknown as typeof window.vialAPI
+  spies.isAlwaysOnTopSupported.mockReset().mockResolvedValue(false)
+  spies.setWindowAlwaysOnTop.mockReset().mockResolvedValue(undefined)
+  spies.setWindowAspectRatio.mockReset().mockResolvedValue(undefined)
+  spies.setWindowCompactMode.mockReset().mockResolvedValue(null)
+  setWindowOpacity.mockReset().mockResolvedValue(undefined)
   vi.stubGlobal('requestAnimationFrame', () => 0)
 })
 
 afterEach(() => {
+  clearMocks()
   vi.unstubAllGlobals()
-  vi.restoreAllMocks()
 })
 
 function renderWindowHook(initial: Props) {
@@ -44,7 +50,11 @@ function renderWindowHook(initial: Props) {
   )
 }
 
-describe('useTypingTestPaneWindow — opacity', () => {
+describe.each(windowBackends(spies))('useTypingTestPaneWindow — opacity ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   it('does not touch the window opacity outside Typing View', () => {
     renderWindowHook({ viewOnly: false, viewOnlyOpacity: 0.7 })
     expect(setWindowOpacity).not.toHaveBeenCalled()
