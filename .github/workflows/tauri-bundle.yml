@@ -73,14 +73,15 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --workspace --all-targets --release -- -D warnings
 
-      # The crates whose code differs on these systems. None of them
-      # reaches the OS's login item (pipette-autostart panics in a test
-      # that would) or its key store (the os_keystore test of
-      # pipette-secret-store skips without PIPETTE_KEYSTORE_IT; the keystore
-      # job of tauri-migration.yml runs it on purpose).
+      # The crates whose code differs on these systems, every test binary
+      # run even after one fails. None of them reaches the OS's login item
+      # (pipette-autostart panics in a test that would) or its key store
+      # (the os_keystore test of pipette-secret-store skips without
+      # PIPETTE_KEYSTORE_IT; the keystore job of tauri-migration.yml runs it
+      # on purpose).
       - name: Test
         working-directory: src-tauri
-        run: cargo test -p pipette-autostart -p pipette-notification -p pipette-active-window -p pipette-secret-store
+        run: cargo test --no-fail-fast -p pipette-autostart -p pipette-notification -p pipette-active-window -p pipette-secret-store
 
       # The release build, unsigned. The bundles are given here because
       # tauri.conf.json lists the Linux ones.
