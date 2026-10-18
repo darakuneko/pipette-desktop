@@ -2,6 +2,7 @@
 //! The reply parsing on its own, and the system runner with harmless commands
 //! (never gdbus: the tests do not touch the session bus).
 
+#[cfg(unix)]
 use std::time::{Duration, Instant};
 
 use super::*;
