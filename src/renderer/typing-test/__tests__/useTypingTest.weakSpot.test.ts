@@ -9,7 +9,7 @@
 // word-generator/__tests__/weak-spot-weighting.test.ts /
 // word-generator.test.ts / word-supply.test.ts / run-state.test.ts.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
 import type { TypingTestConfig } from '../types'
@@ -81,10 +81,30 @@ describe('useTypingTest — weakSpotGate', () => {
   })
 })
 
+/** A deterministic stand-in for Math.random (mulberry32). The word
+ *  generator samples through Math.random, and the share assertions below
+ *  sit close enough to their thresholds (a plain English sample lands near
+ *  0.5 words with an 'e') that an unseeded run can cross one. */
+function seededRandom(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = state
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 describe('useTypingTest — biased sampling end-to-end', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+    vi.spyOn(Math, 'random').mockImplementation(seededRandom(1))
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('setConfig with weakSpotTrainingMode ON + an active profile visibly skews the sampled words', async () => {
