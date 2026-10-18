@@ -54,11 +54,12 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "appimage",
-      "deb"
-    ],
+    "publisher": "darakuneko",
+    "copyright": "Copyright © darakuneko",
+    "license": "GPL-3.0-or-later",
+    "homepage": "https://github.com/darakuneko/pipette-desktop",
     "category": "Utility",
+    "shortDescription": "Vial-compatible keyboard configurator",
     "icon": [
       "../build/icon.png",
       "../build/icon.ico",

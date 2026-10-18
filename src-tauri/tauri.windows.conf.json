@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": [
+      "nsis"
+    ],
+    "licenseFile": "../LICENSE",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "../build/icon.ico",
+        "uninstallerIcon": "../build/icon.ico",
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    }
+  }
+}
