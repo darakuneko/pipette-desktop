@@ -33,6 +33,11 @@ export interface XClient {
   /** Sends the 32-byte `event` to the client that created `destination`
    *  (SendEvent with an empty event mask). */
   sendEvent(destination: number, event: Buffer): void
+  /** The process ids the X server itself knows for the client that created
+   *  `window` (X-Resource's QueryClientIds with LocalClientPID): the server
+   *  reads them from its local socket, so the client cannot set them. Empty
+   *  when the server does not know one; throws without X-Resource. */
+  clientPids(window: number): Promise<number[]>
   /** Waits until the server has handled every request sent so far; rejects
    *  with the first X error among them. */
   sync(): Promise<void>
@@ -63,36 +68,60 @@ interface Pending {
   reject(err: Error): void
 }
 
+export interface ConnectOptions {
+  /** When set, each connection attempt, the setup and each request with a
+   *  reply fail after this many ms, and the connection is closed. */
+  timeoutMs?: number
+}
+
 /** Connects to the local `display` (`:<n>`), authorized with the
- *  MIT-MAGIC-COOKIE-1 `cookie`, or with none when it is null. */
-export async function connectX(display: string, cookie: Buffer | null): Promise<XClient> {
+ *  MIT-MAGIC-COOKIE-1 `cookie`, or with none when it is null. A request
+ *  pending when the connection closes fails. */
+export async function connectX(display: string, cookie: Buffer | null, options: ConnectOptions = {}): Promise<XClient> {
   const number = /^:(\d+)$/.exec(display)?.[1]
   if (number === undefined) throw new Error(`x client: unsupported display ${display}`)
+  const { timeoutMs } = options
   // As Xlib does: the abstract socket first (an X server run without root
   // may be unable to create /tmp/.X11-unix), then the socket file.
   let found: Socket | null = null
   for (const path of [`\0/tmp/.X11-unix/X${number}`, `/tmp/.X11-unix/X${number}`]) {
     const candidate = createConnection(path)
     const connected = await new Promise<boolean>((resolve) => {
-      candidate.once('connect', () => resolve(true))
-      candidate.once('error', () => resolve(false))
+      const timer = timeoutMs === undefined ? undefined : setTimeout(() => resolve(false), timeoutMs)
+      candidate.once('connect', () => { clearTimeout(timer); resolve(true) })
+      candidate.once('error', () => { clearTimeout(timer); resolve(false) })
     })
     if (connected) {
       found = candidate
       break
     }
+    candidate.destroy()
   }
   if (found === null) throw new Error(`x client: cannot connect to ${display}`)
   const socket = found
 
   let buffer = Buffer.alloc(0)
   let waiter: (() => void) | null = null
+  /** Why the connection ended; set once it has. */
+  let ended: Error | null = null
+  const replies = new Map<number, Pending>()
+  const end = (reason: Error): void => {
+    if (ended) return
+    ended = reason
+    socket.destroy()
+    for (const pending of replies.values()) pending.reject(reason)
+    replies.clear()
+    waiter?.()
+  }
   socket.on('data', (chunk: Buffer) => {
     buffer = Buffer.concat([buffer, chunk])
     waiter?.()
   })
+  socket.on('error', (err) => end(new Error(`x client: ${err.message}`)))
+  socket.on('close', () => end(new Error('x client: the connection closed')))
   const read = async (length: number): Promise<Buffer> => {
     while (buffer.length < length) {
+      if (ended) throw ended
       await new Promise<void>((resolve) => {
         waiter = resolve
       })
@@ -112,9 +141,22 @@ export async function connectX(display: string, cookie: Buffer | null): Promise<
   setup.writeUInt16LE(name.length, 6)
   setup.writeUInt16LE(data.length, 8)
   socket.write(Buffer.concat([setup, padded(name), padded(data)]))
-  const head = await read(8)
-  const body = await read(head.readUInt16LE(6) * 4)
-  if (head[0] !== 1) throw new Error(`x client: connection refused: ${body.subarray(0, head[1]).toString('latin1')}`)
+  const setupTimer = timeoutMs === undefined
+    ? undefined
+    : setTimeout(() => end(new Error(`x client: no setup reply within ${timeoutMs} ms`)), timeoutMs)
+  let head: Buffer
+  let body: Buffer
+  try {
+    head = await read(8)
+    body = await read(head.readUInt16LE(6) * 4)
+  } finally {
+    clearTimeout(setupTimer)
+  }
+  if (head[0] !== 1) {
+    const reason = new Error(`x client: connection refused: ${body.subarray(0, head[1]).toString('latin1')}`)
+    end(reason)
+    throw reason
+  }
   const idBase = body.readUInt32LE(4)
   const vendorLength = body.readUInt16LE(16)
   const formats = body[21]
@@ -122,7 +164,6 @@ export async function connectX(display: string, cookie: Buffer | null): Promise<
 
   let sequence = 0
   let nextId = 0
-  const replies = new Map<number, Pending>()
   let errors: string[] = []
 
   const send = (opcode: number, data: number, payload: Buffer): number => {
@@ -161,8 +202,19 @@ export async function connectX(display: string, cookie: Buffer | null): Promise<
 
   const request = (opcode: number, data: number, payload: Buffer): Promise<Buffer> =>
     new Promise((resolve, reject) => {
-      replies.set(send(opcode, data, payload), { resolve, reject })
+      if (ended) {
+        reject(ended)
+        return
+      }
+      const timer = timeoutMs === undefined
+        ? undefined
+        : setTimeout(() => end(new Error(`x client: no reply to request ${opcode} within ${timeoutMs} ms`)), timeoutMs)
+      replies.set(send(opcode, data, payload), {
+        resolve: (reply) => { clearTimeout(timer); resolve(reply) },
+        reject: (err) => { clearTimeout(timer); reject(err) },
+      })
     })
+  let xResOpcode: number | null = null
 
   const u32 = (...values: number[]): Buffer => {
     const out = Buffer.alloc(values.length * 4)
@@ -224,6 +276,30 @@ export async function connectX(display: string, cookie: Buffer | null): Promise<
       if (event.length !== 32) throw new Error('x client: an event is 32 bytes')
       send(25, 0, Buffer.concat([u32(destination, 0), event]))
     },
+    clientPids: async (window) => {
+      if (xResOpcode === null) {
+        const extension = Buffer.from('X-Resource', 'latin1')
+        const head2 = Buffer.alloc(4)
+        head2.writeUInt16LE(extension.length, 0)
+        const reply = await request(98, 0, Buffer.concat([head2, padded(extension)])) // QueryExtension
+        if (reply[8] !== 1) throw new Error('x client: the X server has no X-Resource extension')
+        xResOpcode = reply[9]
+        // QueryVersion 1.2, the version with QueryClientIds.
+        await request(xResOpcode, 0, Buffer.from([1, 2, 0, 0]))
+      }
+      // QueryClientIds of one spec: the client of `window`, LocalClientPID.
+      const reply = await request(xResOpcode, 4, u32(1, window, 2))
+      const count = reply.readUInt32LE(8)
+      const pids: number[] = []
+      let offset = 32
+      for (let i = 0; i < count; i += 1) {
+        const mask = reply.readUInt32LE(offset + 4)
+        const length = reply.readUInt32LE(offset + 8)
+        if (mask === 2 && length >= 4) pids.push(reply.readUInt32LE(offset + 12))
+        offset += 12 + length
+      }
+      return pids
+    },
     sync: async () => {
       await request(43, 0, Buffer.alloc(0))
       if (errors.length > 0) {
@@ -233,7 +309,7 @@ export async function connectX(display: string, cookie: Buffer | null): Promise<
       }
     },
     close: () => {
-      socket.destroy()
+      end(new Error('x client: closed'))
     },
   }
 }
