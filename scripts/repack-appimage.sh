@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Rebuild the electron-builder AppImage with the official appimagetool so it
-# uses the static type2 runtime (no libfuse2 needed on the host), embeds
-# AppImage update information, and ships a .zsync file next to it.
+# Rebuild an AppImage with the official appimagetool as
+# dist/Pipette-linux-x86_64.AppImage, the release name, so it uses the static
+# type2 runtime (no libfuse2 needed on the host), embeds AppImage update
+# information that names the release's .zsync, and ships that .zsync next to
+# it. The AppStream metainfo and the desktop entry are the same for both
+# builds: the entry is pipette-desktop.desktop, the name the metainfo's
+# launchable refers to.
 #
-# Usage: bash scripts/repack-appimage.sh   (after `electron-builder --linux`)
+# Usage: bash scripts/repack-appimage.sh [<AppImage>]
+#   <AppImage>  the AppImage to rebuild, the Tauri bundle's
+#               (src-tauri/target/release/bundle/appimage/*.AppImage). Without
+#               it, dist/Pipette-linux-x86_64.AppImage (after
+#               `electron-builder --linux`) is rebuilt in place.
 # Requires: curl, sha256sum, node, unsquashfs (squashfs-tools). x86_64 only.
 set -euo pipefail
 
@@ -39,7 +47,9 @@ fetch() {
 }
 
 [[ "$(uname -m)" == "x86_64" ]] || die "only x86_64 hosts are supported"
-[[ -f "$DIST/$NAME" ]] || die "$DIST/$NAME not found; run electron-builder --linux first"
+SRC="${1-$DIST/$NAME}"
+[[ -f "$SRC" ]] || die "$SRC not found; build the AppImage first"
+mkdir -p "$DIST"
 command -v unsquashfs >/dev/null || die "unsquashfs not found; install squashfs-tools"
 
 VERSION="$(node -p 'require(process.argv[1]).version' "$ROOT/package.json")"
@@ -58,13 +68,35 @@ mkdir "$WORK/tool"
 
 # unsquashfs keeps the original modes; --appimage-extract would turn every
 # directory into 700, which becomes unreadable once repacked as root-owned.
-unsquashfs -q -o "$("$DIST/$NAME" --appimage-offset)" -d "$WORK/AppDir" "$DIST/$NAME"
+# The squashfs starts where the runtime's ELF ends (the end of its section
+# header table), read from the header rather than by running the runtime.
+OFFSET="$(node -e '
+  const b = require("fs").readFileSync(process.argv[1]).subarray(0, 64)
+  if (b.readUInt32BE(0) !== 0x7f454c46 || b[4] !== 2 || b[5] !== 1) process.exit(1)
+  console.log(Number(b.readBigUInt64LE(0x28)) + b.readUInt16LE(0x3a) * b.readUInt16LE(0x3c))
+' "$SRC")" || die "$SRC is not a 64-bit little-endian ELF AppImage"
+unsquashfs -q -o "$OFFSET" -d "$WORK/AppDir" "$SRC"
 
 # AppStream wants the metainfo named after its component id and the desktop
 # file under usr/share/applications. appimagetool's "AppStream upstream
 # metadata is missing" warning is expected: it only looks for
 # <desktop name>.appdata.xml.
 install -Dm644 "$METAINFO" "$WORK/AppDir/usr/share/metainfo/app.pipette.desktop.metainfo.xml"
+# The Tauri bundle names its entry after the product (Pipette.desktop, a link
+# into usr/share/applications); the entry moves to pipette-desktop.desktop
+# with the same content. Its StartupWMClass is the main binary's name, the
+# GTK program name the window has.
+if [[ ! -e "$WORK/AppDir/pipette-desktop.desktop" ]]; then
+  shopt -s nullglob
+  entries=("$WORK/AppDir"/*.desktop)
+  shopt -u nullglob
+  [[ "${#entries[@]}" -eq 1 ]] || die "expected one desktop entry at the AppDir root, found ${#entries[@]}"
+  entry="$(readlink -f "${entries[0]}")"
+  [[ "$entry" == "$WORK/AppDir/"* && -f "$entry" ]] || die "${entries[0]} is not a file inside the AppDir"
+  grep -qx 'StartupWMClass=pipette' "$entry" || die "${entries[0]} has no StartupWMClass=pipette"
+  install -m644 "$entry" "$WORK/AppDir/pipette-desktop.desktop"
+  rm -f "${entries[0]}" "$entry"
+fi
 [[ -f "$WORK/AppDir/pipette-desktop.desktop" ]] || die "pipette-desktop.desktop not found at the AppDir root"
 mkdir -p "$WORK/AppDir/usr/share/applications"
 ln -sf ../../../pipette-desktop.desktop "$WORK/AppDir/usr/share/applications/pipette-desktop.desktop"
