@@ -20,7 +20,7 @@ import {
   DUMMY_TA_UID,
   restoreTypingAnalytics,
   seedDummyTypingAnalytics,
-} from './analyze-seed'
+} from '../../e2e-tauri/helpers/analyze-seed'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')

@@ -69,7 +69,7 @@ import {
   switchToGoogleSession,
 } from '../helpers/hub-harness'
 import { expandBranch, fillInput, openSyncSettings, signIn } from '../helpers/sync'
-import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
+import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
 /** The display name the fake Hub gives the test account when it creates

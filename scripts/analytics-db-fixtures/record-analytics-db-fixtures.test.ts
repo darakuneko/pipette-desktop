@@ -3,7 +3,7 @@
 // (src-tauri/crates/pipette-typing-analytics-db). Every value comes from the
 // real TypeScript code on the real better-sqlite3:
 //
-// - tests/fixtures/day.jsonl — one seeded day (e2e/helpers/analyze-seed.ts,
+// - tests/fixtures/day.jsonl — one seeded day (e2e-tauri/helpers/analyze-seed.ts,
 //   clock and machine hash pinned) plus the lines of edge-rows.ts.
 // - tests/fixtures/orphan.jsonl — a file whose foreign key fails.
 // - tests/fixtures/expected.json — for each scenario the per-step apply
@@ -23,7 +23,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
+import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e-tauri/helpers/analyze-seed'
 import { TypingAnalyticsDB } from '../../src/main/typing-analytics/db/typing-analytics-db'
 import { DATA_TABLE_NAMES } from '../../src/main/typing-analytics/db/schema'
 import { applyRowsToCache, type ApplyRowsResult } from '../../src/main/typing-analytics/jsonl/apply-to-cache'

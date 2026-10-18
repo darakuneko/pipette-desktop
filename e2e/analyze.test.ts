@@ -17,7 +17,7 @@ import {
   seedDummyTypingAnalytics,
   restoreTypingAnalytics,
   type TypingAnalyticsSeedBackup,
-} from './helpers/analyze-seed'
+} from '../e2e-tauri/helpers/analyze-seed'
 
 let app: ElectronApplication
 let page: Page
