@@ -16,6 +16,7 @@ const spies = {
   setWindowAspectRatio: vi.fn(),
   setWindowCompactMode: vi.fn(),
   setWindowOpacity,
+  setWindowZoom: vi.fn(),
 }
 
 beforeEach(() => {

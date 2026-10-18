@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The two vialAPI implementations the Typing Test window hook's tests run
-// against, both answering from the same VialAPI-shaped spies: a
-// preload-like mock (the spies themselves), and the Tauri shim's window
-// members over a mocked Tauri IPC, whose commands hand the spies their
-// arguments in the members' order. The test file clears the IPC mock after
-// each test (`clearMocks`).
+// The two vialAPI implementations the window hooks' tests (the Typing Test
+// window and the view mode routing) run against, both answering from the
+// same VialAPI-shaped spies: a preload-like mock (the spies themselves),
+// and the Tauri shim's window members over a mocked Tauri IPC, whose
+// commands hand the spies their arguments in the members' order. The test
+// files clear the IPC mock after each test (`clearMocks`).
 
 import { mockIPC } from '@tauri-apps/api/mocks'
 import type { VialAPI } from '../../../../shared/types/vial-api'
@@ -16,6 +16,7 @@ type WindowMember =
   | 'setWindowAspectRatio'
   | 'setWindowCompactMode'
   | 'setWindowOpacity'
+  | 'setWindowZoom'
 /** A spy per member, called with the member's own arguments. */
 export type WindowSpies = { [K in WindowMember]: (...args: Parameters<VialAPI[K]>) => unknown }
 
@@ -45,6 +46,7 @@ export function windowBackends(spies: WindowSpies): WindowBackend[] {
                 ? spies.setWindowCompactMode(a.enabled as boolean)
                 : spies.setWindowCompactMode(a.enabled as boolean, a.compactSize as { width: number; height: number })
             case 'set_window_opacity': return spies.setWindowOpacity(a.opacity as number)
+            case 'set_window_zoom': return spies.setWindowZoom(a.zoom as number)
             default: throw new Error(`unexpected command ${cmd}`)
           }
         })
