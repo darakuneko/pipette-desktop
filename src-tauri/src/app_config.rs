@@ -5,6 +5,7 @@
 //! listeners of src/main/index.ts do. The store itself is
 //! crates/pipette-app-config.
 
+use std::path::Path;
 use std::sync::Arc;
 
 use pipette_app_config::{AppConfigStore, Value, clamp_zoom_factor};
@@ -84,6 +85,8 @@ pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
 /// those changes saved.
 pub fn listen_for_changes(app: &AppHandle) {
     let handle = app.clone();
+    let user_data = app.state::<crate::UserDataDir>().0.clone();
+    let launch_user_data = user_data.clone();
     app.state::<AppConfig>().subscribe(move |key, value| match key {
         "zoomFactor" => {
             let percent = clamp_zoom_factor(Some(value));
@@ -95,14 +98,15 @@ pub fn listen_for_changes(app: &AppHandle) {
         "autoSync" => crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy()),
         "autoLaunch" => {
             let enabled = value.is_truthy();
-            if let Err(err) = handle.run_on_main_thread(move || apply_auto_launch(enabled)) {
+            let user_data = user_data.clone();
+            if let Err(err) = handle.run_on_main_thread(move || apply_auto_launch(enabled, &user_data)) {
                 log::error!("[app-config] failed to apply autoLaunch: {err}");
             }
         }
         _ => {}
     });
     match app.state::<AppConfig>().get("autoLaunch") {
-        Ok(stored) => apply_auto_launch(stored.is_some_and(|value| value.is_truthy())),
+        Ok(stored) => apply_auto_launch(stored.is_some_and(|value| value.is_truthy()), &launch_user_data),
         // Not taken as off: that would remove the entry over a read error.
         Err(err) => log::error!("[app-config] failed to read autoLaunch: {err}"),
     }
@@ -110,8 +114,13 @@ pub fn listen_for_changes(app: &AppHandle) {
 
 /// Registers the app to start at sign-in, or unregisters it. A build that
 /// gets bundled is the release profile's; only a build with the
-/// development tools reads `PIPETTE_DEV_AUTOSTART_DIR`.
-fn apply_auto_launch(enabled: bool) {
-    let env = pipette_autostart::Environment::of_process(cfg!(release_profile), cfg!(feature = "dev-tools"));
+/// development tools reads `PIPETTE_DEV_AUTOSTART_DIR`, which must be
+/// inside `user_data`.
+fn apply_auto_launch(enabled: bool, user_data: &Path) {
+    let env = pipette_autostart::Environment::of_process(
+        cfg!(release_profile),
+        cfg!(feature = "dev-tools"),
+        user_data,
+    );
     pipette_autostart::apply(enabled, &env);
 }

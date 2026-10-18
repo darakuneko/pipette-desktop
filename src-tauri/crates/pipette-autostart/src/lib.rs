@@ -11,12 +11,13 @@
 //! a warning and does nothing.
 
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod dev_dir;
 mod linux;
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 mod other;
+mod passwd;
 
 #[cfg(test)]
 mod golden_tests;
@@ -68,6 +69,11 @@ pub struct Environment {
     /// user database (Node's `os.homedir()`). The real entry lives in its
     /// `.config/autostart`; `XDG_CONFIG_HOME` does not move it.
     pub home: Option<PathBuf>,
+    /// `$HOME` as it is set, so a relative or empty value is seen.
+    pub home_var: Option<OsString>,
+    /// The home directory of the current user in /etc/passwd, which
+    /// `$HOME` may hide.
+    pub passwd_home: Option<PathBuf>,
     /// `XDG_CONFIG_HOME`, only so a development directory inside its
     /// `autostart` is refused as well.
     pub xdg_config_home: Option<PathBuf>,
@@ -79,39 +85,43 @@ pub struct Environment {
     /// `PIPETTE_DEV_AUTOSTART_DIR`; `None` in a build without the
     /// development tools, which never reads it.
     pub dev_dir: Option<OsString>,
+    /// The app's userData directory, which a development directory must
+    /// be inside.
+    pub user_data: PathBuf,
 }
 
 impl Environment {
     /// The environment of this process. `packaged` is whether this is a
     /// build that gets bundled, `dev_tools` whether it has the development
     /// tools, the only builds that read `PIPETTE_DEV_AUTOSTART_DIR`.
-    pub fn of_process(packaged: bool, dev_tools: bool) -> Self {
-        Self::from_vars(
-            packaged,
-            dev_tools,
-            |name| std::env::var_os(name),
-            std::env::home_dir(),
-            std::env::current_exe().map_err(|err| err.to_string()),
-        )
+    pub fn of_process(packaged: bool, dev_tools: bool, user_data: &Path) -> Self {
+        Self {
+            home: std::env::home_dir(),
+            passwd_home: passwd::home_of_process(),
+            current_exe: std::env::current_exe().map_err(|err| err.to_string()),
+            ..Self::from_vars(packaged, dev_tools, |name| std::env::var_os(name), user_data)
+        }
     }
 
-    /// The environment from the variables `var` gives, the home directory
-    /// and the executable.
+    /// The environment from the variables `var` gives, with no home
+    /// directory known and no executable.
     fn from_vars(
         packaged: bool,
         dev_tools: bool,
         var: impl Fn(&str) -> Option<OsString>,
-        home: Option<PathBuf>,
-        current_exe: Result<PathBuf, String>,
+        user_data: &Path,
     ) -> Self {
         Self {
             os: Os::current(),
             packaged,
-            home,
+            home: None,
+            home_var: var("HOME"),
+            passwd_home: None,
             xdg_config_home: var("XDG_CONFIG_HOME").map(PathBuf::from),
             appimage: var("APPIMAGE"),
-            current_exe,
+            current_exe: Err("no executable".to_owned()),
             dev_dir: if dev_tools { var(DEV_DIR_VARIABLE) } else { None },
+            user_data: user_data.to_path_buf(),
         }
     }
 
@@ -125,21 +135,48 @@ impl Environment {
     }
 
     /// The autostart directories a development directory must stay out
-    /// of: `.config/autostart` of the home directory and `autostart` of
-    /// `XDG_CONFIG_HOME`, each when absolute.
-    fn real_autostart_dirs(&self) -> Vec<PathBuf> {
-        let homes = self.home.iter().map(|home| home.join(".config").join("autostart"));
-        let configs = self.xdg_config_home.iter().map(|config| config.join("autostart"));
-        homes.chain(configs).filter(|dir| dir.is_absolute()).collect()
+    /// of: `.config/autostart` of `$HOME`, of the passwd home and of
+    /// [`Self::home`], and `autostart` of `XDG_CONFIG_HOME`, each when
+    /// absolute. An error, so the development directory is refused, when
+    /// `$HOME` is set but not absolute or no home directory is known: the
+    /// real directory is then unknown.
+    fn real_autostart_dirs(&self) -> Result<Vec<PathBuf>, String> {
+        if let Some(home) = &self.home_var
+            && !Path::new(home).is_absolute()
+        {
+            return Err(format!(
+                "{DEV_DIR_VARIABLE} cannot be checked: HOME is not an absolute path: {}",
+                Path::new(home).display()
+            ));
+        }
+        let homes: Vec<PathBuf> =
+            [self.home_var.as_ref().map(PathBuf::from), self.passwd_home.clone(), self.home.clone()]
+                .into_iter()
+                .flatten()
+                .filter(|home| home.is_absolute())
+                .collect();
+        if homes.is_empty() {
+            return Err(format!("{DEV_DIR_VARIABLE} cannot be checked: no home directory is known"));
+        }
+        let configs = self
+            .xdg_config_home
+            .iter()
+            .filter(|config| config.is_absolute())
+            .map(|config| config.join("autostart"));
+        Ok(homes.iter().map(|home| home.join(".config").join("autostart")).chain(configs).collect())
     }
 }
 
 /// Where a change of `autoLaunch` goes.
 #[derive(Debug, PartialEq, Eq)]
 enum Target {
-    /// The desktop entry in this directory: the real
-    /// `$HOME/.config/autostart`, or the development directory.
+    /// The desktop entry in the real `$HOME/.config/autostart`, written as
+    /// the Electron build writes it.
     Directory(PathBuf),
+    /// The desktop entry in the development directory, resolved: written
+    /// through a temporary file and a rename, and only over (or removing)
+    /// a regular file with no other link (src/linux.rs).
+    DevDirectory(PathBuf),
     /// The login item of Windows or macOS.
     LoginItem,
     /// Nowhere, with this warning.
@@ -166,8 +203,9 @@ fn target(applies: bool, env: &Environment) -> Target {
         if env.os != Os::Linux {
             return Target::Skip(format!("auto-launch skipped: {DEV_DIR_VARIABLE} is read on Linux only"));
         }
-        return match dev_dir::check(dir, &env.real_autostart_dirs()) {
-            Ok(dir) => Target::Directory(dir),
+        let checked = env.real_autostart_dirs().and_then(|real| dev_dir::check(dir, &real, &env.user_data));
+        return match checked {
+            Ok(dir) => Target::DevDirectory(dir),
             Err(reason) => Target::Refused(format!("auto-launch: {reason}")),
         };
     }
@@ -190,6 +228,7 @@ fn target(applies: bool, env: &Environment) -> Target {
 fn run(target: Target, enabled: bool, env: &Environment) {
     match target {
         Target::Directory(dir) => linux::apply(&dir, enabled, || env.exec()),
+        Target::DevDirectory(dir) => linux::apply_guarded(&dir, enabled, || env.exec()),
         Target::LoginItem => login_item(enabled, env),
         Target::Skip(message) => log::warn!("{message}"),
         Target::Refused(message) => log::error!("{message}"),
@@ -199,7 +238,7 @@ fn run(target: Target, enabled: bool, env: &Environment) {
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 fn login_item(enabled: bool, env: &Environment) {
-    other::apply(enabled, env.current_exe.as_deref().map(std::path::Path::new));
+    other::apply(enabled, env.current_exe.as_deref().map_err(String::as_str));
 }
 
 /// No build for these systems resolves to a login item ([`Os::current`]).

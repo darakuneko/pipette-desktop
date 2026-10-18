@@ -17,6 +17,11 @@ log = "=0.4.34"
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 auto-launch = { version = "=0.6.0", default-features = false }
 
+# The user id of the process, for its line in /etc/passwd (src/passwd.rs),
+# without unsafe code.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "=1.1.2", features = ["process"] }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 serde = { workspace = true }

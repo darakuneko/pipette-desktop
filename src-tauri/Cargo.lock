@@ -3053,6 +3053,7 @@ version = "0.0.0"
 dependencies = [
  "auto-launch",
  "log",
+ "rustix",
  "serde",
  "serde_json",
  "tempfile",

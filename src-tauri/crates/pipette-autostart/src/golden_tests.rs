@@ -178,10 +178,13 @@ fn every_scenario_registers_as_the_electron_build_does() {
             os: os(&scenario.platform),
             packaged: scenario.is_packaged,
             home: Some(home.path().to_path_buf()),
+            home_var: Some(home.path().as_os_str().to_owned()),
+            passwd_home: None,
             xdg_config_home: xdg_config_home.clone(),
             appimage,
             current_exe: Ok(PathBuf::from(&fixture.exec_path)),
             dev_dir: None,
+            user_data: home.path().join("user-data"),
         };
         for (index, step) in std::iter::once(&scenario.boot).chain(&scenario.steps).enumerate() {
             let on = enabled(&step.action);

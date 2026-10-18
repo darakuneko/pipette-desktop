@@ -29,11 +29,12 @@ fn login_item(exe: Result<&Path, &str>) -> Result<AutoLaunch, String> {
     let exe = exe.map_err(str::to_owned)?;
     let path =
         exe.to_str().ok_or_else(|| format!("the executable's path is not UTF-8: {}", exe.display()))?;
-    AutoLaunchBuilder::new()
-        .set_app_name(APP_NAME)
-        .set_app_path(path)
-        .set_windows_enable_mode(WindowsEnableMode::CurrentUser)
-        .set_macos_launch_mode(MacOSLaunchMode::SMAppService)
-        .build()
-        .map_err(|err| err.to_string())
+    let mut builder = AutoLaunchBuilder::new();
+    builder.set_app_name(APP_NAME).set_app_path(path).set_windows_enable_mode(WindowsEnableMode::CurrentUser);
+    // Only on macOS: the builder checks the system's version for
+    // SMAppService on every system, and Windows' is below 13.
+    if cfg!(target_os = "macos") {
+        builder.set_macos_launch_mode(MacOSLaunchMode::SMAppService);
+    }
+    builder.build().map_err(|err| err.to_string())
 }

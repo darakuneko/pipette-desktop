@@ -3,8 +3,9 @@
 //! `PIPETTE_DEV_AUTOSTART_DIR` in place of `$HOME/.config/autostart`, so the
 //! e2e runs can turn `autoLaunch` on and off in a directory of their own.
 //! The same rules as `assertAutostartDir` of e2e-tauri/helpers/driver.ts,
-//! which checks the value before it starts the app; the session directory
-//! that one also requires is not known here.
+//! which checks the value before it starts the app, with the app's userData
+//! directory as the session directory there (driver.ts makes the session's
+//! userData directory that session directory).
 
 use std::ffi::OsStr;
 use std::fs;
@@ -16,13 +17,15 @@ use crate::linux::FILE_NAME;
 /// The variable that names the directory.
 pub const VARIABLE: &str = "PIPETTE_DEV_AUTOSTART_DIR";
 
-/// `dir` when an entry may be written into it, else why not: an absolute
-/// path without `.` or `..` components (`<link>/..` resolves against the
-/// link's target and could leave the place the path names) that, with its
-/// symbolic links resolved, is not inside any of `real_dirs`, and whose
-/// entry is not a link that resolves into one of them either. Checked at
-/// every use, so a link swapped in later is caught at the next change.
-pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf]) -> Result<PathBuf, String> {
+/// `dir` resolved, when an entry may be written into it, else why not: an
+/// absolute path without `.` or `..` components (`<link>/..` resolves
+/// against the link's target and could leave the place the path names)
+/// that, with its symbolic links resolved, is strictly inside `user_data`
+/// (resolved too), is not inside any of `real_dirs`, and whose entry is not
+/// a link that resolves into one of them either. Checked at every use, so a
+/// link swapped in later is caught at the next change; the caller works on
+/// the returned path, not on `dir`.
+pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf], user_data: &Path) -> Result<PathBuf, String> {
     let path = Path::new(dir);
     if !path.is_absolute() {
         return Err(format!("{VARIABLE} must be an absolute path, not {}", path.display()));
@@ -38,6 +41,20 @@ pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf]) -> Result<PathBuf, Strin
         |err: io::Error| format!("{VARIABLE} cannot be resolved, not {}: {err}", path.display());
     let resolved = resolve_existing(path).map_err(cannot_resolve)?;
     let entry = resolve_existing(&path.join(FILE_NAME)).map_err(cannot_resolve)?;
+    let user_data = fs::canonicalize(user_data).map_err(|err| {
+        format!(
+            "{VARIABLE} cannot be checked: the userData directory {} cannot be resolved: {err}",
+            user_data.display()
+        )
+    })?;
+    if resolved == user_data || !resolved.starts_with(&user_data) {
+        return Err(format!(
+            "{VARIABLE} must be inside the userData directory {}, not {} ({})",
+            user_data.display(),
+            path.display(),
+            resolved.display()
+        ));
+    }
     for real in real_dirs {
         // A part of it that cannot be resolved (a dangling link): compared
         // as written.
@@ -46,7 +63,7 @@ pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf]) -> Result<PathBuf, Strin
             return Err(format!("{VARIABLE} resolves to the real autostart directory {}", target.display()));
         }
     }
-    Ok(path.to_path_buf())
+    Ok(resolved)
 }
 
 /// `path` with every symbolic link resolved, the part that does not exist
