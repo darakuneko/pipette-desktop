@@ -36,9 +36,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn this_process_has_a_name() {
-        let name = autoreleasepool(|_| localized_name(&NSRunningApplication::currentApplication()));
-        assert!(!name.is_empty());
+    fn a_name_is_the_localized_name_or_empty_without_one() {
+        // An unbundled executable, like this test, may have no localized name.
+        autoreleasepool(|_| {
+            let application = NSRunningApplication::currentApplication();
+            let expected = application.localizedName().map(|name| name.to_string()).unwrap_or_default();
+            assert_eq!(localized_name(&application), expected.encode_utf16().collect::<Vec<u16>>());
+        });
     }
 
     #[test]
