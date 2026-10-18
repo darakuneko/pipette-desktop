@@ -113,8 +113,20 @@ describe('Tauri build editors', () => {
     it("shows the keyboard's name and the Disconnect button, and no sideload button", async () => {
       const statusBar = $(tid('status-bar'))
       await statusBar.waitForDisplayed()
-      await browser.waitUntil(async () => (await statusBar.getText()).includes(VIRTUAL_DEVICE_NAME), {
-        timeoutMsg: "the status bar does not show the keyboard's name",
+      // The name sits in a truncated span, whose rendered text WebKitWebDriver
+      // does not report in full; its text content is the name itself.
+      let shown: string | null = null
+      await browser.waitUntil(
+        async () => {
+          shown = await browser.execute(
+            (sel: string) => document.querySelector(sel)?.textContent ?? null,
+            tid('status-device-name'),
+          )
+          return (shown ?? '').includes(VIRTUAL_DEVICE_NAME)
+        },
+        { timeoutMsg: "the status bar does not show the keyboard's name" },
+      ).catch((err: unknown) => {
+        throw new Error(`${String(err)}; the status bar's name is ${JSON.stringify(shown)}`)
       })
       await expect(statusBar.$(tid('disconnect-button'))).toBeDisplayed()
       // Sideloading a JSON definition belongs to the Data modal.
