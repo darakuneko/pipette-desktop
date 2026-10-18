@@ -1,12 +1,20 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
+// Runs against both vialAPI implementations (notification-backends.ts): a
+// preload-like mock, and the Tauri shim's notification member over a
+// mocked Tauri IPC. Both answer with the same spy.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useStartupNotification } from '../useStartupNotification'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
+import { notificationBackends, type NotificationBackend } from './notification-backends'
 import type { NotificationFetchResult } from '../../../shared/types/notification'
 
 const mockNotificationFetch = vi.fn<() => Promise<NotificationFetchResult>>()
+
+let backend: NotificationBackend
 
 function setupMocks(
   configOverrides: Record<string, unknown> = {},
@@ -16,23 +24,18 @@ function setupMocks(
   mockNotificationFetch.mockResolvedValue(
     fetchResult ?? { success: true, notifications: [] },
   )
-
-  const existing = vialAPIMock()
-  Object.defineProperty(window, 'vialAPI', {
-    value: {
-      ...existing,
-      notificationFetch: mockNotificationFetch,
-    },
-    writable: true,
-    configurable: true,
-  })
-
+  backend.install(vialAPIMock())
   return mocks
 }
 
-describe('useStartupNotification', () => {
+afterEach(() => {
+  clearMocks()
+})
+
+describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNotification ($name)', (current) => {
   beforeEach(() => {
     vi.clearAllMocks()
+    backend = current
   })
 
   it('shows all notifications when lastNotificationSeen is not set', async () => {
@@ -96,6 +99,16 @@ describe('useStartupNotification', () => {
 
     expect(result.current.visible).toBe(true)
     expect(result.current.notifications).toHaveLength(1)
+  })
+
+  it('hides modal when the fetch rejects', async () => {
+    setupMocks()
+    mockNotificationFetch.mockRejectedValue(new Error('Network error'))
+
+    const { result } = renderHookWithConfig(() => useStartupNotification())
+    await act(async () => {})
+
+    expect(result.current.visible).toBe(false)
   })
 
   it('hides modal when fetch fails', async () => {

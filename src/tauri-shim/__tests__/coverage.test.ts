@@ -11,8 +11,8 @@
 // label members (key labels, typing test texts, language and theme packs,
 // word lists, datasets and the Aozora Bunko import) are all real, and so
 // are the Hub members and the Cloud Sync members (each listed with the
-// module that holds it), and the tray. The fake left is the startup
-// notification.
+// module that holds it), the tray and the startup notification. No member
+// is faked, and none falls back to a stub.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -34,9 +34,7 @@ import { keyLabelHubApi } from '../api/key-label-hub'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
-const EXPECTED_FAKES = [
-  'notificationFetch',
-]
+const EXPECTED_FAKES: string[] = []
 
 /** The members the keyboard editor needs from the backend, all real. */
 const KEYBOARD_MEMBERS = [
@@ -428,6 +426,15 @@ describe('shim coverage', () => {
 
   it('fakes exactly the expected members', () => {
     expect(Object.keys(fakes).sort()).toEqual([...EXPECTED_FAKES].sort())
+  })
+
+  it('implements every VialAPI member: no stub is left', () => {
+    expect(VIAL_API_MEMBER_NAMES.filter((name) => !(name in implemented))).toEqual([])
+  })
+
+  it('backs the startup notification with a backend command', () => {
+    expect('notificationFetch' in real).toBe(true)
+    expect('notificationFetch' in fakes).toBe(false)
   })
 
   it('implements only VialAPI members, each either real or fake', () => {
