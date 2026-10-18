@@ -25,6 +25,7 @@ import { syncPasswordChangeApi } from './api/sync-password-change'
 import { syncPendingApi } from './api/sync-pending'
 import { syncResetApi } from './api/sync-reset'
 import { themePacksApi } from './api/theme-packs'
+import { trayApi } from './api/tray'
 import { typingAnalyticsApi } from './api/typing-analytics'
 import { typingAnalyticsDataApi } from './api/typing-analytics-data'
 import { typingAnalyticsKeymapsApi } from './api/typing-analytics-keymaps'
@@ -48,6 +49,7 @@ export const real = {
   ...appConfigApi,
   ...shellApi,
   ...windowApi,
+  ...trayApi,
   ...syncPendingApi,
   ...filesApi,
   ...keyboardDataApi,
