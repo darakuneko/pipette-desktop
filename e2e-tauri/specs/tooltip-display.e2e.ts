@@ -6,7 +6,7 @@
 // button names a role="tooltip" element the same way. The tests share one
 // session and run in order.
 
-import { $, browser, expect } from '@wdio/globals'
+import { $, browser } from '@wdio/globals'
 import { connectVirtualKeyboard, EDITOR_SELECTOR, waitForUncovered } from '../helpers/app'
 
 const LAYER_PANEL_TOGGLE = '[data-testid="layer-panel-collapse-btn"], [data-testid="layer-panel-expand-btn"]'
@@ -33,6 +33,14 @@ function tooltipState(id: string): Promise<{ role: string | null; opacity: numbe
   }, id)
 }
 
+/** Waits until the element `id` exists with role="tooltip": the tooltip is
+ *  portalled into the page by an effect after the button first renders. */
+async function waitForTooltipRole(id: string): Promise<void> {
+  await browser.waitUntil(async () => (await tooltipState(id))?.role === 'tooltip', {
+    timeoutMsg: `no role="tooltip" element has the id ${id}`,
+  })
+}
+
 async function waitForOpacity(id: string, opacity: number, timeoutMsg: string): Promise<void> {
   await browser.waitUntil(async () => (await tooltipState(id))?.opacity === opacity, {
     timeout: FADE_TIMEOUT_MS,
@@ -48,7 +56,7 @@ describe('Tauri build tooltips', () => {
 
   it("shows the layer panel toggle's tooltip on hover", async () => {
     const id = await describedBy(LAYER_PANEL_TOGGLE)
-    expect((await tooltipState(id))?.role).toBe('tooltip')
+    await waitForTooltipRole(id)
     await $(LAYER_PANEL_TOGGLE).moveTo()
     await waitForOpacity(id, 1, 'the tooltip did not fade in on hover')
   })
@@ -69,6 +77,6 @@ describe('Tauri build tooltips', () => {
 
   it('names a role="tooltip" element from the undo button', async () => {
     const id = await describedBy(UNDO_BUTTON)
-    expect((await tooltipState(id))?.role).toBe('tooltip')
+    await waitForTooltipRole(id)
   })
 })

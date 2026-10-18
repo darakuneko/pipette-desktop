@@ -175,6 +175,14 @@ async function openAnalyze(uid: string): Promise<void> {
   await waitForGone(tid('analyze-filter-modal'), 'the Analyze filter modal did not close')
 }
 
+/** Shows the Analyze tab `key` and waits until it is selected. */
+async function selectAnalyzeTab(key: string): Promise<void> {
+  await clickInPage(tid(`analyze-tab-${key}`))
+  await browser.waitUntil(async () => (await $(tid(`analyze-tab-${key}`)).getAttribute('aria-selected')) === 'true', {
+    timeoutMsg: `the ${key} tab was not selected`,
+  })
+}
+
 async function leaveAnalyze(): Promise<void> {
   await $(tid('analyze-back')).click()
   await $(tid('analyze-page')).waitForDisplayed({ reverse: true })
@@ -298,14 +306,21 @@ describe('Tauri build typing analytics', () => {
   it('draws every Analyze tab from the seeded data', async () => {
     await openAnalyze(DUMMY_TA_UID)
     for (const [key, drawn] of ANALYZE_TABS) {
-      await clickInPage(tid(`analyze-tab-${key}`))
-      await browser.waitUntil(
-        async () => (await $(tid(`analyze-tab-${key}`)).getAttribute('aria-selected')) === 'true',
-        { timeoutMsg: `the ${key} tab was not selected` },
-      )
+      await selectAnalyzeTab(key)
       await $(tid('analyze-chart')).waitForDisplayed()
       if (drawn) await $(tid(drawn)).waitForDisplayed({ timeoutMsg: `the ${key} tab drew no ${drawn}` })
     }
+
+    // The Activity tab's sessions metric draws the session histogram.
+    const metric = $(tid('analyze-filter-activity-metric'))
+    await selectAnalyzeTab('activity')
+    await metric.selectByAttribute('value', 'sessions')
+    await $(tid('analyze-activity-sessions')).waitForDisplayed({ timeoutMsg: 'the sessions metric drew no histogram' })
+    await metric.selectByAttribute('value', 'keystrokes')
+    // The Layer tab's activations chart has the base-layer picker, as the
+    // seeded snapshot has more than one layer.
+    await selectAnalyzeTab('layer')
+    await $(tid('analyze-filter-layer-base-layer')).waitForDisplayed({ timeoutMsg: 'the Layer tab has no base-layer picker' })
     expect(await recordedPageErrors()).toEqual([])
   })
 

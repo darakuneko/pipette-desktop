@@ -125,6 +125,19 @@ describe('useTypingTest — biased sampling end-to-end', () => {
     expect(withE / result.current.state.words.length).toBeLessThan(0.5)
   })
 
+  it('from the same random sequence, the biased sample has a clearly larger share of the weak token than the plain one', async () => {
+    const share = async (weakSpotTrainingMode: boolean): Promise<number> => {
+      vi.spyOn(Math, 'random').mockImplementation(seededRandom(1))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
+      const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTrainingMode }
+      await act(async () => result.current.setConfig(config))
+      return result.current.state.words.filter((w) => w.includes('e')).length / result.current.state.words.length
+    }
+    const biased = await share(true)
+    const plain = await share(false)
+    expect(biased).toBeGreaterThan(plain + 0.25)
+  })
+
   it('weakSpotTrainingMode ON but the profile has no weak tokens: samples normally (gate not active)', async () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, {
       getMistakeProfile: () => NO_WEAK_SPOTS_PROFILE,

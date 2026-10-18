@@ -61,6 +61,7 @@ const ENTRY_EDITORS: EntryEditor[] = [
 /** Opens the entry editor of tile 0 of `editor`'s tab. */
 async function openEntryEditor(editor: EntryEditor): Promise<void> {
   await openKeycodeTab(editor.tab)
+  await $(tid(`${editor.tilePrefix}-tile-0`)).waitForDisplayed()
   await clickInPage(tid(`${editor.tilePrefix}-tile-0`))
   await $(tid(`${editor.modalPrefix}-modal-backdrop`)).waitForDisplayed()
 }

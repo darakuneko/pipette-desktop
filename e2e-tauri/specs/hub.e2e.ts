@@ -28,6 +28,7 @@ import {
   recordPageErrors,
   recordedPageErrors,
   restartApp,
+  textContentOf,
   tid,
   vialApi,
   VIRTUAL_DEVICE_NAME,
@@ -94,6 +95,18 @@ const THUMBNAIL_BASE64 = Buffer.from('e2e thumbnail').toString('base64')
 /** The Hub's files of a keymap post, sorted. */
 const KEYMAP_FILE_TYPES = ['c', 'pdf', 'pipette', 'vil']
 
+
+/** Waits until the snapshot row of the Import / Save tab shows the Hub
+ *  badge `badge`, and checks its share link opens a page of the fake Hub. */
+async function expectHubRow(badge: string): Promise<void> {
+  await browser.waitUntil(async () => (await textContentOf(tid('layout-store-hub-badge'))) === badge, {
+    timeout: 30_000,
+    timeoutMsg: `the snapshot row does not show the badge "${badge}"`,
+  })
+  await $(tid('layout-store-hub-share-link')).waitForExist()
+  const href = await $(tid('layout-store-hub-share-link')).getAttribute('href')
+  expect(href?.startsWith(`${fakeHub().url}/`)).toBe(true)
+}
 describe('Tauri build Pipette Hub', function () {
   this.timeout(180_000)
 
@@ -199,6 +212,7 @@ describe('Tauri build Pipette Hub', function () {
       await browser.waitUntil(() => snapshotEntry(uid, POST_LABEL)?.hubPostId === post.id, {
         timeoutMsg: 'the snapshot was not linked to the post',
       })
+      await expectHubRow('Hub (Public)')
       const upload = fakeHub().requests.find((r) => r.op === 'files.create')
       expect(upload?.account).toBe(HUB_TEST_ACCOUNT)
       expect(upload?.contentType).toBe('multipart/form-data')
@@ -268,6 +282,8 @@ describe('Tauri build Pipette Hub', function () {
       expect(link?.url).toContain(first.token)
       expect(link?.expiresAt).toBe(first.expires_at)
       expect(hubPosts(POST_LABEL)).toEqual([])
+      await $(tid('layout-store-hub-expiry')).waitForExist()
+      await expectHubRow('Hub (Private)')
 
       // To public: the private post goes and a public one comes.
       await uploadWithVisibility('layout-store-update-hub', 'public')
@@ -334,6 +350,18 @@ describe('Tauri build Pipette Hub', function () {
       expect(shared.url).toContain(privatePost.token)
       expect(privatePost.post_type).toBe('td')
       await disconnect()
+
+      // The Data modal shows the Hub actions of the favorite once the Hub
+      // session is known.
+      await clickInPage(tid('data-button'))
+      await $(tid('data-modal')).waitForDisplayed()
+      await expandBranch('nav-local', 'nav-local-favorites')
+      await expandBranch('nav-local-favorites', 'nav-fav-tapDance')
+      await clickInPage(tid('nav-fav-tapDance'))
+      await $(tid('data-modal-fav-entry')).waitForDisplayed()
+      await $(tid('fav-hub-actions')).waitForDisplayed({ timeout: 30_000 })
+      await clickInPage(tid('data-modal-close'))
+      await waitForGone(tid('data-modal'), 'the Data modal did not close')
     })
 
     it('previews, uploads and updates an Analyze post from the seeded typing data', async () => {

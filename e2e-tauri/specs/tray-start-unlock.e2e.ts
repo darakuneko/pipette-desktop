@@ -70,7 +70,18 @@ async function relaunch(edit: (settings: Settings) => void): Promise<void> {
     edit(settings)
     writeFileSync(settingsPath(), JSON.stringify(settings, null, 2))
   })
+  await waitForAttachedHidden()
+}
+
+/** Waits for the page of the launch that started hidden, and fails at once
+ *  when its window is already visible with no Unlock dialog up: something
+ *  outside the app (the WebDriver session) showed it, and every later step
+ *  would fail for that reason instead. */
+async function waitForAttachedHidden(): Promise<void> {
   await waitForPage()
+  if ((await isWindowVisible()) && !(await dialogUp())) {
+    throw new Error('the window started hidden was already visible when the WebDriver session attached')
+  }
 }
 
 const dialogUp = (): Promise<boolean> => $(UNLOCK_DIALOG_HEADING).isExisting()
@@ -159,7 +170,7 @@ describe('Tauri build start in the tray with a locked keyboard', function () {
       expect(config.startInTray).toBe(true)
       expect(readSettings().viewMode).toBe('typingView')
     })
-    await waitForPage()
+    await waitForAttachedHidden()
   })
 
   it('restoring the Typing View shows the Unlock dialog, then hides back into the tray', async () => {
