@@ -3005,6 +3005,7 @@ dependencies = [
  "pipette-js-json",
  "pipette-keyboard-stores",
  "pipette-logger",
+ "pipette-native",
  "pipette-net",
  "pipette-notification",
  "pipette-pack-stores",
@@ -3210,6 +3211,18 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "pipette-native"
+version = "0.0.0"
+dependencies = [
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "raw-window-handle",
+ "thiserror 2.0.21",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

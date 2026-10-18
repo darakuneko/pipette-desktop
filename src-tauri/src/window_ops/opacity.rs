@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The opacity of the Typing Test's view-only window. Electron's
 //! `setOpacity` does nothing on Linux, and neither does this build there;
-//! Windows and macOS need native calls this build does not make yet.
+//! on Windows and macOS it goes through native.rs.
 
 use serde_json::Value;
+use tauri::{Runtime, Window};
 
 /// `VIEW_ONLY_OPACITY_MIN` / `_MAX` / `_DEFAULT` of
 /// src/shared/types/pipette-settings.ts.
@@ -17,12 +18,9 @@ pub fn clamp_view_only_opacity(raw: &Value) -> f64 {
     raw.as_f64().map_or(DEFAULT, |opacity| opacity.clamp(MIN, MAX))
 }
 
-/// Sets the window's opacity to `raw`, clamped.
-pub fn set_opacity(raw: &Value) {
-    let opacity = clamp_view_only_opacity(raw);
-    if cfg!(not(target_os = "linux")) {
-        log::warn!("[window] this build does not set the window opacity ({opacity})");
-    }
+/// Sets the opacity of `window` to `raw`, clamped.
+pub fn set_opacity<R: Runtime>(window: &Window<R>, raw: &Value) {
+    super::native::set_opacity(window, clamp_view_only_opacity(raw));
 }
 
 #[cfg(test)]

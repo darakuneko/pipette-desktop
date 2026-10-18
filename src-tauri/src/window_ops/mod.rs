@@ -11,22 +11,24 @@
 //!
 //! The decisions are compact.rs's and geometry.rs's; this module reads the
 //! window for them and applies what they decide. The window's bounds here
-//! are its outer position and content size in DIP, the rectangle the app
-//! saves as `windowState` (main_window.rs), so the window has no frame to
-//! add or take off: the size of compact mode and the aspect ratio apply to
-//! the content as given. Electron's bounds on Linux have no frame either.
+//! are the rectangle the app saves as `windowState` (main_window.rs), in
+//! DIP, as Electron's bounds are on each system: on Linux the outer
+//! position and the content size, with no frame to add or take off; on
+//! Windows and macOS the outer rectangle, frame included, which native.rs
+//! converts to the content size Tauri sets.
 
 pub mod always_on_top;
 pub mod compact;
 pub mod display;
 pub mod geometry;
+pub mod native;
 pub mod opacity;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use tauri::{LogicalPosition, LogicalSize, Manager, Runtime, Window, WindowEvent};
+use tauri::{Manager, Runtime, Window, WindowEvent};
 
 use crate::main_window::{self, MAIN_WINDOW};
 use crate::window_bounds::{Rect, Size};
@@ -34,9 +36,6 @@ use crate::window_state::{Display, display_matching};
 use compact::{Animation, Controller, STEP_MS, Tick, WindowPort};
 use display::DisplayWatch;
 use geometry::{ApplyHints, Change, Hints};
-
-/// The frame of the window's bounds: none (see the module comment).
-const NO_FRAME: Size = Size { width: 0.0, height: 0.0 };
 
 /// How often the displays are looked at while the window sits still.
 /// Electron hears `display-metrics-changed`; Tauri has no such event, and
@@ -106,11 +105,11 @@ fn with_controller<R: Runtime, T>(window: &Window<R>, f: impl FnOnce(&mut Contro
 }
 
 /// Gives the window the hints of the controller's state at the time they
-/// are applied, on the main thread as every GTK call. A queued sync that
-/// runs late reads the newest state, so the last one applied is always the
-/// current set.
+/// are applied, on the main thread as every GTK, Win32 and AppKit call. A
+/// queued sync that runs late reads the newest state, so the last one
+/// applied is always the current set.
 fn sync_hints<R: Runtime>(window: &Window<R>) {
-    if !has_gtk_window::<R>() {
+    if !is_app_runtime::<R>() {
         return apply_current_hints(window);
     }
     let target = window.clone();
@@ -139,11 +138,7 @@ fn apply_native_hints<R: Runtime>(window: &Window<R>, hints: Hints) -> Result<()
     if has_gtk_window::<R>() {
         return gtk_apply_hints(window, hints);
     }
-    if hints.aspect.is_some() && cfg!(not(target_os = "linux")) {
-        log::warn!("[window] this build does not set an aspect ratio on this system");
-    }
-    let min_size = hints.min_size.map(|(width, height)| LogicalSize::new(width, height));
-    window.set_min_size(min_size).map_err(|err| err.to_string())
+    native::apply_hints(window, hints)
 }
 
 /// Runs `f` on the main thread and answers what it returns; None when it
@@ -338,7 +333,7 @@ fn compact_step<R: Runtime>(
     let display = if enabled { None } else { display_of(window, &displays, primary, bounds) };
     Some(with_controller(window, |controller, port| {
         let (answer, animation) = if enabled {
-            (None, controller.enter(port, bounds, NO_FRAME, compact_size))
+            (None, controller.enter(port, bounds, native::frame(window), compact_size))
         } else {
             let leave = controller.leave(port, bounds, display.as_ref());
             (Some(leave.size.into()), leave.animation)
@@ -370,7 +365,8 @@ async fn animate<R: Runtime>(window: &Window<R>, mut animation: Animation) {
 
 /// Sets or releases the aspect ratio (the WINDOW_SET_ASPECT_RATIO handler).
 pub fn set_aspect_ratio<R: Runtime>(window: &Window<R>, ratio: f64) {
-    with_controller(window, |controller, port| controller.set_aspect_ratio(port, ratio, NO_FRAME));
+    let frame = native::frame(window);
+    with_controller(window, |controller, port| controller.set_aspect_ratio(port, ratio, frame));
 }
 
 /// The WINDOW_SET_MIN_SIZE handler.
@@ -475,11 +471,7 @@ impl<R: Runtime> WindowPort for Port<R> {
             }
             return;
         }
-        let result = self
-            .0
-            .set_position(LogicalPosition::new(bounds.x, bounds.y))
-            .and_then(|()| self.0.set_size(LogicalSize::new(bounds.width, bounds.height)));
-        if let Err(err) = result {
+        if let Err(err) = native::set_outer_bounds(&self.0, bounds) {
             log::error!("[window] failed to set the window bounds: {err}");
         }
     }
