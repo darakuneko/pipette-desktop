@@ -80,7 +80,7 @@ impl Process {
         // SAFETY: OpenProcess has no preconditions; it answers null on
         // failure.
         let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
-        (!handle.is_null()).then_some(Self(handle))
+        (!handle.is_null()).then(|| Self(handle))
     }
 
     /// The full path of the process's executable, empty when it cannot be
@@ -212,7 +212,10 @@ mod tests {
         let explorer = PathBuf::from(windows).join("explorer.exe");
         let path = path_units(&explorer);
         let description = file_description(&path);
-        assert_eq!(String::from_utf16_lossy(&description), "Windows Explorer");
+        // The description is in the system's language ("Windows Explorer" in
+        // English); any description names it rather than its file name.
+        assert!(!description.is_empty());
+        assert_ne!(description, units("explorer.exe"));
         assert_eq!(app_name::application_name(description.clone(), &path), description);
     }
 
@@ -237,12 +240,12 @@ mod tests {
         assert_eq!(window_title(ptr::null_mut()), units(""));
     }
 
-    /// A visible window of this thread; whether it becomes the foreground
-    /// window depends on the session the test runs in.
+    /// A window of this thread, shown or hidden.
     struct TestWindow(HWND);
 
     impl TestWindow {
-        fn new(title: &str) -> Self {
+        fn new(title: &str, visible: bool) -> Self {
+            let style = if visible { WS_OVERLAPPEDWINDOW | WS_VISIBLE } else { WS_OVERLAPPEDWINDOW };
             let title: Vec<u16> = title.encode_utf16().chain([0]).collect();
             // SAFETY: the STATIC class is registered by the system; every
             // pointer argument is a valid string or null.
@@ -251,7 +254,7 @@ mod tests {
                     0,
                     windows_sys::core::w!("STATIC"),
                     title.as_ptr(),
-                    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                    style,
                     0,
                     0,
                     320,
@@ -277,7 +280,8 @@ mod tests {
     #[test]
     fn the_titles_of_this_process_s_windows_are_read_without_a_message() {
         let title = "pipette-native active window \u{3042}";
-        let window = TestWindow::new(title);
+        // Hidden, so it never competes with the foreground test's window.
+        let window = TestWindow::new(title, false);
         // This thread does not answer messages while it waits for the other
         // one: a title read with WM_GETTEXT would never come back.
         let hwnd = window.0 as usize;
@@ -288,16 +292,22 @@ mod tests {
     #[test]
     fn this_process_s_foreground_window_is_named_by_its_executable() {
         let title = "pipette-native foreground window";
-        let window = TestWindow::new(title);
+        let window = TestWindow::new(title, true);
         // SAFETY: the window belongs to this thread.
         unsafe { SetForegroundWindow(window.0) };
         // SAFETY: GetForegroundWindow has no preconditions.
-        if unsafe { GetForegroundWindow() } != window.0 {
-            println!("skipped: the session did not let the test's window come to the foreground");
+        let in_front = unsafe { GetForegroundWindow() } == window.0;
+        // The lookup runs either way, off this thread, which answers no
+        // messages meanwhile.
+        let info = std::thread::spawn(active_window).join().expect("the lookup");
+        if !in_front {
+            eprintln!(
+                "SKIPPED the name check: the session did not let the test's window come to the foreground (lookup: {:?})",
+                info.as_ref().map(|info| String::from_utf16_lossy(&info.application))
+            );
             return;
         }
         let name = this_exe().file_name().expect("a file name").to_string_lossy().into_owned();
-        let info = std::thread::spawn(active_window).join().expect("the lookup");
         assert_eq!(info, Some(ActiveWindowInfo { application: units(&name), title: units(title) }));
     }
 }
