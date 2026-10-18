@@ -72,10 +72,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Whether a failed WebDriver click may succeed on a later try: the
- *  element was covered, not yet interactable, or replaced in between. */
-function isRetryableClickError(err: unknown): boolean {
-  return err instanceof Error && /intercepted|not interactable|stale element|no such element/i.test(err.message)
+/** The message of {@link Locator}'s check that the element it marked is
+ *  still there: the page replaced the node between the mark and its use. */
+const REPLACED_MESSAGE = 'the marked element was replaced'
+
+/** Whether a failed WebDriver action may succeed on a later try with the
+ *  element found again: it was covered, not yet interactable, or replaced
+ *  in between. */
+function isRetryableError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    new RegExp(`intercepted|not interactable|stale element|no such element|wasn't found|${REPLACED_MESSAGE}`, 'i').test(err.message)
+  )
 }
 
 interface ClickOptions {
@@ -175,16 +183,20 @@ export class Locator {
       await this.waitFor({ state: 'visible', timeout: Math.max(0, deadline - Date.now()) })
       if ((await this.state()).enabled) {
         try {
-          const element = await $(await this.mark())
+          const element = await this.markedElement()
           if (opts.position) {
+            // WebDriver takes whole pixels from the element's center.
             const size = await element.getSize()
-            await element.click({ x: opts.position.x - size.width / 2, y: opts.position.y - size.height / 2 })
+            await element.click({
+              x: Math.round(opts.position.x - size.width / 2),
+              y: Math.round(opts.position.y - size.height / 2),
+            })
           } else {
             await element.click()
           }
           return
         } catch (err) {
-          if (!isRetryableClickError(err) || Date.now() >= deadline) throw err
+          if (!isRetryableError(err) || Date.now() >= deadline) throw err
         }
       } else if (Date.now() >= deadline) {
         throw new Error(`timed out waiting for ${this.description} to be enabled`)
@@ -226,16 +238,37 @@ export class Locator {
   }
 
   /** Runs `fn` in the page with the element. */
-  async evaluate<R>(fn: (el: Element) => R): Promise<Awaited<R>> {
-    await this.waitFor({ state: 'attached' })
-    const ref = await this.mark()
-    return (await $(ref)).execute(fn) as Promise<Awaited<R>>
+  evaluate<R>(fn: (el: Element) => R): Promise<Awaited<R>> {
+    return this.withElement('attached', (element) => element.execute(fn) as Promise<Awaited<R>>)
   }
 
   /** Saves a screenshot of the element alone. */
   async screenshot(opts: { path: string }): Promise<void> {
-    await this.waitFor({ state: 'visible' })
-    await (await $(await this.mark())).saveScreenshot(opts.path)
+    await this.withElement('visible', (element) => element.saveScreenshot(opts.path))
+  }
+
+  /** Waits for the element in `state` and runs `action` on it, finding it
+   *  again when the page replaced it in between, for up to the default
+   *  timeout. */
+  private async withElement<T>(state: WaitState, action: (element: WebdriverIO.Element) => Promise<T>): Promise<T> {
+    const deadline = Date.now() + DEFAULT_TIMEOUT_MS
+    for (;;) {
+      await this.waitFor({ state, timeout: Math.max(0, deadline - Date.now()) })
+      try {
+        return await action(await this.markedElement())
+      } catch (err) {
+        if (!isRetryableError(err) || Date.now() >= deadline) throw err
+      }
+      await sleep(POLL_MS)
+    }
+  }
+
+  /** The WebDriver element of {@link mark}, checked to exist without the
+   *  implicit wait WebdriverIO gives an element it has not found. */
+  private async markedElement(): Promise<WebdriverIO.Element> {
+    const element = await $(await this.mark()).getElement()
+    if (!(await element.isExisting())) throw new Error(`${this.description}: ${REPLACED_MESSAGE}`)
+    return element
   }
 
   private reached(wanted: WaitState, state: ElementState): boolean {
