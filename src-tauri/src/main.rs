@@ -350,7 +350,10 @@ fn main() {
     // built: a second launch hands over to the running app there and exits
     // with 0. So the log, the app config and the HID service, which the
     // running app owns, start only after `build`.
+    // No app menu on macOS, as the Electron build sets none
+    // (`Menu.setApplicationMenu(null)`); the other systems have none anyway.
     let builder = tauri::Builder::default()
+        .enable_macos_default_menu(false)
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
