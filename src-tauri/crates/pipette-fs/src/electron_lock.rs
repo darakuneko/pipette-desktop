@@ -286,7 +286,7 @@ mod tests {
     use std::os::unix::fs::symlink;
     use std::os::unix::net::UnixListener;
     use std::path::PathBuf;
-    use std::process::{Child, Command};
+    use std::process::{Child, Command, Stdio};
 
     use super::*;
 
@@ -298,17 +298,17 @@ mod tests {
         symlink(target, dir.join(ELECTRON_LOCK_FILE)).unwrap();
     }
 
-    /// `sleep` started under the executable name `name`, from a copy in
-    /// `dir`.
+    /// This test binary started under the executable name `name`, from a
+    /// copy in `dir`, running only [`sleep_helper`] (a system `sleep` can be
+    /// one binary for many programs that refuses to run under another name).
     fn sleeper(dir: &Path, name: &str) -> Child {
         let exe: PathBuf = dir.join(name);
-        let sleep =
-            ["/bin/sleep", "/usr/bin/sleep"].into_iter().find(|path| Path::new(path).exists()).unwrap();
-        std::fs::copy(sleep, &exe).unwrap();
+        std::fs::copy(std::env::current_exe().unwrap(), &exe).unwrap();
+        let args = ["--exact", "electron_lock::tests::sleep_helper", "--ignored", "--test-threads=1"];
         // A fork in another test thread can briefly hold the copy open for
         // writing (ETXTBSY).
         for _ in 0..50 {
-            match Command::new(&exe).arg("30").spawn() {
+            match Command::new(&exe).args(args).stdout(Stdio::null()).stderr(Stdio::null()).spawn() {
                 Err(err) if err.raw_os_error() == Some(26) => {
                     std::thread::sleep(std::time::Duration::from_millis(20))
                 }
@@ -316,6 +316,13 @@ mod tests {
             }
         }
         panic!("{} stayed busy", exe.display());
+    }
+
+    /// The process [`sleeper`] starts.
+    #[test]
+    #[ignore = "run by sleeper only"]
+    fn sleep_helper() {
+        std::thread::sleep(std::time::Duration::from_secs(30));
     }
 
     fn stop(mut child: Child) {
