@@ -13,11 +13,15 @@
 //!   raises `RunEvent::ExitRequested` with a code;
 //! - closing the last window when the app does not keep running raises
 //!   `RunEvent::ExitRequested` without one;
-//! - on macOS, quitting from the Dock or by the system (log out, shut down)
-//!   raises no exit request: Cocoa ends the event loop, raising
-//!   `RunEvent::Exit`, and ends the process once that event is handled.
-//!   That event counts as an exit request that cannot be stopped, so the
-//!   sequence runs there to its end or its deadline, holding the event loop.
+//! - quitting from the macOS Dock, logging out or shutting down on macOS,
+//!   and signing out or shutting down on Windows raise no exit request: the
+//!   event loop ends (Cocoa's `applicationWillTerminate`, Windows'
+//!   `WM_ENDSESSION`), raising `RunEvent::Exit`, and the process ends once
+//!   that event is handled. That event counts as an exit request that cannot
+//!   be stopped, so the sequence runs there to its end or its deadline,
+//!   holding the event loop. The system may end the process before that, so
+//!   the pending marker is written first, as an interrupted quit, and the
+//!   sequence's own update replaces or removes it when it gets that far.
 //!
 //! The first request is stopped and starts the sequence. A request while it
 //! runs (the tray's Quit again, the window closed, a second signal) ends the
@@ -38,6 +42,7 @@
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use pipette_hid::HidService;
@@ -91,6 +96,9 @@ const QUIT_PHASES: [&str; 5] =
 #[derive(Default)]
 pub struct Lifecycle {
     quit: QuitGuard,
+    /// Whether an exit request has gone through, having waited for the
+    /// sequence's marker update already.
+    exit_let_through: AtomicBool,
 }
 
 /// The shared lifecycle state; `None` before setup has run.
@@ -249,7 +257,10 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     log::info!("[quit] exit requested (code {code:?}); starting the quit sequence");
                     start_quit_sequence(app.clone(), lifecycle);
                 }
-                ExitDecision::ExitNow => exit_now(app, &lifecycle, code),
+                ExitDecision::ExitNow => {
+                    exit_now(app, &lifecycle, code);
+                    lifecycle.exit_let_through.store(true, Ordering::Relaxed);
+                }
                 ExitDecision::Exit => {
                     log::info!("[quit] exiting (code {code:?})");
                     // While the sequence updates the marker, waits for that
@@ -257,6 +268,7 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     // it short; otherwise returns at once.
                     lifecycle.quit.wait_until_finished(MARKER_TIMEOUT);
                     main_window::save_main_window_state(app);
+                    lifecycle.exit_let_through.store(true, Ordering::Relaxed);
                 }
             }
         }
@@ -288,11 +300,12 @@ fn exit_now(app: &AppHandle<Wry>, lifecycle: &Lifecycle, code: Option<i32>) {
 }
 
 /// The event loop has ended. After an exit request that went through there
-/// is nothing left to do but wait for the sequence's marker update. With no
-/// exit request before it (macOS: the Dock's Quit, log out), the process
-/// ends once this returns, so the quit sequence runs here, holding the event
-/// loop until it ends or its deadline passes; one already running is
-/// interrupted as by a second exit request.
+/// is nothing left to do. With no exit request before it (see the module
+/// comment: the macOS Dock's Quit and log out, Windows' sign-out and shut
+/// down), the process ends once this returns, so the pending marker is
+/// written and the quit sequence runs here, holding the event loop until it
+/// ends or its deadline passes; one already running is interrupted as by a
+/// second exit request.
 fn on_loop_ended(app: &AppHandle<Wry>) {
     let Some(lifecycle) = lifecycle_state(app).map(|state| Arc::clone(&state)) else {
         return;
@@ -300,11 +313,19 @@ fn on_loop_ended(app: &AppHandle<Wry>) {
     match lifecycle.quit.on_exit_requested() {
         ExitDecision::StartSequence => {
             log::info!("[quit] the app is ending without an exit request; running the quit sequence");
+            // Written before the phases run, so a system that ends the
+            // process within the deadline leaves it for the next launch.
+            let data_dir = user_data_dir(app);
+            tauri::async_runtime::block_on(record_interruption(None, QUIT_DEADLINE, &data_dir));
             tauri::async_runtime::block_on(quit_sequence(app, lifecycle));
             main_window::save_main_window_state(app);
         }
         ExitDecision::ExitNow => exit_now(app, &lifecycle, None),
-        ExitDecision::Exit => lifecycle.quit.wait_until_finished(MARKER_TIMEOUT),
+        ExitDecision::Exit => {
+            if !lifecycle.exit_let_through.load(Ordering::Relaxed) {
+                lifecycle.quit.wait_until_finished(MARKER_TIMEOUT);
+            }
+        }
     }
 }
 
