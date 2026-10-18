@@ -5,8 +5,10 @@
 
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::Path;
+
+pub(crate) use crate::dev_dir::Checked;
 
 /// The entry's file name in the autostart directory.
 pub(crate) const FILE_NAME: &str = "pipette.desktop";
@@ -45,78 +47,113 @@ pub(crate) fn apply(dir: &Path, enabled: bool, exec: impl FnOnce() -> Result<OsS
     }
 }
 
-/// [`apply`] for a development directory `dir`, already resolved: only
-/// while `dir` still resolves to itself, only over or removing a regular
-/// file with no other link (a symbolic or hard link could reach another
-/// entry), and writing through a temporary file in `dir` renamed over the
-/// entry, which replaces a link put there meanwhile instead of following it.
-pub(crate) fn apply_guarded(dir: &Path, enabled: bool, exec: impl FnOnce() -> Result<OsString, String>) {
-    let result = if enabled { write_guarded(dir, exec) } else { remove_guarded(dir) };
-    if let Err(err) = result {
+/// [`apply`] for a development directory `checked` resolved: the directory
+/// is opened once without following a link and taken only when it is still
+/// the checked one (its path and, when it existed at the check, its device
+/// and inode), and every entry operation is made relative to that open
+/// directory, so swapping it or a parent for a link afterwards cannot move
+/// the write or the removal. The entry is replaced or removed only when it
+/// is a regular file with no other link (a symbolic or hard link could reach
+/// another entry), and written through a temporary file renamed over it.
+pub(crate) fn apply_guarded(
+    checked: &Checked,
+    enabled: bool,
+    exec: impl FnOnce() -> Result<OsString, String>,
+) {
+    if let Err(err) = guarded::apply(checked, enabled, exec) {
         log::error!("{FAILURE}{err}");
     }
 }
 
-fn write_guarded(dir: &Path, exec: impl FnOnce() -> Result<OsString, String>) -> io::Result<()> {
-    fs::create_dir_all(dir)?;
-    still_resolved(dir)?;
-    let path = dir.join(FILE_NAME);
-    own_regular_file(&path)?;
-    let exec = exec().map_err(io::Error::other)?;
-    let temp = dir.join(format!(".{FILE_NAME}.{}.tmp", std::process::id()));
-    // A temporary file a crash left behind; removing a link removes only the link.
-    let _ = fs::remove_file(&temp);
-    let written = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temp)
-        .and_then(|mut file| file.write_all(&desktop_entry(&exec)))
-        .and_then(|()| fs::rename(&temp, &path));
-    if written.is_err() {
-        let _ = fs::remove_file(&temp);
-    }
-    written
-}
-
-fn remove_guarded(dir: &Path) -> io::Result<()> {
-    match fs::canonicalize(dir) {
-        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(err) => return Err(err),
-        Ok(_) => still_resolved(dir)?,
-    }
-    let path = dir.join(FILE_NAME);
-    if own_regular_file(&path)? { fs::remove_file(&path) } else { Ok(()) }
-}
-
-/// An error unless `dir` resolves to itself: a part of it replaced by a link
-/// after the check.
-fn still_resolved(dir: &Path) -> io::Result<()> {
-    if fs::canonicalize(dir)? == dir {
-        Ok(())
-    } else {
-        Err(io::Error::other(format!("{} changed after it was checked", dir.display())))
-    }
-}
-
-/// Whether the entry `path` exists; an error when it is there but is not a
-/// regular file or has another hard link.
-fn own_regular_file(path: &Path) -> io::Result<bool> {
-    match fs::symlink_metadata(path) {
-        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(err) => Err(err),
-        Ok(meta) if meta.file_type().is_file() && link_count(&meta) == 1 => Ok(true),
-        Ok(_) => Err(io::Error::other(format!("{} is not a regular file of its own", path.display()))),
-    }
-}
-
-#[cfg(unix)]
-fn link_count(meta: &fs::Metadata) -> u64 {
+#[cfg(target_os = "linux")]
+mod guarded {
+    use std::ffi::OsString;
+    use std::fs::{self, File};
+    use std::io::{self, Write};
+    use std::os::fd::AsRawFd;
     use std::os::unix::fs::MetadataExt;
-    meta.nlink()
+
+    use rustix::fs::{AtFlags, FileType, Mode, OFlags};
+    use rustix::io::Errno;
+
+    use super::{Checked, FILE_NAME, desktop_entry};
+
+    pub(super) fn apply(
+        checked: &Checked,
+        enabled: bool,
+        exec: impl FnOnce() -> Result<OsString, String>,
+    ) -> io::Result<()> {
+        if enabled {
+            fs::create_dir_all(&checked.dir)?;
+            let dir = open(checked)?;
+            own_regular_file(&dir)?;
+            let exec = exec().map_err(io::Error::other)?;
+            write(&dir, &desktop_entry(&exec))
+        } else {
+            let dir = match open(checked) {
+                Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
+                other => other?,
+            };
+            if own_regular_file(&dir)? {
+                rustix::fs::unlinkat(&dir, FILE_NAME, AtFlags::empty())?;
+            }
+            Ok(())
+        }
+    }
+
+    /// The checked directory, open, when it still is the checked one.
+    fn open(checked: &Checked) -> io::Result<File> {
+        let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+        let dir = File::from(rustix::fs::open(&checked.dir, flags, Mode::empty())?);
+        let at = fs::read_link(format!("/proc/self/fd/{}", dir.as_raw_fd()))?;
+        let meta = dir.metadata()?;
+        if at != checked.dir || checked.id.is_some_and(|id| id != (meta.dev(), meta.ino())) {
+            return Err(io::Error::other(format!("{} changed after it was checked", checked.dir.display())));
+        }
+        Ok(dir)
+    }
+
+    /// Whether the entry exists in `dir`; an error when it is there but is
+    /// not a regular file or has another hard link.
+    fn own_regular_file(dir: &File) -> io::Result<bool> {
+        match rustix::fs::statat(dir, FILE_NAME, AtFlags::SYMLINK_NOFOLLOW) {
+            Err(Errno::NOENT) => Ok(false),
+            Err(err) => Err(err.into()),
+            Ok(stat) if FileType::from_raw_mode(stat.st_mode).is_file() && stat.st_nlink == 1 => Ok(true),
+            Ok(_) => Err(io::Error::other(format!("{FILE_NAME} is not a regular file of its own"))),
+        }
+    }
+
+    fn write(dir: &File, entry: &[u8]) -> io::Result<()> {
+        let temp = format!(".{FILE_NAME}.{}.tmp", std::process::id());
+        // A temporary file a crash left behind; removing a link removes only the link.
+        let _ = rustix::fs::unlinkat(dir, temp.as_str(), AtFlags::empty());
+        let flags = OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+        let mode = Mode::RUSR | Mode::WUSR | Mode::RGRP | Mode::WGRP | Mode::ROTH | Mode::WOTH;
+        let written = rustix::fs::openat(dir, temp.as_str(), flags, mode)
+            .map_err(io::Error::from)
+            .and_then(|fd| File::from(fd).write_all(entry))
+            .and_then(|()| Ok(rustix::fs::renameat(dir, temp.as_str(), dir, FILE_NAME)?));
+        if written.is_err() {
+            let _ = rustix::fs::unlinkat(dir, temp.as_str(), AtFlags::empty());
+        }
+        written
+    }
 }
 
 /// Development directories are read on Linux only (`crate::target`).
-#[cfg(not(unix))]
-fn link_count(_meta: &fs::Metadata) -> u64 {
-    1
+#[cfg(not(target_os = "linux"))]
+mod guarded {
+    use std::ffi::OsString;
+    use std::io;
+
+    use super::Checked;
+
+    pub(super) fn apply(
+        _checked: &Checked,
+        _enabled: bool,
+        _exec: impl FnOnce() -> Result<OsString, String>,
+    ) -> io::Result<()> {
+        Err(io::Error::other("a development directory is used on Linux only"))
+    }
 }

@@ -50,21 +50,21 @@ pub(crate) fn records() -> Vec<(Level, String)> {
 
 const EXE: &str = "/opt/Pipette/pipette";
 
-/// A packaged Linux build on `home` (also `$HOME`), with `home` as its
-/// userData directory, so every development directory the tests name in
-/// it passes the userData rule and meets the other ones.
+/// A packaged Linux build on `home` (also `$HOME` and the passwd home),
+/// with `home/session` as its userData directory, where development
+/// directories may go.
 fn linux_env(home: &Path) -> Environment {
     Environment {
         os: Os::Linux,
         packaged: true,
         home: Some(home.to_path_buf()),
         home_var: Some(home.as_os_str().to_owned()),
-        passwd_home: None,
+        passwd_home: Some(home.to_path_buf()),
         xdg_config_home: None,
         appimage: None,
         current_exe: Ok(PathBuf::from(EXE)),
         dev_dir: None,
-        user_data: home.to_path_buf(),
+        user_data: home.join("session"),
     }
 }
 
@@ -199,8 +199,9 @@ fn builds_do_not_register_themselves() {
     assert!(!AUTOSTART_APPLIES);
 }
 
-/// A HOME holding the user's real entry, another program's entry, and the
-/// userData directories of both builds.
+/// A HOME holding the user's real entry, another program's entry, the
+/// userData directories of both builds, and `session`, the userData
+/// directory of [`linux_env`].
 fn populated_home() -> tempfile::TempDir {
     let home = tempfile::tempdir().expect("HOME");
     let config = home.path().join(".config");
@@ -211,6 +212,7 @@ fn populated_home() -> tempfile::TempDir {
         fs::create_dir_all(config.join(name)).expect("userData");
         fs::write(config.join(name).join("config.json"), "{\"autoLaunch\":true}").expect("config");
     }
+    fs::create_dir(home.path().join("session")).expect("session");
     home
 }
 
@@ -290,6 +292,10 @@ fn dev_env(home: &Path, dir: impl Into<OsString>) -> Environment {
     Environment { dev_dir: Some(dir.into()), ..linux_env(home) }
 }
 
+fn session(home: &Path) -> PathBuf {
+    home.join("session")
+}
+
 /// Applies on and off and checks that nothing under `home` changed and an
 /// error starting with `reason` was logged each time.
 fn assert_refused(env: &Environment, home: &Path, reason: &str) {
@@ -308,10 +314,32 @@ fn assert_refused(env: &Environment, home: &Path, reason: &str) {
     assert!(matches!(target(true, env), Target::Refused(_)));
 }
 
+/// Applies a target checked earlier on and off and checks that nothing
+/// under `home` changed and each time an error containing `reason` was
+/// logged.
+fn assert_not_used(checked: &crate::dev_dir::Checked, env: &Environment, home: &Path, reason: &str) {
+    let before = snapshot(home);
+    for enabled in [true, false] {
+        capture();
+        run(Target::DevDirectory(checked.clone()), enabled, env);
+        let logs = records();
+        assert_eq!(logs.len(), 1, "{logs:?}");
+        assert!(logs[0].1.starts_with(FAILURE) && logs[0].1.contains(reason), "{logs:?}");
+        assert_eq!(snapshot(home), before);
+    }
+}
+
+fn checked_target(env: &Environment) -> crate::dev_dir::Checked {
+    match target(false, env) {
+        Target::DevDirectory(checked) => checked,
+        other => panic!("the directory is refused: {other:?}"),
+    }
+}
+
 #[test]
 fn the_development_directory_gets_the_entry_and_loses_it() {
     let home = populated_home();
-    let dev = home.path().join("session").join("autostart");
+    let dev = session(home.path()).join("autostart");
     let env = dev_env(home.path(), &dev);
     let real = fs::read(real_entry(home.path())).expect("the real entry");
     capture();
@@ -340,33 +368,94 @@ fn a_directory_with_dot_components_is_refused() {
     for dir in [
         format!("{base}/session/../.config/autostart"),
         format!("{base}/./.config/autostart"),
-        format!("{base}/session/."),
-        format!("{base}/session/.."),
+        format!("{base}/session/a/."),
+        format!("{base}/session/a/.."),
     ] {
         assert_refused(&dev_env(home.path(), dir), home.path(), "must not contain . or .. components");
     }
 }
 
 #[test]
-fn the_real_autostart_directory_and_its_inside_are_refused() {
+fn the_development_directory_must_be_inside_user_data() {
     let home = populated_home();
     let real = home.path().join(".config").join("autostart");
-    for dir in [real.clone(), real.join("sub"), PathBuf::from(format!("{}//", real.display()))] {
-        assert_refused(&dev_env(home.path(), dir), home.path(), "resolves to the real autostart directory");
+    for dir in [
+        real.clone(),
+        real.join("sub"),
+        PathBuf::from(format!("{}//", real.display())),
+        session(home.path()),
+        home.path().join("session-other"),
+    ] {
+        assert_refused(&dev_env(home.path(), dir), home.path(), "must be inside the userData directory");
     }
+    let missing = Environment {
+        user_data: home.path().join("missing"),
+        ..dev_env(home.path(), home.path().join("missing").join("a"))
+    };
+    assert_refused(&missing, home.path(), "cannot be checked");
 }
 
 #[test]
-fn the_xdg_autostart_directory_is_refused() {
+fn a_user_data_directory_holding_a_real_autostart_directory_is_refused() {
     let home = populated_home();
+    let config = home.path().join(".config");
+    for user_data in [home.path().to_path_buf(), config.clone(), config.join("autostart")] {
+        let env = Environment { user_data: user_data.clone(), ..dev_env(home.path(), user_data.join("dev")) };
+        assert_refused(&env, home.path(), "cannot be used: the userData directory");
+    }
     let xdg = tempfile::tempdir().expect("XDG_CONFIG_HOME");
     let env = Environment {
         xdg_config_home: Some(xdg.path().to_path_buf()),
         user_data: xdg.path().to_path_buf(),
         ..dev_env(home.path(), xdg.path().join("autostart"))
     };
-    assert_refused(&env, home.path(), "resolves to the real autostart directory");
+    assert_refused(&env, home.path(), "cannot be used: the userData directory");
     assert!(snapshot(xdg.path()).is_empty());
+}
+
+#[test]
+fn a_directory_inside_a_real_autostart_directory_is_refused() {
+    let home = populated_home();
+    let user_data = home.path().join(".config").join("autostart").join("user-data");
+    fs::create_dir(&user_data).expect("userData");
+    let env = Environment { user_data: user_data.clone(), ..dev_env(home.path(), user_data.join("dev")) };
+    assert_refused(&env, home.path(), "resolves to the real autostart directory");
+    let xdg = tempfile::tempdir().expect("XDG_CONFIG_HOME");
+    let user_data = xdg.path().join("autostart").join("user-data");
+    fs::create_dir_all(&user_data).expect("userData");
+    let env = Environment {
+        xdg_config_home: Some(xdg.path().to_path_buf()),
+        user_data: user_data.clone(),
+        ..dev_env(home.path(), user_data.join("dev"))
+    };
+    assert_refused(&env, xdg.path(), "resolves to the real autostart directory");
+}
+
+#[test]
+fn the_passwd_home_is_protected_when_home_points_elsewhere() {
+    let fake_home = populated_home();
+    let passwd_home = populated_home();
+    let user_data = passwd_home.path().join(".config").join("autostart").join("user-data");
+    fs::create_dir(&user_data).expect("userData");
+    let env = Environment {
+        passwd_home: Some(passwd_home.path().to_path_buf()),
+        user_data: user_data.clone(),
+        ..dev_env(fake_home.path(), user_data.join("dev"))
+    };
+    assert_refused(&env, passwd_home.path(), "resolves to the real autostart directory");
+}
+
+#[test]
+fn a_relative_or_empty_home_or_no_passwd_home_refuses_the_directory() {
+    let home = populated_home();
+    let dev = session(home.path()).join("autostart");
+    for home_var in ["relative/home", ""] {
+        let env = Environment { home_var: Some(OsString::from(home_var)), ..dev_env(home.path(), &dev) };
+        assert_refused(&env, home.path(), "cannot be checked: HOME is not an absolute path");
+    }
+    // `$HOME` as the only source: a user only a directory service knows.
+    let env = Environment { passwd_home: None, ..dev_env(home.path(), &dev) };
+    assert_refused(&env, home.path(), "cannot be checked: /etc/passwd has no home directory for the user");
 }
 
 #[cfg(unix)]
@@ -374,17 +463,15 @@ fn the_xdg_autostart_directory_is_refused() {
 fn a_link_into_the_real_directory_is_refused() {
     use std::os::unix::fs::symlink;
     let home = populated_home();
-    let real = home.path().join(".config").join("autostart");
-    let session = home.path().join("session");
-    fs::create_dir(&session).expect("session");
-    symlink(&real, session.join("to-autostart")).expect("link");
+    let session = session(home.path());
+    symlink(home.path().join(".config").join("autostart"), session.join("to-autostart")).expect("link");
     symlink(home.path().join(".config"), session.join("to-config")).expect("link");
     for dir in [
         session.join("to-autostart"),
         session.join("to-autostart").join("missing"),
         session.join("to-config").join("autostart"),
     ] {
-        assert_refused(&dev_env(home.path(), dir), home.path(), "resolves to the real autostart directory");
+        assert_refused(&dev_env(home.path(), dir), home.path(), "must be inside the userData directory");
     }
 }
 
@@ -393,8 +480,8 @@ fn a_link_into_the_real_directory_is_refused() {
 fn an_entry_that_links_into_the_real_directory_is_refused() {
     use std::os::unix::fs::symlink;
     let home = populated_home();
-    let dev = home.path().join("session");
-    fs::create_dir(&dev).expect("session");
+    let dev = session(home.path()).join("autostart");
+    fs::create_dir(&dev).expect("dev");
     symlink(real_entry(home.path()), dev.join("pipette.desktop")).expect("link");
     assert_refused(&dev_env(home.path(), &dev), home.path(), "resolves to the real autostart directory");
 }
@@ -404,11 +491,10 @@ fn an_entry_that_links_into_the_real_directory_is_refused() {
 fn a_dangling_link_is_refused() {
     use std::os::unix::fs::symlink;
     let home = populated_home();
-    let dev = home.path().join("session");
-    fs::create_dir(&dev).expect("session");
-    symlink(home.path().join("nowhere"), dev.join("dangling")).expect("link");
+    let session = session(home.path());
+    symlink(home.path().join("nowhere"), session.join("dangling")).expect("link");
     assert_refused(
-        &dev_env(home.path(), dev.join("dangling").join("autostart")),
+        &dev_env(home.path(), session.join("dangling").join("autostart")),
         home.path(),
         "cannot be resolved",
     );
@@ -419,7 +505,7 @@ fn the_development_directory_is_read_on_linux_only() {
     let home = populated_home();
     let before = snapshot(home.path());
     for os in [Os::Windows, Os::MacOs, Os::Other] {
-        let env = Environment { os, ..dev_env(home.path(), home.path().join("session")) };
+        let env = Environment { os, ..dev_env(home.path(), session(home.path()).join("autostart")) };
         capture();
         apply(true, &env);
         assert_eq!(
@@ -430,74 +516,17 @@ fn the_development_directory_is_read_on_linux_only() {
     }
 }
 
-#[test]
-fn the_development_directory_must_be_inside_user_data() {
-    let home = populated_home();
-    let user_data = home.path().join(".config").join("app.pipette.desktop");
-    for dir in [
-        home.path().join("session"),
-        user_data.clone(),
-        home.path().join(".config").join("app.pipette.desktop-other"),
-    ] {
-        let env = Environment { user_data: user_data.clone(), ..dev_env(home.path(), dir) };
-        assert_refused(&env, home.path(), "must be inside the userData directory");
-    }
-    let missing = Environment {
-        user_data: home.path().join("missing"),
-        ..dev_env(home.path(), home.path().join("missing").join("a"))
-    };
-    assert_refused(&missing, home.path(), "cannot be checked");
-}
-
-#[test]
-fn the_passwd_home_is_protected_when_home_points_elsewhere() {
-    let fake_home = populated_home();
-    let passwd_home = populated_home();
-    let real = passwd_home.path().join(".config").join("autostart");
-    let env = Environment {
-        home: Some(fake_home.path().to_path_buf()),
-        home_var: Some(fake_home.path().as_os_str().to_owned()),
-        passwd_home: Some(passwd_home.path().to_path_buf()),
-        user_data: passwd_home.path().to_path_buf(),
-        ..dev_env(fake_home.path(), &real)
-    };
-    assert_refused(&env, passwd_home.path(), "resolves to the real autostart directory");
-}
-
-#[test]
-fn a_relative_or_empty_home_or_no_home_refuses_the_directory() {
-    let home = populated_home();
-    let dev = home.path().join("session");
-    for home_var in ["relative/home", ""] {
-        let env = Environment { home_var: Some(OsString::from(home_var)), ..dev_env(home.path(), &dev) };
-        assert_refused(&env, home.path(), "cannot be checked: HOME is not an absolute path");
-    }
-    let env = Environment { home: None, home_var: None, passwd_home: None, ..dev_env(home.path(), &dev) };
-    assert_refused(&env, home.path(), "cannot be checked: no home directory is known");
-}
-
 #[cfg(unix)]
 #[test]
 fn an_entry_swapped_for_a_link_after_the_check_is_not_written_through() {
     use std::os::unix::fs::symlink;
     let home = populated_home();
-    let dev = home.path().join("session");
-    fs::create_dir(&dev).expect("session");
+    let dev = session(home.path()).join("autostart");
+    fs::create_dir(&dev).expect("dev");
     let env = dev_env(home.path(), &dev);
-    let Target::DevDirectory(checked) = target(false, &env) else { panic!("the directory is accepted") };
+    let checked = checked_target(&env);
     symlink(real_entry(home.path()), dev.join("pipette.desktop")).expect("link");
-    let before = snapshot(home.path());
-    for enabled in [true, false] {
-        capture();
-        run(Target::DevDirectory(checked.clone()), enabled, &env);
-        let logs = records();
-        assert_eq!(logs.len(), 1, "{logs:?}");
-        assert!(
-            logs[0].1.starts_with(FAILURE) && logs[0].1.contains("not a regular file of its own"),
-            "{logs:?}"
-        );
-        assert_eq!(snapshot(home.path()), before);
-    }
+    assert_not_used(&checked, &env, home.path(), "not a regular file of its own");
 }
 
 #[cfg(unix)]
@@ -505,30 +534,45 @@ fn an_entry_swapped_for_a_link_after_the_check_is_not_written_through() {
 fn a_directory_swapped_for_a_link_after_the_check_is_not_used() {
     use std::os::unix::fs::symlink;
     let home = populated_home();
-    let dev = home.path().join("session").join("autostart");
+    let dev = session(home.path()).join("autostart");
     let env = dev_env(home.path(), &dev);
-    let Target::DevDirectory(checked) = target(false, &env) else { panic!("the directory is accepted") };
-    fs::create_dir(home.path().join("session")).expect("session");
+    let checked = checked_target(&env);
     symlink(home.path().join(".config").join("autostart"), &dev).expect("link");
-    let before = snapshot(home.path());
-    for enabled in [true, false] {
-        capture();
-        run(Target::DevDirectory(checked.clone()), enabled, &env);
-        assert!(
-            records().iter().any(|(_, message)| message.contains("changed after it was checked")),
-            "{:?}",
-            records()
-        );
-        assert_eq!(snapshot(home.path()), before);
-    }
+    assert_not_used(&checked, &env, home.path(), "");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_parent_swapped_for_a_link_after_the_check_is_not_used() {
+    use std::os::unix::fs::symlink;
+    let home = populated_home();
+    // The checked directory existed, with its device and inode noted.
+    let parent = session(home.path()).join("a");
+    fs::create_dir_all(parent.join("autostart")).expect("dev");
+    let env = dev_env(home.path(), parent.join("autostart"));
+    let checked = checked_target(&env);
+    assert!(checked.id.is_some());
+    // The parent now leads to the real `.config`, whose `autostart` is a
+    // directory, so opening the checked path without following its last
+    // part would still land in the real directory.
+    fs::remove_dir_all(&parent).expect("remove");
+    symlink(home.path().join(".config"), &parent).expect("link");
+    assert_not_used(&checked, &env, home.path(), "changed after it was checked");
+    // A directory that did not exist at the check is pinned by its path.
+    fs::remove_file(&parent).expect("unlink");
+    let fresh = dev_env(home.path(), parent.join("autostart"));
+    let checked = checked_target(&fresh);
+    assert!(checked.id.is_none());
+    symlink(home.path().join(".config"), &parent).expect("link");
+    assert_not_used(&checked, &fresh, home.path(), "changed after it was checked");
 }
 
 #[cfg(unix)]
 #[test]
 fn a_hard_linked_entry_is_refused() {
     let home = populated_home();
-    let dev = home.path().join("session");
-    fs::create_dir(&dev).expect("session");
+    let dev = session(home.path()).join("autostart");
+    fs::create_dir(&dev).expect("dev");
     fs::hard_link(real_entry(home.path()), dev.join("pipette.desktop")).expect("hard link");
     let env = dev_env(home.path(), &dev);
     let before = snapshot(home.path());
@@ -544,8 +588,8 @@ fn a_hard_linked_entry_is_refused() {
 #[test]
 fn the_entry_replaces_a_plain_file_and_leaves_no_temporary_file() {
     let home = populated_home();
-    let dev = home.path().join("session");
-    fs::create_dir(&dev).expect("session");
+    let dev = session(home.path()).join("autostart");
+    fs::create_dir(&dev).expect("dev");
     fs::write(dev.join("pipette.desktop"), "old\n").expect("old entry");
     apply(true, &dev_env(home.path(), &dev));
     let names: Vec<_> = fs::read_dir(&dev).expect("dir").map(|e| e.expect("entry").file_name()).collect();

@@ -138,8 +138,9 @@ impl Environment {
     /// of: `.config/autostart` of `$HOME`, of the passwd home and of
     /// [`Self::home`], and `autostart` of `XDG_CONFIG_HOME`, each when
     /// absolute. An error, so the development directory is refused, when
-    /// `$HOME` is set but not absolute or no home directory is known: the
-    /// real directory is then unknown.
+    /// `$HOME` is set but not absolute or /etc/passwd has no home for the
+    /// user: the real directory is then not known independently of `$HOME`
+    /// (a user only a directory service knows cannot use one).
     fn real_autostart_dirs(&self) -> Result<Vec<PathBuf>, String> {
         if let Some(home) = &self.home_var
             && !Path::new(home).is_absolute()
@@ -155,8 +156,10 @@ impl Environment {
                 .flatten()
                 .filter(|home| home.is_absolute())
                 .collect();
-        if homes.is_empty() {
-            return Err(format!("{DEV_DIR_VARIABLE} cannot be checked: no home directory is known"));
+        if !self.passwd_home.as_ref().is_some_and(|home| home.is_absolute()) {
+            return Err(format!(
+                "{DEV_DIR_VARIABLE} cannot be checked: /etc/passwd has no home directory for the user"
+            ));
         }
         let configs = self
             .xdg_config_home
@@ -176,7 +179,7 @@ enum Target {
     /// The desktop entry in the development directory, resolved: written
     /// through a temporary file and a rename, and only over (or removing)
     /// a regular file with no other link (src/linux.rs).
-    DevDirectory(PathBuf),
+    DevDirectory(dev_dir::Checked),
     /// The login item of Windows or macOS.
     LoginItem,
     /// Nowhere, with this warning.
@@ -228,7 +231,7 @@ fn target(applies: bool, env: &Environment) -> Target {
 fn run(target: Target, enabled: bool, env: &Environment) {
     match target {
         Target::Directory(dir) => linux::apply(&dir, enabled, || env.exec()),
-        Target::DevDirectory(dir) => linux::apply_guarded(&dir, enabled, || env.exec()),
+        Target::DevDirectory(checked) => linux::apply_guarded(&checked, enabled, || env.exec()),
         Target::LoginItem => login_item(enabled, env),
         Target::Skip(message) => log::warn!("{message}"),
         Target::Refused(message) => log::error!("{message}"),

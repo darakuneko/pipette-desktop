@@ -14,6 +14,14 @@ use std::path::{Path, PathBuf};
 
 use crate::linux::FILE_NAME;
 
+/// A development directory that passed [`check`]: resolved, and its
+/// device and inode when it existed then.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Checked {
+    pub(crate) dir: PathBuf,
+    pub(crate) id: Option<(u64, u64)>,
+}
+
 /// The variable that names the directory.
 pub const VARIABLE: &str = "PIPETTE_DEV_AUTOSTART_DIR";
 
@@ -21,11 +29,12 @@ pub const VARIABLE: &str = "PIPETTE_DEV_AUTOSTART_DIR";
 /// absolute path without `.` or `..` components (`<link>/..` resolves
 /// against the link's target and could leave the place the path names)
 /// that, with its symbolic links resolved, is strictly inside `user_data`
-/// (resolved too), is not inside any of `real_dirs`, and whose entry is not
+/// (resolved too, and holding none of `real_dirs` nor their parents), is not
+/// inside any of `real_dirs`, and whose entry is not
 /// a link that resolves into one of them either. Checked at every use, so a
 /// link swapped in later is caught at the next change; the caller works on
 /// the returned path, not on `dir`.
-pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf], user_data: &Path) -> Result<PathBuf, String> {
+pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf], user_data: &Path) -> Result<Checked, String> {
     let path = Path::new(dir);
     if !path.is_absolute() {
         return Err(format!("{VARIABLE} must be an absolute path, not {}", path.display()));
@@ -59,11 +68,32 @@ pub(crate) fn check(dir: &OsStr, real_dirs: &[PathBuf], user_data: &Path) -> Res
         // A part of it that cannot be resolved (a dangling link): compared
         // as written.
         let target = resolve_existing(real).unwrap_or_else(|_| real.clone());
+        // A userData directory holding a real autostart directory or its
+        // `.config` could reach it through a link swapped in later.
+        let parent = target.parent().unwrap_or(&target);
+        if target.starts_with(&user_data) || parent.starts_with(&user_data) {
+            return Err(format!(
+                "{VARIABLE} cannot be used: the userData directory {} holds the real autostart directory {}",
+                user_data.display(),
+                target.display()
+            ));
+        }
         if resolved.starts_with(&target) || entry.starts_with(&target) {
             return Err(format!("{VARIABLE} resolves to the real autostart directory {}", target.display()));
         }
     }
-    Ok(resolved)
+    Ok(Checked { id: dir_id(&resolved), dir: resolved })
+}
+
+#[cfg(unix)]
+fn dir_id(dir: &Path) -> Option<(u64, u64)> {
+    use std::os::unix::fs::MetadataExt;
+    fs::metadata(dir).ok().map(|meta| (meta.dev(), meta.ino()))
+}
+
+#[cfg(not(unix))]
+fn dir_id(_dir: &Path) -> Option<(u64, u64)> {
+    None
 }
 
 /// `path` with every symbolic link resolved, the part that does not exist
