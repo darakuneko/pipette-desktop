@@ -3,13 +3,17 @@
 // A thin Playwright-like layer over the WebdriverIO session of the capture,
 // so the capture steps read as they do with Playwright: `page.locator(css,
 // { hasText })`, `.filter({ has })`, `.first()`, `getByRole`, `click`,
-// `waitFor`, `screenshot` and the like. Elements are found in the page by
-// `queryPage` (page-query.ts); actions that need WebDriver (click,
-// element screenshot) mark the element there first and then address it by
-// that mark. Like Playwright, an action waits for its element (30 s unless
-// given a timeout) and refuses a locator that matches more than one.
+// `waitFor`, `fill`, `screenshot`, `page.keyboard`, `page.mouse` and the
+// like. Elements are found in the page by `queryPage` (page-query.ts);
+// actions that need WebDriver (click, element screenshot) mark the element
+// there first and then address it by that mark, and the ones that run in
+// the page (fill, reads, a forced double click) are in page-element.ts.
+// Like Playwright, an action waits for its element (30 s unless given a
+// timeout) and refuses a locator that matches more than one.
 
 import { $, browser } from '@wdio/globals'
+import { dispatchDoubleClick, fillElement, readElement, type ElementBox, type ElementRead } from './page-element'
+import { keyCombo, webdriverKey } from './page-keys'
 import {
   queryPage,
   REF_ATTRIBUTE,
@@ -23,10 +27,13 @@ import {
 const DEFAULT_TIMEOUT_MS = 30_000
 const POLL_MS = 100
 
-/** The WebDriver codes of the keys the capture presses. */
-const KEY_CODES: Record<string, string> = {
-  Escape: '\uE00C',
-}
+/** The ids of the WebDriver input sources of `page.keyboard` and
+ *  `page.mouse`. One source each, never released between calls, so a key or
+ *  button held by one call (`down`) is still held for the next ones. */
+const KEYBOARD_SOURCE = 'doc-capture-keyboard'
+const MOUSE_SOURCE = 'doc-capture-mouse'
+/** How long `page.keyboard.press` holds its keys. */
+const KEY_HOLD_MS = 10
 
 /** The selectors of the roles the capture looks up with `getByRole`. */
 const ROLE_SELECTORS: Record<string, string> = {
@@ -95,7 +102,7 @@ interface ClickOptions {
   position?: { x: number; y: number }
 }
 
-type WaitState = 'attached' | 'detached' | 'visible'
+type WaitState = 'attached' | 'detached' | 'visible' | 'hidden'
 
 export class Locator {
   constructor(
@@ -232,6 +239,41 @@ export class Locator {
     if (picked !== null) throw new Error(`selectOption on ${this.description}: ${picked}`)
   }
 
+  /** Sets the value of the input or textarea, as Playwright's `fill`:
+   *  waits for it to be visible, then sets it and sends `input` and
+   *  `change` (page-element.ts). */
+  async fill(value: string): Promise<void> {
+    await this.waitFor({ state: 'visible' })
+    const error = await runInPage(fillElement, await this.mark(), value)
+    if (error !== null) throw new Error(`fill on ${this.description}: ${error}`)
+  }
+
+  async inputValue(): Promise<string> {
+    return (await this.read('value')) as string
+  }
+
+  async textContent(): Promise<string | null> {
+    return (await this.read('text')) as string | null
+  }
+
+  /** The element's box in the viewport, or null when it has no size. */
+  async boundingBox(): Promise<ElementBox | null> {
+    return (await this.read('box')) as ElementBox | null
+  }
+
+  /** Double-clicks the element; with `force`, sends the `dblclick` event
+   *  in the page without waiting for it to be visible and uncovered. */
+  async dblclick(opts: { force?: boolean } = {}): Promise<void> {
+    if (opts.force) {
+      await this.waitFor({ state: 'attached' })
+      if (!(await runInPage(dispatchDoubleClick, await this.mark()))) {
+        throw new Error(`${this.description}: ${REPLACED_MESSAGE}`)
+      }
+      return
+    }
+    await this.withElement('visible', (element) => element.doubleClick())
+  }
+
   async scrollIntoViewIfNeeded(): Promise<void> {
     await this.waitFor({ state: 'attached' })
     await query<boolean>(this.chain, 'scroll')
@@ -271,6 +313,12 @@ export class Locator {
     return element
   }
 
+  /** Waits for the element and reads it in the page (page-element.ts). */
+  private async read(what: ElementRead): Promise<string | ElementBox | null> {
+    await this.waitFor({ state: 'attached' })
+    return runInPage(readElement, await this.mark(), what)
+  }
+
   private reached(wanted: WaitState, state: ElementState): boolean {
     switch (wanted) {
       case 'attached':
@@ -279,6 +327,8 @@ export class Locator {
         return state.count === 0
       case 'visible':
         return state.count === 1 && state.visible
+      case 'hidden':
+        return state.count === 0 || !state.visible
     }
   }
 
@@ -305,12 +355,54 @@ export class Locator {
   }
 }
 
+/** Presses `keys` together with the keyboard's input source: down in
+ *  order, held for {@link KEY_HOLD_MS}, then up. Keys a `down` holds stay
+ *  held. */
+async function pressKeys(keys: string[]): Promise<void> {
+  const action = browser.action('key', { id: KEYBOARD_SOURCE })
+  for (const key of keys) action.down(key)
+  action.pause(KEY_HOLD_MS)
+  for (const key of keys) action.up(key)
+  await action.perform(true)
+}
+
+function mouseAction() {
+  return browser.action('pointer', { id: MOUSE_SOURCE, parameters: { pointerType: 'mouse' } })
+}
+
+const VIEWPORT_WAIT_MS = 5_000
+
 export class Page {
+  /** Key names are Playwright's (page-keys.ts). */
   readonly keyboard = {
-    press: async (key: string): Promise<void> => {
-      const code = KEY_CODES[key]
-      if (!code) throw new Error(`keyboard.press does not know the key ${key}`)
-      await browser.keys([code])
+    /** Presses `key`, or a combination such as `Control+z`. */
+    press: (key: string): Promise<void> => pressKeys(keyCombo(key)),
+    /** Types `text` a character at a time, `delay` ms apart. */
+    type: async (text: string, opts: { delay?: number } = {}): Promise<void> => {
+      for (const char of text) {
+        await pressKeys([webdriverKey(char)])
+        if (opts.delay) await sleep(opts.delay)
+      }
+    },
+    down: async (key: string): Promise<void> => {
+      await browser.action('key', { id: KEYBOARD_SOURCE }).down(webdriverKey(key)).perform(true)
+    },
+    up: async (key: string): Promise<void> => {
+      await browser.action('key', { id: KEYBOARD_SOURCE }).up(webdriverKey(key)).perform(true)
+    },
+  }
+
+  /** The mouse, at whole pixels of the viewport. A button `down` holds
+   *  stays held until `up`. */
+  readonly mouse = {
+    move: async (x: number, y: number): Promise<void> => {
+      await mouseAction().move({ x: Math.round(x), y: Math.round(y), origin: 'viewport' }).perform(true)
+    },
+    down: async (): Promise<void> => {
+      await mouseAction().down({ button: 0 }).perform(true)
+    },
+    up: async (): Promise<void> => {
+      await mouseAction().up({ button: 0 }).perform(true)
     },
   }
 
@@ -329,11 +421,37 @@ export class Page {
     await browser.saveScreenshot(opts.path)
   }
 
+  /** Resizes the window so its page is `size`, and answers whether it got
+   *  there: the window has no frame on the capture's screen, so its size
+   *  is the page's, but the app's own limits (its minimum size) win, and
+   *  a WebDriver that cannot resize the window leaves it as it is. */
+  async setViewportSize(size: { width: number; height: number }): Promise<boolean> {
+    try {
+      await browser.setWindowSize(size.width, size.height)
+    } catch (err) {
+      console.log(`  [warn] the window could not be resized: ${err instanceof Error ? err.message : String(err)}`)
+      return false
+    }
+    const deadline = Date.now() + VIEWPORT_WAIT_MS
+    for (;;) {
+      const actual = await runInPage(() => ({ width: window.innerWidth, height: window.innerHeight }))
+      if (actual.width === size.width && actual.height === size.height) return true
+      if (Date.now() >= deadline) {
+        console.log(`  [warn] the page is ${actual.width}x${actual.height}, not ${size.width}x${size.height}`)
+        return false
+      }
+      await sleep(POLL_MS)
+    }
+  }
+
   waitForTimeout(ms: number): Promise<void> {
     return sleep(ms)
   }
 
-  evaluate<R>(fn: () => R): Promise<Awaited<R>> {
-    return runInPage(fn)
+  /** Runs `fn` in the page, with `arg` when given. */
+  evaluate<R>(fn: () => R): Promise<Awaited<R>>
+  evaluate<A, R>(fn: (arg: A) => R, arg: A): Promise<Awaited<R>>
+  evaluate<A, R>(fn: (arg?: A) => R, ...args: [A?]): Promise<Awaited<R>> {
+    return args.length === 0 ? runInPage(fn) : runInPage(fn as (arg: A) => R, args[0] as A)
   }
 }
