@@ -143,9 +143,7 @@ impl Controller {
     ) -> Option<Animation> {
         if self.normal_size.is_none() {
             self.normal_size = Some(bounds.size());
-            if let Err(err) = self.geometry.apply_min_size_if_changed(port, COMPACT_MIN_SIZE) {
-                log::error!("[window] failed to set the minimum size: {err}");
-            }
+            self.apply_min_size(port, COMPACT_MIN_SIZE);
         }
         let size = compact_size.filter(|size| size.width > 0.0 && size.height > 0.0)?;
         let width = js_max(size.width + frame.width, COMPACT_MIN_SIZE.width);
