@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The command of src/notification_commands.rs.
+
+[[set]]
+identifier = "notification"
+description = "Fetches the startup notices."
+permissions = ["allow-notification-fetch"]

@@ -33,6 +33,16 @@ pub const APP_COMMANDS: &[&str] = &[
     "window_hide",
     "window_started_hidden",
     "window_is_visible",
+    "set_window_compact_mode",
+    "set_window_aspect_ratio",
+    "set_window_always_on_top",
+    "set_window_opacity",
+    "set_window_min_size",
+    "is_always_on_top_supported",
+    // src/tray.rs
+    "tray_status_update",
+    // src/notification_commands.rs
+    "notification_fetch",
     // src/store_commands/sync_pending.rs
     "sync_has_pending_changes",
     // src/file_commands.rs

@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-autostart"
+description = "Starting the app at sign-in, as applyAutoLaunch of src/main/app-behavior.ts does"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+log = "=0.4.34"
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

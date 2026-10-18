@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Window and app behavior: the tray icon, closing the window into the tray,
+//! Window and app behavior: closing the window into the tray (src/tray.rs),
 //! a launch of the app while it runs, and the quit sequence every exit path
 //! goes through (src/shutdown.rs).
 //!
@@ -28,14 +28,11 @@
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use pipette_hid::HidService;
 use pipette_sync_pending::PendingStore;
 use pipette_typing_analytics::{Recorder, SyncRuntime};
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime, State, Webview, Window, WindowEvent, Wry};
 
@@ -50,6 +47,7 @@ use crate::shutdown::{
 };
 use crate::store_commands::sync_pending::persist_after_quit;
 use crate::sync_commands::triggers::{SyncTriggers, triggers};
+use crate::tray;
 
 /// Builds with debug assertions: how many milliseconds the stub of the
 /// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its
@@ -78,19 +76,11 @@ const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
-/// Shared by the window, tray and exit handlers.
+/// The quit guard, shared by the window and exit handlers and the handling
+/// of a second launch.
 #[derive(Default)]
 pub struct Lifecycle {
     quit: QuitGuard,
-    /// Set once the tray icon exists. Closing hides the window only then:
-    /// a hidden window with no tray icon to restore it would be unreachable.
-    tray_active: AtomicBool,
-}
-
-impl Lifecycle {
-    fn is_tray_active(&self) -> bool {
-        self.tray_active.load(Ordering::Acquire)
-    }
 }
 
 /// The shared lifecycle state; `None` before setup has run.
@@ -98,100 +88,16 @@ fn lifecycle_state<R: Runtime, M: Manager<R>>(manager: &M) -> Option<State<'_, A
     manager.try_state::<Arc<Lifecycle>>()
 }
 
-/// The tray icon's id.
-const TRAY_ID: &str = "main";
-/// The tray item ids.
-const TRAY_SHOW: &str = "show";
-const TRAY_QUIT: &str = "quit";
-
-/// Creates the tray when the config's `trayResident` is on (`Boolean()` of
-/// it, as the Electron build reads it) and starts listening for the
-/// termination signals. Called from the app's setup hook.
+/// Manages the quit guard and starts listening for the termination signals.
+/// Called from the app's setup hook.
 pub fn setup(app: &mut App<Wry>) {
     app.manage(Arc::new(Lifecycle::default()));
-    let tray_resident = app.state::<AppConfig>().get("trayResident").unwrap_or_else(|err| {
-        log::error!("failed to read trayResident: {err}");
-        None
-    });
-    if tray_resident.as_ref().is_some_and(pipette_app_config::Value::is_truthy) {
-        add_tray(app.handle());
-    }
     #[cfg(unix)]
     listen_for_termination(app.handle().clone());
 }
 
-/// Adds the tray (`on`) or removes it, on the main thread, as `setupTray` /
-/// `destroyTray` of src/main/app-behavior.ts do when the renderer changes
-/// `trayResident`; nothing happens when the tray already is that way. Called
-/// off the main thread, it queues the change there and returns without
-/// waiting for it.
-pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
-    let handle = app.clone();
-    let result = app.run_on_main_thread(move || {
-        if on {
-            add_tray(&handle);
-        } else {
-            remove_tray(&handle);
-        }
-    });
-    if let Err(err) = result {
-        log::error!("failed to update the tray icon: {err}");
-    }
-}
-
-fn add_tray(app: &AppHandle<Wry>) {
-    let lifecycle = app.state::<Arc<Lifecycle>>();
-    if lifecycle.is_tray_active() {
-        return;
-    }
-    match build_tray(app) {
-        Ok(()) => lifecycle.tray_active.store(true, Ordering::Release),
-        Err(err) => log::error!("failed to create the tray icon: {err}"),
-    }
-}
-
-fn remove_tray(app: &AppHandle<Wry>) {
-    let lifecycle = app.state::<Arc<Lifecycle>>();
-    lifecycle.tray_active.store(false, Ordering::Release);
-    // The icon goes away with the last handle to it, this one.
-    drop(app.remove_tray_by_id(TRAY_ID));
-}
-
-/// The tray menu: Show, a separator, Quit. The labels are the fixed English
-/// ones of the Electron tray (src/main/app-behavior.ts), which cannot be
-/// localized either: the translations live in the renderer.
-fn build_tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, TRAY_SHOW, "Show", true, None::<&str>)?;
-    let separator = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, TRAY_QUIT, "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &separator, &quit])?;
-    let mut tray =
-        TrayIconBuilder::with_id(TRAY_ID).menu(&menu).tooltip("Pipette").on_menu_event(|app, event| {
-            match event.id().as_ref() {
-                TRAY_SHOW => show_main_window(app),
-                TRAY_QUIT => app.exit(0),
-                _ => {}
-            }
-        });
-    // A left click shows the window too, as in the Electron tray. Linux
-    // (AppIndicator) reports no clicks; the menu is the only way there.
-    tray = tray.on_tray_icon_event(|tray, event| {
-        if let TrayIconEvent::Click {
-            button: MouseButton::Left, button_state: MouseButtonState::Up, ..
-        } = event
-        {
-            show_main_window(tray.app_handle());
-        }
-    });
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
-    }
-    tray.build(app)?;
-    Ok(())
-}
-
 /// Restores, shows and focuses the main window.
-fn show_main_window(app: &AppHandle<Wry>) {
+pub fn show_main_window(app: &AppHandle<Wry>) {
     if let Some(window) = main_window::main_window(app) {
         main_window::reveal(&window);
     }
@@ -244,28 +150,19 @@ pub fn start_quitting_for_tests<R: Runtime>(app: &AppHandle<R>) {
     app.manage(lifecycle);
 }
 
-/// Whether the tray icon exists, so a hidden window can be shown again.
-pub fn is_tray_active<R: Runtime>(app: &AppHandle<R>) -> bool {
-    lifecycle_state(app).is_some_and(|lifecycle| lifecycle.is_tray_active())
-}
-
 /// Saves the window state when the window is asked to close, then hides
 /// the window instead of closing it while the tray is active and no exit
-/// has been requested. After a move, applies the minimum size of the
-/// display the window is on.
+/// has been requested. The other window events go to
+/// `window_ops::on_window_event` (src/window_ops/mod.rs).
 pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
-    match event {
-        WindowEvent::CloseRequested { api, .. } => {
-            main_window::save_window_state(window, &window.state::<AppConfig>());
-            let hide = lifecycle_state(window)
-                .is_some_and(|lifecycle| lifecycle.is_tray_active() && !lifecycle.quit.is_quitting());
-            if hide {
-                api.prevent_close();
-                main_window::conceal(window);
-            }
+    if let WindowEvent::CloseRequested { api, .. } = event {
+        main_window::save_window_state(window, &window.state::<AppConfig>());
+        let hide = tray::is_tray_active(window)
+            && lifecycle_state(window).is_some_and(|lifecycle| !lifecycle.quit.is_quitting());
+        if hide {
+            api.prevent_close();
+            main_window::conceal(window);
         }
-        WindowEvent::Moved(_) => main_window::update_min_size(window),
-        _ => {}
     }
 }
 

@@ -1,0 +1,9 @@
+[
+  {
+    "member": "notificationFetch",
+    "args": [],
+    "command": "notification_fetch",
+    "invokeArgs": {},
+    "response": { "success": false, "error": "not implemented" }
+  }
+]

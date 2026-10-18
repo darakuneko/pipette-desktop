@@ -9,6 +9,8 @@
     "app-config",
     "shell",
     "window",
+    "tray",
+    "notification",
     "sync-pending",
     "sync-auth",
     "sync-password",

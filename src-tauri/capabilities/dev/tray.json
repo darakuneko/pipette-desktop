@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-tray",
+  "description": "Builds with the dev-tools feature only: tells whether the tray icon exists and what its menu holds, and runs a menu item as a click on it would, since the e2e tests cannot reach the tray through WebDriver.",
+  "windows": ["main"],
+  "permissions": ["allow-dev-tray-state", "allow-dev-tray-activate"]
+}

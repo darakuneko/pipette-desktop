@@ -35,5 +35,59 @@
     "command": "window_is_visible",
     "invokeArgs": {},
     "response": true
+  },
+  {
+    "member": "setWindowCompactMode",
+    "args": [true, { "width": 640, "height": 200 }],
+    "command": "set_window_compact_mode",
+    "invokeArgs": {
+      "enabled": true,
+      "compactSize": { "width": 640, "height": 200 }
+    },
+    "response": null
+  },
+  {
+    "member": "setWindowAspectRatio",
+    "args": [3.2],
+    "command": "set_window_aspect_ratio",
+    "invokeArgs": {
+      "ratio": 3.2
+    },
+    "response": null
+  },
+  {
+    "member": "setWindowAlwaysOnTop",
+    "args": [true],
+    "command": "set_window_always_on_top",
+    "invokeArgs": {
+      "enabled": true
+    },
+    "response": null
+  },
+  {
+    "member": "setWindowOpacity",
+    "args": [0.8],
+    "command": "set_window_opacity",
+    "invokeArgs": {
+      "opacity": 0.8
+    },
+    "response": null
+  },
+  {
+    "member": "setWindowMinSize",
+    "args": [300, 100],
+    "command": "set_window_min_size",
+    "invokeArgs": {
+      "width": 300,
+      "height": 100
+    },
+    "response": null
+  },
+  {
+    "member": "isAlwaysOnTopSupported",
+    "args": [],
+    "command": "is_always_on_top_supported",
+    "invokeArgs": {},
+    "response": false
   }
 ]
