@@ -114,6 +114,10 @@ describe('Tauri build packs and labels', () => {
     await openFromTools('settings-key-labels-button', 'key-labels-modal')
     // QWERTY has no rename trigger: its name is plain text in its row.
     await expect($('[data-testid="key-labels-row-qwerty"]')).toHaveText(expect.stringContaining('QWERTY'))
+    // QWERTY is built in: nothing to upload, rename or delete.
+    for (const action of ['upload', 'rename', 'delete']) {
+      expect(await $(`[data-testid="key-labels-${action}-qwerty"]`).isExisting()).toBe(false)
+    }
 
     await clickIntoFilesDialog('[data-testid="key-labels-import-button"]', [
       join(SAMPLE_PACKS, 'key-labels/astarte.json'),
@@ -177,6 +181,16 @@ describe('Tauri build packs and labels', () => {
     await $(`[data-testid="key-labels-confirm-delete-${astarte.id}"]`).click()
     await waitForGone(`[data-testid="key-labels-row-${astarte.id}"]`, 'the deleted key label is still listed')
     expect((await listed('keyLabelStoreList')).map((meta) => meta.id)).not.toContain(astarte.id)
+
+    // The Hub tab's search runs and ends; this session's Hub address has
+    // nothing listening, so it finds nothing.
+    await $('[data-testid="key-labels-tab-hub"]').click()
+    await $('[data-testid="key-labels-search-input"]').setValue('french')
+    await expect($('[data-testid="key-labels-search-input"]')).toHaveValue('french')
+    await $('[data-testid="key-labels-search-button"]').click()
+    await browser.waitUntil(() => $('[data-testid="key-labels-search-button"]').isEnabled(), {
+      timeoutMsg: 'the Hub search did not end',
+    })
 
     await closeToDeviceSelector('key-labels-modal-close', 'key-labels-modal')
     expectedUnits.push('key-labels')
