@@ -17,17 +17,18 @@
 // They go to docs/screenshots, or to PIPETTE_DOC_SCREENSHOT_DIR when that
 // names a directory inside the temporary directory (capture-paths.ts).
 //
-// `pnpm doc:screenshots` runs every spec: the main capture
-// (specs/doc-capture.ts, numbered and named screenshots) and the captures
+// `pnpm doc:screenshots` runs every spec, the main capture first
+// (specs/doc-capture.ts, numbered and named screenshots), then the captures
 // of one area each (the other specs, named screenshots only). One area
 // alone:
 //
 //   pnpm doc:screenshots --spec e2e-tauri/doc-capture/specs/<area>.ts
 
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { connect } from 'node:net'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Options } from '@wdio/types'
 import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver, userDataPath } from '../helpers/driver'
 import { startHubDriver, stopHubHarness } from '../helpers/hub-harness'
@@ -37,6 +38,20 @@ import { assertCaptureUserData, screenshotDir } from './capture-paths'
  *  as the Hub test account (helpers/hub-harness.ts): their screenshots show
  *  the Hub's actions and search results. Every other spec's app has a Hub
  *  address nothing listens on. */
+const SPECS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'specs')
+const MAIN_SPEC = 'doc-capture.ts'
+/** The specs in the order they run: the main capture first, then the
+ *  areas by name. Some areas retake screenshots the main capture also
+ *  takes (analyze-by-app, analyze-ergonomics-learning, key-popover-*,
+ *  overlay-tools, overlay-save, editor-settings-save); running them after
+ *  it keeps the area's shot, whatever the glob order would be. */
+const SPEC_FILES = [
+  MAIN_SPEC,
+  ...readdirSync(SPECS_DIR)
+    .filter((name) => name.endsWith('.ts') && name !== MAIN_SPEC)
+    .sort(),
+].map((name) => join(SPECS_DIR, name))
+
 const HUB_SPECS = ['hub.ts', 'key-labels.ts', 'language-packs.ts', 'theme-packs.ts'].map((name) => `/specs/${name}`)
 
 const PORT_CHECK_TIMEOUT_MS = 2_000
@@ -72,7 +87,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   runner: 'local',
   hostname: DRIVER_HOST,
   port: DRIVER_PORT,
-  specs: ['./specs/**/*.ts'],
+  specs: SPEC_FILES,
   maxInstances: 1,
   capabilities: [
     {
