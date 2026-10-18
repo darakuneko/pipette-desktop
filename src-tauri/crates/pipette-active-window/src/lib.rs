@@ -15,14 +15,16 @@
 //! there is no native lookup for the app's lifetime.
 //!
 //! Linux has the X11 lookup ([`X11Backend`]), checked against the binding on
-//! a private X server. Windows and macOS have no native lookup here yet, so
-//! their name is `None`.
+//! a private X server. Windows and macOS have the system's own
+//! ([`SystemBackend`], on `pipette_native::active_window`), and no GNOME
+//! Shell query.
 //!
 //! Callers check the Monitor App setting (`typingMonitorAppEnabled`) before
 //! asking, once per analytics flush; the crate keeps no timer.
 
 mod gnome;
 mod normalize;
+mod system;
 #[cfg(target_os = "linux")]
 mod x11;
 
@@ -32,6 +34,7 @@ pub use gnome::{
 };
 pub use normalize::{MAX_NAME_LENGTH, normalize};
 use pipette_js_json::JsString;
+pub use system::SystemBackend;
 #[cfg(target_os = "linux")]
 pub use x11::X11Backend;
 
@@ -91,7 +94,13 @@ impl ActiveWindow {
     }
 
     /// The lookup for the OS this runs on.
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(any(windows, target_os = "macos"))]
+    pub fn for_current_os() -> Self {
+        Self::new(Some(Box::new(SystemBackend)), None)
+    }
+
+    /// The lookup for the OS this runs on.
+    #[cfg(not(any(target_os = "linux", windows, target_os = "macos")))]
     pub fn for_current_os() -> Self {
         Self::new(None, None)
     }

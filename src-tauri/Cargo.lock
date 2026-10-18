@@ -2979,6 +2979,7 @@ version = "0.0.0"
 dependencies = [
  "log",
  "pipette-js-json",
+ "pipette-native",
  "rustix",
  "tempfile",
  "x11rb",
