@@ -263,10 +263,23 @@ fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<Strin
             return Some(format!("opening the probe handle: {opened:?}"));
         }
     }
+    let expected = expected_response(entry);
     match invoke(window, &entry.command, &entry.invoke_args) {
-        Ok(response) if response == entry.response => None,
-        Ok(response) => Some(format!("responded {response}, the fixture records {}", entry.response)),
+        Ok(response) if response == expected => None,
+        Ok(response) => Some(format!("responded {response}, expected {expected}")),
         Err(err) => Some(format!("failed: {err}")),
+    }
+}
+
+/// The response `entry` must get. `is_always_on_top_supported` answers
+/// from the session's environment, so it gets this machine's answer; the
+/// fixture records the one of an X11 session without Wayland (the e2e
+/// tests' xvfb), which the shim's tests use.
+fn expected_response(entry: &Entry) -> Value {
+    if entry.command == "is_always_on_top_supported" {
+        json!(crate::window_ops::always_on_top::is_supported_here())
+    } else {
+        entry.response.clone()
     }
 }
 

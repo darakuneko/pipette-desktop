@@ -88,6 +88,6 @@
     "args": [],
     "command": "is_always_on_top_supported",
     "invokeArgs": {},
-    "response": false
+    "response": true
   }
 ]

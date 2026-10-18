@@ -31,12 +31,13 @@ use std::sync::{Mutex, PoisonError};
 
 use pipette_app_config::{AppConfigStore, Object, Value};
 use tauri::{
-    AppHandle, Emitter, LogicalSize, Manager, Monitor, PhysicalPosition, PhysicalSize, Runtime,
-    WebviewWindow, WebviewWindowBuilder, Window,
+    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, Runtime, WebviewWindow,
+    WebviewWindowBuilder, Window,
 };
 
 use crate::navigation;
 use crate::window_bounds::{MIN_SIZE, Rect, Size, effective_min_size};
+use crate::window_ops::{self, compact::bounds_to_save};
 use crate::window_state::{self, Display, WindowReadout};
 
 /// The label of the main window, the only window the capabilities grant the
@@ -57,8 +58,9 @@ struct MainWindowState {
     min_size: Mutex<AppliedMinSize>,
 }
 
-/// The minimum size last applied, and the monitor it was derived from:
-/// moves within that monitor leave it alone.
+/// The monitor the minimum size was last derived from, so moves within it
+/// leave the minimum size alone, and the minimum size the window opened
+/// with; `window_ops::geometry` keeps the one applied since.
 struct AppliedMinSize {
     /// None until the window first moves: the window opens on the monitor
     /// [`window_state::place`] picked, which is not tied to a [`Monitor`].
@@ -78,6 +80,13 @@ impl MonitorKey {
     fn of(monitor: &Monitor) -> Self {
         Self { position: *monitor.position(), size: *monitor.size(), scale: monitor.scale_factor() }
     }
+}
+
+/// The minimum size the main window opened with, once it is open.
+pub fn opening_min_size<R: Runtime>(app: &AppHandle<R>) -> Option<Size> {
+    let state = app.try_state::<MainWindowState>()?;
+    let applied = state.min_size.lock().unwrap_or_else(PoisonError::into_inner);
+    Some(applied.min_size)
 }
 
 /// Whether this launch opened the main window hidden.
@@ -144,7 +153,7 @@ pub fn open_main_window<R: Runtime>(
 }
 
 /// The monitors in DIP, and which of them is the primary one.
-fn displays<R: Runtime>(app: &AppHandle<R>) -> (Vec<Display>, Option<usize>) {
+pub fn displays<R: Runtime>(app: &AppHandle<R>) -> (Vec<Display>, Option<usize>) {
     let monitors = app.available_monitors().unwrap_or_else(|err| {
         log::error!("[window] failed to list the monitors: {err}");
         Vec::new()
@@ -171,16 +180,20 @@ fn dip_rect(position: PhysicalPosition<i32>, size: PhysicalSize<u32>, scale: f64
     window_state::to_dip(position.x.into(), position.y.into(), size.width.into(), size.height.into(), scale)
 }
 
+/// The bounds of `window` in DIP: its outer position and its content size.
+pub fn window_bounds<R: Runtime>(window: &Window<R>) -> tauri::Result<Rect> {
+    let scale = window.scale_factor()?;
+    Ok(dip_rect(window.outer_position()?, window.inner_size()?, scale))
+}
+
 /// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:
 /// directly, without telling the config listeners, and a failure is only
-/// logged. A hidden or minimized window keeps the state saved before
+/// logged. While compact mode is on, the size saved is the one it goes back
+/// to. A hidden or minimized window keeps the state saved before
 /// ([`window_state::state_to_save`]).
 pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore) {
-    let bounds = window
-        .scale_factor()
-        .and_then(|scale| Ok(dip_rect(window.outer_position()?, window.inner_size()?, scale)));
-    let bounds = match bounds {
-        Ok(bounds) => bounds,
+    let bounds = match window_bounds(window) {
+        Ok(bounds) => bounds_to_save(bounds, window_ops::compact_normal_size(window)),
         Err(err) => {
             log::error!("[window] failed to read the window bounds: {err}");
             return;
@@ -223,7 +236,7 @@ pub fn save_main_window_state<R: Runtime>(app: &AppHandle<R>) {
 /// Whether the window system lets a window read its own position: not on
 /// Wayland, where the window then also opens where the compositor puts it.
 #[cfg(target_os = "linux")]
-fn position_known<R: Runtime>(window: &Window<R>) -> bool {
+pub fn position_known<R: Runtime>(window: &Window<R>) -> bool {
     use gtk::gdk::prelude::DisplayExtManual;
     use gtk::prelude::WidgetExt;
     match window.gtk_window() {
@@ -236,17 +249,22 @@ fn position_known<R: Runtime>(window: &Window<R>) -> bool {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn position_known<R: Runtime>(_window: &Window<R>) -> bool {
+pub fn position_known<R: Runtime>(_window: &Window<R>) -> bool {
     true
 }
 
 /// Applies the minimum size the window's display allows after the window
 /// moved onto another monitor, when it differs from the one applied last.
 /// Runs for every move event, so within one monitor it only compares.
+/// Compact mode owns the minimum size while it is on, and its moves are not
+/// looked at.
 pub fn update_min_size<R: Runtime>(window: &Window<R>) {
     let Some(state) = window.try_state::<MainWindowState>() else {
         return;
     };
+    if window_ops::in_compact_mode(window) {
+        return;
+    }
     let monitor = match window.current_monitor() {
         Ok(Some(monitor)) => monitor,
         Ok(None) => return,
@@ -256,22 +274,19 @@ pub fn update_min_size<R: Runtime>(window: &Window<R>) {
         }
     };
     let key = MonitorKey::of(&monitor);
-    let mut applied = state.min_size.lock().unwrap_or_else(PoisonError::into_inner);
-    if applied.monitor.as_ref() == Some(&key) {
-        return;
-    }
-    applied.monitor = Some(key);
-    let min_size = effective_min_size(display(&monitor).work_area.size(), MIN_SIZE.width, MIN_SIZE.height);
-    if applied.min_size == min_size {
-        return;
-    }
-    match window.set_min_size(Some(LogicalSize::new(min_size.width, min_size.height))) {
-        Ok(()) => applied.min_size = min_size,
-        Err(err) => {
-            // Tried again on the next move.
-            applied.monitor = None;
-            log::error!("[window] failed to set the minimum size: {err}");
+    {
+        let mut applied = state.min_size.lock().unwrap_or_else(PoisonError::into_inner);
+        if applied.monitor.as_ref() == Some(&key) {
+            return;
         }
+        applied.monitor = Some(key);
+    }
+    // Unlocked: window_ops reads the opening minimum size from the same lock.
+    let min_size = effective_min_size(display(&monitor).work_area.size(), MIN_SIZE.width, MIN_SIZE.height);
+    if let Err(err) = window_ops::apply_min_size(window, min_size) {
+        // Tried again on the next move.
+        state.min_size.lock().unwrap_or_else(PoisonError::into_inner).monitor = None;
+        log::error!("[window] failed to set the minimum size: {err}");
     }
 }
 
