@@ -4,12 +4,14 @@
 import { StrictMode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useViewModeRouting } from '../use-view-mode-routing'
 import type { DeviceInfo, UnlockStatus } from '../../../shared/types/protocol'
 import type { ViewMode } from '../../../shared/types/pipette-settings'
 import type { KeymapEditorHandle } from '../../components/editors/KeymapEditor'
 import { ZOOM_FACTOR_DEFAULT } from '../../../shared/types/app-config'
 import { EMPTY_UID } from '../../../shared/constants/protocol'
+import { windowBackends } from '../../components/editors/__tests__/window-backends'
 
 // The hook's Params interface pins down the FULL return types of
 // useDeviceConnection / useKeyboard / useDevicePrefs / useEditorUIState /
@@ -162,23 +164,22 @@ function renderRouting(initial: Overrides = {}) {
   return { ...utils, mocks: first.mocks, update }
 }
 
-let vialAPIStub: {
-  setWindowCompactMode: ReturnType<typeof vi.fn>
-  setWindowAspectRatio: ReturnType<typeof vi.fn>
-  setWindowAlwaysOnTop: ReturnType<typeof vi.fn>
-  setWindowOpacity: ReturnType<typeof vi.fn>
-  setWindowZoom: ReturnType<typeof vi.fn>
+const vialAPIStub = {
+  isAlwaysOnTopSupported: vi.fn(),
+  setWindowCompactMode: vi.fn(),
+  setWindowAspectRatio: vi.fn(),
+  setWindowAlwaysOnTop: vi.fn(),
+  setWindowOpacity: vi.fn(),
+  setWindowZoom: vi.fn(),
 }
 
 beforeEach(() => {
-  vialAPIStub = {
-    setWindowCompactMode: vi.fn().mockResolvedValue(undefined),
-    setWindowAspectRatio: vi.fn().mockResolvedValue(undefined),
-    setWindowAlwaysOnTop: vi.fn().mockResolvedValue(undefined),
-    setWindowOpacity: vi.fn().mockResolvedValue(undefined),
-    setWindowZoom: vi.fn().mockResolvedValue(undefined),
-  }
-  window.vialAPI = vialAPIStub as unknown as typeof window.vialAPI
+  vialAPIStub.isAlwaysOnTopSupported.mockReset().mockResolvedValue(false)
+  vialAPIStub.setWindowCompactMode.mockReset().mockResolvedValue(undefined)
+  vialAPIStub.setWindowAspectRatio.mockReset().mockResolvedValue(undefined)
+  vialAPIStub.setWindowAlwaysOnTop.mockReset().mockResolvedValue(undefined)
+  vialAPIStub.setWindowOpacity.mockReset().mockResolvedValue(undefined)
+  vialAPIStub.setWindowZoom.mockReset().mockResolvedValue(undefined)
 
   // exitViewOnlyMode/handleViewAnalytics/handleAnalyticsBack chain two
   // nested rAF calls before touching vialAPI. Run them synchronously so
@@ -191,9 +192,17 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  clearMocks()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
+
+/** The `setWindowCompactMode` calls, with an `undefined` size dropped: the
+ *  Tauri IPC drops an undefined argument, so over the shim `(true)` and
+ *  `(true, undefined)` reach the spy the same way. */
+function compactModeCalls(): unknown[][] {
+  return vialAPIStub.setWindowCompactMode.mock.calls.map((args) => (args[1] === undefined ? [args[0]] : args))
+}
 
 /** Flushes the microtask queue so a `window.vialAPI.*().then(...)` chain
  * that already ran (via the synchronous rAF stub above) gets to resolve. */
@@ -204,7 +213,11 @@ async function flushMicrotasks() {
   })
 }
 
-describe('useViewModeRouting', () => {
+describe.each(windowBackends(vialAPIStub))('useViewModeRouting ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
+  })
+
   describe('disconnect cleanup', () => {
     it('resets ephemeral UI, tears down the view-only window, and clears pendingTypingTestSaveRef so no deferred save fires after reconnect', () => {
       const { result, update, mocks } = renderRouting({
@@ -287,7 +300,7 @@ describe('useViewModeRouting', () => {
 
       expect(mocks.setViewMode).toHaveBeenCalledWith('typingView')
       expect(mocks.setViewMode).toHaveBeenCalledTimes(1)
-      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(true, undefined)
+      expect(compactModeCalls()).toContainEqual([true])
       expect(mocks.setTypingTestViewOnly).toHaveBeenCalledWith(true)
       expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
 
@@ -388,7 +401,7 @@ describe('useViewModeRouting', () => {
       // Default origin ref starts as 'typingView' (matches App.tsx's
       // initial analyticsOriginRef value), so Back without a prior
       // handleViewAnalytics call already exercises this branch.
-      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(true, undefined)
+      expect(compactModeCalls()).toContainEqual([true])
     })
 
     it("returns to the plain editor (not typingView) for the 'editor' origin", async () => {
@@ -503,7 +516,7 @@ describe('useViewModeRouting', () => {
       const { mocks } = renderRouting({ viewMode: 'typingView', unlocked: true, uid: 'UID1', appliedUid: 'UID1' })
       await flushMicrotasks()
 
-      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(true, undefined)
+      expect(compactModeCalls()).toContainEqual([true])
       expect(mocks.setTypingTestViewOnly).toHaveBeenCalledWith(true)
       expect(mocks.setShowUnlockDialog).not.toHaveBeenCalled()
       expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
@@ -515,7 +528,7 @@ describe('useViewModeRouting', () => {
       })
       await flushMicrotasks()
 
-      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(true, undefined)
+      expect(compactModeCalls()).toContainEqual([true])
       expect(mocks.toggleTypingTest).not.toHaveBeenCalled()
     })
 
@@ -719,7 +732,7 @@ describe('useViewModeRouting', () => {
       expect(mocks.setViewMode).toHaveBeenCalledWith('typingView')
 
       await flushMicrotasks()
-      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(true, undefined)
+      expect(compactModeCalls()).toContainEqual([true])
     })
   })
 
