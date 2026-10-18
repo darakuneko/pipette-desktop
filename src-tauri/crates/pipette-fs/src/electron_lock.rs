@@ -294,6 +294,16 @@ mod tests {
         tempfile::tempdir().unwrap()
     }
 
+    /// Keeps the tests that start processes (the stand-in programs, and
+    /// `ps` on macOS) apart from those that listen on a socket. A process
+    /// started while a listener exists can inherit it on macOS, where a
+    /// socket is created first and marked close-on-exec after, and would then
+    /// keep a socket the test closed answering.
+    fn serial() -> std::sync::MutexGuard<'static, ()> {
+        static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
     fn lock(dir: &Path, target: &str) {
         symlink(target, dir.join(ELECTRON_LOCK_FILE)).unwrap();
     }
@@ -358,6 +368,7 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn a_running_electron_build_holds_the_lock_until_it_ends() {
+        let _serial = serial();
         let dir = user_data();
         let bin = tempfile::tempdir().unwrap();
         let child = sleeper(bin.path(), "pipette-desktop");
@@ -371,6 +382,7 @@ mod tests {
 
     #[test]
     fn a_stale_lock_whose_pid_another_program_has_is_ignored() {
+        let _serial = serial();
         let dir = user_data();
         let bin = tempfile::tempdir().unwrap();
         let child = sleeper(bin.path(), "unrelated-program");
@@ -381,6 +393,7 @@ mod tests {
 
     #[test]
     fn a_lock_from_another_host_is_ignored_while_no_socket_answers() {
+        let _serial = serial();
         let dir = user_data();
         lock(dir.path(), &format!("not-{}-{}", host_name().unwrap(), std::os::unix::process::parent_id()));
         assert_eq!(electron_lock_holder(dir.path()), None);
@@ -394,6 +407,7 @@ mod tests {
 
     #[test]
     fn a_socket_that_answers_holds_the_lock_on_any_host() {
+        let _serial = serial();
         let dir = user_data();
         let sockets = tempfile::tempdir().unwrap();
         let socket = sockets.path().join("SingletonSocket");
@@ -405,12 +419,17 @@ mod tests {
             electron_lock_holder(dir.path()),
             Some(LockHolder { host: "renamed-host".into(), pid: 999_999 })
         );
+        // The browser takes the probe's connection off the queue, as
+        // Chromium does, then crashes.
+        listener.set_nonblocking(true).unwrap();
+        while listener.accept().is_ok() {}
         drop(listener);
         assert_eq!(electron_lock_holder(dir.path()), None);
     }
 
     #[test]
     fn this_process_is_not_the_electron_build() {
+        let _serial = serial();
         let name = executable_name(std::process::id());
         assert!(name.as_deref().is_some_and(|name| !is_electron_executable(name)), "{name:?}");
     }
