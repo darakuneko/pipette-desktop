@@ -22,7 +22,8 @@ pub mod display;
 pub mod geometry;
 pub mod opacity;
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use tauri::{LogicalPosition, LogicalSize, Manager, Runtime, Window, WindowEvent};
@@ -54,7 +55,30 @@ struct Inner {
     always_on_top: bool,
     /// The hints the window has, as last applied to it.
     applied_hints: Option<Hints>,
-    polling: bool,
+    /// The stop flag of the display poll of this window, while one runs.
+    /// The poll is tied to the window, not to its label: a window opened
+    /// again under the same label gets a poll of its own.
+    display_poll: Option<Arc<AtomicBool>>,
+}
+
+impl Inner {
+    /// The stop flag of a new display poll, or None when one runs.
+    fn start_display_poll(&mut self) -> Option<Arc<AtomicBool>> {
+        if self.display_poll.is_some() {
+            return None;
+        }
+        let stop = Arc::new(AtomicBool::new(false));
+        self.display_poll = Some(Arc::clone(&stop));
+        Some(stop)
+    }
+
+    /// Forgets the window once it is gone, stopping its display poll.
+    fn on_destroyed(&mut self) {
+        if let Some(stop) = self.display_poll.take() {
+            stop.store(true, Ordering::Relaxed);
+        }
+        *self = Self::default();
+    }
 }
 
 /// The handlers' state, managed on first use.
@@ -158,7 +182,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
         return;
     }
     if let WindowEvent::Destroyed = event {
-        *lock(window) = Inner::default();
+        lock(window).on_destroyed();
         return;
     }
     start_display_poll(window);
@@ -172,29 +196,31 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     }
 }
 
-/// Looks at the displays every [`DISPLAY_POLL`] while the window exists, so
-/// a still window takes a changed work area too. Only the app's runtime
-/// lists monitors.
+/// Looks at the displays every [`DISPLAY_POLL`] until the window is
+/// destroyed, so a still window takes a changed work area too. Only the
+/// app's runtime lists monitors.
 fn start_display_poll<R: Runtime>(window: &Window<R>) {
     if !is_app_runtime::<R>() {
         return;
     }
-    {
-        let mut inner = lock(window);
-        if inner.polling {
-            return;
-        }
-        inner.polling = true;
-    }
-    let port = Port(window.clone());
+    let Some(stop) = lock(window).start_display_poll() else {
+        return;
+    };
+    let window = window.clone();
     tauri::async_runtime::spawn(async move {
         loop {
             tokio::time::sleep(DISPLAY_POLL).await;
-            if port.is_destroyed() {
+            if stop.load(Ordering::Relaxed) {
                 return;
             }
-            let window = port.0.clone();
-            if port.0.run_on_main_thread(move || check_displays(&window)).is_err() {
+            let (target, stop) = (window.clone(), Arc::clone(&stop));
+            let result = window.run_on_main_thread(move || {
+                // The window may have been destroyed since the check above.
+                if !stop.load(Ordering::Relaxed) {
+                    check_displays(&target);
+                }
+            });
+            if result.is_err() {
                 return;
             }
         }
@@ -504,6 +530,22 @@ fn gtk_set_bounds<R: Runtime>(window: &Window<R>, bounds: Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn destroying_the_window_stops_its_display_poll() {
+        let mut inner = Inner::default();
+        let first = inner.start_display_poll().unwrap();
+        assert!(inner.start_display_poll().is_none());
+        assert!(!first.load(Ordering::Relaxed));
+
+        inner.on_destroyed();
+        assert!(first.load(Ordering::Relaxed));
+
+        // The window opened again under the same label polls on its own.
+        let second = inner.start_display_poll().unwrap();
+        assert!(first.load(Ordering::Relaxed));
+        assert!(!second.load(Ordering::Relaxed));
+    }
 
     fn display(x: f64, width: f64) -> Display {
         let bounds = Rect { x, y: 0.0, width, height: 1080.0 };
