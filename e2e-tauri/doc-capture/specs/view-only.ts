@@ -52,8 +52,9 @@ describe('view-only screenshots', () => {
     await dismissNotificationModal(page)
 
     // Resize to ~400px width for documentation screenshots. The window is
-    // resized (its page is the screenshot); the compact window's own size
-    // stays when the app does not allow this one.
+    // resized (its page is the screenshot); the compact window keeps the
+    // keyboard's aspect ratio, so its height follows the width (about
+    // 400x157 on the virtual keyboard) instead of 300.
     await page.setViewportSize({ width: 400, height: 300 })
     await page.waitForTimeout(1000)
 
