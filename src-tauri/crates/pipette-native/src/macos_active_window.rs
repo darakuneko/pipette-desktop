@@ -8,9 +8,11 @@
 //! the screen recording permission granted, and the Electron build never
 //! calls `requestPermissions`, so its titles on macOS are empty too.
 //!
-//! `NSWorkspace` and `NSRunningApplication` may be used from any thread;
-//! the frontmost application follows the main run loop, which the app's
-//! event loop keeps running.
+//! `NSWorkspace` and `NSRunningApplication` are safe to read from any
+//! thread, but the frontmost application only changes while the main run
+//! loop runs: while it does not (during the quit sequence, for one), the
+//! answer may be stale. The lookup must not hop to the main thread for a
+//! fresher one, since the main thread may be waiting on the lookup's caller.
 
 use objc2::rc::autoreleasepool;
 use objc2_app_kit::{NSRunningApplication, NSWorkspace};
