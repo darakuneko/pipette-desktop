@@ -32,6 +32,14 @@ use status::{Layout, RowKind, TrayStatus};
 const TRAY_ID: &str = "main";
 
 /// What the tray handlers share.
+///
+/// Locked on the main thread only: by the setup hook, the tasks
+/// [`set_tray_resident`] queues there, the window's close handler, and the
+/// synchronous commands, which Tauri runs on the main thread. While it is
+/// locked the tray is built and its tooltip and menu are set, GTK calls Tauri
+/// makes on the main thread; off the main thread they would wait for it, and
+/// a main thread waiting for this lock would never answer. The commands that
+/// lock it must therefore stay synchronous (not `async`).
 #[derive(Default)]
 pub struct TrayState {
     inner: Mutex<Inner>,
@@ -72,6 +80,12 @@ pub fn is_tray_active<R: Runtime, M: Manager<R>>(manager: &M) -> bool {
 /// before the main window opens, which looks at whether the icon exists.
 pub fn setup(app: &mut App<Wry>) {
     app.manage(TrayState::default());
+    // Registered once for the app, not with each tray icon: Tauri keeps the
+    // menu handler of every icon built, and an icon added again after
+    // `trayResident` was turned off would run each click twice.
+    app.on_menu_event(|app, event| {
+        on_menu_item(app, event.id().as_ref());
+    });
     let tray_resident = app.state::<AppConfig>().get("trayResident").unwrap_or_else(|err| {
         log::error!("failed to read trayResident: {err}");
         None
@@ -108,7 +122,11 @@ fn add_tray(app: &AppHandle<Wry>) {
     }
     // The panic of a missing appindicator library is caught here, on the
     // main thread, before it could unwind into the event loop's C frames.
-    let failure = match catch_unwind(AssertUnwindSafe(|| build_tray(app, &inner.status))) {
+    // The logger's panic hook reports it as DEBUG only: it is logged below.
+    let built = pipette_logger::expecting_panics(|| {
+        catch_unwind(AssertUnwindSafe(|| build_tray(app, &inner.status)))
+    });
+    let failure = match built {
         Ok(Ok(live)) => {
             inner.live = Some(live);
             return;
@@ -149,26 +167,32 @@ fn panic_message(panic: &(dyn std::any::Any + Send)) -> String {
         .unwrap_or_else(|| "panicked".to_owned())
 }
 
+/// Removes the tray icon, and shows the main window if it is hidden: with no
+/// icon nothing could show it again (a close that hid it may have been
+/// handled just before).
 fn remove_tray(app: &AppHandle<Wry>) {
     // The icon goes away with the last handle to it: the one kept here and
     // the one in the app's resources.
-    drop(app.state::<TrayState>().lock().live.take());
+    let live = app.state::<TrayState>().lock().live.take();
+    drop(live);
     drop(app.remove_tray_by_id(TRAY_ID));
+    if let Some(window) = crate::main_window::main_window(app)
+        && !crate::main_window::is_visible(&window)
+    {
+        crate::main_window::reveal(&window);
+    }
 }
 
 /// The tray icon with the menu of `status`. A left click shows the window
 /// too, as in the Electron tray; Linux (AppIndicator) reports no clicks, the
-/// menu is the only way there. The menu's handler goes by item id, so it
-/// keeps working for the menus that replace the first one.
+/// menu is the only way there. The menu's clicks go to the handler [`setup`]
+/// registers, by item id, so the menus that replace the first one work too.
 fn build_tray(app: &AppHandle<Wry>, status: &TrayStatus) -> tauri::Result<LiveTray> {
     let menu = TrayMenu::build(app, status)?;
     let tooltip = status.tooltip();
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu.menu)
         .tooltip(&tooltip)
-        .on_menu_event(|app, event| {
-            on_menu_item(app, event.id().as_ref());
-        })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -179,8 +203,9 @@ fn build_tray(app: &AppHandle<Wry>, status: &TrayStatus) -> tauri::Result<LiveTr
                 show_main_window(tray.app_handle());
             }
         });
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
+    match app.default_window_icon() {
+        Some(icon) => builder = builder.icon(icon.clone()),
+        None => log::warn!("the app has no icon for the tray"),
     }
     let icon = builder.build(app)?;
     Ok(LiveTray { icon, menu, tooltip })
@@ -206,12 +231,13 @@ impl LiveTray {
             log::error!("failed to set the tray tooltip: {err}");
         }
         match self.menu.update(self.icon.app_handle(), status) {
-            Ok(false) => {}
-            Ok(true) => {
-                if let Err(err) = self.icon.set_menu(Some(self.menu.menu.clone())) {
-                    log::error!("failed to set the tray menu: {err}");
-                }
-            }
+            Ok(None) => {}
+            // The icon keeps its menu when it cannot take the new one, and the
+            // next status with other rows than it builds a new one again.
+            Ok(Some(replacement)) => match self.icon.set_menu(Some(replacement.menu.clone())) {
+                Ok(()) => self.menu = replacement,
+                Err(err) => log::error!("failed to set the tray menu: {err}"),
+            },
             Err(err) => log::error!("failed to update the tray menu: {err}"),
         }
     }
@@ -254,12 +280,11 @@ impl<R: Runtime> TrayMenu<R> {
         Ok(Self { menu, layout: status.layout(), keyboard, count, kpm })
     }
 
-    /// Shows `status`: true when that took a new menu, which the tray icon
-    /// must then be given.
-    fn update<M: Manager<R>>(&mut self, manager: &M, status: &TrayStatus) -> tauri::Result<bool> {
+    /// Shows `status`, or returns the new menu that shows it when it has
+    /// other rows; the tray icon must then take it in place of this one.
+    fn update<M: Manager<R>>(&self, manager: &M, status: &TrayStatus) -> tauri::Result<Option<Self>> {
         if status.layout() != self.layout {
-            *self = Self::build(manager, status)?;
-            return Ok(true);
+            return Self::build(manager, status).map(Some);
         }
         if let (Some(item), Some(name)) = (&self.keyboard, &status.keyboard_name) {
             item.set_text(name)?;
@@ -270,7 +295,7 @@ impl<R: Runtime> TrayMenu<R> {
         if let Some(item) = &self.kpm {
             item.set_text(status.kpm_label())?;
         }
-        Ok(false)
+        Ok(None)
     }
 
     /// The menu's rows, read back from its items.
@@ -422,16 +447,33 @@ mod tests {
             (status(None, false, 0.0, 0.0), true),
         ];
         for (next, replaced) in steps {
-            assert_eq!(menu.update(&app, &next).unwrap(), replaced, "{next:?}");
+            if let Some(replacement) = menu.update(&app, &next).unwrap() {
+                assert!(replaced, "{next:?}");
+                menu = replacement;
+            } else {
+                assert!(!replaced, "{next:?}");
+            }
             assert_eq!(template(&menu), status::as_template(&next.menu_rows()), "{next:?}");
         }
+    }
+
+    /// A menu with other rows is built aside: the one the icon holds stays
+    /// as it was until the icon takes the new one.
+    #[test]
+    fn a_new_layout_leaves_the_current_menu_alone() {
+        let app = mock_app();
+        let menu = TrayMenu::build(&app, &status(Some("K"), false, 0.0, 0.0)).unwrap();
+        let before = template(&menu);
+        assert!(menu.update(&app, &status(Some("K"), true, 5.0, 1.0)).unwrap().is_some());
+        assert_eq!(template(&menu), before);
+        assert_eq!(menu.layout, Layout { name: true, recording: false });
     }
 
     #[test]
     fn a_replaced_menu_keeps_the_ids_its_handler_goes_by() {
         let app = mock_app();
-        let mut menu = TrayMenu::build(&app, &TrayStatus::default()).unwrap();
-        assert!(menu.update(&app, &status(Some("K"), true, 1.0, 1.0)).unwrap());
+        let menu = TrayMenu::build(&app, &TrayStatus::default()).unwrap();
+        let menu = menu.update(&app, &status(Some("K"), true, 1.0, 1.0)).unwrap().unwrap();
         let rows = menu.rows().unwrap();
         assert_eq!(rows.first().map(|row| row.id.as_str()), Some(status::SHOW));
         assert_eq!(rows.last().map(|row| row.id.as_str()), Some(status::QUIT));
