@@ -340,8 +340,14 @@ describe('Tauri build typing analytics', () => {
     // on the label's tooltip (drawn outside the panel), reads as a click
     // outside the panel and closes it instead.
     await waitForGone(tid(`analyze-filter-store-rename-input-${entry.id}`), 'the rename input did not close')
+    // The label is truncated, and the rendered text of a truncated element
+    // can read empty, so its content is compared.
     await browser.waitUntil(
-      async () => (await $(tid(`analyze-filter-store-entry-label-${entry.id}`)).getText()) === FILTER_RENAMED,
+      async () =>
+        (await browser.execute(
+          (sel: string) => document.querySelector(sel)?.textContent ?? null,
+          tid(`analyze-filter-store-entry-label-${entry.id}`),
+        )) === FILTER_RENAMED,
       { timeoutMsg: 'the panel did not show the renamed filter' },
     )
     const confirmDelete = tid(`analyze-filter-store-delete-confirm-${entry.id}`)
