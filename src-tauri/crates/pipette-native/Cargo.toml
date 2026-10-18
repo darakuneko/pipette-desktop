@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-native"
-description = "The window calls Tauri does not make on Windows and macOS, as Electron makes them there: a window's opacity and the aspect ratio of its content while the user resizes it. The only crate of the workspace with unsafe code, behind safe functions"
+description = "The window calls Tauri does not make on Windows and macOS, as Electron makes them there: a window's opacity and the aspect ratio of its content while the user resizes it, and the lookup of the window in front. The only crate of the workspace with unsafe code, behind safe functions"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -15,31 +15,39 @@ raw-window-handle = "=0.6.2"
 thiserror = { workspace = true }
 
 # Win32: the layered window's alpha, and the subclass procedure that keeps
-# the window layered and fits the size the user drags to the aspect ratio.
+# the window layered and fits the size the user drags to the aspect ratio;
+# the foreground window, its process, its executable's version resource and
+# the packages of a UWP frame's processes.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.61.2", features = [
     "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_Storage_Packaging_Appx",
     "Win32_System_Threading",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
 
 # AppKit: NSWindow's alphaValue, contentAspectRatio and frame (the screens
-# for its coordinates). Same versions as tao uses.
+# for its coordinates); NSWorkspace's frontmost application. Same versions
+# as tao uses.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "=0.6.5"
 objc2-foundation = { version = "=0.3.2", default-features = false, features = [
     "std",
     "NSArray",
     "NSGeometry",
+    "NSString",
     "objc2-core-foundation",
 ] }
 objc2-app-kit = { version = "=0.3.2", default-features = false, features = [
     "std",
     "NSResponder",
+    "NSRunningApplication",
     "NSScreen",
     "NSView",
     "NSWindow",
+    "NSWorkspace",
     "objc2-core-foundation",
 ] }
 
@@ -62,8 +70,9 @@ name = "macos_window"
 harness = false
 
 # The workspace forbids unsafe code; this crate denies it everywhere but in
-# the two modules that call the system (src/windows.rs, src/macos.rs) and
-# their tests, where every unsafe block says why it is sound.
+# the modules that call the system with it (src/windows.rs,
+# src/windows_active_window.rs, src/macos.rs) and their tests, where every
+# unsafe block says why it is sound.
 [lints.rust]
 unsafe_code = "deny"
 unsafe_op_in_unsafe_fn = "deny"

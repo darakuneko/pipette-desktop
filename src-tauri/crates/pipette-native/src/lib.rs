@@ -12,22 +12,35 @@
 //!   resizes are not bent to it. Windows: a subclass procedure fits each
 //!   `WM_SIZING` rectangle (aspect.rs); macOS: `NSWindow.contentAspectRatio`.
 //!
+//! And [`active_window`], the application and title of the window in front,
+//! as the Electron build's `@paymoapp/active-window` reads them (Windows:
+//! windows_active_window.rs and app_name.rs, macOS: macos_active_window.rs).
+//!
 //! This is the one crate of the workspace with unsafe code, and only its
-//! system modules (windows.rs, macos.rs) have any. Every function here is
-//! safe to call: each takes the window's native handle from a borrowed
-//! window, checks that it runs on the thread the window belongs to (the
-//! main thread), and on other systems does nothing but answer
+//! system modules (windows.rs, windows_active_window.rs, macos.rs) have
+//! any. Every function here is safe to call: each window call takes the
+//! window's native handle from a borrowed window and checks that it runs on
+//! the thread the window belongs to (the main thread); the active window
+//! lookup runs on any thread. On other systems they do nothing but answer
 //! [`Error::Unsupported`].
 
+// Only the Windows lookup names applications by it; the tests run everywhere.
+#[cfg_attr(not(windows), allow(dead_code))]
+mod app_name;
 // Only the Windows subclass procedure resizes by it; the tests run everywhere.
 #[cfg_attr(not(windows), allow(dead_code))]
 mod aspect;
 #[cfg(target_os = "macos")]
 #[allow(unsafe_code)]
 mod macos;
+#[cfg(target_os = "macos")]
+mod macos_active_window;
 #[cfg(windows)]
 #[allow(unsafe_code)]
 mod windows;
+#[cfg(windows)]
+#[allow(unsafe_code)]
+mod windows_active_window;
 
 use raw_window_handle::HasWindowHandle;
 
@@ -95,6 +108,31 @@ pub fn set_outer_frame(window: &impl HasWindowHandle, frame: OuterFrame) -> Resu
     Err(Error::Unsupported)
 }
 
+/// The window in front as [`active_window`] reads it: the application's
+/// name and the window's title, in UTF-16 code units (either possibly
+/// empty).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ActiveWindowInfo {
+    pub application: Vec<u16>,
+    pub title: Vec<u16>,
+}
+
+/// The window in front, read the way `@paymoapp/active-window` reads it, or
+/// `None` where the binding finds none (it throws "Failed to get active
+/// window" there). Windows: the `FileDescription` of the window's
+/// executable (its file name when that is empty; for a UWP app, the
+/// executable of the app's packaged process) and the window's title. macOS:
+/// the frontmost application's localized name, and no title. Runs on any
+/// thread and never waits on a window.
+pub fn active_window() -> Result<Option<ActiveWindowInfo>, Error> {
+    #[cfg(windows)]
+    return Ok(windows_active_window::active_window());
+    #[cfg(target_os = "macos")]
+    return Ok(macos_active_window::active_window());
+    #[cfg(not(any(windows, target_os = "macos")))]
+    Err(Error::Unsupported)
+}
+
 /// `std::clamp(opacity, 0.0, 1.0)`, and 1 for NaN.
 fn clamp_opacity(opacity: f64) -> f64 {
     if opacity.is_nan() { 1.0 } else { opacity.clamp(0.0, 1.0) }
@@ -144,5 +182,6 @@ mod tests {
         assert_eq!(set_content_aspect_ratio(&NoWindow, Some(2.0)), Err(Error::Unsupported));
         let frame = OuterFrame { x: 0.0, y: 0.0, width: 1.0, height: 1.0 };
         assert_eq!(set_outer_frame(&NoWindow, frame), Err(Error::Unsupported));
+        assert_eq!(active_window(), Err(Error::Unsupported));
     }
 }
