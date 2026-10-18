@@ -1,0 +1,417 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+//! The autostart tests of src/main/__tests__/app-behavior.test.ts, and the
+//! guards that keep a build away from the real entry: nothing is written
+//! or removed while `AUTOSTART_APPLIES` is false, wherever userData lives,
+//! and a development directory is refused when it reaches a real autostart
+//! directory. Every test runs on a temporary HOME.
+
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use log::{Level, LevelFilter, Log, Metadata, Record};
+
+use crate::linux::{FAILURE, desktop_entry};
+use crate::{AUTOSTART_APPLIES, DEV_DIR_VARIABLE, Environment, Os, Target, apply, run, target};
+
+thread_local! {
+    static RECORDS: RefCell<Vec<(Level, String)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Keeps each thread's records apart, so tests running in parallel do not
+/// see each other's. The crate logs on the calling thread.
+struct Capture;
+
+impl Log for Capture {
+    fn enabled(&self, _: &Metadata<'_>) -> bool {
+        true
+    }
+    fn log(&self, record: &Record<'_>) {
+        RECORDS.with(|r| r.borrow_mut().push((record.level(), record.args().to_string())));
+    }
+    fn flush(&self) {}
+}
+
+/// Starts capturing this thread's log records afresh.
+pub(crate) fn capture() {
+    static INSTALL: std::sync::Once = std::sync::Once::new();
+    INSTALL.call_once(|| {
+        log::set_logger(&Capture).expect("no other logger is installed");
+        log::set_max_level(LevelFilter::Trace);
+    });
+    RECORDS.with(|r| r.borrow_mut().clear());
+}
+
+pub(crate) fn records() -> Vec<(Level, String)> {
+    RECORDS.with(|r| r.borrow().clone())
+}
+
+const EXE: &str = "/opt/Pipette/pipette";
+
+/// A packaged Linux build on `home` with no variables set.
+fn linux_env(home: &Path) -> Environment {
+    Environment {
+        os: Os::Linux,
+        packaged: true,
+        home: Some(home.to_path_buf()),
+        xdg_config_home: None,
+        appimage: None,
+        current_exe: Ok(PathBuf::from(EXE)),
+        dev_dir: None,
+    }
+}
+
+fn real_entry(home: &Path) -> PathBuf {
+    home.join(".config").join("autostart").join("pipette.desktop")
+}
+
+/// Runs a change as a build allowed to register itself would.
+fn apply_allowed(enabled: bool, env: &Environment) {
+    run(target(true, env), enabled, env);
+}
+
+/// Every file and directory under `root` with the files' bytes, symbolic
+/// links as their targets.
+fn snapshot(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
+    fn walk(root: &Path, dir: &Path, out: &mut BTreeMap<PathBuf, Option<Vec<u8>>>) {
+        for entry in fs::read_dir(dir).expect("read the directory") {
+            let path = entry.expect("entry").path();
+            let rel = path.strip_prefix(root).expect("inside").to_path_buf();
+            let meta = fs::symlink_metadata(&path).expect("metadata");
+            if meta.is_symlink() {
+                out.insert(
+                    rel,
+                    Some(fs::read_link(&path).expect("link").into_os_string().into_encoded_bytes()),
+                );
+            } else if meta.is_dir() {
+                out.insert(rel, None);
+                walk(root, &path, out);
+            } else {
+                out.insert(rel, Some(fs::read(&path).expect("read")));
+            }
+        }
+    }
+    let mut out = BTreeMap::new();
+    walk(root, root, &mut out);
+    out
+}
+
+// --- app-behavior.test.ts: applyAutoLaunch ---
+
+#[test]
+fn is_a_no_op_when_unpackaged() {
+    let home = tempfile::tempdir().expect("HOME");
+    let env = Environment { packaged: false, ..linux_env(home.path()) };
+    capture();
+    apply_allowed(true, &env);
+    assert!(!real_entry(home.path()).exists());
+    assert_eq!(records(), [(Level::Warn, "auto-launch skipped: unpackaged build".to_owned())]);
+}
+
+#[test]
+fn windows_and_macos_use_the_login_item_and_write_no_file() {
+    for os in [Os::Windows, Os::MacOs] {
+        let home = tempfile::tempdir().expect("HOME");
+        let env = Environment { os, ..linux_env(home.path()) };
+        assert_eq!(target(true, &env), Target::LoginItem);
+        assert!(snapshot(home.path()).is_empty());
+    }
+}
+
+#[test]
+fn writes_the_entry_with_the_executable_by_default() {
+    let home = tempfile::tempdir().expect("HOME");
+    capture();
+    apply_allowed(true, &linux_env(home.path()));
+    let entry = fs::read(real_entry(home.path())).expect("the entry");
+    assert_eq!(
+        entry,
+        b"[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+    );
+    assert!(records().is_empty());
+}
+
+#[test]
+fn prefers_appimage_over_the_executable_even_when_empty() {
+    for (appimage, exec) in
+        [("/opt/Pipette.AppImage", "Exec=\"/opt/Pipette.AppImage\"\n"), ("", "Exec=\"\"\n")]
+    {
+        let home = tempfile::tempdir().expect("HOME");
+        let env = Environment { appimage: Some(OsString::from(appimage)), ..linux_env(home.path()) };
+        apply_allowed(true, &env);
+        let entry = fs::read_to_string(real_entry(home.path())).expect("the entry");
+        assert!(entry.contains(exec), "{entry}");
+    }
+}
+
+#[test]
+fn removes_the_entry_when_disabled() {
+    let home = tempfile::tempdir().expect("HOME");
+    let env = linux_env(home.path());
+    apply_allowed(true, &env);
+    assert!(real_entry(home.path()).exists());
+    apply_allowed(false, &env);
+    assert!(!real_entry(home.path()).exists());
+}
+
+#[test]
+fn disabling_an_entry_that_never_existed_logs_nothing() {
+    let home = tempfile::tempdir().expect("HOME");
+    capture();
+    apply_allowed(false, &linux_env(home.path()));
+    assert!(records().is_empty());
+}
+
+#[test]
+fn an_executable_that_cannot_be_found_is_logged() {
+    let home = tempfile::tempdir().expect("HOME");
+    let env = Environment { current_exe: Err("gone".to_owned()), ..linux_env(home.path()) };
+    capture();
+    apply_allowed(true, &env);
+    assert!(!real_entry(home.path()).exists());
+    assert_eq!(records(), [(Level::Error, format!("{FAILURE}gone"))]);
+}
+
+#[cfg(unix)]
+#[test]
+fn the_path_bytes_are_written_as_they_are() {
+    use std::os::unix::ffi::OsStringExt;
+    let exec = OsString::from_vec(b"/opt/\xffPipette".to_vec());
+    let needle = b"Exec=\"/opt/\xffPipette\"\n";
+    assert!(desktop_entry(&exec).windows(needle.len()).any(|w| w == needle));
+}
+
+// --- AUTOSTART_APPLIES = false ---
+
+#[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "the tests below rely on the build not registering itself"
+)]
+fn builds_do_not_register_themselves() {
+    assert!(!AUTOSTART_APPLIES);
+}
+
+/// A HOME holding the user's real entry, another program's entry, and the
+/// userData directories of both builds.
+fn populated_home() -> tempfile::TempDir {
+    let home = tempfile::tempdir().expect("HOME");
+    let config = home.path().join(".config");
+    fs::create_dir_all(config.join("autostart")).expect("autostart");
+    fs::write(real_entry(home.path()), "the Electron build's entry\n").expect("entry");
+    fs::write(config.join("autostart").join("other.desktop"), "someone else\n").expect("other");
+    for name in ["pipette-desktop", "app.pipette.desktop", "custom-user-data"] {
+        fs::create_dir_all(config.join(name)).expect("userData");
+        fs::write(config.join(name).join("config.json"), "{\"autoLaunch\":true}").expect("config");
+    }
+    home
+}
+
+#[test]
+fn a_build_writes_and_removes_nothing_wherever_user_data_lives() {
+    let home = populated_home();
+    let before = snapshot(home.path());
+    let config = home.path().join(".config");
+    let user_data = [
+        None,
+        Some(config.join("app.pipette.desktop")),
+        Some(config.join("pipette-desktop")),
+        Some(config.join("custom-user-data")),
+    ];
+    for user_data in user_data {
+        for (packaged, dev_tools) in [(true, false), (false, false), (false, true)] {
+            for xdg in [None, Some(config.clone())] {
+                let vars: BTreeMap<&str, OsString> = [
+                    ("HOME", Some(home.path().as_os_str().to_owned())),
+                    ("PIPETTE_USER_DATA_DIR", user_data.clone().map(PathBuf::into_os_string)),
+                    ("XDG_CONFIG_HOME", xdg.clone().map(PathBuf::into_os_string)),
+                ]
+                .into_iter()
+                .filter_map(|(name, value)| Some((name, value?)))
+                .collect();
+                let env = Environment::from_vars(
+                    packaged,
+                    dev_tools,
+                    |name| vars.get(name).cloned(),
+                    Some(home.path().to_path_buf()),
+                    Ok(PathBuf::from(EXE)),
+                );
+                let env = Environment { os: Os::Linux, ..env };
+                for enabled in [true, false, true] {
+                    capture();
+                    apply(enabled, &env);
+                    assert_eq!(
+                        records(),
+                        [(
+                            Level::Warn,
+                            "auto-launch skipped: this build does not start at sign-in".to_owned()
+                        )]
+                    );
+                    assert_eq!(snapshot(home.path()), before, "{user_data:?} {packaged} {dev_tools}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_build_without_the_development_tools_ignores_the_directory_variable() {
+    let home = populated_home();
+    let dev = home.path().join("dev-autostart");
+    let before = snapshot(home.path());
+    let vars = |name: &str| (name == DEV_DIR_VARIABLE).then(|| dev.clone().into_os_string());
+    let env =
+        Environment::from_vars(true, false, vars, Some(home.path().to_path_buf()), Ok(PathBuf::from(EXE)));
+    assert_eq!(env.dev_dir, None);
+    let env = Environment { os: Os::Linux, ..env };
+    apply(true, &env);
+    apply(false, &env);
+    assert_eq!(snapshot(home.path()), before);
+}
+
+// --- PIPETTE_DEV_AUTOSTART_DIR ---
+
+fn dev_env(home: &Path, dir: impl Into<OsString>) -> Environment {
+    Environment { dev_dir: Some(dir.into()), ..linux_env(home) }
+}
+
+/// Applies on and off and checks that nothing under `home` changed and an
+/// error starting with `reason` was logged each time.
+fn assert_refused(env: &Environment, home: &Path, reason: &str) {
+    let before = snapshot(home);
+    for enabled in [true, false] {
+        capture();
+        apply(enabled, env);
+        let logs = records();
+        assert_eq!(logs.len(), 1, "{logs:?}");
+        assert_eq!(logs[0].0, Level::Error);
+        assert!(logs[0].1.starts_with(&format!("auto-launch: {DEV_DIR_VARIABLE} {reason}")), "{}", logs[0].1);
+        assert_eq!(snapshot(home), before);
+    }
+    // Even a build allowed to register itself does not fall back to the
+    // real entry.
+    assert!(matches!(target(true, env), Target::Refused(_)));
+}
+
+#[test]
+fn the_development_directory_gets_the_entry_and_loses_it() {
+    let home = populated_home();
+    let dev = home.path().join("session").join("autostart");
+    let env = dev_env(home.path(), &dev);
+    let real = fs::read(real_entry(home.path())).expect("the real entry");
+    capture();
+    apply(true, &env);
+    assert_eq!(fs::read(dev.join("pipette.desktop")).expect("the entry"), desktop_entry(EXE.as_ref()));
+    apply(true, &env);
+    apply(false, &env);
+    assert!(!dev.join("pipette.desktop").exists());
+    apply(false, &env);
+    assert!(records().is_empty(), "{:?}", records());
+    assert_eq!(fs::read(real_entry(home.path())).expect("the real entry"), real);
+}
+
+#[test]
+fn a_relative_directory_is_refused() {
+    let home = populated_home();
+    for dir in ["session/autostart", "", "./autostart"] {
+        assert_refused(&dev_env(home.path(), dir), home.path(), "must be an absolute path");
+    }
+}
+
+#[test]
+fn a_directory_with_dot_components_is_refused() {
+    let home = populated_home();
+    let base = home.path().display().to_string();
+    for dir in [
+        format!("{base}/session/../.config/autostart"),
+        format!("{base}/./.config/autostart"),
+        format!("{base}/session/."),
+        format!("{base}/session/.."),
+    ] {
+        assert_refused(&dev_env(home.path(), dir), home.path(), "must not contain . or .. components");
+    }
+}
+
+#[test]
+fn the_real_autostart_directory_and_its_inside_are_refused() {
+    let home = populated_home();
+    let real = home.path().join(".config").join("autostart");
+    for dir in [real.clone(), real.join("sub"), PathBuf::from(format!("{}//", real.display()))] {
+        assert_refused(&dev_env(home.path(), dir), home.path(), "resolves to the real autostart directory");
+    }
+}
+
+#[test]
+fn the_xdg_autostart_directory_is_refused() {
+    let home = populated_home();
+    let xdg = tempfile::tempdir().expect("XDG_CONFIG_HOME");
+    let env = Environment {
+        xdg_config_home: Some(xdg.path().to_path_buf()),
+        ..dev_env(home.path(), xdg.path().join("autostart"))
+    };
+    assert_refused(&env, home.path(), "resolves to the real autostart directory");
+    assert!(snapshot(xdg.path()).is_empty());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_link_into_the_real_directory_is_refused() {
+    use std::os::unix::fs::symlink;
+    let home = populated_home();
+    let real = home.path().join(".config").join("autostart");
+    let session = home.path().join("session");
+    fs::create_dir(&session).expect("session");
+    symlink(&real, session.join("to-autostart")).expect("link");
+    symlink(home.path().join(".config"), session.join("to-config")).expect("link");
+    for dir in [
+        session.join("to-autostart"),
+        session.join("to-autostart").join("missing"),
+        session.join("to-config").join("autostart"),
+    ] {
+        assert_refused(&dev_env(home.path(), dir), home.path(), "resolves to the real autostart directory");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn an_entry_that_links_into_the_real_directory_is_refused() {
+    use std::os::unix::fs::symlink;
+    let home = populated_home();
+    let dev = home.path().join("session");
+    fs::create_dir(&dev).expect("session");
+    symlink(real_entry(home.path()), dev.join("pipette.desktop")).expect("link");
+    assert_refused(&dev_env(home.path(), &dev), home.path(), "resolves to the real autostart directory");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_dangling_link_is_refused() {
+    use std::os::unix::fs::symlink;
+    let home = populated_home();
+    let dev = home.path().join("session");
+    fs::create_dir(&dev).expect("session");
+    symlink(home.path().join("nowhere"), dev.join("dangling")).expect("link");
+    assert_refused(
+        &dev_env(home.path(), dev.join("dangling").join("autostart")),
+        home.path(),
+        "cannot be resolved",
+    );
+}
+
+#[test]
+fn the_development_directory_is_read_on_linux_only() {
+    let home = populated_home();
+    let before = snapshot(home.path());
+    for os in [Os::Windows, Os::MacOs, Os::Other] {
+        let env = Environment { os, ..dev_env(home.path(), home.path().join("session")) };
+        capture();
+        apply(true, &env);
+        assert_eq!(
+            records(),
+            [(Level::Warn, format!("auto-launch skipped: {DEV_DIR_VARIABLE} is read on Linux only"))]
+        );
+        assert_eq!(snapshot(home.path()), before);
+    }
+}
