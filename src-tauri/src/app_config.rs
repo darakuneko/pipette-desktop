@@ -86,7 +86,7 @@ pub fn listen_for_changes(app: &AppHandle) {
                 set_zoom(window, percent);
             }
         }
-        "trayResident" => crate::lifecycle::set_tray_resident(&handle, value.is_truthy()),
+        "trayResident" => crate::tray::set_tray_resident(&handle, value.is_truthy()),
         "autoSync" => crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy()),
         "autoLaunch" => {
             log::info!(

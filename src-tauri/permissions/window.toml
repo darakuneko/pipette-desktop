@@ -1,15 +1,21 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# The commands of src/window_commands.rs: the zoom and the main window's
-# visibility.
+# The commands of src/window_commands.rs: the zoom, the main window's
+# visibility, and the window of the Typing Test's view-only mode.
 
 [[set]]
 identifier = "window"
-description = "Zooms the window, and shows, hides and reports the visibility of the main window."
+description = "Zooms the window, shows, hides and reports the visibility of the main window, and sets the compact mode, aspect ratio, always-on-top state, opacity and minimum size of the window."
 permissions = [
   "allow-set-window-zoom",
   "allow-window-show",
   "allow-window-hide",
   "allow-window-started-hidden",
   "allow-window-is-visible",
+  "allow-set-window-compact-mode",
+  "allow-set-window-aspect-ratio",
+  "allow-set-window-always-on-top",
+  "allow-set-window-opacity",
+  "allow-set-window-min-size",
+  "allow-is-always-on-top-supported",
 ]

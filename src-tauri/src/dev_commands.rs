@@ -21,6 +21,10 @@ mod sync_auth;
 mod sync_triggers;
 #[cfg(feature = "dev-tools")]
 mod tools;
+#[cfg(feature = "dev-tools")]
+mod tray;
+#[cfg(feature = "dev-tools")]
+mod window_ops;
 
 /// Installs `app`, the handler of the app commands, and `on_page_load`, the
 /// app's page load hook, on `builder`; with the dev-tools feature, together

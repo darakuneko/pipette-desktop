@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-window",
+  "description": "Builds with the dev-tools feature only: tells the main window's geometry as the app applied it (size, minimum size, geometry hints, always on top, compact mode), which the e2e tests cannot ask the window system for.",
+  "windows": ["main"],
+  "permissions": ["allow-dev-window-state"]
+}

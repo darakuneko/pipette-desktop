@@ -25,6 +25,9 @@ pub const DEV_COMMANDS: &[&str] = &[
     "dev_sync_state",
     "dev_hub_state",
     "dev_hub_run_startup_sync",
+    "dev_tray_state",
+    "dev_tray_activate",
+    "dev_window_state",
 ];
 
 /// The development commands that exist on Linux only.

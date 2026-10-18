@@ -7,9 +7,9 @@
 // directory.
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -171,23 +171,131 @@ export function isLoopbackUrl(url: string | undefined): boolean {
   }
 }
 
+/** A startup-notice address nothing listens on: a session without a fake
+ *  notice server gets no notices instead of reaching the real endpoint. The
+ *  development tools' build reads PIPETTE_NOTIFICATION_URL. */
+export const E2E_NOTIFICATION_URL = 'http://127.0.0.1:9'
+
+/** Whether `url` is an http URL on 127.0.0.1 itself (not localhost, not
+ *  [::1]), where the fake servers listen. */
+export function isLocalHttpUrl(url: string | undefined): boolean {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' && parsed.hostname === '127.0.0.1'
+  } catch {
+    return false
+  }
+}
+
+/** The variable that replaces the autostart directory
+ *  ($HOME/.config/autostart) in a development tools' build. */
+export const AUTOSTART_DIR_VARIABLE = 'PIPETTE_DEV_AUTOSTART_DIR'
+
+/** `path` with every symbolic link resolved, the part that does not exist
+ *  yet appended as it is (the app creates the directory). Throws when an
+ *  existing part cannot be resolved, a dangling link among them. */
+function resolveExisting(path: string): string {
+  const missing: string[] = []
+  let existing = path
+  for (;;) {
+    try {
+      lstatSync(existing)
+      break
+    } catch {
+      const parent = dirname(existing)
+      if (parent === existing) throw new Error(`no part of ${path} exists`)
+      missing.unshift(basename(existing))
+      existing = parent
+    }
+  }
+  return join(realpathSync(existing), ...missing)
+}
+
+/** Whether `path` is `dir` or inside it; both already resolved. */
+function isWithin(path: string, dir: string): boolean {
+  const rel = relative(dir, path)
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
+}
+
+/** The autostart directories a session must never point at: the one
+ *  Electron writes ($HOME/.config/autostart) and the XDG one, for the home
+ *  and config directories of this process and of the app's environment
+ *  `env`. */
+export function realAutostartDirs(env: NodeJS.ProcessEnv): string[] {
+  const homes = [homedir(), env.HOME]
+  const configs = [process.env.XDG_CONFIG_HOME, env.XDG_CONFIG_HOME]
+  const dirs = [
+    ...homes.filter((home): home is string => !!home && isAbsolute(home)).map((home) => join(home, '.config', 'autostart')),
+    ...configs.filter((config): config is string => !!config && isAbsolute(config)).map((config) => join(config, 'autostart')),
+  ]
+  return [...new Set(dirs)]
+}
+
+/** The normalized `dir` when it may be the session's autostart directory,
+ *  else throws: an absolute path without `.` or `..` components (the app
+ *  resolves `..` after following a link, so `<link>/..` could leave the
+ *  session), strictly inside `sessionDir`, which after resolving its
+ *  symbolic links is still inside it and is none of `realDirs` nor inside
+ *  one of them. The app gets the returned path, the one checked. */
+export function assertAutostartDir(dir: string, sessionDir: string, realDirs: string[]): string {
+  if (!isAbsolute(dir)) throw new Error(`${AUTOSTART_DIR_VARIABLE} must be an absolute path, not ${dir}`)
+  if (dir.split(/[\\/]/).some((part) => part === '.' || part === '..')) {
+    throw new Error(`${AUTOSTART_DIR_VARIABLE} must not contain . or .. components, not ${dir}`)
+  }
+  let session: string
+  try {
+    session = realpathSync(sessionDir)
+  } catch (err) {
+    throw new Error(`the session's directory ${sessionDir} for ${AUTOSTART_DIR_VARIABLE} cannot be resolved: ${String(err)}`)
+  }
+  const normalized = resolve(dir)
+  let resolved: string
+  try {
+    resolved = resolveExisting(normalized)
+  } catch (err) {
+    // A dangling link, a loop or a part it may not read: nothing to check.
+    throw new Error(`${AUTOSTART_DIR_VARIABLE} cannot be resolved, not ${dir}: ${(err as NodeJS.ErrnoException).code ?? String(err)}`)
+  }
+  if (resolved === session || !isWithin(resolved, session)) {
+    throw new Error(`${AUTOSTART_DIR_VARIABLE} must be inside the session's directory ${session}, not ${dir} (${resolved})`)
+  }
+  for (const real of realDirs) {
+    let target = resolve(real)
+    try {
+      target = resolveExisting(target)
+    } catch {
+      // A part of it cannot be resolved (a dangling link): compared as written.
+    }
+    if (isWithin(resolved, target)) throw new Error(`${AUTOSTART_DIR_VARIABLE} resolves to the real autostart directory ${target}`)
+  }
+  return normalized
+}
+
 /** The environment the app of a session runs with: the virtual keyboard
- *  only, the session's userData directory, a Hub on the loopback interface
- *  (E2E_HUB_URL unless the session names another, a fake Hub), the e2e
- *  mark, and the sync's master key in a file of that directory
+ *  only, the session's userData directory, a Hub and a startup-notice
+ *  server on the loopback interface (E2E_HUB_URL and E2E_NOTIFICATION_URL
+ *  unless the session names others, fake servers), the e2e mark, and the
+ *  sync's master key in a file of that directory
  *  (`PIPETTE_DEV_KEYSTORE=file`, read by the development tools' build), so
  *  a session never reaches the OS key store of the developer's desktop.
  *
- *  PIPETTE_E2E=1 makes the app refuse every Hub request and the real Google
- *  when their destinations are not on the loopback interface,
- *  PIPETTE_HUB_TEST=1 makes even a build without the development tools take
- *  the Hub address, and PIPETTE_DEV_SUPPRESS_BROWSER=1 keeps the sign-in
- *  from opening the system browser. The extra variables cannot replace
- *  these, and a Hub address off the loopback interface stops the launch. */
+ *  PIPETTE_E2E=1 makes the app refuse every Hub request, the real Google
+ *  and the real notice endpoint when their destinations are not on the
+ *  loopback interface, PIPETTE_HUB_TEST=1 makes even a build without the
+ *  development tools take the Hub address, and
+ *  PIPETTE_DEV_SUPPRESS_BROWSER=1 keeps the sign-in from opening the system
+ *  browser. The extra variables cannot replace these. A Hub address off
+ *  the loopback interface, a notice address that is not http on 127.0.0.1,
+ *  or an autostart directory {@link assertAutostartDir} refuses stops the
+ *  launch. The autostart directory comes from the session's variables
+ *  only, never from the shell's. */
 export function appEnv(userDataDir: string, extra: Record<string, string>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PIPETTE_HUB_URL: E2E_HUB_URL,
+    PIPETTE_NOTIFICATION_URL: E2E_NOTIFICATION_URL,
+    [AUTOSTART_DIR_VARIABLE]: undefined,
     ...extra,
     PIPETTE_VIRTUAL_DEVICE: 'only',
     PIPETTE_USER_DATA_DIR: userDataDir,
@@ -199,6 +307,12 @@ export function appEnv(userDataDir: string, extra: Record<string, string>): Node
   if (!isLoopbackUrl(env.PIPETTE_HUB_URL)) {
     throw new Error(`PIPETTE_HUB_URL must be on 127.0.0.1 or [::1] in an e2e session, not ${String(env.PIPETTE_HUB_URL)}`)
   }
+  if (!isLocalHttpUrl(env.PIPETTE_NOTIFICATION_URL)) {
+    throw new Error(`PIPETTE_NOTIFICATION_URL must be an http URL on 127.0.0.1 in an e2e session, not ${String(env.PIPETTE_NOTIFICATION_URL)}`)
+  }
+  const autostartDir = env[AUTOSTART_DIR_VARIABLE]
+  if (autostartDir === undefined) delete env[AUTOSTART_DIR_VARIABLE]
+  else env[AUTOSTART_DIR_VARIABLE] = assertAutostartDir(autostartDir, userDataDir, realAutostartDirs(env))
   return env
 }
 
@@ -234,15 +348,29 @@ export function launchAppAgain(timeoutMs: number): Promise<LaunchResult> {
   })
 }
 
+/** The variables a session adds, or the function that makes them from the
+ *  session's fresh userData directory (for a path inside it, such as the
+ *  autostart directory). */
+export type SessionEnv = Record<string, string> | ((userDataDir: string) => Record<string, string>)
+
 /** Starts tauri-driver for one session with a fresh userData directory, and
  *  resolves once it accepts connections. The session's app gets `env` on
  *  top of the variables every session sets. */
-export async function startDriver(env: Record<string, string> = {}): Promise<DriverSession> {
+export async function startDriver(sessionEnv: SessionEnv = {}): Promise<DriverSession> {
   if (session) throw new Error('tauri-driver is already running')
   const userDataDir = mkdtempSync(join(tmpdir(), 'pipette-e2e-tauri-'))
+  let env: Record<string, string>
+  let driverEnv: NodeJS.ProcessEnv
+  try {
+    env = typeof sessionEnv === 'function' ? sessionEnv(userDataDir) : sessionEnv
+    driverEnv = appEnv(userDataDir, env)
+  } catch (err) {
+    rmSync(userDataDir, { recursive: true, force: true })
+    throw err
+  }
   stopping = false
   const driver = spawn(DRIVER_COMMAND, ['--port', String(DRIVER_PORT), '--native-port', String(NATIVE_DRIVER_PORT)], {
-    env: appEnv(userDataDir, env),
+    env: driverEnv,
     stdio: ['ignore', 'inherit', 'inherit'],
   })
   driver.on('exit', (code, signal) => {

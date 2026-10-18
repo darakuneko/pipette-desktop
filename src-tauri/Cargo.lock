@@ -2907,6 +2907,7 @@ dependencies = [
  "lzma-rs",
  "pipette-active-window",
  "pipette-app-config",
+ "pipette-autostart",
  "pipette-drive",
  "pipette-entry-store",
  "pipette-fs",
@@ -2917,6 +2918,7 @@ dependencies = [
  "pipette-keyboard-stores",
  "pipette-logger",
  "pipette-net",
+ "pipette-notification",
  "pipette-pack-stores",
  "pipette-secret-store",
  "pipette-sync",
@@ -2955,6 +2957,14 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "pipette-autostart"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "tempfile",
 ]
 
 [[package]]
@@ -3119,6 +3129,19 @@ dependencies = [
  "rustls",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "pipette-notification"
+version = "0.0.0"
+dependencies = [
+ "log",
+ "pipette-js-json",
+ "pipette-net",
+ "pipette-time",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

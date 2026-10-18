@@ -376,6 +376,9 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         super::sync_triggers::dev_sync_state,
         super::hub::dev_hub_state,
         super::hub::dev_hub_run_startup_sync,
+        super::tray::dev_tray_state,
+        super::tray::dev_tray_activate,
+        super::window_ops::dev_window_state,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]

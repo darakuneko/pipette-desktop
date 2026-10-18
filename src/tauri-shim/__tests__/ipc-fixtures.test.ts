@@ -39,7 +39,7 @@ import type { ThemePackImportApplyOptions } from '../../shared/types/theme-store
 import type { TypingAnalyticsEvent, TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { SyncScope } from '../../shared/types/sync'
-import type { VialAPI } from '../../shared/types/vial-api'
+import type { TrayStatus, VialAPI } from '../../shared/types/vial-api'
 
 interface Entry {
   member: string
@@ -86,6 +86,8 @@ interface Shim {
   typingAnalyticsRemote: typeof import('../api/typing-analytics-remote')
   typingDatasets: typeof import('../api/typing-datasets')
   window: typeof import('../api/window')
+  tray: typeof import('../api/tray')
+  notification: typeof import('../api/notification')
   hubAccount: typeof import('../api/hub-account')
   hubPosts: typeof import('../api/hub-posts')
   hubFavorite: typeof import('../api/hub-favorite')
@@ -128,6 +130,8 @@ async function load(): Promise<Shim> {
     typingAnalyticsRemote: await import('../api/typing-analytics-remote'),
     typingDatasets: await import('../api/typing-datasets'),
     window: await import('../api/window'),
+    tray: await import('../api/tray'),
+    notification: await import('../api/notification'),
     hubAccount: await import('../api/hub-account'),
     hubPosts: await import('../api/hub-posts'),
     hubFavorite: await import('../api/hub-favorite'),
@@ -201,6 +205,32 @@ const CALLERS: Record<string, Caller> = {
   windowHide: { run: ({ window }) => window.windowApi.windowHide(), void: true },
   windowStartedHidden: { run: ({ window }) => window.windowApi.windowStartedHidden() },
   windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
+  setWindowCompactMode: {
+    run: ({ window }, [enabled, size]) =>
+      window.windowApi.setWindowCompactMode(enabled as boolean, size as { width: number; height: number }),
+  },
+  setWindowAspectRatio: {
+    run: ({ window }, [ratio]) => window.windowApi.setWindowAspectRatio(ratio as number),
+    void: true,
+  },
+  setWindowAlwaysOnTop: {
+    run: ({ window }, [enabled]) => window.windowApi.setWindowAlwaysOnTop(enabled as boolean),
+    void: true,
+  },
+  setWindowOpacity: {
+    run: ({ window }, [opacity]) => window.windowApi.setWindowOpacity(opacity as number),
+    void: true,
+  },
+  setWindowMinSize: {
+    run: ({ window }, [width, height]) => window.windowApi.setWindowMinSize(width as number, height as number),
+    void: true,
+  },
+  isAlwaysOnTopSupported: { run: ({ window }) => window.windowApi.isAlwaysOnTopSupported() },
+  trayStatusUpdate: {
+    run: ({ tray }, [status]) => tray.trayApi.trayStatusUpdate(status as TrayStatus),
+    void: true,
+  },
+  notificationFetch: { run: ({ notification }) => notification.notificationApi.notificationFetch() },
   syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
   syncAuthStatus: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStatus() },
   syncAuthStart: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStart() },

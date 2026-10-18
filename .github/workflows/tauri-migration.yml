@@ -135,7 +135,9 @@ jobs:
       # webkitgtk-webdriver from 26.04 on. xvfb gives the app a display and
       # dbus-run-session a session bus of its own, as a desktop session has
       # (the tray icon registers on it, and the single-instance guard owns a
-      # name on it).
+      # name on it). libayatana-appindicator3-1 is the library Tauri loads
+      # at run time to show the tray icon on Linux; the tray tests need it
+      # installed, not only present as a dependency of the build packages.
       - name: Install the e2e dependencies
         run: |
           # apt-cache show also succeeds for a name that is only referred to,
@@ -145,7 +147,7 @@ jobs:
           else
             driver=webkit2gtk-driver
           fi
-          sudo apt-get install -y "$driver" xvfb dbus
+          sudo apt-get install -y "$driver" xvfb dbus libayatana-appindicator3-1
 
       # rust-cache keeps ~/.cargo/bin, so a cached tauri-driver of this
       # version makes the install a no-op.

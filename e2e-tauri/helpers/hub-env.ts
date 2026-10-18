@@ -12,7 +12,7 @@
 // localhost or [::1].
 
 import { closeSync, openSync, readSync } from 'node:fs'
-import { appEnv } from './driver'
+import { appEnv, isLocalHttpUrl } from './driver'
 
 /** The Hub test account of the first session. */
 export const HUB_TEST_ACCOUNT = 'e2e-hub@example.com'
@@ -28,21 +28,10 @@ export const GOOGLE_ENDPOINT_VARIABLES = [
 
 export type HubSessionKind = 'testAccount' | 'google'
 
-/** Whether `value` is an http URL on 127.0.0.1. */
-function onLoopback(value: string | undefined): boolean {
-  if (!value) return false
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' && url.hostname === '127.0.0.1'
-  } catch {
-    return false
-  }
-}
-
 /** Throws unless `env` is the environment of a Hub session of `kind`
  *  against the fake Hub at `hubUrl`. */
 export function assertHubEnv(kind: HubSessionKind, env: Record<string, string | undefined>, hubUrl: string): void {
-  if (!onLoopback(hubUrl)) throw new Error(`the fake Hub must listen on 127.0.0.1, not ${hubUrl}`)
+  if (!isLocalHttpUrl(hubUrl)) throw new Error(`the fake Hub must listen on 127.0.0.1, not ${hubUrl}`)
   if (env.PIPETTE_HUB_URL !== hubUrl) {
     throw new Error(`PIPETTE_HUB_URL must be the fake Hub (${hubUrl}), not ${String(env.PIPETTE_HUB_URL)}`)
   }
@@ -57,7 +46,7 @@ export function assertHubEnv(kind: HubSessionKind, env: Record<string, string | 
   }
   if (env.PIPETTE_HUB_TEST_ACCOUNT !== undefined) throw new Error('PIPETTE_HUB_TEST_ACCOUNT is set in the Google session')
   for (const name of GOOGLE_ENDPOINT_VARIABLES) {
-    if (!onLoopback(env[name])) throw new Error(`${name} must point at 127.0.0.1, not ${String(env[name])}`)
+    if (!isLocalHttpUrl(env[name])) throw new Error(`${name} must point at 127.0.0.1, not ${String(env[name])}`)
   }
   if (env.PIPETTE_DEV_KEYSTORE !== 'file') throw new Error('PIPETTE_DEV_KEYSTORE must be file')
   if (env.PIPETTE_DEV_SUPPRESS_BROWSER !== '1') throw new Error('PIPETTE_DEV_SUPPRESS_BROWSER must be 1')
