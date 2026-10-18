@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { emit } from '@tauri-apps/api/event'
 import { windowApi } from '../api/window'
+import type { VialAPI } from '../../shared/types/vial-api'
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 10; i++) await Promise.resolve()
@@ -50,7 +51,9 @@ describe('windowApi view-only window members', () => {
 
   it('leaves compact mode without a size and resolves the size before it', async () => {
     const calls = record({ set_window_compact_mode: { width: 400, height: 157 } })
-    await expect(windowApi.setWindowCompactMode(false)).resolves.toEqual({ width: 400, height: 157 })
+    // Called as the renderer calls it, through the VialAPI type.
+    const api: Pick<VialAPI, 'setWindowCompactMode'> = windowApi
+    await expect(api.setWindowCompactMode(false)).resolves.toEqual({ width: 400, height: 157 })
     expect(calls).toEqual([{ cmd: 'set_window_compact_mode', args: { enabled: false } }])
   })
 
