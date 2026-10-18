@@ -183,22 +183,38 @@ fn remove_tray(app: &AppHandle<Wry>) {
     }
 }
 
-/// The tray icon with the menu of `status`. A left click shows the window
-/// too, as in the Electron tray; Linux (AppIndicator) reports no clicks, the
-/// menu is the only way there. The menu's clicks go to the handler [`setup`]
+/// Whether a left click on the icon opens the menu rather than showing the
+/// window. As with the Electron tray, macOS opens the menu on any click,
+/// and on Windows a left click shows the window and a right click opens the
+/// menu. Linux (AppIndicator) reports no clicks: the menu is the only way
+/// there.
+const MENU_ON_LEFT_CLICK: bool = cfg!(target_os = "macos");
+
+/// The longest tooltip a Windows tray icon takes, in UTF-16 units: its
+/// buffer holds 128 with the terminating NUL. The Electron tray cuts a
+/// longer one to this; Tauri would fill the buffer and leave out the NUL.
+const WINDOWS_TOOLTIP_UNITS: usize = 127;
+
+/// `tooltip` as the icon is given it: on Windows, cut to what it holds.
+fn os_tooltip(tooltip: &str) -> &str {
+    if cfg!(windows) { status::truncate_utf16(tooltip, WINDOWS_TOOLTIP_UNITS) } else { tooltip }
+}
+
+/// The tray icon with the menu of `status` (see [`MENU_ON_LEFT_CLICK`] for
+/// what the clicks do). The menu's clicks go to the handler [`setup`]
 /// registers, by item id, so the menus that replace the first one work too.
 fn build_tray(app: &AppHandle<Wry>, status: &TrayStatus) -> tauri::Result<LiveTray> {
     let menu = TrayMenu::build(app, status)?;
     let tooltip = status.tooltip();
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu.menu)
-        .tooltip(&tooltip)
+        .tooltip(os_tooltip(&tooltip))
+        .show_menu_on_left_click(MENU_ON_LEFT_CLICK)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
+                button: MouseButton::Left, button_state: MouseButtonState::Up, ..
             } = event
+                && !MENU_ON_LEFT_CLICK
             {
                 show_main_window(tray.app_handle());
             }
@@ -227,7 +243,7 @@ impl LiveTray {
     /// on Linux.
     fn apply(&mut self, status: &TrayStatus) {
         self.tooltip = status.tooltip();
-        if let Err(err) = self.icon.set_tooltip(Some(&self.tooltip)) {
+        if let Err(err) = self.icon.set_tooltip(Some(os_tooltip(&self.tooltip))) {
             log::error!("failed to set the tray tooltip: {err}");
         }
         match self.menu.update(self.icon.app_handle(), status) {
