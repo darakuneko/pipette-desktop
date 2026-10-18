@@ -27,6 +27,7 @@
 //! Electron build the window opens one frame larger or smaller once, and
 //! keeps that size from then on.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use pipette_app_config::{AppConfigStore, Object, Value};
@@ -50,11 +51,13 @@ pub const MAIN_WINDOW: &str = "main";
 /// (src/tauri-shim/api/window.ts) listens to.
 pub const VISIBILITY_CHANGED: &str = "window:visibility-changed";
 
-/// What the handlers keep about the main window.
+/// What the handlers keep about the main window. A window opened again
+/// after the last one closed (macOS) replaces both, as `createWindow` of the
+/// Electron build sets them for every window it creates.
 struct MainWindowState {
-    /// Whether this launch opened the window hidden. Fixed at startup; it
-    /// does not follow the window's visibility.
-    started_hidden: bool,
+    /// Whether the window was opened hidden. Set when it opens; it does not
+    /// follow the window's visibility.
+    started_hidden: AtomicBool,
     min_size: Mutex<AppliedMinSize>,
 }
 
@@ -89,9 +92,9 @@ pub fn opening_min_size<R: Runtime>(app: &AppHandle<R>) -> Option<Size> {
     Some(applied.min_size)
 }
 
-/// Whether this launch opened the main window hidden.
+/// Whether the main window was opened hidden.
 pub fn started_hidden<R: Runtime>(app: &AppHandle<R>) -> bool {
-    app.try_state::<MainWindowState>().is_some_and(|state| state.started_hidden)
+    app.try_state::<MainWindowState>().is_some_and(|state| state.started_hidden.load(Ordering::Relaxed))
 }
 
 /// The builder of the main window: its entry in tauri.conf.json (which has
@@ -142,10 +145,19 @@ pub fn open_main_window<R: Runtime>(
         builder.center()
     };
     let window = builder.build()?;
-    app.manage(MainWindowState {
-        started_hidden: start_hidden,
-        min_size: Mutex::new(AppliedMinSize { monitor: None, min_size: placement.min_size }),
-    });
+    let applied = AppliedMinSize { monitor: None, min_size: placement.min_size };
+    match app.try_state::<MainWindowState>() {
+        Some(state) => {
+            state.started_hidden.store(start_hidden, Ordering::Relaxed);
+            *state.min_size.lock().unwrap_or_else(PoisonError::into_inner) = applied;
+        }
+        None => {
+            app.manage(MainWindowState {
+                started_hidden: AtomicBool::new(start_hidden),
+                min_size: Mutex::new(applied),
+            });
+        }
+    }
     crate::app_config::apply_stored_zoom(config, &window);
     if !start_hidden {
         reveal(&window.as_ref().window());

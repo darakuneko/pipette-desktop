@@ -204,10 +204,36 @@ pub fn as_template(rows: &[MenuRow]) -> Value {
         .collect()
 }
 
+/// The longest start of `text` that is at most `max` UTF-16 units, ending
+/// on a character boundary.
+pub fn truncate_utf16(text: &str, max: usize) -> &str {
+    let mut units = 0;
+    for (index, ch) in text.char_indices() {
+        units += ch.len_utf16();
+        if units > max {
+            return &text[..index];
+        }
+    }
+    text
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn a_tooltip_is_cut_on_a_character_boundary() {
+        assert_eq!(truncate_utf16("Pipette", 127), "Pipette");
+        assert_eq!(truncate_utf16("Pipette", 7), "Pipette");
+        assert_eq!(truncate_utf16("Pipette", 3), "Pip");
+        // "—" is one unit, "🎹" two.
+        assert_eq!(truncate_utf16("a—b", 2), "a—");
+        assert_eq!(truncate_utf16("a🎹b", 2), "a");
+        assert_eq!(truncate_utf16("a🎹b", 3), "a🎹");
+        let long = format!("Pipette — {} — Cnt: 1,234 · KPM: 56", "K".repeat(200));
+        assert_eq!(truncate_utf16(&long, 127).encode_utf16().count(), 127);
+    }
 
     fn golden() -> Value {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/resident/tray.json");

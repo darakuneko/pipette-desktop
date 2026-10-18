@@ -3,11 +3,25 @@
 //! a launch of the app while it runs, and the quit sequence every exit path
 //! goes through (src/shutdown.rs).
 //!
+//! Closing the last window does not end the app on macOS, nor anywhere while
+//! the tray is active, as the 'window-all-closed' handler of
+//! src/main/index.ts decides; a launch of the app or a click on its Dock icon
+//! then opens the window again.
+//!
 //! Exit paths and how each reaches the quit sequence:
 //! - the tray's Quit item and SIGTERM / SIGINT call `AppHandle::exit`, which
 //!   raises `RunEvent::ExitRequested` with a code;
-//! - closing the last window when the tray is not active raises
-//!   `RunEvent::ExitRequested` without one.
+//! - closing the last window when the app does not keep running raises
+//!   `RunEvent::ExitRequested` without one;
+//! - quitting from the macOS Dock, logging out or shutting down on macOS,
+//!   and signing out or shutting down on Windows raise no exit request: the
+//!   event loop ends (Cocoa's `applicationWillTerminate`, Windows'
+//!   `WM_ENDSESSION`), raising `RunEvent::Exit`, and the process ends once
+//!   that event is handled. That event counts as an exit request that cannot
+//!   be stopped, so the sequence runs there to its end or its deadline,
+//!   holding the event loop. The system may end the process before that, so
+//!   the pending marker is written first, as an interrupted quit, and the
+//!   sequence's own update replaces or removes it when it gets that far.
 //!
 //! The first request is stopped and starts the sequence. A request while it
 //! runs (the tray's Quit again, the window closed, a second signal) ends the
@@ -22,12 +36,13 @@
 //! Electron window's close handler does when the app quits; closing the
 //! window saves it too.
 //!
-//! SIGKILL cannot be caught, and on Linux this build has no menu, so no
-//! keyboard shortcut quits it.
+//! SIGKILL cannot be caught, and this build has no menu (the Electron build
+//! sets none either), so no keyboard shortcut quits it.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use pipette_hid::HidService;
@@ -81,6 +96,9 @@ const QUIT_PHASES: [&str; 5] =
 #[derive(Default)]
 pub struct Lifecycle {
     quit: QuitGuard,
+    /// Whether an exit request has gone through, having waited for the
+    /// sequence's marker update already.
+    exit_let_through: AtomicBool,
 }
 
 /// The shared lifecycle state; `None` before setup has run.
@@ -103,6 +121,28 @@ pub fn show_main_window(app: &AppHandle<Wry>) {
     }
 }
 
+/// Shows the main window, or opens it again when the last window was
+/// closed, as `revealApp` of src/main/index.ts does for a launch of the app
+/// while it runs and for a click on its Dock icon. The window is opened on
+/// the main thread.
+fn reveal_app(app: &AppHandle<Wry>) {
+    if main_window::main_window(app).is_some() {
+        return show_main_window(app);
+    }
+    let handle = app.clone();
+    let result = app.run_on_main_thread(move || {
+        if main_window::main_window(&handle).is_some() {
+            return show_main_window(&handle);
+        }
+        if let Err(err) = main_window::open_main_window(&handle, &handle.state::<AppConfig>()) {
+            log::error!("[app] failed to open the main window again: {err}");
+        }
+    });
+    if let Err(err) = result {
+        log::error!("[app] failed to hand opening the main window over to the main thread: {err}");
+    }
+}
+
 /// What a launch of another instance did to this one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SecondLaunch {
@@ -119,8 +159,25 @@ enum SecondLaunch {
 /// its main window, as the 'second-instance' handler of src/main/index.ts
 /// does. Runs on the plugin's D-Bus thread on Linux.
 pub fn on_second_launch(app: &AppHandle<Wry>) {
-    let outcome = respond_to_second_launch(app, show_main_window);
+    let outcome = respond_to_second_launch(app, reveal_app);
     log::info!("[app] the app was launched again: {outcome:?}");
+}
+
+/// A click on the Dock icon of the running app (macOS), handled as a launch
+/// of the app is: the 'activate' handler of src/main/index.ts runs the same
+/// `revealApp`.
+#[cfg(target_os = "macos")]
+fn on_reopen(app: &AppHandle<Wry>) {
+    let outcome = respond_to_second_launch(app, reveal_app);
+    log::info!("[app] the Dock icon was clicked: {outcome:?}");
+}
+
+/// Whether an exit request leaves the app running: one raised by the last
+/// window closing (no `code`), before any quit, on macOS or while the tray
+/// is active. The 'window-all-closed' handler of src/main/index.ts quits
+/// only on other systems with no tray.
+fn keeps_running_without_windows(code: Option<i32>, quitting: bool, macos: bool, tray_active: bool) -> bool {
+    code.is_none() && !quitting && (macos || tray_active)
 }
 
 fn respond_to_second_launch<R: Runtime>(
@@ -182,10 +239,17 @@ fn close_probe_on_page_load(hid: &HidService, label: &str, event: PageLoadEvent)
     }
 }
 
-/// Routes every exit request through the quit guard.
+/// Routes every exit request through the quit guard, and a click on the
+/// Dock icon to [`reveal_app`].
 pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
     match event {
         RunEvent::ExitRequested { code, api, .. } => {
+            let macos = cfg!(target_os = "macos");
+            if keeps_running_without_windows(code, is_quitting(app), macos, tray::is_tray_active(app)) {
+                api.prevent_exit();
+                log::info!("[app] the last window closed; the app keeps running");
+                return;
+            }
             let lifecycle = Arc::clone(&app.state::<Arc<Lifecycle>>());
             match lifecycle.quit.on_exit_requested() {
                 ExitDecision::StartSequence => {
@@ -194,16 +258,8 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     start_quit_sequence(app.clone(), lifecycle);
                 }
                 ExitDecision::ExitNow => {
-                    let phase = lifecycle.quit.running_phase();
-                    log::warn!(
-                        "[quit] exit requested (code {code:?}) while quitting during {}; exiting now",
-                        phase.unwrap_or("(between phases)")
-                    );
-                    // Blocks the event loop for at most MARKER_TIMEOUT; the
-                    // exit goes through when this returns.
-                    let data_dir = user_data_dir(app);
-                    tauri::async_runtime::block_on(record_interruption(phase, QUIT_DEADLINE, &data_dir));
-                    main_window::save_main_window_state(app);
+                    exit_now(app, &lifecycle, code);
+                    lifecycle.exit_let_through.store(true, Ordering::Relaxed);
                 }
                 ExitDecision::Exit => {
                     log::info!("[quit] exiting (code {code:?})");
@@ -212,16 +268,64 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     // it short; otherwise returns at once.
                     lifecycle.quit.wait_until_finished(MARKER_TIMEOUT);
                     main_window::save_main_window_state(app);
+                    lifecycle.exit_let_through.store(true, Ordering::Relaxed);
                 }
             }
         }
         RunEvent::Exit => {
+            on_loop_ended(app);
             if let Some(hid) = app.try_state::<Hid>() {
                 hid.0.close_probe();
             }
             log::info!("[quit] event loop ended");
         }
+        #[cfg(target_os = "macos")]
+        RunEvent::Reopen { .. } => on_reopen(app),
         _ => {}
+    }
+}
+
+/// An exit request while the quit sequence runs: records the interruption
+/// and lets the exit through. Blocks the event loop for at most
+/// MARKER_TIMEOUT.
+fn exit_now(app: &AppHandle<Wry>, lifecycle: &Lifecycle, code: Option<i32>) {
+    let phase = lifecycle.quit.running_phase();
+    log::warn!(
+        "[quit] exit requested (code {code:?}) while quitting during {}; exiting now",
+        phase.unwrap_or("(between phases)")
+    );
+    let data_dir = user_data_dir(app);
+    tauri::async_runtime::block_on(record_interruption(phase, QUIT_DEADLINE, &data_dir));
+    main_window::save_main_window_state(app);
+}
+
+/// The event loop has ended. After an exit request that went through there
+/// is nothing left to do. With no exit request before it (see the module
+/// comment: the macOS Dock's Quit and log out, Windows' sign-out and shut
+/// down), the process ends once this returns, so the pending marker is
+/// written and the quit sequence runs here, holding the event loop until it
+/// ends or its deadline passes; one already running is interrupted as by a
+/// second exit request.
+fn on_loop_ended(app: &AppHandle<Wry>) {
+    let Some(lifecycle) = lifecycle_state(app).map(|state| Arc::clone(&state)) else {
+        return;
+    };
+    match lifecycle.quit.on_exit_requested() {
+        ExitDecision::StartSequence => {
+            log::info!("[quit] the app is ending without an exit request; running the quit sequence");
+            // Written before the phases run, so a system that ends the
+            // process within the deadline leaves it for the next launch.
+            let data_dir = user_data_dir(app);
+            tauri::async_runtime::block_on(record_interruption(None, QUIT_DEADLINE, &data_dir));
+            tauri::async_runtime::block_on(quit_sequence(app, lifecycle));
+            main_window::save_main_window_state(app);
+        }
+        ExitDecision::ExitNow => exit_now(app, &lifecycle, None),
+        ExitDecision::Exit => {
+            if !lifecycle.exit_let_through.load(Ordering::Relaxed) {
+                lifecycle.quit.wait_until_finished(MARKER_TIMEOUT);
+            }
+        }
     }
 }
 
@@ -231,27 +335,39 @@ fn user_data_dir(app: &AppHandle<Wry>) -> PathBuf {
 }
 
 fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
-    let data_dir = user_data_dir(&app);
+    let sequence = quit_sequence(&app, lifecycle);
+    tauri::async_runtime::spawn(async move {
+        sequence.await;
+        app.exit(0);
+    });
+}
+
+/// The quit sequence, ending with the guard marked finished. Polling stops
+/// and the app counts as quitting when this is called, before the sequence
+/// runs.
+fn quit_sequence(
+    app: &AppHandle<Wry>,
+    lifecycle: Arc<Lifecycle>,
+) -> impl Future<Output = ()> + Send + 'static {
+    let data_dir = user_data_dir(app);
     let durations = phase_durations();
     let pending = app.state::<PendingStore>().inner().clone();
     let recorder = app.state::<Arc<Recorder>>().inner().clone();
     let runtime = app.state::<SyncRuntime>().inner().clone();
-    let sync = triggers(&app);
-    // Polling stops and the app counts as quitting before anything else.
+    let sync = triggers(app);
     let sync_work = sync.as_ref().is_some_and(|sync| sync.begin_quit());
     let work = sync_work
         || runtime.password_change_running()
         || recorder.has_pending_work()
         || dev_quit_delay().is_some();
-    tauri::async_runtime::spawn(async move {
+    async move {
         // With nothing to wait for, the phases are skipped and only the
         // pending units are written.
         let phases = if work { quit_phases(durations, recorder, runtime, sync) } else { Vec::new() };
         let outcome = quit(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit, pending).await;
         log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
-        app.exit(0);
-    });
+    }
 }
 
 /// The phases of the before-quit handler: passwordChange stops the running
@@ -434,6 +550,21 @@ mod tests {
 
         close_probe_on_page_load(&hid, MAIN_WINDOW, PageLoadEvent::Started);
         assert_eq!(hid.probe_send_receive(id, &[0x01]).unwrap_err().to_string(), "No probe device is open");
+    }
+
+    #[test]
+    fn closing_the_last_window_quits_only_off_macos_with_no_tray() {
+        let keeps = |code, quitting, macos, tray_active| {
+            keeps_running_without_windows(code, quitting, macos, tray_active)
+        };
+        assert!(!keeps(None, false, false, false));
+        assert!(keeps(None, false, true, false));
+        assert!(keeps(None, false, false, true));
+        assert!(keeps(None, false, true, true));
+        // A window closed while quitting ends the app at once.
+        assert!(!keeps(None, true, true, true));
+        // The exit the tray, a signal or the sequence requests.
+        assert!(!keeps(Some(0), false, true, true));
     }
 
     #[test]
