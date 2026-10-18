@@ -140,15 +140,27 @@ function isRunning(pid: number): boolean {
  *  without it, so nothing the app saves on quit (the window's bounds) would
  *  be saved. Linux only. */
 export async function quitApp(timeoutMs: number): Promise<void> {
+  const pid = sessionAppPid()
+  process.kill(pid, 'SIGTERM')
+  await waitForAppExit(pid, timeoutMs, 'of SIGTERM')
+}
+
+/** The pid of the app of the running session; throws unless exactly one
+ *  runs. Linux only: it reads /proc. */
+export function sessionAppPid(): number {
   if (!session) throw new Error('no session is running')
-  if (process.platform !== 'linux') throw new Error('quitApp finds the app through /proc, which is Linux only')
+  if (process.platform !== 'linux') throw new Error('the app is found through /proc, which is Linux only')
   const pids = sessionAppPids(session.userDataDir)
   if (pids.length !== 1) throw new Error(`expected one app process of the session, found ${pids.length}`)
-  const [pid] = pids
-  process.kill(pid, 'SIGTERM')
+  return pids[0]
+}
+
+/** Resolves once the process `pid` has exited, or throws after
+ *  `timeoutMs` (`what` names the cause awaited, for the message). */
+export async function waitForAppExit(pid: number, timeoutMs: number, what: string): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (isRunning(pid)) {
-    if (Date.now() > deadline) throw new Error(`the app (pid ${pid}) did not exit within ${timeoutMs} ms of SIGTERM`)
+    if (Date.now() > deadline) throw new Error(`the app (pid ${pid}) did not exit within ${timeoutMs} ms ${what}`)
     await new Promise((r) => setTimeout(r, QUIT_POLL_MS))
   }
 }

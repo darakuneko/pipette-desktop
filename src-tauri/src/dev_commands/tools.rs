@@ -381,6 +381,8 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         super::window_ops::dev_window_state,
         #[cfg(target_os = "linux")]
         dev_screenshot,
+        #[cfg(target_os = "linux")]
+        super::tray::dev_tray_menu_click,
     ]
 }
 
@@ -452,6 +454,7 @@ mod tests {
             assert!(is_dev_command(command), "{command}");
         }
         assert_eq!(is_dev_command("dev_screenshot"), cfg!(target_os = "linux"));
+        assert_eq!(is_dev_command("dev_tray_menu_click"), cfg!(target_os = "linux"));
         for command in APP_COMMANDS.iter().chain(&["unknown"]) {
             assert!(!is_dev_command(command), "{command}");
         }

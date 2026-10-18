@@ -5,7 +5,7 @@
 // tests share one app session and run in order: each starts where the
 // previous one left the window.
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
@@ -14,6 +14,7 @@ import {
   clickIntoFileDialog,
   closeKeyPopover,
   connectVirtualKeyboard,
+  countIn,
   EDITOR_SELECTOR,
   editorKey,
   HEX_INPUT_SELECTOR,
@@ -21,6 +22,7 @@ import {
   openKeycodeHexInput,
   openOverlayTab,
   openToolsOverlay,
+  readAppLog,
   restartApp,
   setKeycode,
   UNLOCK_DIALOG_HEADING,
@@ -28,7 +30,7 @@ import {
   virtualDevice,
   waitForGone,
 } from '../helpers/app'
-import { appLogPath, launchAppAgain, readAppConfig } from '../helpers/driver'
+import { launchAppAgain, readAppConfig } from '../helpers/driver'
 
 const UNLOCK_TIMEOUT_MS = 15_000
 const KC_Z = '001D'
@@ -134,15 +136,9 @@ describe('Tauri build smoke', () => {
   })
 })
 
-/** The app's log, empty before its first line. */
-function readAppLog(): string {
-  const path = appLogPath()
-  return existsSync(path) ? readFileSync(path, 'utf8') : ''
-}
-
 /** How many times `text` is in the app's log. */
 function countLogLines(text: string): number {
-  return readAppLog().split(text).length - 1
+  return countIn(readAppLog(), text)
 }
 
 /** Waits until the app's log has a line containing `text`. */

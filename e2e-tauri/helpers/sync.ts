@@ -75,11 +75,6 @@ export async function openSyncSettings(): Promise<void> {
   await $(tid('data-sync-title')).waitForDisplayed()
 }
 
-export async function closeSettings(): Promise<void> {
-  await clickInPage(tid('settings-close'))
-  await waitForGone(tid('settings-modal'), 'the Settings modal did not close')
-}
-
 /** Signs in from the Connect tab as a browser would: the app records the
  *  authorization URL instead of opening a browser
  *  (PIPETTE_DEV_SUPPRESS_BROWSER=1); the fake Drive's authorization

@@ -3,9 +3,10 @@
 // Driving the Tauri build's window: the dev-tools commands of the backend
 // (src-tauri/src/dev_commands/tools.rs) and the UI steps the specs share.
 
+import { existsSync, readFileSync } from 'node:fs'
 import { $, $$, browser } from '@wdio/globals'
 import type { VirtualDeviceControllerState } from '../../src/tauri-shim/generated/VirtualDeviceControllerState'
-import { quitApp } from './driver'
+import { appLogPath, quitApp } from './driver'
 
 export const VIRTUAL_DEVICE_NAME = 'Virtual Keyboard'
 export const EDITOR_SELECTOR = '[data-testid="editor-content"]'
@@ -157,6 +158,23 @@ export async function waitForGone(selector: string, timeoutMsg: string): Promise
     },
     { timeoutMsg },
   )
+}
+
+/** Closes the Settings modal. */
+export async function closeSettings(): Promise<void> {
+  await clickInPage(tid('settings-close'))
+  await waitForGone(tid('settings-modal'), 'the Settings modal did not close')
+}
+
+/** The app's log, empty before its first line. */
+export function readAppLog(): string {
+  const path = appLogPath()
+  return existsSync(path) ? readFileSync(path, 'utf8') : ''
+}
+
+/** How many times `text` is in `log`. */
+export function countIn(log: string, text: string): number {
+  return log.split(text).length - 1
 }
 
 /** Connects the virtual keyboard from the device list and waits for its

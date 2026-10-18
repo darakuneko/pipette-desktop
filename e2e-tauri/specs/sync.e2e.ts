@@ -24,6 +24,7 @@ import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import {
   clickInPage,
+  closeSettings,
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
   invokeCommand,
@@ -39,7 +40,6 @@ import { quitApp, readAppConfig, readPendingUnits, userDataPath } from '../helpe
 import { assertDevToolsBuild, fakeDrive, injectDriveFault, switchMachine } from '../helpers/sync-harness'
 import {
   closeDataModal,
-  closeSettings,
   deviceDayContent,
   driveClock,
   driveFileNames,

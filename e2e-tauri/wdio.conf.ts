@@ -16,10 +16,12 @@ import { existsSync } from 'node:fs'
 import type { Options } from '@wdio/types'
 import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver } from './helpers/driver'
 import { startHubDriver, stopHubHarness } from './helpers/hub-harness'
+import { startResidentDriver, stopResidentHarness } from './helpers/resident-harness'
 import { startSyncDriver, stopSyncHarness } from './helpers/sync-harness'
 
 const SYNC_SPEC = '/specs/sync.e2e.ts'
 const HUB_SPEC = '/specs/hub.e2e.ts'
+const RESIDENT_SPEC = '/specs/resident.e2e.ts'
 
 /** Whether a test of the current session failed; afterTest and afterSession
  *  run in the same worker. */
@@ -58,12 +60,14 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
 
   // The sync spec's app talks to a fake Drive the worker runs
   // (helpers/sync-harness.ts), the Hub spec's to a fake Hub
-  // (helpers/hub-harness.ts); every other spec's app has no sync endpoints
-  // and a Hub address nothing listens on.
+  // (helpers/hub-harness.ts), the resident spec's to a fake notice server
+  // (helpers/resident-harness.ts); every other spec's app has no sync
+  // endpoints and a Hub and notice address nothing listens on.
   async beforeSession(_config, _capabilities, specs) {
     sessionFailed = false
     if (specs.some((spec) => spec.endsWith(SYNC_SPEC))) await startSyncDriver()
     else if (specs.some((spec) => spec.endsWith(HUB_SPEC))) await startHubDriver()
+    else if (specs.some((spec) => spec.endsWith(RESIDENT_SPEC))) await startResidentDriver()
     else await startDriver()
   },
 
@@ -75,7 +79,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
     try {
       await stopDriver({ keepUserData: sessionFailed })
     } finally {
-      await Promise.all([stopSyncHarness(), stopHubHarness()])
+      await Promise.all([stopSyncHarness(), stopHubHarness(), stopResidentHarness()])
     }
   },
 }

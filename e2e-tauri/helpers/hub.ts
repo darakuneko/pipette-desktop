@@ -12,6 +12,7 @@ import { $, browser } from '@wdio/globals'
 import type { HubPrivateLink } from '../../src/shared/types/hub-private'
 import {
   clickInPage,
+  closeSettings,
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
   invokeCommand,
@@ -24,7 +25,7 @@ import {
 } from './app'
 import { userDataPath } from './driver'
 import { fakeHub, hubControl } from './hub-harness'
-import { closeSettings, fillInput } from './sync'
+import { fillInput } from './sync'
 
 export const SAMPLE_PACKS = resolve(dirname(fileURLToPath(import.meta.url)), '../../sample-packs')
 
