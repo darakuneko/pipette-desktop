@@ -35,7 +35,6 @@ const WM_NAME_LENGTH: u32 = 1_000_000;
 type Conn = RustConnection<TimedStream>;
 
 /// The authorization sent when connecting.
-#[derive(Clone)]
 enum Auth {
     /// The MIT-MAGIC-COOKIE-1 entry x11rb finds in `XAUTHORITY` (or
     /// `$HOME/.Xauthority`) for the address connected to, else none.
@@ -46,8 +45,8 @@ enum Auth {
 }
 
 /// Connects as x11rb's `RustConnection::connect` does (each address of the
-/// display name in turn), with the stream's waits limited by
-/// [`stream::IO_TIMEOUT`]. `display` `None` is `DISPLAY`.
+/// display name in turn), with each of the stream's waits
+/// limited to two seconds. `display` `None` is `DISPLAY`.
 fn connect(display: Option<&str>, auth: &Auth) -> Result<(Conn, usize), ConnectError> {
     let parsed = parse_display(display)?;
     let screen = usize::from(parsed.screen);

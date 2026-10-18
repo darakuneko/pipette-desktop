@@ -13,7 +13,7 @@ use x11rb::rust_connection::{DefaultStream, PollMode, Stream};
 use x11rb::utils::RawFdContainer;
 
 /// How long one wait to read or write may last.
-pub(crate) const IO_TIMEOUT: Duration = Duration::from_secs(2);
+const IO_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// A [`DefaultStream`] whose waits fail with `TimedOut` after
 /// [`IO_TIMEOUT`]; reads and writes are its own.
