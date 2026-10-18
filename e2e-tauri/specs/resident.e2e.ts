@@ -36,7 +36,7 @@ import {
   waitForGone,
   waitForUncovered,
 } from '../helpers/app'
-import { APP_BINARY, readAppConfig, sessionAppPid, userDataPath, waitForAppExit } from '../helpers/driver'
+import { APP_BINARY, quitApp, readAppConfig, sessionAppPid, userDataPath, waitForAppExit } from '../helpers/driver'
 import {
   assertTrayActive,
   clickTrayMenu,
@@ -46,7 +46,7 @@ import {
   recordVisibility,
   setSettingsToggle,
   trayRows,
-  visibilityEvents,
+  waitForVisibilityEvents,
   waitForPage,
   waitForTray,
   waitForSettledWindow,
@@ -57,7 +57,7 @@ import {
   type WindowState,
 } from '../helpers/resident'
 import { fakeNotices, firstLaunchAt, startupNotices } from '../helpers/resident-harness'
-import { requestWindowClose } from '../helpers/x11-window'
+import { requestWindowClose, viewableWindowCount } from '../helpers/x11-window'
 import { firestoreTimestamp, notice } from '../../scripts/fake-notification/server'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -71,6 +71,10 @@ const MOVE_SAMPLE_MS = 1_500
 const QUIT_TIMEOUT_MS = 40_000
 const MODAL = tid('notification-modal-backdrop')
 const TYPED_KEYS: [number, number][] = [[2, 3], [2, 4], [2, 5]]
+const KEY_HOLD_MS = 120
+const KEY_GAP_MS = 60
+/** How long the hidden launch may take to fetch its notices. */
+const HIDDEN_LAUNCH_TIMEOUT_MS = 60_000
 /** Under Wayland the app neither reads nor sets its window's position. */
 const positionsKnown = !process.env.WAYLAND_DISPLAY || process.env.GDK_BACKEND === 'x11'
 
@@ -126,10 +130,12 @@ async function modalTitles(): Promise<string[]> {
 async function tapKeys(times: number): Promise<void> {
   for (let i = 0; i < times; i += 1) {
     for (const [row, col] of TYPED_KEYS) {
+      // Held across several of the renderer's matrix polls: the virtual
+      // keyboard reports the matrix as it is, with no latched presses.
       await virtualDevice.pressKey(row, col)
-      await browser.pause(40)
+      await browser.pause(KEY_HOLD_MS)
       await virtualDevice.releaseKey(row, col)
-      await browser.pause(40)
+      await browser.pause(KEY_GAP_MS)
     }
   }
 }
@@ -155,6 +161,40 @@ async function setRec(on: boolean): Promise<void> {
   })
   await clickInPage(tid('typing-record-close'))
   await waitForGone(tid('typing-record-modal'), 'the record modal did not close')
+}
+
+/** The pid of the session's app, or null while there is not exactly one. */
+function appPidOrNull(): number | null {
+  try {
+    return sessionAppPid()
+  } catch {
+    return null
+  }
+}
+
+/** Quits the app and starts it again in a new WebDriver session. Until the
+ *  new launch has fetched its notices (its renderer runs), the X server is
+ *  asked how many windows of the new app are on screen; answers the most
+ *  seen at once. */
+async function relaunchWatchingWindows(): Promise<number> {
+  await quitApp(QUIT_TIMEOUT_MS)
+  const from = fakeNotices().requests.length
+  const reload = browser.reloadSession()
+  // Awaited after the loop; marked handled so that a rejection while the
+  // loop runs is not reported as unhandled.
+  reload.catch(() => undefined)
+  let most = 0
+  const deadline = Date.now() + HIDDEN_LAUNCH_TIMEOUT_MS
+  for (;;) {
+    const fetched = fakeNotices().requests.length > from
+    const pid = appPidOrNull()
+    if (pid !== null) most = Math.max(most, await viewableWindowCount(pid))
+    if (fetched && pid !== null) break
+    if (Date.now() > deadline) throw new Error('the relaunched app did not fetch its notices')
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  await reload
+  return most
 }
 
 async function disconnectKeyboard(): Promise<void> {
@@ -307,7 +347,7 @@ describe('Tauri build resident behaviour', function () {
     await waitForVisible(false, 'the close did not hide the window')
     await invokeCommand('dev_tray_activate', { id: 'show' })
     await waitForVisible(true, 'Show did not show the window')
-    expect(await visibilityEvents()).toEqual([false, true])
+    await waitForVisibilityEvents([false, true], 'the close and Show did not send one event each')
 
     // The menu listener is the app's, added once: after the tray icon is
     // taken down and put up again, a click on Show runs it once.
@@ -315,10 +355,9 @@ describe('Tauri build resident behaviour', function () {
     await recordVisibility()
     await requestWindowClose(sessionAppPid())
     await waitForVisible(false, 'the close did not hide the window after the tray came back')
-    await clickTrayMenu('Show')
+    await clickTrayMenu('show')
     await waitForVisible(true, "the tray menu's Show did not show the window")
-    await browser.pause(NO_MODAL_WAIT_MS)
-    expect(await visibilityEvents()).toEqual([false, true])
+    await waitForVisibilityEvents([false, true], "the close and the tray menu's Show did not send one event each")
   })
 
   it('starts hidden in the tray with startInTray on, and shows from the tray', async () => {
@@ -328,16 +367,23 @@ describe('Tauri build resident behaviour', function () {
     await closeSettings()
     await browser.waitUntil(() => readAppConfig().startInTray === true, { timeoutMsg: 'startInTray was not saved' })
 
-    await restartApp()
-    await waitForPage()
     try {
+      // WebDriver's new session may bring the window forward itself, so the
+      // hidden start is seen on the X server before the session is up.
+      expect(await relaunchWatchingWindows()).toBe(0)
+      await waitForPage()
       expect(await vialApi<boolean>('windowStartedHidden')).toBe(true)
-      expect(await isWindowVisible()).toBe(false)
+      const visibleOnAttach = await isWindowVisible()
+      console.log(`the window started hidden is ${visibleOnAttach ? 'visible' : 'hidden'} once the session is up`)
       await assertTrayActive()
       await recordVisibility()
-      await clickTrayMenu('Show')
+      if (visibleOnAttach) {
+        await requestWindowClose(sessionAppPid())
+        await waitForVisible(false, 'the close did not hide the window started hidden')
+      }
+      await clickTrayMenu('show')
       await waitForVisible(true, "the tray menu's Show did not show the window started hidden")
-      expect(await visibilityEvents()).toEqual([true])
+      await waitForVisibilityEvents(visibleOnAttach ? [false, true] : [true], "the tray menu's Show did not send one event")
     } finally {
       await invokeCommand('app_config_set', { key: 'startInTray', value: 'false' })
     }
@@ -449,7 +495,7 @@ describe('Tauri build resident behaviour', function () {
     await cycleTray()
     const logBefore = readAppLog().length
     const pid = sessionAppPid()
-    await clickTrayMenu('Quit')
+    await clickTrayMenu('quit')
     await waitForAppExit(pid, QUIT_TIMEOUT_MS, "of the tray menu's Quit")
 
     const log = readAppLog().slice(logBefore)
@@ -457,6 +503,7 @@ describe('Tauri build resident behaviour', function () {
     expect(countIn(log, '[quit] sequence ended: Completed')).toBe(1)
     expect(countIn(log, 'while quitting during')).toBe(0)
     expect(countIn(log, '[quit] exiting (code')).toBe(1)
+    expect(countIn(log, '[quit] exiting (code Some(0))')).toBe(1)
     expect(existsSync(userDataPath('quit-pending.json'))).toBe(false)
 
     // The session goes on with a new launch, which the session's end then

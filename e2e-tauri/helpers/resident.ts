@@ -61,28 +61,48 @@ export async function assertTrayActive(): Promise<void> {
   }
 }
 
-/** Clicks the tray menu item labelled `label` through GTK, so the click
- *  reaches the app's menu listeners as a click in the desktop's tray does. */
-export const clickTrayMenu = (label: string): Promise<void> => invokeCommand('dev_tray_menu_click', { label })
+/** Clicks the tray menu item `id` (`show`, `quit`) through GTK, so the
+ *  click reaches the app's menu listeners as a click in the desktop's tray
+ *  does. */
+export const clickTrayMenu = (id: string): Promise<void> => invokeCommand('dev_tray_menu_click', { id })
+
+/** Waits until the visibility events since {@link recordVisibility} are
+ *  exactly `expected`. */
+export async function waitForVisibilityEvents(expected: boolean[], timeoutMsg: string): Promise<void> {
+  await readUntil(visibilityEvents, (events) => JSON.stringify(events) === JSON.stringify(expected), timeoutMsg)
+}
 
 export const isWindowVisible = (): Promise<boolean> => vialApi<boolean>('windowIsVisible')
 
+/** The event the backend sends when the main window is shown or hidden
+ *  (`IpcChannels.WINDOW_VISIBILITY_CHANGED`). */
+const VISIBILITY_EVENT = 'window:visibility-changed'
+
 /** Starts recording the window's visibility events in the page, unless it
- *  already does, and empties the record. */
+ *  already does, and empties the record. Resolves once the backend has
+ *  registered the listener, so an event sent right after is recorded. */
 export async function recordVisibility(): Promise<void> {
-  await browser.execute(() => {
+  await browser.execute(async (event: string) => {
     const page = window as unknown as {
       __e2eVisibility?: boolean[]
-      vialAPI: { onWindowVisibilityChanged: (callback: (visible: boolean) => void) => () => void }
+      __TAURI_INTERNALS__: {
+        invoke: (cmd: string, args: Record<string, unknown>) => Promise<unknown>
+        transformCallback: (callback: (message: { payload: boolean }) => void) => number
+      }
     }
     if (page.__e2eVisibility) {
       page.__e2eVisibility.length = 0
       return
     }
     const events: boolean[] = []
+    const internals = page.__TAURI_INTERNALS__
+    await internals.invoke('plugin:event|listen', {
+      event,
+      target: { kind: 'Any' },
+      handler: internals.transformCallback((message) => events.push(message.payload)),
+    })
     page.__e2eVisibility = events
-    page.vialAPI.onWindowVisibilityChanged((visible) => events.push(visible))
-  })
+  }, VISIBILITY_EVENT)
 }
 
 /** The visibility events since {@link recordVisibility}. */
