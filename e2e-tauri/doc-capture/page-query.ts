@@ -2,8 +2,8 @@
 //
 // The part of the capture's Playwright-like locators (page.ts) that runs in
 // the page: finding the elements of a locator chain and reading their state.
-// `queryPage` is sent to the page as its source text (`runInPage` of
-// page.ts), so it must not use anything from outside its own body.
+// `queryPage` is sent to the page as its source text (WebdriverIO's
+// `execute`), so it must not use anything from outside its own body.
 
 /** How an element's text, or its accessible name, is matched: a string is
  *  a case-insensitive substring of the whitespace-normalized text unless
@@ -36,24 +36,6 @@ export interface ElementState {
   count: number
   visible: boolean
   enabled: boolean
-}
-
-/** Defines `__name` for a function sent as source text: the TypeScript
- *  loader keeps function names by wrapping them in `__name(...)`, which the
- *  page does not have, so the script defines it to return the function as
- *  is. */
-const NAME_SHIM = 'var __name = function (target) { return target; };'
-
-/** The WebDriver script that calls the function whose source is `source`
- *  with the script's arguments and returns its answer. */
-export function callScript(source: string): string {
-  return `${NAME_SHIM} return (${source}).apply(null, arguments);`
-}
-
-/** The WebDriver script that calls the function whose source is `source`
- *  with the element the script's first argument (a selector) finds. */
-export function callWithElementScript(source: string): string {
-  return `${NAME_SHIM} return (${source})(document.querySelector(arguments[0]));`
 }
 
 /** The attribute `tag` puts on the matched elements, so the WebDriver side

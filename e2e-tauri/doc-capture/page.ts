@@ -11,8 +11,6 @@
 
 import { $, browser } from '@wdio/globals'
 import {
-  callScript,
-  callWithElementScript,
   queryPage,
   REF_ATTRIBUTE,
   type ElementState,
@@ -42,7 +40,7 @@ const ROLE_SELECTORS: Record<string, string> = {
 /** Runs `fn` in the page with `args` and returns its answer. The function
  *  goes as its source text, so it may use only its own body. */
 export function runInPage<A extends unknown[], R>(fn: (...args: A) => R, ...args: A): Promise<Awaited<R>> {
-  return browser.execute(callScript(fn.toString()), ...args) as Promise<Awaited<R>>
+  return browser.execute(fn as (...innerArgs: unknown[]) => R, ...args) as Promise<Awaited<R>>
 }
 
 function query<T>(chain: Step[], op: QueryOp, arg: string | null = null): Promise<T> {
@@ -238,7 +236,7 @@ export class Locator {
   async evaluate<R>(fn: (el: Element) => R): Promise<Awaited<R>> {
     await this.waitFor({ state: 'attached' })
     const ref = await this.mark()
-    return browser.execute(callWithElementScript(fn.toString()), ref) as Promise<Awaited<R>>
+    return (await $(ref)).execute(fn) as Promise<Awaited<R>>
   }
 
   /** Saves a screenshot of the element alone. */
