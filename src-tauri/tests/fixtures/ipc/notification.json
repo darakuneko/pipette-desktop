@@ -4,6 +4,11 @@
     "args": [],
     "command": "notification_fetch",
     "invokeArgs": {},
-    "response": { "success": false, "error": "not implemented" }
+    "response": {
+      "success": true,
+      "notifications": [
+        { "title": "Release", "body": "Notes", "type": "info", "publishedAt": "2025-10-09T08:53:20.000Z" }
+      ]
+    }
   }
 ]

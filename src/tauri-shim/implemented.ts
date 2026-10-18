@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI members the Tauri shim answers: the members the backend
 // implements, one module per domain under ./api, and the fixed answers of
-// ./fakes. Members in neither fall back to the stubs built in
-// create-vial-api.ts.
+// ./fakes (none). Members in neither fall back to the stubs built in
+// create-vial-api.ts (none: coverage.test.ts checks that every member is
+// implemented).
 
 import type { VialAPI } from '../shared/types/vial-api'
 import { analyzeFiltersApi } from './api/analyze-filters'
@@ -13,6 +14,7 @@ import { filesApi } from './api/files'
 import { i18nPacksApi } from './api/i18n-packs'
 import { keyLabelsApi } from './api/key-labels'
 import { keyboardDataApi } from './api/keyboard-data'
+import { notificationApi } from './api/notification'
 import { runLogsApi } from './api/run-logs'
 import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
@@ -50,6 +52,7 @@ export const real = {
   ...shellApi,
   ...windowApi,
   ...trayApi,
+  ...notificationApi,
   ...syncPendingApi,
   ...filesApi,
   ...keyboardDataApi,

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsModal } from '../SettingsModal'
 import { SyncAuthStartError, type UseSyncReturn } from '../../hooks/useSync'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT } from '../../../shared/types/hub'
 import type { NotificationFetchResult } from '../../../shared/types/notification'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/sync'
+import { notificationBackends } from '../../hooks/__tests__/notification-backends'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -84,21 +86,22 @@ const mockPasswordChangeLockStatus = vi.fn()
 const mockPasswordChangeResume = vi.fn()
 const mockPasswordChangeReleaseLocks = vi.fn()
 const mockSyncFormatStatus = vi.fn().mockResolvedValue(null)
-Object.defineProperty(window, 'vialAPI', {
-  value: {
-    syncFormatStatus: mockSyncFormatStatus,
-    syncOnFormatStatusChanged: () => () => {},
-    syncPasswordChangeStatus: mockPasswordChangeStatus,
-    syncPasswordChangeLockStatus: mockPasswordChangeLockStatus,
-    syncPasswordChangeResume: mockPasswordChangeResume,
-    syncPasswordChangeReleaseLocks: mockPasswordChangeReleaseLocks,
-    openExternal: mockOpenExternal,
-    notificationFetch: mockNotificationFetch,
-    keyLabelStoreList: async () => ({ success: true, data: KEY_LABEL_LIST_STUB }),
-    keyLabelStoreGet: async () => ({ success: false, errorCode: 'NOT_FOUND' }),
-  },
-  writable: true,
-})
+const BASE_VIAL_API = {
+  syncFormatStatus: mockSyncFormatStatus,
+  syncOnFormatStatusChanged: () => () => {},
+  syncPasswordChangeStatus: mockPasswordChangeStatus,
+  syncPasswordChangeLockStatus: mockPasswordChangeLockStatus,
+  syncPasswordChangeResume: mockPasswordChangeResume,
+  syncPasswordChangeReleaseLocks: mockPasswordChangeReleaseLocks,
+  openExternal: mockOpenExternal,
+  notificationFetch: mockNotificationFetch,
+  keyLabelStoreList: async () => ({ success: true, data: KEY_LABEL_LIST_STUB }),
+  keyLabelStoreGet: async () => ({ success: false, errorCode: 'NOT_FOUND' }),
+}
+function installBaseVialAPI(): void {
+  Object.defineProperty(window, 'vialAPI', { value: BASE_VIAL_API, writable: true, configurable: true })
+}
+installBaseVialAPI()
 
 const FULLY_CONFIGURED: Partial<UseSyncReturn> = {
   authStatus: { authenticated: true },
@@ -1152,7 +1155,19 @@ describe('SettingsModal', () => {
     })
   })
 
-  describe('Notification tab', () => {
+  // Runs against both vialAPI implementations (notification-backends.ts):
+  // the preload-like mock and the Tauri shim over a mocked Tauri IPC, both
+  // answering with mockNotificationFetch.
+  describe.each(notificationBackends(() => mockNotificationFetch()))('Notification tab ($name)', (backend) => {
+    beforeEach(() => {
+      backend.install(BASE_VIAL_API)
+    })
+
+    afterEach(() => {
+      clearMocks()
+      installBaseVialAPI()
+    })
+
     function renderAndSwitchToNotification(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
       const result = render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} {...props} />)
       fireEvent.click(screen.getByTestId('settings-tab-notification'))

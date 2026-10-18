@@ -31,18 +31,27 @@ fn usable_in_run(endpoints: GoogleEndpoints, e2e_run: bool) -> Result<GoogleEndp
     Ok(endpoints)
 }
 
+/// Whether the e2e mark is in this process's environment at all, in any
+/// build and with any value. Unlike [`is_e2e_run`], a build without the
+/// development tools sees it too: such a build ignores the loopback
+/// overrides the harness sets, so a startup notice it fetched would go to
+/// the real endpoint.
+pub fn e2e_mark_present() -> bool {
+    e2e_mark_in(&|name| std::env::var_os(name))
+}
+
+fn e2e_mark_in(env: &dyn Fn(&str) -> Option<std::ffi::OsString>) -> bool {
+    env(pipette_hub::E2E_ENV).is_some()
+}
+
 /// Whether the startup notices may be fetched from `url`: always outside
-/// an e2e run (`e2e_run`, from [`is_e2e_run`]), and in one only from
+/// an e2e run (`e2e_run`, from [`e2e_mark_present`]), and in one only from
 /// 127.0.0.1 or ::1. The error is the `error` of the notice command's
 /// failed result; nothing is sent then.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the startup-notice command that calls it is not registered yet")
-)]
 pub fn notification_destination_allowed(url: &str, e2e_run: bool) -> Result<(), String> {
     if e2e_run && !is_loopback_url(url) {
         return Err(
-            "PIPETTE_E2E=1 with a startup-notice destination off the loopback interface: the real notice endpoint is not used in an e2e run"
+            "PIPETTE_E2E with a startup-notice destination off the loopback interface: the real notice endpoint is not used in an e2e run"
                 .to_owned(),
         );
     }
@@ -77,6 +86,14 @@ mod tests {
     fn any_notice_destination_is_allowed_outside_an_e2e_run() {
         assert_eq!(notification_destination_allowed(REAL_NOTICE_ENDPOINT, false), Ok(()));
         assert_eq!(notification_destination_allowed("http://127.0.0.1:9", false), Ok(()));
+    }
+
+    #[test]
+    fn the_e2e_mark_counts_in_any_build_with_any_value() {
+        for value in ["1", "0", ""] {
+            assert!(e2e_mark_in(&|name| (name == "PIPETTE_E2E").then(|| value.into())), "{value:?}");
+        }
+        assert!(!e2e_mark_in(&|_| None));
     }
 
     #[test]

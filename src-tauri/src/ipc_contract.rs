@@ -146,7 +146,8 @@ pub(crate) fn probe_keyboard_service() -> HidService {
 /// userData directory (the pending sync units restored from it, with no
 /// delayed writes, and the stores and the typing analytics on it, the
 /// latter with a fixed machine id and an up-to-date cache), a Hub that is
-/// offline, and the access control the app's build generates.
+/// offline, a notice source that answers with one notice and sends
+/// nothing, and the access control the app's build generates.
 fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     let app = mock_builder()
@@ -170,6 +171,7 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     crate::sync_commands::analytics_remote::manage(app.handle());
     crate::sync_commands::reset::manage(app.handle());
     crate::hub_commands::setup::manage_for_tests(app.handle());
+    crate::notification_commands::manage_for_tests(app.handle());
     app
 }
 
