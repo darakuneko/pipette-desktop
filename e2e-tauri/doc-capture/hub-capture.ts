@@ -32,7 +32,8 @@ const TOKEN_TIMEOUT_MS = 30_000
  * Hub on in the app's config and starts the app again (running
  * `whileStopped` too, for the spec's own seed), so the app signs in to the
  * fake Hub on launch, as an app the user signed in to the Hub does. Leaves
- * the app on the device-selection screen.
+ * the app on the device-selection screen; throws when it has not signed
+ * in.
  */
 export async function startSignedInToHub(page: Page, whileStopped?: () => void | Promise<void>): Promise<void> {
   await assertHubSession()
@@ -45,9 +46,12 @@ export async function startSignedInToHub(page: Page, whileStopped?: () => void |
   })
   await assertHubSession()
   await prepareCapture(page)
-  await browser
-    .waitUntil(async () => (await hubState()).tokenCached, { timeout: TOKEN_TIMEOUT_MS })
-    .catch(() => console.log('  [warn] the app has not signed in to the Hub yet'))
+  // The fake Hub always accepts the test account, so an app that has not
+  // signed in is a broken capture, not a missing account.
+  await browser.waitUntil(async () => (await hubState()).tokenCached, {
+    timeout: TOKEN_TIMEOUT_MS,
+    timeoutMsg: 'the app did not sign in to the fake Hub',
+  })
 }
 
 /** The sample files of `kind` (a directory of sample-packs/), parsed. */
