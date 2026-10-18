@@ -6,10 +6,8 @@
 // window's visibility events recorded in the page, and the Settings modal
 // of the device list.
 
-import { existsSync, readFileSync } from 'node:fs'
 import { $, browser } from '@wdio/globals'
-import { clickInPage, invokeCommand, tid, vialApi, waitForGone } from './app'
-import { appLogPath } from './driver'
+import { clickInPage, invokeCommand, tid, vialApi } from './app'
 
 export interface TrayItem {
   id: string
@@ -150,17 +148,6 @@ export function waitForSettledWindow(done: (state: WindowState) => boolean, time
   )
 }
 
-/** The app's log, empty before its first line. */
-export function readAppLog(): string {
-  const path = appLogPath()
-  return existsSync(path) ? readFileSync(path, 'utf8') : ''
-}
-
-/** How many times `text` is in `log`. */
-export function countIn(log: string, text: string): number {
-  return log.split(text).length - 1
-}
-
 /** Opens the Settings modal from the device list on the tab `tab`. */
 export async function openSettings(tab: 'tools' | 'notification'): Promise<void> {
   await clickInPage(tid('settings-button'))
@@ -169,11 +156,6 @@ export async function openSettings(tab: 'tools' | 'notification'): Promise<void>
   await browser.waitUntil(async () => (await $(tid(`settings-tab-${tab}`)).getAttribute('aria-selected')) === 'true', {
     timeoutMsg: `the ${tab} tab of the Settings modal was not selected`,
   })
-}
-
-export async function closeSettings(): Promise<void> {
-  await clickInPage(tid('settings-close'))
-  await waitForGone(tid('settings-modal'), 'the Settings modal did not close')
 }
 
 /** Clicks the switch `toggle` of the Settings modal and waits until it

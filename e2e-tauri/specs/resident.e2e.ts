@@ -21,9 +21,12 @@ import { fileURLToPath } from 'node:url'
 import { $, $$, browser, expect } from '@wdio/globals'
 import {
   clickInPage,
+  closeSettings,
   connectVirtualKeyboard,
+  countIn,
   EDITOR_SELECTOR,
   invokeCommand,
+  readAppLog,
   restartApp,
   tid,
   unlockIfAsked,
@@ -37,11 +40,8 @@ import { APP_BINARY, readAppConfig, sessionAppPid, userDataPath, waitForAppExit 
 import {
   assertTrayActive,
   clickTrayMenu,
-  closeSettings,
-  countIn,
   isWindowVisible,
   openSettings,
-  readAppLog,
   readUntil,
   recordVisibility,
   setSettingsToggle,

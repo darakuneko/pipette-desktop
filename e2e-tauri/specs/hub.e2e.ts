@@ -22,6 +22,7 @@ import { $, browser, expect } from '@wdio/globals'
 import { HUB_ERROR_NOT_AUTHENTICATED } from '../../src/shared/types/hub'
 import {
   clickInPage,
+  closeSettings,
   invokeCommand,
   openOverlayTab,
   recordPageErrors,
@@ -66,7 +67,7 @@ import {
   injectHubFault,
   switchToGoogleSession,
 } from '../helpers/hub-harness'
-import { closeSettings, expandBranch, fillInput, openSyncSettings, signIn } from '../helpers/sync'
+import { expandBranch, fillInput, openSyncSettings, signIn } from '../helpers/sync'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 
 const DISPLAY_NAME = 'E2E Hub'
