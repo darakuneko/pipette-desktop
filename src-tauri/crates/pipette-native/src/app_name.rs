@@ -9,14 +9,14 @@
 
 /// The language and code page the binding asks for when the version
 /// resource lists none: U.S. English (0x0409), Windows-1252 (0x04E4).
-pub(crate) const DEFAULT_TRANSLATION: (u16, u16) = (0x0409, 0x04e4);
+const DEFAULT_TRANSLATION: (u16, u16) = (0x0409, 0x04e4);
 
 /// The executable of every UWP app's frame window; the app itself runs in a
 /// child window's process.
 const UWP_FRAME_HOST: &str = "ApplicationFrameHost.exe";
 
 /// What `path` names after its last backslash, all of it when it has none.
-pub(crate) fn basename(path: &[u16]) -> &[u16] {
+fn basename(path: &[u16]) -> &[u16] {
     let backslash = u16::from(b'\\');
     path.iter().rposition(|&unit| unit == backslash).map_or(path, |last| &path[last + 1..])
 }
@@ -35,7 +35,6 @@ pub(crate) fn application_name(description: Vec<u16>, path: &[u16]) -> Vec<u16> 
 
 /// The `\VarFileInfo\Translation` sub-block, NUL-terminated for
 /// `VerQueryValueW`.
-#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn translation_query() -> Vec<u16> {
     nul_terminated("\\VarFileInfo\\Translation")
 }
