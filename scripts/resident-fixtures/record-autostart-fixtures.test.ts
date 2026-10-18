@@ -10,13 +10,14 @@
 //
 // Run: pnpm run generate:resident-fixtures
 
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, it } from 'vitest'
 import { writeJsonFixture } from '../fixture-files'
 import { REPO_ROOT } from '../fixture-vitest-config'
 import { boot, withPlatformAndEnv } from './boot'
-import { changeConfig, useTemporaryHome } from './harness'
+import { changeConfig, harnessState, useTemporaryHome } from './harness'
 import { step, takeRecorded, type Step } from './steps'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-autostart/tests/fixtures/autostart.json')
@@ -40,6 +41,8 @@ function autostartTree(home: string): Record<string, string | null> | 'missing' 
 
 interface AutostartStep extends Step {
   autostart: ReturnType<typeof autostartTree>
+  /** Every path under XDG_CONFIG_HOME, when the scenario sets it. */
+  xdgConfigHome?: string[]
 }
 
 /** Log lines with the temporary HOME written as `$HOME`. Messages that
@@ -92,15 +95,32 @@ const PREPARE: Record<string, Prepare> = {
 
 async function scenario(
   name: string,
-  options: { platform?: NodeJS.Platform; isPackaged?: boolean; env?: Record<string, string | undefined>; before?: string; autoLaunch: boolean },
+  options: {
+    platform?: NodeJS.Platform
+    isPackaged?: boolean
+    env?: Record<string, string | undefined>
+    before?: string
+    autoLaunch: boolean
+    /** Sets XDG_CONFIG_HOME to a temporary directory apart from HOME. */
+    xdgConfigHome?: boolean
+  },
   changes: boolean[],
 ): Promise<Scenario> {
   const platform = options.platform ?? 'linux'
   const isPackaged = options.isPackaged ?? true
-  const env = { APPIMAGE: undefined, ...options.env }
   const before = options.before ?? 'empty HOME'
   const home = useTemporaryHome()
   PREPARE[before](home)
+  let xdgConfigHome: string | undefined
+  if (options.xdgConfigHome === true) {
+    xdgConfigHome = mkdtempSync(join(tmpdir(), 'pipette-resident-xdg-config-'))
+    harnessState().tempDirs.push(xdgConfigHome)
+  }
+  const env = { APPIMAGE: undefined, XDG_CONFIG_HOME: xdgConfigHome, ...options.env }
+  // The temporary XDG_CONFIG_HOME differs on every run; the golden names it.
+  const recordedEnv = { ...env, ...(xdgConfigHome === undefined ? {} : { XDG_CONFIG_HOME: '<a temporary directory apart from HOME>' }) }
+  const xdgTree = (): Record<string, unknown> =>
+    xdgConfigHome === undefined ? {} : { xdgConfigHome: readdirSync(xdgConfigHome, { recursive: true }).map(String).sort() }
   const realExecPath = process.execPath
   Object.defineProperty(process, 'execPath', { value: EXEC_PATH })
   try {
@@ -117,12 +137,13 @@ async function scenario(
         home,
       )
       if (bootStep.logs?.length === 0) delete bootStep.logs
-      const afterBoot = autostartTree(home)
+      const afterBoot = { autostart: autostartTree(home), ...xdgTree() }
       const steps: AutostartStep[] = []
       for (const value of changes) {
-        steps.push(await autostartStep(home, { configChange: { key: 'autoLaunch', value } }, () => changeConfig('autoLaunch', value)))
+        const recorded = await autostartStep(home, { configChange: { key: 'autoLaunch', value } }, () => changeConfig('autoLaunch', value))
+        steps.push({ ...recorded, ...xdgTree() })
       }
-      return { name, platform, isPackaged, env, before, boot: { ...bootStep, autostart: afterBoot }, steps }
+      return { name, platform, isPackaged, env: recordedEnv, before, boot: { ...bootStep, ...afterBoot }, steps }
     })
   } finally {
     Object.defineProperty(process, 'execPath', { value: realExecPath })
@@ -145,6 +166,9 @@ describe('autostart', () => {
     scenarios.push(await scenario('linux: enable at boot, then off, off again, on', { autoLaunch: true }, [false, false, true]))
     scenarios.push(await scenario('linux: disabled at boot with no entry', { autoLaunch: false }, [true, true]))
     scenarios.push(await scenario('linux: HOME with .config', { autoLaunch: true, before: 'HOME with .config' }, []))
+    scenarios.push(
+      await scenario('linux: XDG_CONFIG_HOME elsewhere is not read', { autoLaunch: true, xdgConfigHome: true }, [false, true]),
+    )
     scenarios.push(await scenario('linux: an entry already there', { autoLaunch: true, before: 'an entry already there' }, [false]))
     scenarios.push(await scenario('linux: disabled at boot over an entry', { autoLaunch: false, before: 'an entry already there' }, []))
     for (const appimage of APPIMAGES) {

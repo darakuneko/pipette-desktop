@@ -4,14 +4,14 @@
 // MIT-MAGIC-COOKIE-1 cookie in an authority file of its own. The generator
 // never talks to the X server of the desktop it runs on.
 //
-// The display number is chosen here and checked free (no lock file, no
-// socket file, nothing listening on the abstract socket) instead of being
+// The display number is chosen here (90 and up, never the desktop's) and
+// reserved through its lock file before the server starts, instead of being
 // left to `-displayfd`: an X server that does not honour the lock files
 // would otherwise take display 0 and unlink the desktop's socket file.
 
 import { spawn, type ChildProcess } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdtempSync, openSync, rmSync, unlinkSync, writeFileSync, writeSync } from 'node:fs'
 import { createConnection } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -83,28 +83,74 @@ function abstractSocketInUse(n: number): Promise<boolean> {
   })
 }
 
-/** The first display number in the private range that nothing holds. */
-async function freeDisplayNumber(): Promise<number> {
+/** Reserves the first display number in the private range that nothing
+ *  holds, by creating its lock file `/tmp/.X<n>-lock` exclusively (with this
+ *  process's pid, in the X server's format). The server is started with
+ *  `-displayfd`, which makes it skip its own lock, so this file is what
+ *  keeps two generators (and other X servers) off the same number. A lock
+ *  file that already exists, stale or not, means the number is taken.
+ *  Returns the number and its lock file, which only this generator removes. */
+async function reserveDisplayNumber(): Promise<{ number: number; lockFile: string }> {
   const desktop = /^:(\d+)/.exec(process.env.DISPLAY ?? '')?.[1]
   for (let n = FIRST_DISPLAY; n <= LAST_DISPLAY; n++) {
     if (String(n) === desktop) continue
-    if (existsSync(`/tmp/.X${n}-lock`) || existsSync(`/tmp/.X11-unix/X${n}`)) continue
-    if (await abstractSocketInUse(n)) continue
-    return n
+    const lockFile = `/tmp/.X${n}-lock`
+    let fd: number
+    try {
+      fd = openSync(lockFile, 'wx', 0o444)
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'EEXIST') continue
+      throw err
+    }
+    writeSync(fd, `${String(process.pid).padStart(10)}\n`)
+    closeSync(fd)
+    if (existsSync(`/tmp/.X11-unix/X${n}`) || (await abstractSocketInUse(n))) {
+      // Held by a server that keeps no lock file: give the number back.
+      unlinkSync(lockFile)
+      continue
+    }
+    return { number: n, lockFile }
   }
   throw new Error(`x server: no free display between :${FIRST_DISPLAY} and :${LAST_DISPLAY}`)
 }
 
-/** Starts `Xvfb` (the binary named by `command`, found on PATH). */
+/** Starts `Xvfb` (the binary named by `command`, found on PATH) on a
+ *  reserved display. It runs under `setpriv --pdeathsig TERM`, so it stops
+ *  with the process that started it even when that process is killed; on a
+ *  normal exit or SIGINT / SIGTERM of this process it is stopped and the
+ *  lock file removed. When this process is killed outright the lock file
+ *  stays (with this pid) and later runs skip that number. */
 export async function startXServer(command = 'Xvfb'): Promise<XServer> {
-  const chosen = await freeDisplayNumber()
+  const { number: chosen, lockFile } = await reserveDisplayNumber()
   const dir = mkdtempSync(join(tmpdir(), 'pipette-x11-fixture-'))
   const authFile = join(dir, 'Xauthority')
   const cookie = randomBytes(16)
   writeFileSync(authFile, authorityEntry(cookie), { mode: 0o600 })
-  const server = spawn(command, [`:${chosen}`, '-displayfd', '3', '-nolisten', 'tcp', '-auth', authFile], {
-    stdio: ['ignore', 'ignore', 'pipe', 'pipe'],
-  })
+  const server = spawn(
+    'setpriv',
+    ['--pdeathsig', 'TERM', '--', command, `:${chosen}`, '-displayfd', '3', '-nolisten', 'tcp', '-auth', authFile],
+    { stdio: ['ignore', 'ignore', 'pipe', 'pipe'] },
+  )
+  let cleaned = false
+  const cleanUpNow = (): void => {
+    if (cleaned) return
+    cleaned = true
+    if (server.exitCode === null && server.signalCode === null) server.kill('SIGKILL')
+    rmSync(lockFile, { force: true })
+    rmSync(dir, { recursive: true, force: true })
+  }
+  const onSignal = (signal: NodeJS.Signals): void => {
+    cleanUpNow()
+    process.kill(process.pid, signal)
+  }
+  const forget = (): void => {
+    process.off('exit', cleanUpNow)
+    process.off('SIGINT', onSignal)
+    process.off('SIGTERM', onSignal)
+  }
+  process.on('exit', cleanUpNow)
+  process.once('SIGINT', onSignal)
+  process.once('SIGTERM', onSignal)
   let log = ''
   server.stderr?.on('data', (chunk: Buffer) => {
     log += chunk.toString('utf8')
@@ -114,8 +160,8 @@ export async function startXServer(command = 'Xvfb'): Promise<XServer> {
     number = await readDisplayNumber(server.stdio[3] as Readable, server)
     if (number !== String(chosen)) throw new Error(`x server: started on :${number}, not on :${chosen}`)
   } catch (err) {
-    server.kill('SIGKILL')
-    rmSync(dir, { recursive: true, force: true })
+    cleanUpNow()
+    forget()
     const detail = err instanceof Error ? err.message : String(err)
     throw new Error(`${detail}\n${log}`)
   }
@@ -132,7 +178,8 @@ export async function startXServer(command = 'Xvfb'): Promise<XServer> {
         await exited
         clearTimeout(timer)
       }
-      rmSync(dir, { recursive: true, force: true })
+      cleanUpNow()
+      forget()
     },
   }
 }

@@ -117,6 +117,53 @@
       "steps": []
     },
     {
+      "name": "linux: XDG_CONFIG_HOME elsewhere is not read",
+      "platform": "linux",
+      "isPackaged": true,
+      "env": {
+        "XDG_CONFIG_HOME": "<a temporary directory apart from HOME>"
+      },
+      "before": "empty HOME",
+      "boot": {
+        "action": {
+          "boot": {
+            "autoLaunch": true
+          }
+        },
+        "calls": [],
+        "autostart": {
+          "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+        },
+        "xdgConfigHome": []
+      },
+      "steps": [
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": false
+            }
+          },
+          "calls": [],
+          "autostart": {},
+          "xdgConfigHome": []
+        },
+        {
+          "action": {
+            "configChange": {
+              "key": "autoLaunch",
+              "value": true
+            }
+          },
+          "calls": [],
+          "autostart": {
+            "pipette.desktop": "[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\"/opt/Pipette/pipette\"\nX-GNOME-Autostart-enabled=true\n"
+          },
+          "xdgConfigHome": []
+        }
+      ]
+    },
+    {
       "name": "linux: an entry already there",
       "platform": "linux",
       "isPackaged": true,

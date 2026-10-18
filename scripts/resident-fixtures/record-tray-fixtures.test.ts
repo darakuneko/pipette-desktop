@@ -64,7 +64,17 @@ const appEvent = (event: string): Promise<Step> => step({ appEvent: event }, () 
 async function scenario(name: string, config: Record<string, unknown>, steps: () => Promise<Step[]>): Promise<Scenario> {
   await boot({ config })
   const bootCalls = takeRecorded().calls
-  return { name, boot: { config }, bootCalls, steps: await steps() }
+  // The saved state is the boot default (no saved position): the window's
+  // first bounds come from the mock centring it on the display's work area,
+  // and the bounds saved on close follow from them.
+  const state = harnessState()
+  const bootInfo = {
+    config,
+    windowState: state.windowState,
+    displays: state.displays,
+    initialBounds: state.windows[0].getBounds(),
+  }
+  return { name, boot: bootInfo, bootCalls, steps: await steps() }
 }
 
 const KB = 'GPK60-63R'

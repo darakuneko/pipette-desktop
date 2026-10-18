@@ -6,6 +6,35 @@
       "boot": {
         "config": {
           "trayResident": true
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -679,6 +708,35 @@
       "boot": {
         "config": {
           "trayResident": false
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -1036,6 +1094,35 @@
       "boot": {
         "config": {
           "trayResident": true
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -1339,6 +1426,14 @@
             },
             {
               "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
+            },
+            {
+              "t": 0,
               "call": "window.focus",
               "args": []
             }
@@ -1353,6 +1448,14 @@
               "t": 0,
               "call": "window.show",
               "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
             },
             {
               "t": 0,
@@ -1414,6 +1517,35 @@
       "boot": {
         "config": {
           "trayResident": false
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -1494,6 +1626,35 @@
         "config": {
           "startInTray": true,
           "trayResident": true
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -1620,6 +1781,35 @@
         "config": {
           "startInTray": true,
           "trayResident": false
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -1679,6 +1869,14 @@
             },
             {
               "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
+            },
+            {
+              "t": 0,
               "call": "window.focus",
               "args": []
             }
@@ -1699,6 +1897,35 @@
         "config": {
           "startInTray": false,
           "trayResident": true
+        },
+        "windowState": {
+          "x": -1,
+          "y": -1,
+          "width": 1320,
+          "height": 1080
+        },
+        "displays": [
+          {
+            "id": 1,
+            "bounds": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ],
+        "initialBounds": {
+          "x": 300,
+          "y": 0,
+          "width": 1320,
+          "height": 1040
         }
       },
       "bootCalls": [
@@ -1793,6 +2020,14 @@
               "t": 0,
               "call": "window.show",
               "args": []
+            },
+            {
+              "t": 0,
+              "call": "webContents.send",
+              "args": [
+                "window:visibility-changed",
+                true
+              ]
             },
             {
               "t": 0,

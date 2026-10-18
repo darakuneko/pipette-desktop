@@ -11,6 +11,11 @@
 // The binding runs in a child Node process per case, with DISPLAY and
 // XAUTHORITY of the private server and an empty HOME / XDG_DATA_DIRS (its icon
 // lookup reads desktop entries from there; the icon is not recorded).
+// No locale variable is passed, so the probe runs in the C locale. That does
+// not change what is recorded: STRING titles are returned as raw bytes, and
+// Xlib converts UTF8_STRING to UTF-8 whatever the locale. COMPOUND_TEXT,
+// whose conversion does depend on the locale, is recorded only for an ASCII
+// title, where every locale gives the same text.
 //
 // Needs `Xvfb` on PATH. Run: pnpm run generate:resident-fixtures
 

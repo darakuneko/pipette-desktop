@@ -148,7 +148,10 @@ type DateCategory = 'es' | 'rfc2822' | 'other'
  *  RFC 2822 dates; `other` are strings outside the standard format or with
  *  a field out of range, which only V8's fallback parser decides. Strings
  *  without a zone are read as local time, so none sits at the ends of the
- *  Date range (where the local zone would decide). */
+ *  Date range (where the local zone would decide). The `other` rows record
+ *  V8's legacy parser, which may read them differently after a Node / V8
+ *  update; the Rust port is not held to them (they are in the range of the
+ *  intended differences), so such a change only rewrites this golden. */
 const DATES: [DateCategory, string][] = [
   ['es', '2026-10-18T00:00:00Z'],
   ['es', '2026-10-18T00:00:00.000Z'],

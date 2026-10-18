@@ -7,7 +7,9 @@
 // The windows model an obedient window manager: `setBounds` applies exactly
 // what it is given, a window built without a position is centred on the
 // primary display's work area, and the content area is the bounds minus the
-// harness frame (`frame`), with the frame on the top and left.
+// harness frame (`frame`), with the frame on the top and left. `show()` and
+// `hide()` emit `show` / `hide` on every call, visible already or not, as
+// Electron's do.
 
 import { vi } from 'vitest'
 import { relative } from 'node:path'
@@ -236,16 +238,14 @@ class FakeWindow implements HarnessWindow {
 
   show(): void {
     record('window.show')
-    const wasVisible = this.visible
     this.visible = true
-    if (!wasVisible) this.emit('show')
+    this.emit('show')
   }
 
   hide(): void {
     record('window.hide')
-    const wasVisible = this.visible
     this.visible = false
-    if (wasVisible) this.emit('hide')
+    this.emit('hide')
   }
 
   focus(): void {
