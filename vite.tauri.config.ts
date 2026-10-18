@@ -5,7 +5,7 @@
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, normalizePath, type Plugin } from 'vite'
 import { devServerHeaders } from './src/tauri-shim/csp-policy'
 import { rendererViteConfig } from './vite.renderer.shared'
 
@@ -13,8 +13,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const RENDERER_ROOT = resolve(__dirname, 'src/renderer')
 const DEV_PORT = 5173
 
-const ELECTRON_HID_TRANSPORT = resolve(__dirname, 'src/preload/hid-transport.ts')
-const TAURI_HID_TRANSPORT = resolve(__dirname, 'src/tauri-shim/hid-transport.ts')
+// In the form Vite gives resolved ids: with `/` separators on Windows too.
+const ELECTRON_HID_TRANSPORT = normalizePath(resolve(__dirname, 'src/preload/hid-transport.ts'))
+const TAURI_HID_TRANSPORT = normalizePath(resolve(__dirname, 'src/tauri-shim/hid-transport.ts'))
 
 const shared = rendererViteConfig()
 

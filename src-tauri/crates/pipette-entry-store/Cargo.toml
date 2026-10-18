@@ -29,6 +29,8 @@ thiserror = "=2.0.21"
 uuid = { version = "=1.26.1", features = ["v4"] }
 
 [dev-dependencies]
+# The scenarios whose recorded files this host cannot hold.
+pipette-fs = { path = "../pipette-fs", features = ["test-util"] }
 pipette-entry-store = { path = ".", features = ["test-util"] }
 tempfile = { workspace = true }
 

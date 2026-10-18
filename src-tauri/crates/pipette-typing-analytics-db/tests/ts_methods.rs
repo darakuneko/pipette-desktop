@@ -15,7 +15,7 @@ mod common;
 use std::path::PathBuf;
 
 use common::{assert_tables, fixtures_dir, open_read_only, read_json, remove_db, run_call};
-use pipette_time::test_util::in_each_time_zone;
+use pipette_time::test_util::{in_each_time_zone, sqlite_time_zones};
 use pipette_typing_analytics_db::TypingAnalyticsDb;
 use serde_json::Value;
 
@@ -74,6 +74,7 @@ fn local_time_reads_match_typescript() {
     fixtures.sort_by_key(|f| f["timeZone"].as_str().unwrap().to_owned());
     let zones: Vec<&str> = fixtures.iter().map(|f| f["timeZone"].as_str().unwrap()).collect();
     assert_eq!(zones.len(), 5);
+    let zones = sqlite_time_zones(&zones);
     let Some(zone) = in_each_time_zone("local_time_reads_match_typescript", &zones) else { return };
     let fixture = fixtures.iter().find(|f| f["timeZone"].as_str() == Some(&zone)).unwrap();
     assert_calls(&mut seeded(), &fixture["calls"], &zone);

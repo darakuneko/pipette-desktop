@@ -69,7 +69,9 @@ fn logs() -> &'static Captured {
 /// error (`… (os error N)`) as `<os error>`, from the `Error: ` before it
 /// on, or the whole text when there is none.
 fn normalize(text: &str, user_data: &Path) -> String {
-    let text = text.replace(user_data.to_str().unwrap(), "<userData>");
+    // Windows joins the path with `\`, the recording on Linux with `/`.
+    let text =
+        text.replace(user_data.to_str().unwrap(), "<userData>").replace(std::path::MAIN_SEPARATOR_STR, "/");
     let Some(at) = text.rfind(" (os error ").filter(|_| text.ends_with(')')) else { return text };
     match text[..at].rfind("Error: ") {
         Some(start) => format!("{}Error: <os error>", &text[..start]),

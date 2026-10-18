@@ -67,7 +67,9 @@ pub struct ReadResult {
 /// A file that cannot be opened reads as empty unless `must_exist` is set,
 /// for a caller that listed the file and must not take an unreadable file
 /// for one without rows; then it is an error. An error while reading an
-/// opened file is always an error.
+/// opened file is always an error, and so is a directory at `path`: Node
+/// opens it and fails the read with EISDIR, which Linux does too, while
+/// Windows already refuses to open it.
 ///
 /// The whole file is read at once and its last byte decides whether the
 /// last line is complete, so a row appended while the file is being read
@@ -76,6 +78,7 @@ pub fn read_rows(path: &Path, after_id: Option<&JsString>, must_exist: bool) -> 
     let mut file = match File::open(path) {
         Ok(file) => file,
         Err(err) if must_exist => return Err(err),
+        Err(_) if path.is_dir() => return Err(io::Error::from(io::ErrorKind::IsADirectory)),
         Err(_) => {
             return Ok(ReadResult {
                 rows: Vec::new(),
@@ -199,5 +202,18 @@ mod tests {
         let past = read_rows(&path, Some(&"zz".into()), false).unwrap();
         assert!(past.rows.is_empty());
         assert_eq!(past.last_id, Some("zz".into()));
+    }
+
+    #[test]
+    fn a_directory_is_an_error_on_every_system() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("day.jsonl");
+        std::fs::create_dir(&path).unwrap();
+        for must_exist in [false, true] {
+            let err = read_rows(&path, None, must_exist).unwrap_err();
+            if !must_exist {
+                assert_eq!(err.kind(), io::ErrorKind::IsADirectory);
+            }
+        }
     }
 }

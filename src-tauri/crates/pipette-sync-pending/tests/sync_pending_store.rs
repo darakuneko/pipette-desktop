@@ -244,6 +244,7 @@ mod restoring_the_pending_state_at_startup {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Windows reports a path through a file as missing, as Node does there")]
     fn keeps_a_unit_whose_keyboard_cannot_be_checked() {
         let h = Harness::new();
         // `sync/keyboards` is a file: the check fails with something other

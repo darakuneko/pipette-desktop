@@ -132,8 +132,10 @@ fn entries() -> Vec<Entry> {
         .collect()
 }
 
-/// The page every call comes from unless a test says otherwise.
-const APP_PAGE: &str = "tauri://localhost/tauri.html";
+/// The page every call comes from unless a test says otherwise: the app's
+/// own origin, which WebView2 on Windows serves as `http://tauri.localhost`.
+const APP_PAGE: &str =
+    if cfg!(windows) { "http://tauri.localhost/tauri.html" } else { "tauri://localhost/tauri.html" };
 
 /// A HID service that lists only the virtual keyboard, with
 /// [`PROBE_KEYBOARD`] as its hardware.

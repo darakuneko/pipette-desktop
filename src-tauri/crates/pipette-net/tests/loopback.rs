@@ -204,8 +204,15 @@ fn reports_a_refused_connection_and_a_bad_url_as_network_errors() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         listener.local_addr().unwrap()
     };
+    // Windows tries a refused connection again for about two seconds before
+    // it gives up, longer than the read and total timeouts of the others.
+    let limits = Limits {
+        read_timeout: Duration::from_secs(10),
+        total_timeout: Duration::from_secs(10),
+        ..TEST_LIMITS
+    };
     for url in [format!("http://{closed}/"), "not a url".to_owned(), "ftp://127.0.0.1/".to_owned()] {
-        let err = get(&url).unwrap_err();
+        let err = get_with(limits, &url).unwrap_err();
         assert!(matches!(err, HttpError::Network(_)), "{url}: {err:?}");
     }
 }

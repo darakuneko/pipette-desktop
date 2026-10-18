@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use common::{Harness, build, ms, recorded, tree_of};
+use common::{Harness, build, ms, recorded, tree_of, unsupported};
 use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::{
     TypingTextError, TypingTextErrorCode, TypingTextSave, TypingTextSource, TypingTextStore,
@@ -160,7 +160,12 @@ fn the_scenarios_match_the_typescript_handlers() {
         let h = Harness::new();
         let store = TypingTextStore::default();
         h.clock.set(ms(&text(scenario, "time")));
-        build(h.user_data(), &tree_of(scenario.get("tree").unwrap()));
+        let tree = tree_of(scenario.get("tree").unwrap());
+        if let Some(reason) = unsupported(h.user_data(), &tree) {
+            eprintln!("SKIPPED {name}: {reason}");
+            continue;
+        }
+        build(h.user_data(), &tree);
 
         let list = |key: &str| match scenario.get(key) {
             Some(Value::Array(items)) => items.clone(),

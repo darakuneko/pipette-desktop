@@ -60,7 +60,9 @@
     ],
     "category": "Utility",
     "icon": [
-      "../build/icon.png"
+      "../build/icon.png",
+      "../build/icon.ico",
+      "../build/icon.icns"
     ]
   }
 }
