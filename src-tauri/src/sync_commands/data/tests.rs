@@ -172,7 +172,9 @@ fn imports_as_the_handler_does() {
                 let message = result["error"]
                     .as_str()
                     .unwrap()
-                    .replace(&user_data.path().display().to_string(), "<userData>");
+                    .replace(&user_data.path().display().to_string(), "<userData>")
+                    // Windows joins the path with `\`, the recording on Linux with `/`.
+                    .replace(std::path::MAIN_SEPARATOR_STR, "/");
                 assert_eq!(message, text(get(error, "message")), "{name}: message");
             }
         }

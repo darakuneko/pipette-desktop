@@ -68,7 +68,13 @@ fn replace_texts(value: &mut Value, user_data: &str) {
                         }
                     }
                     ("filePath", Value::String(path)) => {
-                        child = path.to_string_lossy().replace(user_data, "<userData>").into();
+                        // Windows joins the path with `\`, the recording on Linux
+                        // with `/`.
+                        child = path
+                            .to_string_lossy()
+                            .replace(user_data, "<userData>")
+                            .replace(std::path::MAIN_SEPARATOR_STR, "/")
+                            .into();
                     }
                     _ => replace_texts(&mut child, user_data),
                 }

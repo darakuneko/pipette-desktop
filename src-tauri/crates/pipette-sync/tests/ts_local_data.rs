@@ -165,6 +165,8 @@ fn imports_as_the_typescript_handler_does() {
                 if compare_text {
                     let message =
                         err.unwrap().to_string().replace(&root.path().display().to_string(), "<userData>");
+                    // Windows joins the path with `\`, the recording on Linux with `/`.
+                    let message = message.replace(std::path::MAIN_SEPARATOR_STR, "/");
                     assert_eq!(message, text(get(error, "message")), "{name}: message");
                 }
             }
