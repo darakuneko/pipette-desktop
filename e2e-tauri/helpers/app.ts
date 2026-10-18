@@ -314,6 +314,40 @@ export async function openOverlayTab(tab: 'tools' | 'data'): Promise<void> {
 
 export const openToolsOverlay = (): Promise<void> => openOverlayTab('tools')
 
+/** Closes the keycodes overlay, if it is open, and waits until it has
+ *  stopped sliding. */
+export async function closeKeycodesOverlay(): Promise<void> {
+  const toggle = $(OVERLAY_TOGGLE_SELECTOR)
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') return
+  await toggle.click()
+  await browser.waitUntil(
+    () =>
+      browser.execute((sel: string) => {
+        const panel = document.getElementById('keycodes-overlay-panel')
+        return (
+          document.querySelector(sel)?.getAttribute('aria-expanded') !== 'true' &&
+          (panel === null || panel.getAnimations().length === 0)
+        )
+      }, OVERLAY_TOGGLE_SELECTOR),
+    { timeoutMsg: 'the keycodes overlay did not close' },
+  )
+}
+
+/** Turns the switch `toggle` of the overlay's Tools tab to `on`, then
+ *  closes the overlay. */
+export async function setToolsToggle(toggle: string, on: boolean): Promise<void> {
+  await openToolsOverlay()
+  const element = $(tid(toggle))
+  await element.waitForDisplayed()
+  if ((await element.getAttribute('aria-checked')) !== String(on)) {
+    await element.click()
+    await browser.waitUntil(async () => (await element.getAttribute('aria-checked')) === String(on), {
+      timeoutMsg: `${toggle} did not turn ${on ? 'on' : 'off'}`,
+    })
+  }
+  await closeKeycodesOverlay()
+}
+
 /** Queues `path` as the answer of the next file dialog (`dev_dialog_respond`
  *  of the development tools), clicks `selector`, and waits until a file
  *  dialog has taken the answer, so a click that opened no dialog fails here
