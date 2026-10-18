@@ -158,9 +158,11 @@ mod tests {
     const CARGO_TAG: &str = "Signature: 8a477f597d28d172789f06886806bc55\n# This file is a cache directory tag created by cargo.\n# For information about cache directory tags see https://bford.info/cachedir/\n";
 
     /// Files (path and text) a case's file system holds.
+    #[cfg(unix)]
     type Files<'a> = &'a [(&'a str, &'a str)];
 
     /// The executable, `APPIMAGE`, `APPDIR`, the files and the answer.
+    #[cfg(unix)]
     type Case<'a> = (&'a str, Option<&'a str>, Option<&'a str>, Files<'a>, bool);
 
     /// The predicate over a file system holding `files` (path and text),

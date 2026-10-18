@@ -30,6 +30,7 @@ use std::path::Path;
 pub const ELECTRON_LOCK_FILE: &str = "SingletonLock";
 
 /// The name of Chromium's link to its singleton socket.
+#[cfg(unix)]
 const ELECTRON_SOCKET_LINK: &str = "SingletonSocket";
 
 /// The executable names of the Electron build: electron-builder names the
