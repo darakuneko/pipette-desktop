@@ -734,6 +734,17 @@ describe.each(windowBackends(vialAPIStub))('useViewModeRouting ($name)', (backen
       await flushMicrotasks()
       expect(compactModeCalls()).toContainEqual([true])
     })
+
+    it('enters view-only with the saved window size', async () => {
+      const size = { width: 640, height: 240 }
+      const { result, mocks } = renderRouting({ unlocked: true, typingTestMode: false, typingTestViewOnlyWindowSize: size })
+
+      act(() => { result.current.onStatusBarViewOnlyChange() })
+      await flushMicrotasks()
+
+      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(true, size)
+      expect(mocks.setTypingTestViewOnly).toHaveBeenCalledWith(true)
+    })
   })
 
   describe('onStatusBarTypingTestModeChange (StatusBar prop)', () => {
