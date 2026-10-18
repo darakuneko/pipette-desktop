@@ -3213,6 +3213,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-native"
+version = "0.0.0"
+dependencies = [
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "raw-window-handle",
+ "thiserror 2.0.21",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "pipette-net"
 version = "0.0.0"
 dependencies = [
