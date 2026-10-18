@@ -334,8 +334,26 @@ describe('Tauri build typing analytics', () => {
       timeoutMsg: 'the filter was not renamed',
     })
 
-    await $(tid(`analyze-filter-store-delete-${entry.id}`)).click()
-    await $(tid(`analyze-filter-store-delete-confirm-${entry.id}`)).click()
+    // The row shows the new label only after the panel re-reads the list,
+    // and the longer label widens the panel. The delete click goes through
+    // the page: a pointer click aimed before that re-layout, or one landing
+    // on the label's tooltip (drawn outside the panel), reads as a click
+    // outside the panel and closes it instead.
+    await waitForGone(tid(`analyze-filter-store-rename-input-${entry.id}`), 'the rename input did not close')
+    await browser.waitUntil(
+      async () => (await $(tid(`analyze-filter-store-entry-label-${entry.id}`)).getText()) === FILTER_RENAMED,
+      { timeoutMsg: 'the panel did not show the renamed filter' },
+    )
+    const confirmDelete = tid(`analyze-filter-store-delete-confirm-${entry.id}`)
+    await browser.waitUntil(
+      async () => {
+        if (await $(confirmDelete).isDisplayed()) return true
+        await clickInPage(tid(`analyze-filter-store-delete-${entry.id}`))
+        return $(confirmDelete).isDisplayed()
+      },
+      { interval: 1_000, timeoutMsg: 'the delete confirmation did not open' },
+    )
+    await clickInPage(confirmDelete)
     await browser.waitUntil(async () => (await listed()).length === 0, { timeoutMsg: 'the filter was not deleted' })
     await waitForPendingUnits([`keyboards/${DUMMY_TA_UID}/analyze_filters`])
     await $(tid('analyze-filter-store-toggle')).click()
