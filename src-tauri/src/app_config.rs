@@ -68,15 +68,20 @@ pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
 
 /// Reacts to the renderer's changes: `zoomFactor` zooms every window,
 /// `trayResident` adds or removes the tray, `autoSync` starts or stops the
-/// polling and the flush (sync_commands/triggers.rs). `autoLaunch` has
-/// nothing to apply to: this build does not register itself to start at
-/// sign-in.
+/// polling and the flush (sync_commands/triggers.rs), `autoLaunch`
+/// registers or unregisters the app to start at sign-in (pipette-autostart,
+/// which writes nothing outside a development directory while
+/// `AUTOSTART_APPLIES` is false). Then applies the stored `autoLaunch`, as
+/// the Electron build does at every launch.
 ///
 /// The listener runs under the store lock, once per set in the order the
-/// sets were saved. The zoom and the tray change are queued to the main
-/// thread without waiting for it, so the main thread applies them in that
-/// order and can read the store meanwhile without a deadlock; the sync
-/// keeps the value it is told and never reads the store from here.
+/// sets were saved. The zoom, the tray and the sign-in changes are queued
+/// to the main thread without waiting for it, so the main thread applies
+/// them in that order and can read the store meanwhile without a deadlock;
+/// the sync keeps the value it is told and never reads the store from here.
+/// Called from the setup on the main thread, so the launch's `autoLaunch`
+/// is applied before any change queued meanwhile, and reads the value
+/// those changes saved.
 pub fn listen_for_changes(app: &AppHandle) {
     let handle = app.clone();
     app.state::<AppConfig>().subscribe(move |key, value| match key {
@@ -89,11 +94,24 @@ pub fn listen_for_changes(app: &AppHandle) {
         "trayResident" => crate::tray::set_tray_resident(&handle, value.is_truthy()),
         "autoSync" => crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy()),
         "autoLaunch" => {
-            log::info!(
-                "[app-config] autoLaunch is now {}; this build does not start at sign-in",
-                value.is_truthy()
-            );
+            let enabled = value.is_truthy();
+            if let Err(err) = handle.run_on_main_thread(move || apply_auto_launch(enabled)) {
+                log::error!("[app-config] failed to apply autoLaunch: {err}");
+            }
         }
         _ => {}
     });
+    match app.state::<AppConfig>().get("autoLaunch") {
+        Ok(stored) => apply_auto_launch(stored.is_some_and(|value| value.is_truthy())),
+        // Not taken as off: that would remove the entry over a read error.
+        Err(err) => log::error!("[app-config] failed to read autoLaunch: {err}"),
+    }
+}
+
+/// Registers the app to start at sign-in, or unregisters it. A build that
+/// gets bundled is the release profile's; only a build with the
+/// development tools reads `PIPETTE_DEV_AUTOSTART_DIR`.
+fn apply_auto_launch(enabled: bool) {
+    let env = pipette_autostart::Environment::of_process(cfg!(release_profile), cfg!(feature = "dev-tools"));
+    pipette_autostart::apply(enabled, &env);
 }
