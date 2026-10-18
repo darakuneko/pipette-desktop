@@ -13,6 +13,15 @@
 ; without braces.
 !define PIPETTE_ELECTRON_UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ea2785fe-f9f8-5f54-9882-47312c59a4b9"
 
+; Stops the installation with a message. Tauri's template creates $INSTDIR
+; (SetOutPath) before this hook; RMDir without /r removes it only while it is
+; still empty, so a folder that already held files is left alone.
+!macro PIPETTE_STOP MESSAGE
+  MessageBox MB_OK|MB_ICONSTOP "${MESSAGE}" /SD IDOK
+  RMDir "$INSTDIR"
+  Abort "${MESSAGE}"
+!macroend
+
 !macro NSIS_HOOK_PREINSTALL
   Push $0
   Push $1
@@ -23,8 +32,7 @@
   ; this per-user installer has no rights to change.
   ReadRegStr $0 HKLM "${PIPETTE_ELECTRON_UNINSTKEY}" "UninstallString"
   ${If} $0 != ""
-    MessageBox MB_OK|MB_ICONSTOP "Pipette 0.4 is installed for all users. Uninstall it from Settings > Apps first (your data is kept), then run this installer again." /SD IDOK
-    Abort "Pipette 0.4 is installed for all users."
+    !insertmacro PIPETTE_STOP "Pipette 0.4 is installed for all users. Uninstall it from Settings > Apps first (your data is kept), then run this installer again."
   ${EndIf}
 
   ReadRegStr $0 HKCU "${PIPETTE_ELECTRON_UNINSTKEY}" "UninstallString"
@@ -40,32 +48,44 @@
       StrCpy $1 $0
     ${EndIf}
 
-    ${If} ${FileExists} "$1"
-      DetailPrint "Uninstalling Pipette 0.4"
-      ${GetParent} "$1" $3
-      ; The uninstaller deletes its own folder, so it runs from a copy. _?=
-      ; makes that copy work on the installation folder and finish before
-      ; ExecWait returns. Run silently, it closes a running Pipette 0.4.
-      InitPluginsDir
-      CopyFiles /SILENT "$1" "$PLUGINSDIR\pipette-0.4-uninstaller.exe"
-      ClearErrors
-      ExecWait '"$PLUGINSDIR\pipette-0.4-uninstaller.exe" /S /currentuser _?=$3' $2
-      ${If} ${Errors}
-        StrCpy $2 "error"
-      ${EndIf}
-      Delete "$PLUGINSDIR\pipette-0.4-uninstaller.exe"
-
-      ReadRegStr $0 HKCU "${PIPETTE_ELECTRON_UNINSTKEY}" "UninstallString"
-      ${If} $2 != 0
-      ${OrIf} $0 != ""
-        MessageBox MB_OK|MB_ICONSTOP "Pipette 0.4 could not be uninstalled. Uninstall it from Settings > Apps (your data is kept), then run this installer again." /SD IDOK
-        Abort "Pipette 0.4 could not be uninstalled."
-      ${EndIf}
-    ${Else}
-      ; The entry points at an uninstaller that is gone (the folder was
-      ; deleted by hand): nothing is left to remove.
-      DetailPrint "Pipette 0.4 is registered but its uninstaller is missing: $1"
+    ; An entry whose uninstaller is gone (the folder deleted by hand) would
+    ; leave the old registration and shortcuts behind.
+    ${IfNot} ${FileExists} "$1"
+      !insertmacro PIPETTE_STOP "Pipette 0.4 is registered, but its uninstaller is missing. Remove the old Pipette entry from Settings > Apps (your data is kept), then run this installer again."
     ${EndIf}
+
+    ; Run only the uninstaller electron-builder put next to the app:
+    ; "Uninstall Pipette.exe" in the folder that holds Pipette.exe.
+    ${GetFileName} "$1" $2
+    ${GetParent} "$1" $3
+    ${If} $2 != "Uninstall Pipette.exe"
+    ${OrIfNot} ${FileExists} "$3\Pipette.exe"
+      !insertmacro PIPETTE_STOP "Pipette 0.4 is registered with an unexpected uninstaller ($1). Uninstall Pipette 0.4 from Settings > Apps (your data is kept), then run this installer again."
+    ${EndIf}
+
+    DetailPrint "Uninstalling Pipette 0.4"
+    ; The uninstaller deletes its own folder, so it runs from a copy. _?=
+    ; makes that copy work on the installation folder and finish before
+    ; ExecWait returns. Run silently, it closes a running Pipette 0.4.
+    InitPluginsDir
+    CopyFiles /SILENT "$1" "$PLUGINSDIR\pipette-0.4-uninstaller.exe"
+    ClearErrors
+    ExecWait '"$PLUGINSDIR\pipette-0.4-uninstaller.exe" /S /currentuser _?=$3' $2
+    ${If} ${Errors}
+      StrCpy $2 "error"
+    ${EndIf}
+    Delete "$PLUGINSDIR\pipette-0.4-uninstaller.exe"
+
+    ReadRegStr $0 HKCU "${PIPETTE_ELECTRON_UNINSTKEY}" "UninstallString"
+    ${If} $2 != 0
+    ${OrIf} $0 != ""
+      !insertmacro PIPETTE_STOP "Pipette 0.4 could not be uninstalled. Uninstall it from Settings > Apps (your data is kept), then run this installer again."
+    ${EndIf}
+
+    ; The old installation folder may be the one chosen for this
+    ; installation, and the uninstaller has just deleted it; the files that
+    ; follow are written into $INSTDIR.
+    SetOutPath "$INSTDIR"
   ${EndIf}
 
   Pop $3
