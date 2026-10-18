@@ -14,8 +14,10 @@
 //!   They are found by what they start: `Pipette.exe` in a folder Pipette
 //!   was installed in (this executable's, the Electron build's default
 //!   folders, the folder its uninstall entry names), or `Pipette.exe`
-//!   anywhere under a name starting with `electron.app.`. Another program's
-//!   value is never touched.
+//!   anywhere under a name starting with `electron.app.`. The file name is
+//!   compared without case, so a value under another name that starts this
+//!   build's own `pipette.exe` from its folder goes too (a second item
+//!   starting this build). Any other value is left alone.
 //!
 //! The decision is [`plan`], a pure function the tests run on every system;
 //! the registry calls are the `system` module (Windows only).

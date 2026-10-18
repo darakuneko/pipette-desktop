@@ -19,6 +19,10 @@ pipette-fs = { path = "../pipette-fs" }
 # (src/linux.rs), byte for byte the one Electron writes.
 [target.'cfg(target_os = "macos")'.dependencies]
 auto-launch = { version = "=0.6.0", default-features = false }
+# The status of the login item, read only on macOS 13 and later (after
+# auto-launch accepted the system), so turning it off leaves alone only an
+# item that is not registered. The version auto-launch uses.
+smappservice-rs = "=0.1.3"
 
 # The Windows Run key (src/windows_run.rs), written as Electron writes it,
 # with the Electron build's values found by their data. MIT or Apache-2.0;

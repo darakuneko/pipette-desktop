@@ -9,26 +9,28 @@
 //! macOS 12 has no SMAppService. Nothing else is used there (Electron falls
 //! back to an older API this build does not have): an item the Electron
 //! build added keeps starting the app at the same path, but turning
-//! `autoLaunch` off cannot remove it, which is logged as an error each time.
+//! `autoLaunch` off cannot remove it. Each apply (at every launch, with
+//! `autoLaunch` on or off, and at every change) logs that as an error.
 
 use std::path::Path;
 
 use auto_launch::{AutoLaunch, AutoLaunchBuilder, Error, MacOSLaunchMode};
+use smappservice_rs::{AppService, ServiceStatus, ServiceType};
 
 use crate::PRODUCT_NAME;
 
-/// Registers the app when `enabled`, else removes the item when it is
-/// enabled (an item still waiting for the user's approval in System
-/// Settings does not start the app). A failure is logged as an error.
+/// Registers the app when `enabled`, else unregisters it unless it is not
+/// registered at all (unregistering then fails), so an item still waiting
+/// for the user's approval is removed too, as Electron's unconditional
+/// unregister does. A failure is logged as an error.
 pub(crate) fn apply(enabled: bool, exe: Result<&Path, &str>) {
     let result = login_item(exe).and_then(|item| {
         if enabled {
             item.enable()
-        } else if item.is_enabled()? {
-            item.disable()
-        } else {
-            // Unregistering an item that is not registered is an error.
+        } else if AppService::new(ServiceType::MainApp).status() == ServiceStatus::NotRegistered {
             Ok(())
+        } else {
+            item.disable()
         }
     });
     match result {
