@@ -74,6 +74,7 @@ impl Setup {
     }
 
     fn set_up(&self, case: &Value) {
+        self.conn.stream().set_deadline(Instant::now() + LOOKUP_TIMEOUT);
         let active = text(case, "active");
         if active == "no-atom" {
             let atom = self.conn.intern_atom(true, b"_NET_ACTIVE_WINDOW").unwrap().reply().unwrap().atom;
@@ -117,7 +118,7 @@ impl Setup {
 fn the_lookup_matches_the_binding_on_a_private_x_server() {
     let Some(server) = PrivateXServer::start() else { return };
     let auth = Auth::Cookie(server.cookie.to_vec());
-    let (conn, screen) = connect(Some(&server.display), &auth).unwrap();
+    let (conn, screen) = connect(Some(&server.display), &auth, Instant::now() + LOOKUP_TIMEOUT).unwrap();
     let root = conn.setup().roots[screen].root;
     let setup = Setup { conn, root };
     // One lookup for every case, as the app keeps one for its lifetime.
@@ -157,4 +158,10 @@ fn a_display_that_cannot_be_opened_fails_to_load() {
     // unix protocol has no TCP fallback); no Xvfb is needed.
     assert!(X11Backend::with_cookie("unix/:65535", b"").is_err());
     assert!(X11Backend::with_cookie("not a display", b"").is_err());
+}
+
+#[test]
+fn a_tcp_connect_past_its_deadline_gives_up_without_connecting() {
+    let error = connect_tcp("127.0.0.1", 9, Instant::now()).unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::TimedOut);
 }

@@ -121,9 +121,8 @@ impl ActiveWindow {
     }
 
     /// The normalized name of the active application. Blocks for up to
-    /// [`GDBUS_TIMEOUT`] when it runs the GNOME Shell query; an X server
-    /// that stops answering holds the X11 lookup for a read timeout of two
-    /// seconds.
+    /// [`GDBUS_TIMEOUT`] when it runs the GNOME Shell query; the X11 lookup
+    /// waits on the X server for at most two seconds in all.
     pub fn app_name(&mut self) -> Option<JsString> {
         match self.native().map(|native| native.active_window()) {
             Some(Ok(Some(info))) => {

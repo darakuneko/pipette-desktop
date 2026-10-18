@@ -8,16 +8,19 @@ mod stream;
 mod text;
 
 use std::collections::HashMap;
+use std::io;
+use std::net::{TcpStream, ToSocketAddrs};
+use std::time::Instant;
 
 use pipette_js_json::JsString;
 use x11rb::connection::Connection as _;
 use x11rb::errors::{ConnectError, ReplyError};
 use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _, GetPropertyReply};
-use x11rb::reexports::x11rb_protocol::parse_display::parse_display;
+use x11rb::reexports::x11rb_protocol::parse_display::{ConnectAddress, parse_display};
 use x11rb::reexports::x11rb_protocol::xauth::get_auth;
 use x11rb::rust_connection::{DefaultStream, RustConnection};
 
-use self::stream::TimedStream;
+use self::stream::{LOOKUP_TIMEOUT, TimedStream};
 use self::text::TitleEncoding;
 use crate::{NativeBackend, NativeError, WindowInfo};
 
@@ -44,15 +47,38 @@ enum Auth {
     Cookie(Vec<u8>),
 }
 
+/// A TCP connection to `host:port` that gives up at `deadline` (x11rb's
+/// own connect has no limit). Resolving the host name is not limited.
+fn connect_tcp(host: &str, port: u16, deadline: Instant) -> io::Result<TcpStream> {
+    let mut last = io::Error::new(io::ErrorKind::NotFound, format!("no address for {host}"));
+    for address in (host, port).to_socket_addrs()? {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(io::Error::new(io::ErrorKind::TimedOut, format!("cannot connect to {host} in time")));
+        }
+        match TcpStream::connect_timeout(&address, remaining) {
+            Ok(stream) => return Ok(stream),
+            Err(err) => last = err,
+        }
+    }
+    Err(last)
+}
+
 /// Connects as x11rb's `RustConnection::connect` does (each address of the
-/// display name in turn), with each of the stream's waits
-/// limited to two seconds. `display` `None` is `DISPLAY`.
-fn connect(display: Option<&str>, auth: &Auth) -> Result<(Conn, usize), ConnectError> {
+/// display name in turn), giving up waiting on the server at `deadline`.
+/// `display` `None` is `DISPLAY`.
+fn connect(display: Option<&str>, auth: &Auth, deadline: Instant) -> Result<(Conn, usize), ConnectError> {
     let parsed = parse_display(display)?;
     let screen = usize::from(parsed.screen);
     let mut last = None;
     for address in parsed.connect_instruction() {
-        let (socket, (family, peer)) = match DefaultStream::connect(&address) {
+        let connected = match &address {
+            ConnectAddress::Hostname(host, port) => {
+                connect_tcp(host, *port, deadline).and_then(DefaultStream::from_tcp_stream)
+            }
+            _ => DefaultStream::connect(&address),
+        };
+        let (socket, (family, peer)) = match connected {
             Ok(connected) => connected,
             Err(err) => {
                 last = Some(err);
@@ -64,7 +90,8 @@ fn connect(display: Option<&str>, auth: &Auth) -> Result<(Conn, usize), ConnectE
             #[cfg(test)]
             Auth::Cookie(cookie) => (b"MIT-MAGIC-COOKIE-1".to_vec(), cookie.clone()),
         };
-        let conn = RustConnection::connect_to_stream_with_auth_info(TimedStream(socket), screen, name, data)?;
+        let socket = TimedStream::new(socket, deadline);
+        let conn = RustConnection::connect_to_stream_with_auth_info(socket, screen, name, data)?;
         return Ok((conn, screen));
     }
     Err(last.map_or(ConnectError::UnknownError, ConnectError::IoError))
@@ -79,8 +106,8 @@ struct Session {
 }
 
 impl Session {
-    fn open(display: Option<&str>, auth: &Auth) -> Result<Self, ConnectError> {
-        let (conn, screen) = connect(display, auth)?;
+    fn open(display: Option<&str>, auth: &Auth, deadline: Instant) -> Result<Self, ConnectError> {
+        let (conn, screen) = connect(display, auth, deadline)?;
         let root = conn.setup().roots[screen].root;
         Ok(Self { conn, root, atoms: HashMap::new() })
     }
@@ -114,8 +141,9 @@ impl Session {
     }
 
     /// The active window and its title and application; `None` when there is
-    /// no active window.
-    fn lookup(&mut self) -> Result<Option<WindowInfo>, ReplyError> {
+    /// no active window. Gives up waiting on the server at `deadline`.
+    fn lookup(&mut self, deadline: Instant) -> Result<Option<WindowInfo>, ReplyError> {
+        self.conn.stream().set_deadline(deadline);
         let Some(active) = self.atom("_NET_ACTIVE_WINDOW")? else { return Ok(None) };
         let window = match self.property(self.root, active, AtomEnum::WINDOW, ACTIVE_WINDOW_LENGTH)? {
             Some(prop) if prop.type_ == u32::from(AtomEnum::WINDOW) => {
@@ -180,18 +208,21 @@ impl X11Backend {
     }
 
     fn open(display: Option<String>, auth: Auth) -> Result<Self, NativeError> {
-        let session = Session::open(display.as_deref(), &auth)?;
+        let session = Session::open(display.as_deref(), &auth, Instant::now() + LOOKUP_TIMEOUT)?;
         Ok(Self { display, auth, session: Some(session) })
     }
 }
 
 impl NativeBackend for X11Backend {
+    /// Reopening a broken connection and the lookup share one deadline,
+    /// [`LOOKUP_TIMEOUT`] from the call.
     fn active_window(&mut self) -> Result<Option<WindowInfo>, NativeError> {
+        let deadline = Instant::now() + LOOKUP_TIMEOUT;
         let mut session = match self.session.take() {
             Some(session) => session,
-            None => Session::open(self.display.as_deref(), &self.auth)?,
+            None => Session::open(self.display.as_deref(), &self.auth, deadline)?,
         };
-        match session.lookup() {
+        match session.lookup(deadline) {
             Ok(Some(info)) => {
                 self.session = Some(session);
                 Ok(Some(info))

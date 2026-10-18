@@ -17,19 +17,20 @@ pub(crate) enum TitleEncoding {
 
 /// The title from a `WM_NAME` property of `format` holding `value`.
 ///
-/// STRING is taken as raw bytes up to the first NUL (so Latin-1 text becomes
-/// U+FFFD). UTF8_STRING and COMPOUND_TEXT go through Xlib's conversion,
-/// whose first list item ends at the first NUL; a type Xlib cannot convert
-/// gives no title. Xlib converts only format 8, and a STRING of another
-/// format is no title here either.
+/// STRING is taken as raw bytes up to the first NUL whatever its format, as
+/// the binding copies the property's memory without converting it (so
+/// Latin-1 text becomes U+FFFD). UTF8_STRING and COMPOUND_TEXT go through
+/// Xlib's conversion, which takes format 8 only and whose first list item
+/// ends at the first NUL; a type or format Xlib cannot convert gives no
+/// title.
 pub(crate) fn title(encoding: TitleEncoding, format: u8, value: &[u8]) -> String {
-    if format != 8 {
-        return String::new();
-    }
-    let value = until_nul(value);
+    let converted = (format == 8).then(|| until_nul(value));
     match encoding {
-        TitleEncoding::String | TitleEncoding::Utf8String => String::from_utf8_lossy(value).into_owned(),
-        TitleEncoding::CompoundText => compound_text(value).unwrap_or_default(),
+        TitleEncoding::String => String::from_utf8_lossy(until_nul(value)).into_owned(),
+        TitleEncoding::Utf8String => {
+            converted.map(|text| String::from_utf8_lossy(text).into_owned()).unwrap_or_default()
+        }
+        TitleEncoding::CompoundText => converted.and_then(compound_text).unwrap_or_default(),
         TitleEncoding::Other => String::new(),
     }
 }
@@ -111,11 +112,17 @@ mod tests {
     }
 
     #[test]
-    fn other_types_and_formats_have_no_title() {
+    fn string_titles_of_any_format_are_raw_bytes() {
+        assert_eq!(title(Str, 16, b"Ti\0\0"), "Ti");
+        assert_eq!(title(Str, 32, b"Titl\0\0\0\0"), "Titl");
+    }
+
+    #[test]
+    fn other_types_and_converted_types_of_another_format_have_no_title() {
         assert_eq!(title(Other, 8, b"Other"), "");
-        for encoding in [Str, Utf8String, CompoundText] {
-            assert_eq!(title(encoding, 16, b"T\0i\0"), "");
-            assert_eq!(title(encoding, 32, b"T\0\0\0"), "");
+        for encoding in [Utf8String, CompoundText] {
+            assert_eq!(title(encoding, 16, b"Ti\0\0"), "");
+            assert_eq!(title(encoding, 32, b"Titl\0\0\0\0"), "");
         }
     }
 

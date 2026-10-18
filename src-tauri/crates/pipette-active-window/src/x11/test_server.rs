@@ -36,8 +36,25 @@ pub(crate) struct PrivateXServer {
     /// The MIT-MAGIC-COOKIE-1 cookie in `authority`.
     pub cookie: [u8; 16],
     child: Option<Child>,
-    lock_file: PathBuf,
     _dir: tempfile::TempDir,
+    /// Dropped after `Drop` has stopped the server.
+    _lock: DisplayLock,
+}
+
+/// A reserved display number's lock file, removed once when this is
+/// dropped, and only while it still holds what this test wrote (the number
+/// may have been reserved again by someone else after a removal elsewhere).
+struct DisplayLock {
+    path: PathBuf,
+    content: String,
+}
+
+impl Drop for DisplayLock {
+    fn drop(&mut self) {
+        if std::fs::read_to_string(&self.path).is_ok_and(|held| held == self.content) {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
 }
 
 /// `Xvfb` on PATH.
@@ -60,8 +77,8 @@ fn display_in_use(n: u16) -> bool {
 /// Reserves the first display number in the private range that nothing
 /// holds, by creating its lock file `/tmp/.X<n>-lock` exclusively with this
 /// process's pid in the X server's format. A lock file that exists, stale
-/// or not, means the number is taken. Only the guard removes the file.
-fn reserve_display() -> Result<(u16, PathBuf), String> {
+/// or not, means the number is taken. Only the returned lock removes the file.
+fn reserve_display() -> Result<(u16, DisplayLock), String> {
     let desktop = std::env::var("DISPLAY").ok();
     for n in FIRST_DISPLAY..=LAST_DISPLAY {
         if desktop
@@ -76,13 +93,20 @@ fn reserve_display() -> Result<(u16, PathBuf), String> {
             Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(err) => return Err(format!("cannot create {}: {err}", lock_file.display())),
         };
-        let written = file.write_all(format!("{:>10}\n", std::process::id()).as_bytes());
+        let content = format!("{:>10}\n", std::process::id());
+        let written = file.write_all(content.as_bytes());
         drop(file);
-        if written.is_err() || display_in_use(n) {
+        if written.is_err() {
+            // Created just now by this test, but without the content the
+            // lock's drop checks for.
             let _ = std::fs::remove_file(&lock_file);
             continue;
         }
-        return Ok((n, lock_file));
+        let lock = DisplayLock { path: lock_file, content };
+        if display_in_use(n) {
+            continue;
+        }
+        return Ok((n, lock));
     }
     Err(format!("no free display between :{FIRST_DISPLAY} and :{LAST_DISPLAY}"))
 }
@@ -121,14 +145,15 @@ impl PrivateXServer {
     }
 
     fn start_with(xvfb: &Path) -> Result<Self, String> {
-        let (number, lock_file) = reserve_display()?;
+        // The lock is released by its own drop if anything below fails.
+        let (number, lock) = reserve_display()?;
         let mut server = Self {
             display: format!(":{number}"),
             authority: PathBuf::new(),
             cookie: random_cookie()?,
             child: None,
-            lock_file,
             _dir: tempfile::tempdir().map_err(|err| err.to_string())?,
+            _lock: lock,
         };
         server.authority = server._dir.path().join("Xauthority");
         let mut file = OpenOptions::new()
@@ -180,8 +205,8 @@ impl PrivateXServer {
         Ok(server)
     }
 
-    /// SIGTERM, then SIGKILL if it has not exited in time; then the lock
-    /// file goes.
+    /// SIGTERM, then SIGKILL if it has not exited in time. The lock file
+    /// goes with `_lock`, after this.
     fn stop(&mut self) {
         if let Some(mut child) = self.child.take() {
             if matches!(child.try_wait(), Ok(None)) {
@@ -198,12 +223,28 @@ impl PrivateXServer {
             }
             let _ = child.wait();
         }
-        let _ = std::fs::remove_file(&self.lock_file);
     }
 }
 
 impl Drop for PrivateXServer {
     fn drop(&mut self) {
         self.stop();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_lock_is_removed_only_while_it_holds_what_was_written() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("lock");
+        std::fs::write(&path, "mine").unwrap();
+        drop(DisplayLock { path: path.clone(), content: "mine".into() });
+        assert!(!path.exists());
+        std::fs::write(&path, "someone else's").unwrap();
+        drop(DisplayLock { path: path.clone(), content: "mine".into() });
+        assert!(path.exists());
     }
 }
