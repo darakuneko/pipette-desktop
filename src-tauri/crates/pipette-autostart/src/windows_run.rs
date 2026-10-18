@@ -21,7 +21,7 @@
 //! the registry calls are the `system` module (Windows only).
 
 /// The name of this build's value: the product name.
-pub(crate) const VALUE_NAME: &str = "Pipette";
+pub(crate) const VALUE_NAME: &str = crate::PRODUCT_NAME;
 
 /// The file name of the Electron build's executable.
 const ELECTRON_EXE: &str = "Pipette.exe";
@@ -52,14 +52,12 @@ pub(crate) fn plan(
     values: &[(String, Option<String>)],
     electron_dirs: &[String],
 ) -> Vec<Change> {
-    let mut changes = if enabled {
-        vec![
-            Change::SetRun { name: VALUE_NAME.to_owned(), data: quoted(exe) },
-            Change::RemoveApproved(VALUE_NAME.to_owned()),
-        ]
+    let own = if enabled {
+        Change::SetRun { name: VALUE_NAME.to_owned(), data: quoted(exe) }
     } else {
-        vec![Change::RemoveRun(VALUE_NAME.to_owned()), Change::RemoveApproved(VALUE_NAME.to_owned())]
+        Change::RemoveRun(VALUE_NAME.to_owned())
     };
+    let mut changes = vec![own, Change::RemoveApproved(VALUE_NAME.to_owned())];
     let mut dirs: Vec<String> = electron_dirs.iter().map(|dir| normalized(dir)).collect();
     if let Some((dir, _)) = split_dir(exe) {
         dirs.push(normalized(dir));
@@ -91,9 +89,9 @@ fn is_electron_value(name: &str, data: &str, dirs: &[String]) -> bool {
     if !file.eq_ignore_ascii_case(ELECTRON_EXE) {
         return false;
     }
-    let electron_name = name.len() >= ELECTRON_NAME_PREFIX.len()
-        && name.is_char_boundary(ELECTRON_NAME_PREFIX.len())
-        && name[..ELECTRON_NAME_PREFIX.len()].eq_ignore_ascii_case(ELECTRON_NAME_PREFIX);
+    let electron_name = name
+        .get(..ELECTRON_NAME_PREFIX.len())
+        .is_some_and(|start| start.eq_ignore_ascii_case(ELECTRON_NAME_PREFIX));
     electron_name || dirs.contains(&normalized(dir))
 }
 
@@ -135,12 +133,13 @@ fn normalized(dir: &str) -> String {
 
 /// The folders the Electron build installs into by default:
 /// electron-builder's per-user `%LOCALAPPDATA%\Programs\<name>` and its
-/// per-machine `%ProgramFiles%\<name>`, `<name>` being the package name.
+/// per-machine `%ProgramFiles%\<name>`, `<name>` being the package name
+/// (the name of the Electron build's userData directory too).
 pub(crate) fn electron_default_dirs(
     local_app_data: Option<&str>,
     program_files: Option<&str>,
 ) -> Vec<String> {
-    let name = "pipette-desktop";
+    let name = pipette_fs::ELECTRON_USER_DATA_NAME;
     let mut dirs = Vec::new();
     if let Some(base) = local_app_data.filter(|base| !base.is_empty()) {
         dirs.push(format!(r"{base}\Programs\{name}"));

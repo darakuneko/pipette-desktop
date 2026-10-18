@@ -15,8 +15,7 @@ use std::path::Path;
 
 use auto_launch::{AutoLaunch, AutoLaunchBuilder, Error, MacOSLaunchMode};
 
-/// The name the item is registered under: the app's product name.
-const APP_NAME: &str = "Pipette";
+use crate::PRODUCT_NAME;
 
 /// Registers the app when `enabled`, else removes the item when it is
 /// enabled (an item still waiting for the user's approval in System
@@ -48,7 +47,7 @@ fn login_item(exe: Result<&Path, &str>) -> Result<AutoLaunch, Error> {
         Error::Io(std::io::Error::other(format!("the executable's path is not UTF-8: {}", exe.display())))
     })?;
     AutoLaunchBuilder::new()
-        .set_app_name(APP_NAME)
+        .set_app_name(PRODUCT_NAME)
         .set_app_path(path)
         .set_macos_launch_mode(MacOSLaunchMode::SMAppService)
         .build()

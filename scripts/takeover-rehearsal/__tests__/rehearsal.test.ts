@@ -118,7 +118,7 @@ describe('refusals before a launch', () => {
     expect(() => preflight(options(noApp.root, join(noApp.root, 'missing')), real)).toThrow(/no app/)
 
     const ok = rehearsalRoot()
-    expect(preflight(options(ok.root, ok.app), real).userData).toBe(ok.layout.userData)
+    expect(preflight(options(ok.root, ok.app), real).layout.userData).toBe(ok.layout.userData)
   })
 
   it('the script exits with 2 for a root inside a stand-in HOME, before it starts anything', () => {

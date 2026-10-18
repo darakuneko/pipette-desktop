@@ -39,6 +39,12 @@ pub enum UserDataError {
     NoConfigDir,
 }
 
+/// The value of [`USER_DATA_DIR_ENV`] when it names a directory: an empty
+/// value counts as unset.
+pub fn user_data_override(value: Option<OsString>) -> Option<OsString> {
+    value.filter(|dir| !dir.is_empty())
+}
+
 /// The userData directory from the environment and the OS config directory,
 /// for a build that is `distributed` or not. The directory is not created.
 pub fn user_data_dir(distributed: bool) -> Result<PathBuf, UserDataError> {
@@ -53,7 +59,7 @@ pub fn resolve_user_data_dir(
     config_dir: Option<PathBuf>,
     distributed: bool,
 ) -> Result<PathBuf, UserDataError> {
-    if let Some(dir) = override_dir.filter(|dir| !dir.is_empty()).map(PathBuf::from) {
+    if let Some(dir) = user_data_override(override_dir).map(PathBuf::from) {
         if !dir.is_absolute() {
             return Err(UserDataError::NotAbsolute(dir));
         }

@@ -26,6 +26,9 @@ export type Snapshot = Map<string, Entry>
 
 export class LinkError extends Error {}
 
+/** Why a rehearsal script stops before it looks further (exit code 2). */
+export class RefusedError extends Error {}
+
 const CHUNK = 1 << 20
 
 /** The SHA-256 of the first `limit` bytes of `path` (all of it without a
@@ -76,6 +79,16 @@ export function snapshotTree(root: string): Snapshot {
   return out
 }
 
+/** {@link snapshotTree}, with a link in the copy as a {@link RefusedError}. */
+export function snapshotOrRefuse(root: string): Snapshot {
+  try {
+    return snapshotTree(root)
+  } catch (err) {
+    if (err instanceof LinkError) throw new RefusedError(`refused: ${err.message}`)
+    throw err
+  }
+}
+
 export interface TreeDiff {
   added: string[]
   changed: string[]
@@ -100,9 +113,4 @@ export function diffTrees(before: Snapshot, after: Snapshot): TreeDiff {
   }
   for (const path of before.keys()) if (!after.has(path)) removed.push(path)
   return { added: added.sort(), changed: changed.sort(), removed: removed.sort() }
-}
-
-/** A snapshot as plain JSON, for the report. */
-export function snapshotJson(snapshot: Snapshot): Record<string, Entry> {
-  return Object.fromEntries(snapshot)
 }

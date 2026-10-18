@@ -5,7 +5,7 @@
 // from the real ones: the rehearsal never runs on the user's own data.
 
 import { existsSync, realpathSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 /** The directory name of the Electron build's userData, the one a
  *  distributed release takes over (`ELECTRON_USER_DATA_NAME` of
@@ -77,7 +77,7 @@ export function resolveExisting(path: string): string {
 /** Whether `inner` is `outer` or inside it. */
 export function isWithin(inner: string, outer: string): boolean {
   const rel = relative(outer, inner)
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
 }
 
 /** Why the rehearsal must not run on `layout`, or nothing. Every path is

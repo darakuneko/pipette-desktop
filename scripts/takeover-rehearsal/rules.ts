@@ -8,6 +8,7 @@
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import { DatabaseSync } from 'node:sqlite'
 import { USER_DATA_NAME } from './layout'
 import { sha256Of, type Snapshot, type TreeDiff } from './tree'
@@ -45,16 +46,6 @@ function inside(path: string, dir: string): string | null {
   return path.startsWith(`${dir}/`) ? path.slice(dir.length + 1) : path === dir ? '' : null
 }
 
-/** `value` as JSON text with the keys of every object sorted. */
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
-  if (typeof value === 'object' && value !== null) {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    return `{${entries.map(([key, inner]) => `${JSON.stringify(key)}:${canonical(inner)}`).join(',')}}`
-  }
-  return JSON.stringify(value)
-}
-
 function configObject(text: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(text)
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('not an object')
@@ -71,7 +62,7 @@ function configVerdict(dataDir: string, change: ChangeKind, configBefore: string
     const after = configObject(readFileSync(join(dataDir, 'config.json'), 'utf-8'))
     const before = configBefore === undefined ? {} : configObject(configBefore)
     const changed = Object.keys(before).filter(
-      (key) => key !== 'windowState' && (!(key in after) || canonical(before[key]) !== canonical(after[key])),
+      (key) => key !== 'windowState' && (!(key in after) || !isDeepStrictEqual(before[key], after[key])),
     )
     if (changed.length > 0) return [false, `keys changed or removed: ${changed.join(', ')}`]
     const added = Object.keys(after).filter((key) => !(key in before))
@@ -173,10 +164,6 @@ export interface ReadResult {
   reason: string
 }
 
-function checkJson(text: string): void {
-  JSON.parse(text)
-}
-
 function checkJsonLines(text: string): number {
   let lines = 0
   for (const [index, line] of text.split('\n').entries()) {
@@ -233,7 +220,7 @@ export function checkReadable(home: string, paths: string[]): ReadResult[] {
         return { path, verdict: 'unchecked', reason: 'a log or a journal' }
       }
       if (path.endsWith('.json')) {
-        checkJson(readFileSync(full, 'utf-8'))
+        JSON.parse(readFileSync(full, 'utf-8'))
         return { path, verdict: 'readable', reason: 'JSON' }
       }
       if (path.endsWith('.jsonl')) {
@@ -246,4 +233,14 @@ export function checkReadable(home: string, paths: string[]): ReadResult[] {
       return { path, verdict: 'unreadable', reason: String(err) }
     }
   })
+}
+
+/** A finding as one line of a script's output. */
+export function formatFinding(finding: Finding): string {
+  return `  ${finding.verdict.padEnd(9)} ${finding.change.padEnd(7)} ${finding.path} (${finding.reason})`
+}
+
+/** A read result as one line of a script's output. */
+export function formatRead(result: ReadResult): string {
+  return `  ${result.verdict.padEnd(10)} ${result.path} (${result.reason})`
 }

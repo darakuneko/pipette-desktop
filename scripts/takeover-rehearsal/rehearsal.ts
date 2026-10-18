@@ -20,8 +20,10 @@ import { userInfo } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { type Layout, type RealPaths, layoutOf, realPathsOf, refusalOf } from './layout'
-import { CONFIG_REL, USER_DATA_REL, checkReadable, judgeLaunchOnly, type Finding, type ReadResult } from './rules'
-import { LinkError, diffTrees, snapshotTree, type Snapshot, type TreeDiff } from './tree'
+import { CONFIG_REL, USER_DATA_REL, checkReadable, formatFinding, formatRead, judgeLaunchOnly, type Finding, type ReadResult } from './rules'
+import { RefusedError, diffTrees, snapshotOrRefuse, type Snapshot, type TreeDiff } from './tree'
+
+export { RefusedError }
 
 export type Mode = 'launch-only' | 'operate'
 
@@ -32,8 +34,6 @@ export interface Options {
   firejail: boolean
   timeoutMinutes: number
 }
-
-export class RefusedError extends Error {}
 
 const USAGE = 'usage: rehearsal.ts launch-only|operate --root <dir> --app <AppImage> [--firejail] [--timeout-minutes <n>]'
 
@@ -62,7 +62,7 @@ export function parseArgs(argv: string[]): Options {
 /** Inherited variables the app does not get: every Pipette variable (so
  *  the default userData directory and the autostart takeover run as for
  *  the user) and those of an AppImage the script itself might run in. */
-const DROPPED = ['APPIMAGE', 'APPDIR', 'ARGV0', 'OWD', 'DBUS_SESSION_BUS_ADDRESS']
+const DROPPED = ['APPIMAGE', 'APPDIR', 'ARGV0', 'OWD']
 
 /** The environment the app runs with: every per-user location under the
  *  rehearsal home (the display and the runtime directory stay the
@@ -122,8 +122,9 @@ export function processLauncher(options: Options): Launcher {
 }
 
 /** The checks before any launch: the paths, the copy, and the copy free of
- *  links. Throws {@link RefusedError}. */
-export function preflight(options: Options, real: RealPaths): Layout {
+ *  links. Throws {@link RefusedError}. Returns the layout and the state of
+ *  the rehearsal home, the first launch's starting point. */
+export function preflight(options: Options, real: RealPaths): { layout: Layout; snapshot: Snapshot } {
   const layout = layoutOf(resolve(options.root))
   const refusal = refusalOf(layout, real)
   if (refusal) throw new RefusedError(`refused: ${refusal}`)
@@ -137,17 +138,7 @@ export function preflight(options: Options, real: RealPaths): Layout {
   if (options.firejail && spawnSync('firejail', ['--version']).status !== 0) {
     throw new RefusedError('refused: --firejail was given but firejail does not run')
   }
-  takeSnapshot(layout)
-  return layout
-}
-
-function takeSnapshot(layout: Layout): Snapshot {
-  try {
-    return snapshotTree(layout.home)
-  } catch (err) {
-    if (err instanceof LinkError) throw new RefusedError(`refused: ${err.message}`)
-    throw err
-  }
+  return { layout, snapshot: snapshotOrRefuse(layout.home) }
 }
 
 function readConfig(layout: Layout): string | undefined {
@@ -172,14 +163,20 @@ export interface Report {
   passed: boolean
 }
 
-async function launchOnce(layout: Layout, launch: Launcher, index: number): Promise<LaunchReport> {
-  const before = takeSnapshot(layout)
+/** One launch from the state `before`; returns its report and the state
+ *  after it. */
+async function launchOnce(
+  layout: Layout,
+  launch: Launcher,
+  index: number,
+  before: Snapshot,
+): Promise<[LaunchReport, Snapshot]> {
   const configBefore = readConfig(layout)
   const output = join(layout.reports, `launch-${index}.log`)
   const exitCode = await launch(appEnv(layout, process.env), output)
-  const after = takeSnapshot(layout)
+  const after = snapshotOrRefuse(layout.home)
   const diff = diffTrees(before, after)
-  return { exitCode, output, diff, findings: judgeLaunchOnly(diff, layout.home, before, after, configBefore) }
+  return [{ exitCode, output, diff, findings: judgeLaunchOnly(diff, layout.home, before, after, configBefore) }, after]
 }
 
 /** (a) or (b) on `layout`, with `launch` starting the app. (a): one launch,
@@ -187,23 +184,29 @@ async function launchOnce(layout: Layout, launch: Launcher, index: number): Prom
  *  operates in, then every new or changed file of the userData directory
  *  read by its rule, then a second launch to see the app read it; removals
  *  are listed for the user to match against the operations. */
-export async function rehearse(mode: Mode, layout: Layout, launch: Launcher, say: (line: string) => void): Promise<Report> {
+export async function rehearse(
+  mode: Mode,
+  layout: Layout,
+  launch: Launcher,
+  say: (line: string) => void,
+  start: Snapshot = snapshotOrRefuse(layout.home),
+): Promise<Report> {
   mkdirSync(layout.reports, { recursive: true })
   const launches: LaunchReport[] = []
   let readable: ReadResult[] = []
   if (mode === 'launch-only') {
     say('Launch 1 of 1: look at the window, do nothing, then Quit from the tray or the window.')
-    launches.push(await launchOnce(layout, launch, 1))
+    launches.push((await launchOnce(layout, launch, 1, start))[0])
   } else {
     say('Launch 1 of 2: go through every keyboard, snapshot, favorite, setting, pack, Key Label, Analyze and Typing Test, then Quit.')
-    launches.push(await launchOnce(layout, launch, 1))
-    const { added, changed } = launches[0].diff
+    const [first, after] = await launchOnce(layout, launch, 1, start)
+    launches.push(first)
     readable = checkReadable(
       layout.home,
-      [...added, ...changed].filter((path) => inUserData(path) && existsFile(join(layout.home, path))),
+      [...first.diff.added, ...first.diff.changed].filter((path) => inUserData(path) && after.get(path)?.kind === 'file'),
     )
     say('Launch 2 of 2: check that everything you did is there, then Quit.')
-    launches.push(await launchOnce(layout, launch, 2))
+    launches.push((await launchOnce(layout, launch, 2, after))[0])
   }
   const last = launches[launches.length - 1]
   const logLines = existsSync(last.output)
@@ -223,10 +226,6 @@ function inUserData(path: string): boolean {
   return path.startsWith(`${USER_DATA_REL}/`)
 }
 
-function existsFile(path: string): boolean {
-  return existsSync(path) && statSync(path).isFile()
-}
-
 function summarize(report: Report, say: (line: string) => void): void {
   for (const [index, launch] of report.launches.entries()) {
     say(`launch ${index + 1}: exit code ${String(launch.exitCode)}, output in ${launch.output}`)
@@ -234,10 +233,10 @@ function summarize(report: Report, say: (line: string) => void): void {
       // With operations, new and changed data files are listed by the read
       // check below instead.
       if (report.mode === 'operate' && inUserData(finding.path) && finding.change !== 'removed') continue
-      say(`  ${finding.verdict.padEnd(9)} ${finding.change.padEnd(7)} ${finding.path} (${finding.reason})`)
+      say(formatFinding(finding))
     }
   }
-  for (const result of report.readable) say(`  ${result.verdict.padEnd(10)} ${result.path} (${result.reason})`)
+  for (const result of report.readable) say(formatRead(result))
   for (const line of report.logLines) say(`  log: ${line}`)
   say(report.passed ? 'PASSED' : 'FINDINGS: look at the lines above before going further')
 }
@@ -246,9 +245,10 @@ async function main(): Promise<number> {
   const say = (line: string): void => console.log(line)
   let options: Options
   let layout: Layout
+  let start: Snapshot
   try {
     options = parseArgs(process.argv.slice(2))
-    layout = preflight(options, realPathsOf(userInfo().homedir, process.env))
+    ;({ layout, snapshot: start } = preflight(options, realPathsOf(userInfo().homedir, process.env)))
   } catch (err) {
     if (err instanceof RefusedError) {
       console.error(err.message)
@@ -256,7 +256,7 @@ async function main(): Promise<number> {
     }
     throw err
   }
-  const report = await rehearse(options.mode, layout, processLauncher(options), say)
+  const report = await rehearse(options.mode, layout, processLauncher(options), say, start)
   const file = join(layout.reports, `${options.mode}-${new Date().toISOString().replaceAll(':', '-')}.json`)
   writeFileSync(file, `${JSON.stringify(report, null, 2)}\n`)
   summarize(report, say)

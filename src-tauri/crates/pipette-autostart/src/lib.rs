@@ -16,7 +16,7 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-use pipette_fs::USER_DATA_DIR_ENV;
+use pipette_fs::{USER_DATA_DIR_ENV, user_data_override};
 
 mod dev_dir;
 mod linux;
@@ -34,35 +34,12 @@ mod tests;
 
 pub use dev_dir::VARIABLE as DEV_DIR_VARIABLE;
 
-/// Whether a build may register itself to start at sign-in: true since the
-/// distributed build took the Electron build's userData directory over, so
-/// the shared entry points at this build. Which builds are distributed is
-/// `packaged` of [`Environment`].
-pub const AUTOSTART_APPLIES: bool = true;
+/// The operating system, which decides how the app is registered
+/// (`Other`: a system the Electron build registers nothing on).
+pub use pipette_fs::Platform as Os;
 
-/// The operating system, which decides how the app is registered.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Os {
-    Linux,
-    Windows,
-    MacOs,
-    /// Every other system, where the Electron build registers nothing.
-    Other,
-}
-
-impl Os {
-    pub const fn current() -> Self {
-        if cfg!(target_os = "linux") {
-            Self::Linux
-        } else if cfg!(target_os = "windows") {
-            Self::Windows
-        } else if cfg!(target_os = "macos") {
-            Self::MacOs
-        } else {
-            Self::Other
-        }
-    }
-}
+/// The product name: the login item's name on Windows and macOS.
+const PRODUCT_NAME: &str = "Pipette";
 
 /// What deciding and writing the registration reads from the process.
 #[derive(Clone, Debug)]
@@ -124,7 +101,7 @@ impl Environment {
         Self {
             os: Os::current(),
             packaged,
-            user_data_override: var(USER_DATA_DIR_ENV).is_some_and(|dir| !dir.is_empty()),
+            user_data_override: user_data_override(var(USER_DATA_DIR_ENV)).is_some(),
             home: None,
             home_var: var("HOME"),
             passwd_home: None,
@@ -205,15 +182,14 @@ enum Target {
 /// it, as `applyAutoLaunch` does: at every launch and on every change of
 /// `autoLaunch`. Failures are logged, never returned.
 pub fn apply(enabled: bool, env: &Environment) {
-    run(target(AUTOSTART_APPLIES, env), enabled, env);
+    run(target(env), enabled, env);
 }
 
-/// The target for `env` when the build may register itself (`applies`).
-/// A development directory comes first, so a build that has one never
+/// The target for `env`. A development directory comes first, so a build that has one never
 /// reaches the real entry; a directory that is refused is not replaced by
 /// the real one. Then only a distributed build without
 /// `PIPETTE_USER_DATA_DIR` reaches it.
-fn target(applies: bool, env: &Environment) -> Target {
+fn target(env: &Environment) -> Target {
     if let Some(dir) = &env.dev_dir {
         if env.os != Os::Linux {
             return Target::Skip(format!("auto-launch skipped: {DEV_DIR_VARIABLE} is read on Linux only"));
@@ -223,9 +199,6 @@ fn target(applies: bool, env: &Environment) -> Target {
             Ok(dir) => Target::DevDirectory(dir),
             Err(reason) => Target::Refused(format!("auto-launch: {reason}")),
         };
-    }
-    if !applies {
-        return Target::Skip("auto-launch skipped: this build does not start at sign-in".to_owned());
     }
     if env.user_data_override {
         return Target::Skip(format!("auto-launch skipped: {USER_DATA_DIR_ENV} is set"));

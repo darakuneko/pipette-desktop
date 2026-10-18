@@ -7,7 +7,8 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, unlinkSync, 
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { UsageError, compare, saveSnapshot } from '../data-dir'
+import { compare, saveSnapshot } from '../data-dir'
+import { RefusedError } from '../tree'
 
 const made: string[] = []
 afterEach(() => {
@@ -71,9 +72,9 @@ describe('a userData directory started on by hand', () => {
   it('refuses a snapshot of another directory and a copy with a link', () => {
     const data = dataDir()
     const saved = saveSnapshot(data)
-    expect(() => compare(dataDir(), saved, false)).toThrow(UsageError)
+    expect(() => compare(dataDir(), saved, false)).toThrow(RefusedError)
     symlinkSync(tmpdir(), join(data, 'escape'))
     expect(() => compare(data, saved, false)).toThrow(/symbolic link/)
-    expect(() => saveSnapshot(data)).toThrow(UsageError)
+    expect(() => saveSnapshot(data)).toThrow(RefusedError)
   })
 })

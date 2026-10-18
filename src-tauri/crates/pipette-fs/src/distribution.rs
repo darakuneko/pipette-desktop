@@ -50,7 +50,7 @@ impl Platform {
 /// The uninstaller the NSIS installer writes next to the installed
 /// executable (`WriteUninstaller "$INSTDIR\uninstall.exe"` of Tauri's
 /// installer template).
-pub const WINDOWS_UNINSTALLER: &str = "uninstall.exe";
+const WINDOWS_UNINSTALLER: &str = "uninstall.exe";
 
 /// The file Cargo keeps at the root of every target directory.
 const CARGO_TARGET_MARK: &str = ".rustc_info.json";
@@ -74,7 +74,7 @@ pub fn is_distributed_build(release_without_dev_tools: bool) -> bool {
 /// Whether `exe` on `platform` is the executable a release ships (see the
 /// module documentation), with `appimage` the value of `APPIMAGE` and
 /// `is_file` telling whether a file exists.
-pub fn is_distributed_executable(
+pub(crate) fn is_distributed_executable(
     platform: Platform,
     exe: &Path,
     appimage: Option<&OsStr>,
