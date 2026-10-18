@@ -14,6 +14,13 @@ rust-version.workspace = true
 pipette-js-json = { path = "../pipette-js-json" }
 log = "=0.4.34"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+# The X11 lookup: x11rb's pure-Rust connection (no libxcb, and without the
+# allow-unsafe-code feature it forbids unsafe code itself), and rustix's poll
+# for the read timeout of its stream.
+x11rb = { version = "=0.14.0", default-features = false }
+rustix = { version = "=1.1.2", features = ["event"] }
+
 [dev-dependencies]
 # The private X server's authority file in the X11 tests.
 tempfile = { workspace = true }

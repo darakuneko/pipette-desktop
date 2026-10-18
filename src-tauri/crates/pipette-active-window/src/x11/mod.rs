@@ -4,18 +4,20 @@
 //! on the root window, its title from `WM_NAME` and its application from the
 //! class in `WM_CLASS` (text.rs). `_NET_WM_NAME` is not read.
 
-mod conn;
-mod display;
+mod stream;
 mod text;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use pipette_js_json::JsString;
+use x11rb::connection::Connection as _;
+use x11rb::errors::{ConnectError, ReplyError};
+use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _, GetPropertyReply};
+use x11rb::reexports::x11rb_protocol::parse_display::parse_display;
+use x11rb::reexports::x11rb_protocol::xauth::get_auth;
+use x11rb::rust_connection::{DefaultStream, RustConnection};
 
-use self::conn::{
-    ANY_PROPERTY_TYPE, ATOM_STRING, ATOM_WINDOW, ATOM_WM_CLASS, ATOM_WM_NAME, Connection, Error,
-};
+use self::stream::TimedStream;
 use self::text::TitleEncoding;
 use crate::{NativeBackend, NativeError, WindowInfo};
 
@@ -30,19 +32,65 @@ const ACTIVE_WINDOW_LENGTH: u32 = 8;
 const WM_CLASS_LENGTH: u32 = 8192;
 const WM_NAME_LENGTH: u32 = 1_000_000;
 
+type Conn = RustConnection<TimedStream>;
+
+/// The authorization sent when connecting.
+#[derive(Clone)]
+enum Auth {
+    /// The MIT-MAGIC-COOKIE-1 entry x11rb finds in `XAUTHORITY` (or
+    /// `$HOME/.Xauthority`) for the address connected to, else none.
+    Xauthority,
+    /// This cookie.
+    #[cfg(test)]
+    Cookie(Vec<u8>),
+}
+
+/// Connects as x11rb's `RustConnection::connect` does (each address of the
+/// display name in turn), with the stream's waits limited by
+/// [`stream::IO_TIMEOUT`]. `display` `None` is `DISPLAY`.
+fn connect(display: Option<&str>, auth: &Auth) -> Result<(Conn, usize), ConnectError> {
+    let parsed = parse_display(display)?;
+    let screen = usize::from(parsed.screen);
+    let mut last = None;
+    for address in parsed.connect_instruction() {
+        let (socket, (family, peer)) = match DefaultStream::connect(&address) {
+            Ok(connected) => connected,
+            Err(err) => {
+                last = Some(err);
+                continue;
+            }
+        };
+        let (name, data) = match auth {
+            Auth::Xauthority => get_auth(family, &peer, parsed.display).ok().flatten().unwrap_or_default(),
+            #[cfg(test)]
+            Auth::Cookie(cookie) => (b"MIT-MAGIC-COOKIE-1".to_vec(), cookie.clone()),
+        };
+        let conn = RustConnection::connect_to_stream_with_auth_info(TimedStream(socket), screen, name, data)?;
+        return Ok((conn, screen));
+    }
+    Err(last.map_or(ConnectError::UnknownError, ConnectError::IoError))
+}
+
 /// A connection and the atoms found on its server. Atoms are only cached
 /// once the server has them; one that is missing is asked for again.
 struct Session {
-    conn: Connection,
+    conn: Conn,
+    root: u32,
     atoms: HashMap<&'static str, u32>,
 }
 
 impl Session {
-    fn atom(&mut self, name: &'static str) -> Result<Option<u32>, Error> {
+    fn open(display: Option<&str>, auth: &Auth) -> Result<Self, ConnectError> {
+        let (conn, screen) = connect(display, auth)?;
+        let root = conn.setup().roots[screen].root;
+        Ok(Self { conn, root, atoms: HashMap::new() })
+    }
+
+    fn atom(&mut self, name: &'static str) -> Result<Option<u32>, ReplyError> {
         if let Some(&atom) = self.atoms.get(name) {
             return Ok(Some(atom));
         }
-        let atom = self.conn.intern_atom(name, true)?;
+        let atom = self.conn.intern_atom(true, name.as_bytes())?.reply()?.atom;
         if atom == 0 {
             return Ok(None);
         }
@@ -53,49 +101,51 @@ impl Session {
     /// A property of `window`, or `None` when reading it gives an X error
     /// (a window destroyed in the meantime), as Xlib's callers treat it.
     fn property(
-        &mut self,
+        &self,
         window: u32,
-        property: u32,
-        type_: u32,
+        property: impl Into<u32>,
+        type_: AtomEnum,
         length: u32,
-    ) -> Result<Option<conn::Property>, Error> {
-        match self.conn.get_property(window, property, type_, length) {
+    ) -> Result<Option<GetPropertyReply>, ReplyError> {
+        match self.conn.get_property(false, window, property, type_, 0, length)?.reply() {
             Ok(prop) => Ok(Some(prop)),
-            Err(Error::X(_)) => Ok(None),
+            Err(ReplyError::X11Error(_)) => Ok(None),
             Err(err) => Err(err),
         }
     }
 
     /// The active window and its title and application; `None` when there is
     /// no active window.
-    fn lookup(&mut self) -> Result<Option<WindowInfo>, Error> {
+    fn lookup(&mut self) -> Result<Option<WindowInfo>, ReplyError> {
         let Some(active) = self.atom("_NET_ACTIVE_WINDOW")? else { return Ok(None) };
-        let root = self.conn.root();
-        let window = match self.property(root, active, ATOM_WINDOW, ACTIVE_WINDOW_LENGTH)? {
-            Some(prop) if prop.type_ == ATOM_WINDOW && prop.format == 32 && prop.value.len() >= 4 => {
-                u32::from_le_bytes([prop.value[0], prop.value[1], prop.value[2], prop.value[3]])
+        let window = match self.property(self.root, active, AtomEnum::WINDOW, ACTIVE_WINDOW_LENGTH)? {
+            Some(prop) if prop.type_ == u32::from(AtomEnum::WINDOW) => {
+                prop.value32().and_then(|mut windows| windows.next()).unwrap_or(0)
             }
             _ => 0,
         };
         if window == 0 {
             return Ok(None);
         }
-        let title = match self.property(window, ATOM_WM_NAME, ANY_PROPERTY_TYPE, WM_NAME_LENGTH)? {
+        let title = match self.property(window, AtomEnum::WM_NAME, AtomEnum::ANY, WM_NAME_LENGTH)? {
             Some(prop) if prop.type_ != 0 => {
                 let encoding = self.title_encoding(prop.type_)?;
                 text::title(encoding, prop.format, &prop.value)
             }
             _ => String::new(),
         };
-        let application = match self.property(window, ATOM_WM_CLASS, ATOM_STRING, WM_CLASS_LENGTH)? {
-            Some(prop) if prop.type_ == ATOM_STRING && prop.format == 8 => text::application(&prop.value),
-            _ => String::new(),
-        };
+        let application =
+            match self.property(window, AtomEnum::WM_CLASS, AtomEnum::STRING, WM_CLASS_LENGTH)? {
+                Some(prop) if prop.type_ == u32::from(AtomEnum::STRING) && prop.format == 8 => {
+                    text::application(&prop.value)
+                }
+                _ => String::new(),
+            };
         Ok(Some(WindowInfo { application: JsString::from(application), title: JsString::from(title) }))
     }
 
-    fn title_encoding(&mut self, type_: u32) -> Result<TitleEncoding, Error> {
-        if type_ == ATOM_STRING {
+    fn title_encoding(&mut self, type_: u32) -> Result<TitleEncoding, ReplyError> {
+        if type_ == u32::from(AtomEnum::STRING) {
             return Ok(TitleEncoding::String);
         }
         if self.atom("UTF8_STRING")? == Some(type_) {
@@ -108,37 +158,31 @@ impl Session {
     }
 }
 
-/// The X11 lookup on one display. The connection is opened by
-/// [`X11Backend::open`]; when it breaks (the server goes away or stops
-/// answering), the lookup fails and the next one opens it again.
+/// The X11 lookup on one display. The connection is opened when the backend
+/// is made; when it breaks (the server goes away or stops answering), the
+/// lookup fails and the next one opens it again.
 pub struct X11Backend {
-    display: String,
-    authority: Option<PathBuf>,
-    hostname: String,
+    display: Option<String>,
+    auth: Auth,
     session: Option<Session>,
 }
 
 impl X11Backend {
-    /// Opens `display` with the cookie of the authority file `authority`.
-    pub fn open(display: &str, authority: Option<PathBuf>) -> Result<Self, NativeError> {
-        let mut backend =
-            Self { display: display.to_owned(), authority, hostname: display::hostname(), session: None };
-        backend.session = Some(backend.connect()?);
-        Ok(backend)
-    }
-
     /// Opens the display Xlib's `XOpenDisplay(NULL)` opens: `DISPLAY`, with
-    /// the authority file of `XAUTHORITY` or `HOME`.
+    /// the cookie of the authority file of `XAUTHORITY` or `HOME`.
     pub fn from_env() -> Result<Self, NativeError> {
-        let var = |name| std::env::var(name).ok();
-        let display = var("DISPLAY").filter(|d| !d.is_empty()).ok_or("Failed to open display")?;
-        let authority = display::authority_path(var("XAUTHORITY").as_deref(), var("HOME").as_deref());
-        Self::open(&display, authority)
+        Self::open(None, Auth::Xauthority)
     }
 
-    fn connect(&self) -> Result<Session, Error> {
-        let conn = Connection::open(&self.display, self.authority.as_deref(), &self.hostname)?;
-        Ok(Session { conn, atoms: HashMap::new() })
+    /// Opens `display` with `cookie`.
+    #[cfg(test)]
+    fn with_cookie(display: &str, cookie: &[u8]) -> Result<Self, NativeError> {
+        Self::open(Some(display.to_owned()), Auth::Cookie(cookie.to_vec()))
+    }
+
+    fn open(display: Option<String>, auth: Auth) -> Result<Self, NativeError> {
+        let session = Session::open(display.as_deref(), &auth)?;
+        Ok(Self { display, auth, session: Some(session) })
     }
 }
 
@@ -146,7 +190,7 @@ impl NativeBackend for X11Backend {
     fn active_window(&mut self) -> Result<Option<WindowInfo>, NativeError> {
         let mut session = match self.session.take() {
             Some(session) => session,
-            None => self.connect()?,
+            None => Session::open(self.display.as_deref(), &self.auth)?,
         };
         match session.lookup() {
             Ok(Some(info)) => {
@@ -157,7 +201,7 @@ impl NativeBackend for X11Backend {
                 self.session = Some(session);
                 Err(NO_ACTIVE_WINDOW.into())
             }
-            Err(err @ Error::X(_)) => {
+            Err(err @ ReplyError::X11Error(_)) => {
                 self.session = Some(session);
                 Err(err.into())
             }

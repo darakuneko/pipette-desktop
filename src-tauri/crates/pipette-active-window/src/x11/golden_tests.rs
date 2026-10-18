@@ -6,8 +6,9 @@
 //! binding's. Skips when Xvfb is not installed (see `REQUIRE_VAR`).
 
 use pipette_js_json::Value;
+use x11rb::protocol::xproto::{CreateWindowAux, PropMode, WindowClass};
+use x11rb::wrapper::ConnectionExt as _;
 
-use super::conn::{ATOM_WINDOW, Connection};
 use super::test_server::PrivateXServer;
 use super::*;
 
@@ -29,82 +30,66 @@ fn hex(text: &str) -> Vec<u8> {
 }
 
 /// The requests the generator makes to set a case up, on a connection of
-/// the test's own.
+/// the test's own. Each is checked, so an X error fails the test.
 struct Setup {
-    conn: Connection,
+    conn: Conn,
+    root: u32,
 }
 
 impl Setup {
-    fn intern(&mut self, name: &str) -> u32 {
-        self.conn.intern_atom(name, false).unwrap()
+    fn intern(&self, name: &str) -> u32 {
+        self.conn.intern_atom(false, name.as_bytes()).unwrap().reply().unwrap().atom
     }
 
-    fn create_window(&mut self) -> u32 {
-        let (base, mask, next) = &mut self.conn.ids;
-        let id = *base | (*next * (*mask & mask.wrapping_neg()));
-        *next += 1;
-        let root = self.conn.root();
-        let mut request = vec![1, 0, 0, 0];
-        for field in [id, root, 0, 1 | (1 << 16)] {
-            request.extend(field.to_le_bytes());
-        }
-        request.extend(0u16.to_le_bytes());
-        request.extend(2u16.to_le_bytes()); // InputOnly, never mapped.
-        request.extend(0u32.to_le_bytes());
-        request.extend(0u32.to_le_bytes());
-        self.conn.send(request).unwrap();
-        id
+    /// An InputOnly window that is never mapped.
+    fn create_window(&self) -> u32 {
+        let window = self.conn.generate_id().unwrap();
+        self.conn
+            .create_window(
+                0,
+                window,
+                self.root,
+                0,
+                0,
+                1,
+                1,
+                0,
+                WindowClass::INPUT_ONLY,
+                0,
+                &CreateWindowAux::new(),
+            )
+            .unwrap()
+            .check()
+            .unwrap();
+        window
     }
 
-    fn destroy_window(&mut self, window: u32) {
-        let mut request = vec![4, 0, 0, 0];
-        request.extend(window.to_le_bytes());
-        self.conn.send(request).unwrap();
+    fn change_property(&self, window: u32, property: u32, type_: u32, format: u8, data: &[u8]) {
+        let items = data.len() as u32 / u32::from(format / 8);
+        self.conn
+            .change_property(PropMode::REPLACE, window, property, type_, format, items, data)
+            .unwrap()
+            .check()
+            .unwrap();
     }
 
-    fn change_property(&mut self, window: u32, property: u32, type_: u32, format: u8, data: &[u8]) {
-        let mut request = vec![18, 0, 0, 0];
-        for field in [window, property, type_] {
-            request.extend(field.to_le_bytes());
-        }
-        request.extend([format, 0, 0, 0]);
-        request.extend((data.len() as u32 / u32::from(format / 8)).to_le_bytes());
-        request.extend(data);
-        self.conn.send(request).unwrap();
-    }
-
-    fn delete_property(&mut self, window: u32, property: u32) {
-        let mut request = vec![19, 0, 0, 0];
-        request.extend(window.to_le_bytes());
-        request.extend(property.to_le_bytes());
-        self.conn.send(request).unwrap();
-    }
-
-    /// GetInputFocus as the round trip that surfaces the errors of the
-    /// requests before it.
-    fn sync(&mut self) {
-        let sequence = self.conn.send(vec![43, 0, 0, 0]).unwrap();
-        self.conn.reply(sequence).unwrap();
-    }
-
-    fn set_up(&mut self, case: &Value) {
+    fn set_up(&self, case: &Value) {
         let active = text(case, "active");
         if active == "no-atom" {
-            assert_eq!(self.conn.intern_atom("_NET_ACTIVE_WINDOW", true).unwrap(), 0);
+            let atom = self.conn.intern_atom(true, b"_NET_ACTIVE_WINDOW").unwrap().reply().unwrap().atom;
+            assert_eq!(atom, 0);
             return;
         }
         let atom = self.intern("_NET_ACTIVE_WINDOW");
-        let root = self.conn.root();
         let target = match active.as_str() {
             "unset" => {
-                self.delete_property(root, atom);
-                self.sync();
+                self.conn.delete_property(self.root, atom).unwrap().check().unwrap();
                 return;
             }
             "none" => 0,
             "destroyed" => {
                 let window = self.create_window();
-                self.destroy_window(window);
+                self.conn.destroy_window(window).unwrap().check().unwrap();
                 window
             }
             "window" => {
@@ -120,17 +105,23 @@ impl Setup {
             }
             other => panic!("unknown active {other}"),
         };
-        self.change_property(root, atom, ATOM_WINDOW, 32, &target.to_le_bytes());
-        self.sync();
+        self.conn
+            .change_property32(PropMode::REPLACE, self.root, atom, AtomEnum::WINDOW, &[target])
+            .unwrap()
+            .check()
+            .unwrap();
     }
 }
 
 #[test]
 fn the_lookup_matches_the_binding_on_a_private_x_server() {
     let Some(server) = PrivateXServer::start() else { return };
-    let mut setup = Setup { conn: Connection::open(&server.display, Some(&server.authority), "").unwrap() };
+    let auth = Auth::Cookie(server.cookie.to_vec());
+    let (conn, screen) = connect(Some(&server.display), &auth).unwrap();
+    let root = conn.setup().roots[screen].root;
+    let setup = Setup { conn, root };
     // One lookup for every case, as the app keeps one for its lifetime.
-    let mut lookup = X11Backend::open(&server.display, Some(server.authority.clone())).unwrap();
+    let mut lookup = X11Backend::with_cookie(&server.display, &server.cookie).unwrap();
     let fixture = fixture();
     let Value::Array(cases) = field(&fixture, "cases") else { panic!("cases") };
     assert_eq!(cases.len(), 29);
@@ -155,6 +146,7 @@ fn the_lookup_matches_the_binding_on_a_private_x_server() {
         }
     }
     drop(setup);
+    drop(lookup);
     drop(server);
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }
@@ -163,6 +155,6 @@ fn the_lookup_matches_the_binding_on_a_private_x_server() {
 fn a_display_that_cannot_be_opened_fails_to_load() {
     // A display number no server takes, through the local socket only (the
     // unix protocol has no TCP fallback); no Xvfb is needed.
-    assert!(X11Backend::open("unix/:65535", None).is_err());
-    assert!(X11Backend::open("not a display", None).is_err());
+    assert!(X11Backend::with_cookie("unix/:65535", b"").is_err());
+    assert!(X11Backend::with_cookie("not a display", b"").is_err());
 }

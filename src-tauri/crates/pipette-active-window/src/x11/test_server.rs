@@ -18,7 +18,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::display::{FAMILY_WILD, MIT_MAGIC_COOKIE};
+/// FamilyWild, which Xlib matches against any local display.
+const FAMILY_WILD: u16 = 65535;
 
 const FIRST_DISPLAY: u16 = 90;
 const LAST_DISPLAY: u16 = 199;
@@ -31,7 +32,9 @@ pub(crate) const REQUIRE_VAR: &str = "PIPETTE_REQUIRE_XVFB";
 
 pub(crate) struct PrivateXServer {
     pub display: String,
-    pub authority: PathBuf,
+    authority: PathBuf,
+    /// The MIT-MAGIC-COOKIE-1 cookie in `authority`.
+    pub cookie: [u8; 16],
     child: Option<Child>,
     lock_file: PathBuf,
     _dir: tempfile::TempDir,
@@ -87,7 +90,7 @@ fn reserve_display() -> Result<(u16, PathBuf), String> {
 /// One Xauthority entry of family FamilyWild with no display number.
 fn authority_entry(cookie: &[u8]) -> Vec<u8> {
     let mut entry = FAMILY_WILD.to_be_bytes().to_vec();
-    for field in [&b""[..], b"", MIT_MAGIC_COOKIE, cookie] {
+    for field in [&b""[..], b"", b"MIT-MAGIC-COOKIE-1", cookie] {
         entry.extend((field.len() as u16).to_be_bytes());
         entry.extend(field);
     }
@@ -122,6 +125,7 @@ impl PrivateXServer {
         let mut server = Self {
             display: format!(":{number}"),
             authority: PathBuf::new(),
+            cookie: random_cookie()?,
             child: None,
             lock_file,
             _dir: tempfile::tempdir().map_err(|err| err.to_string())?,
@@ -133,7 +137,7 @@ impl PrivateXServer {
             .mode(0o600)
             .open(&server.authority)
             .map_err(|err| err.to_string())?;
-        file.write_all(&authority_entry(&random_cookie()?)).map_err(|err| err.to_string())?;
+        file.write_all(&authority_entry(&server.cookie)).map_err(|err| err.to_string())?;
         drop(file);
         // With the display number given, `-displayfd` only reports it (on
         // standard output here) once the server is ready; it also makes the
