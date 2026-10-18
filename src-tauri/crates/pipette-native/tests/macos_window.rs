@@ -19,9 +19,9 @@ mod appkit {
     use std::ptr::NonNull;
 
     use objc2::{MainThreadMarker, MainThreadOnly};
-    use objc2_app_kit::{NSApplication, NSBackingStoreType, NSWindow, NSWindowStyleMask};
+    use objc2_app_kit::{NSApplication, NSBackingStoreType, NSScreen, NSWindow, NSWindowStyleMask};
     use objc2_foundation::{NSPoint, NSRect, NSSize};
-    use pipette_native::{Error, set_content_aspect_ratio, set_opacity};
+    use pipette_native::{Error, OuterFrame, set_content_aspect_ratio, set_opacity, set_outer_frame};
     use raw_window_handle::{
         AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle, WindowHandle,
     };
@@ -80,14 +80,33 @@ mod appkit {
         let increments = window.resizeIncrements();
         assert!(close(increments.width, 1.0) && close(increments.height, 1.0), "{increments:?}");
 
+        // The frame's top-left corner, from the top of the first screen,
+        // in AppKit's bottom-up coordinates.
+        let screen_height = NSScreen::screens(main_thread)
+            .firstObject()
+            .expect("the runner has a screen")
+            .frame()
+            .size
+            .height;
+        let target = OuterFrame { x: 40.0, y: 60.0, width: 420.0, height: 260.0 };
+        set_outer_frame(&view, target).expect("set the frame");
+        let frame = window.frame();
+        assert!(close(frame.origin.x, 40.0) && close(frame.size.width, 420.0), "{frame:?}");
+        assert!(close(frame.size.height, 260.0), "{frame:?}");
+        assert!(close(frame.origin.y, screen_height - 60.0 - 260.0), "{frame:?} on {screen_height}");
+
         let address = view.0;
         let off_main = std::thread::spawn(move || {
             let view = View(address);
-            (set_opacity(&view, 0.5), set_content_aspect_ratio(&view, Some(2.0)))
+            (
+                set_opacity(&view, 0.5),
+                set_content_aspect_ratio(&view, Some(2.0)),
+                set_outer_frame(&view, OuterFrame { x: 0.0, y: 0.0, width: 1.0, height: 1.0 }),
+            )
         })
         .join()
         .expect("the thread ends");
-        assert_eq!(off_main, (Err(Error::WrongThread), Err(Error::WrongThread)));
+        assert_eq!(off_main, (Err(Error::WrongThread), Err(Error::WrongThread), Err(Error::WrongThread)));
         assert!(close(window.alphaValue(), 1.0));
 
         window.close();

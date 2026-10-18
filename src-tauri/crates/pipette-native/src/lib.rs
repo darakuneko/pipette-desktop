@@ -5,6 +5,7 @@
 //! - [`set_opacity`]: `setOpacity`. Windows: the window becomes a layered
 //!   window (`WS_EX_LAYERED`) with `SetLayeredWindowAttributes`' alpha;
 //!   macOS: `NSWindow.alphaValue`.
+//! - [`set_outer_frame`] (macOS): `setBounds`, the frame set at once.
 //! - [`set_content_aspect_ratio`]: `setAspectRatio(ratio, extraSize)` with
 //!   the frame (outer minus content size) as `extraSize`, so the content
 //!   keeps the ratio while the user resizes the window; the app's own
@@ -72,6 +73,28 @@ pub fn set_content_aspect_ratio(window: &impl HasWindowHandle, ratio: Option<f64
     Err(Error::Unsupported)
 }
 
+/// A window's outer rectangle, frame included, in points: the position of
+/// its top-left corner from the top-left corner of the first screen, y
+/// growing downwards (the coordinates Tauri's positions have on macOS).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OuterFrame {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+/// Moves and resizes `window` to `frame` in one step, on macOS only (where
+/// setting the position and then the content size moves the top-left
+/// corner); [`Error::Unsupported`] elsewhere. Must run on the main thread.
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+pub fn set_outer_frame(window: &impl HasWindowHandle, frame: OuterFrame) -> Result<(), Error> {
+    #[cfg(target_os = "macos")]
+    return macos::set_outer_frame(window, frame);
+    #[cfg(not(target_os = "macos"))]
+    Err(Error::Unsupported)
+}
+
 /// `std::clamp(opacity, 0.0, 1.0)`, and 1 for NaN.
 fn clamp_opacity(opacity: f64) -> f64 {
     if opacity.is_nan() { 1.0 } else { opacity.clamp(0.0, 1.0) }
@@ -119,5 +142,7 @@ mod tests {
         }
         assert_eq!(set_opacity(&NoWindow, 0.5), Err(Error::Unsupported));
         assert_eq!(set_content_aspect_ratio(&NoWindow, Some(2.0)), Err(Error::Unsupported));
+        let frame = OuterFrame { x: 0.0, y: 0.0, width: 1.0, height: 1.0 };
+        assert_eq!(set_outer_frame(&NoWindow, frame), Err(Error::Unsupported));
     }
 }

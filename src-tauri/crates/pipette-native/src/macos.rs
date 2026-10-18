@@ -8,14 +8,19 @@
 //! and `contentResizeIncrements` wins, and so for `aspectRatio` and
 //! `resizeIncrements`), so the release here also sets the content's
 //! increments, which is what lets go of a content ratio.
+//!
+//! A window's frame is set in one `setFrame:display:`: Tauri's setters set
+//! the position and the content size apart, and `setContentSize:` keeps the
+//! bottom edge where it is, so a resize after a move shifts the top-left
+//! corner by the change of height.
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSView, NSWindow};
-use objc2_foundation::NSSize;
+use objc2_app_kit::{NSScreen, NSView, NSWindow};
+use objc2_foundation::{NSPoint, NSRect, NSSize};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
-use crate::Error;
+use crate::{Error, OuterFrame};
 
 /// The NSWindow of `window`; `_main_thread` proves this runs on the main
 /// thread.
@@ -58,5 +63,21 @@ pub(crate) fn set_content_aspect_ratio(
             ns_window.setContentResizeIncrements(one);
         }
     }
+    Ok(())
+}
+
+pub(crate) fn set_outer_frame(window: &impl HasWindowHandle, frame: OuterFrame) -> Result<(), Error> {
+    let main_thread = main_thread()?;
+    let ns_window = ns_window(window, main_thread)?;
+    // AppKit's screen coordinates start at the bottom-left corner of the
+    // first screen (the one with the menu bar) and grow upwards; the frame
+    // given starts at the top-left corner of that screen and grows
+    // downwards, as Tauri's positions on macOS do.
+    let first_screen = NSScreen::screens(main_thread)
+        .firstObject()
+        .ok_or_else(|| Error::NoHandle("there is no screen".into()))?;
+    let origin_y = first_screen.frame().size.height - frame.y - frame.height;
+    let rect = NSRect::new(NSPoint::new(frame.x, origin_y), NSSize::new(frame.width, frame.height));
+    ns_window.setFrame_display(rect, true);
     Ok(())
 }

@@ -128,6 +128,18 @@ fn the_opacity_makes_the_window_layered_and_it_stays_layered() {
 }
 
 #[test]
+fn a_window_layered_before_stays_layered_once_its_opacity_is_set() {
+    let window = TestWindow::new();
+    // SAFETY: the window is alive and belongs to this thread.
+    unsafe { SetWindowLongW(window.0, GWL_EXSTYLE, (window.ex_style() | WS_EX_LAYERED) as i32) };
+    set_opacity(&window, 0.5).unwrap();
+    // SAFETY: as above.
+    unsafe { SetWindowLongW(window.0, GWL_EXSTYLE, (window.ex_style() & !WS_EX_LAYERED) as i32) };
+    assert_ne!(window.ex_style() & WS_EX_LAYERED, 0);
+    assert_eq!(window.alpha(), 127);
+}
+
+#[test]
 fn an_opaque_window_stays_a_plain_one() {
     let window = TestWindow::new();
     set_opacity(&window, 1.0).unwrap();

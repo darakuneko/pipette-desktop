@@ -27,7 +27,7 @@ pub mod opacity;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use tauri::{LogicalPosition, LogicalSize, Manager, Runtime, Window, WindowEvent};
+use tauri::{Manager, Runtime, Window, WindowEvent};
 
 use crate::main_window::{self, MAIN_WINDOW};
 use crate::window_bounds::{Rect, Size};
@@ -445,12 +445,7 @@ impl<R: Runtime> WindowPort for Port<R> {
             }
             return;
         }
-        let size = native::content_size(bounds.size(), native::frame(&self.0));
-        let result = self
-            .0
-            .set_position(LogicalPosition::new(bounds.x, bounds.y))
-            .and_then(|()| self.0.set_size(LogicalSize::new(size.width, size.height)));
-        if let Err(err) = result {
+        if let Err(err) = native::set_outer_bounds(&self.0, bounds) {
             log::error!("[window] failed to set the window bounds: {err}");
         }
     }

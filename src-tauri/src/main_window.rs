@@ -143,9 +143,9 @@ pub fn open_main_window<R: Runtime>(
     let window = builder.build()?;
     window_ops::native::fit_opening_frame(
         &window.as_ref().window(),
-        placement.bounds.size(),
+        placement.bounds,
         placement.min_size,
-        !placement.positioned,
+        placement.positioned,
     );
     app.manage(MainWindowState {
         started_hidden: start_hidden,

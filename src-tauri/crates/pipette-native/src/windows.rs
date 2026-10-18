@@ -12,8 +12,8 @@
 //!   bit and with it the alpha;
 //! - the aspect one carries the ratio in its reference data (the bits of an
 //!   `f32`, the precision Chromium keeps the ratio in), so it needs no
-//!   allocation; it reads the frame and the minimum size of the window at
-//!   each `WM_SIZING`.
+//!   allocation; it reads the frame and the minimum and maximum sizes of
+//!   the window at each `WM_SIZING`.
 
 use std::ptr;
 
@@ -69,17 +69,20 @@ pub(crate) fn set_opacity(window: &impl HasWindowHandle, opacity: f64) -> Result
     let hwnd = hwnd(window)?;
     let alpha = crate::alpha_byte(opacity);
     let style = ex_style(hwnd);
+    // An opaque window that is not layered yet looks the same as Electron's
+    // layered one at 255; it stays a plain window.
+    if style & WS_EX_LAYERED == 0 && alpha == u8::MAX {
+        return Ok(());
+    }
+    // Whoever layered the window before, from now on the opacity needs the
+    // layering, so the procedure keeping it goes on every time (installing
+    // it again changes nothing).
+    // SAFETY: `hwnd` is a window of this thread (checked above), as
+    // SetWindowSubclass requires; `keep_layered` matches SUBCLASSPROC.
+    if unsafe { SetWindowSubclass(hwnd, Some(keep_layered), LAYERED_ID, 0) } == 0 {
+        return Err(last_error("SetWindowSubclass"));
+    }
     if style & WS_EX_LAYERED == 0 {
-        // An opaque window that is not layered yet looks the same as
-        // Electron's layered one at 255; it stays a plain window.
-        if alpha == u8::MAX {
-            return Ok(());
-        }
-        // SAFETY: `hwnd` is a window of this thread (checked above), as
-        // SetWindowSubclass requires; `keep_layered` matches SUBCLASSPROC.
-        if unsafe { SetWindowSubclass(hwnd, Some(keep_layered), LAYERED_ID, 0) } == 0 {
-            return Err(last_error("SetWindowSubclass"));
-        }
         // SAFETY: sets only the extended style of a window of this thread;
         // the window's procedures receive WM_STYLECHANGING / WM_STYLECHANGED
         // on this thread before it returns.
@@ -170,7 +173,7 @@ unsafe extern "system" fn fit_to_ratio(
     if message == WM_SIZING
         && lparam != 0
         && let Some(edge) = Edge::from_wmsz(wparam)
-        && let Some((margin, min_size)) = frame_and_min_size(hwnd)
+        && let Some((margin, min_size, max_size)) = frame_and_track_sizes(hwnd)
     {
         // SAFETY: for WM_SIZING, lParam points to the window rectangle of
         // the drag, which the window procedures may change for the length
@@ -178,7 +181,7 @@ unsafe extern "system" fn fit_to_ratio(
         let rect = unsafe { &mut *(lparam as *mut RECT) };
         let ratio = f32::from_bits(data as u32);
         let bounds = Bounds { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
-        let fitted = aspect::fit(edge, ratio, min_size, margin, bounds);
+        let fitted = aspect::fit(edge, ratio, min_size, max_size, margin, bounds);
         *rect = RECT { left: fitted.left, top: fitted.top, right: fitted.right, bottom: fitted.bottom };
     }
     if message == WM_NCDESTROY {
@@ -192,10 +195,10 @@ unsafe extern "system" fn fit_to_ratio(
     unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
 }
 
-/// The frame of `hwnd` (window minus client size) and its minimum tracking
-/// size as its window procedure answers `WM_GETMINMAXINFO` (zero when it
-/// sets none), in physical pixels.
-fn frame_and_min_size(hwnd: HWND) -> Option<(Extent, Extent)> {
+/// The frame of `hwnd` (window minus client size) and its minimum and
+/// maximum tracking sizes as its window procedure answers `WM_GETMINMAXINFO`
+/// (zero for a size it does not set), in physical pixels.
+fn frame_and_track_sizes(hwnd: HWND) -> Option<(Extent, Extent, Extent)> {
     let mut window = RECT { left: 0, top: 0, right: 0, bottom: 0 };
     let mut client = window;
     // SAFETY: both pointers are to RECTs on this stack frame, written
@@ -221,6 +224,9 @@ fn frame_and_min_size(hwnd: HWND) -> Option<(Extent, Extent)> {
     // lives on this stack frame for the whole synchronous call; the message
     // goes to the window's own procedures on this thread.
     unsafe { SendMessageW(hwnd, WM_GETMINMAXINFO, 0, &mut info as *mut MINMAXINFO as LPARAM) };
-    let min_size = Extent { width: info.ptMinTrackSize.x.max(0), height: info.ptMinTrackSize.y.max(0) };
-    Some((margin, min_size))
+    let extent = |point: windows_sys::Win32::Foundation::POINT| Extent {
+        width: point.x.max(0),
+        height: point.y.max(0),
+    };
+    Some((margin, extent(info.ptMinTrackSize), extent(info.ptMaxTrackSize)))
 }
