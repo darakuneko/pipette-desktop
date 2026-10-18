@@ -46,6 +46,7 @@ pub struct Hints {
 impl Hints {
     /// The GDK flags of the set, by name: `MIN_SIZE`, then `BASE_SIZE` and
     /// `ASPECT` together.
+    #[cfg(any(test, feature = "dev-tools"))]
     pub fn mask(&self) -> Vec<&'static str> {
         let mut mask = Vec::new();
         if self.min_size.is_some() {

@@ -359,7 +359,9 @@ pub fn set_always_on_top<R: Runtime>(window: &Window<R>, enabled: bool) {
     }
 }
 
-/// The window's geometry as this module applied it.
+/// The window's geometry as this module applied it, for the development
+/// tools.
+#[cfg(feature = "dev-tools")]
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowReport {
@@ -375,6 +377,7 @@ pub struct WindowReport {
 }
 
 /// The geometry hints the window has, in whole logical pixels.
+#[cfg(feature = "dev-tools")]
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HintsReport {
@@ -383,6 +386,7 @@ pub struct HintsReport {
     pub aspect: Option<f64>,
 }
 
+#[cfg(feature = "dev-tools")]
 pub fn report<R: Runtime>(window: &Window<R>) -> Result<WindowReport, String> {
     let size = window
         .scale_factor()
