@@ -132,8 +132,42 @@ fn native_errors_warn_once_and_only_without_the_query() {
 }
 
 #[test]
-fn the_current_os_has_the_query_on_linux_only() {
+fn the_current_os_has_the_x11_lookup_and_the_query_on_linux_only() {
+    // Not asked for a name: on Linux that would open the desktop's display.
     let active = ActiveWindow::for_current_os();
-    assert!(active.native.is_none());
+    assert_eq!(matches!(active.native, Native::NotLoaded(_)), cfg!(target_os = "linux"));
     assert_eq!(active.focused_window.is_some(), cfg!(target_os = "linux"));
+}
+
+#[test]
+fn the_native_lookup_is_loaded_once_at_the_first_name() {
+    let loads = Arc::new(Mutex::new(0));
+    let counter = Arc::clone(&loads);
+    let load: NativeLoader = Box::new(move || {
+        *counter.lock().unwrap() += 1;
+        Ok(Box::new(FakeNative::window("App", "")) as Box<dyn NativeBackend>)
+    });
+    let mut active = ActiveWindow::with_loader(load, None);
+    assert_eq!(*loads.lock().unwrap(), 0);
+    assert_eq!(active.app_name(), Some("App".into()));
+    assert_eq!(active.app_name(), Some("App".into()));
+    assert_eq!(*loads.lock().unwrap(), 1);
+    assert!(!active.warned);
+}
+
+#[test]
+fn a_native_lookup_that_fails_to_load_warns_once_and_is_not_retried() {
+    let loads = Arc::new(Mutex::new(0));
+    let counter = Arc::clone(&loads);
+    let load: NativeLoader = Box::new(move || {
+        *counter.lock().unwrap() += 1;
+        Err("Failed to open display".into())
+    });
+    let runner = FakeRunner::new(Some(SHELL_REPLY));
+    let mut active = ActiveWindow::with_loader(load, Some(GnomeFocusedWindow::new(Box::new(runner.clone()))));
+    assert_eq!(active.app_name(), Some("Shell".into()));
+    assert_eq!(active.app_name(), Some("Shell".into()));
+    assert_eq!(*loads.lock().unwrap(), 1);
+    assert_eq!(runner.runs().len(), 2);
+    assert!(active.warned);
 }

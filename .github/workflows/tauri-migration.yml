@@ -55,13 +55,20 @@ jobs:
       - name: Clear the generated shim files
         run: rm -rf src/tauri-shim/generated
 
+      # The X11 active-window test of pipette-active-window starts a private
+      # Xvfb of its own (the apt index is fresh from setup-rust).
+      - name: Install Xvfb
+        run: sudo apt-get install -y xvfb
+
       # PIPETTE_REQUIRE_FAKE_OAUTH: the sign-in test against the Node fake
       # Google (tests/node_fake_oauth.rs of pipette-google-auth) must run,
-      # not skip.
+      # not skip. PIPETTE_REQUIRE_XVFB: the same for the X11 active-window
+      # test against the private Xvfb.
       - name: Test
         working-directory: src-tauri
         env:
           PIPETTE_REQUIRE_FAKE_OAUTH: "1"
+          PIPETTE_REQUIRE_XVFB: "1"
         run: cargo test --workspace --features pipette-app/dev-tools
 
       # The step above builds pipette-net with the endpoint variables of the
