@@ -11,9 +11,11 @@
 // Like Playwright, an action waits for its element (30 s unless given a
 // timeout) and refuses a locator that matches more than one.
 
+import { writeFileSync } from 'node:fs'
 import { $, browser } from '@wdio/globals'
 import { dispatchDoubleClick, fillElement, isSvgElement, readElement, type ElementBox, type ElementRead } from './page-element'
 import { keyCombo, webdriverKey } from './page-keys'
+import { cropImage, decodePng, encodePng, isSolidColour, type RgbaImage } from './png'
 import {
   queryPage,
   REF_ATTRIBUTE,
@@ -297,9 +299,20 @@ export class Locator {
     return this.withElement('attached', (element) => element.execute(fn) as Promise<Awaited<R>>)
   }
 
-  /** Saves a screenshot of the element alone. */
+  /** Saves a screenshot of the element alone: the window's screenshot cut
+   *  to the element's box, once the element is scrolled into view and the
+   *  page has painted. WebKitWebDriver's own element screenshot paints an
+   *  element outside the viewport black. */
   async screenshot(opts: { path: string }): Promise<void> {
-    await this.withElement('visible', (element) => element.saveScreenshot(opts.path))
+    await this.scrollIntoViewIfNeeded()
+    await afterPaint()
+    const box = await this.boundingBox()
+    if (!box) throw new Error(`${this.description} has no size to take a screenshot of`)
+    const image = await windowImage()
+    const scale = image.width / (await runInPage(() => window.innerWidth))
+    const cropped = cropImage(image, { x: box.x * scale, y: box.y * scale, width: box.width * scale, height: box.height * scale })
+    assertPainted(cropped, `the screenshot of ${this.description}`)
+    writeFileSync(opts.path, encodePng(cropped))
   }
 
   /** Waits for the element in `state` and runs `action` on it, finding it
@@ -389,6 +402,34 @@ function mouseAction() {
 }
 
 const VIEWPORT_WAIT_MS = 5_000
+/** How long {@link afterPaint} waits for two animation frames at most. */
+const PAINT_WAIT_MS = 1_000
+
+/** Resolves once the page has painted twice (two animation frames), or
+ *  after {@link PAINT_WAIT_MS} when the page paints no frames. */
+async function afterPaint(): Promise<void> {
+  await runInPage(
+    (limitMs: number) =>
+      new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), limitMs)
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))
+      }),
+    PAINT_WAIT_MS,
+  )
+}
+
+/** The window's screenshot, decoded. */
+async function windowImage(): Promise<RgbaImage> {
+  return decodePng(Buffer.from(await browser.takeScreenshot(), 'base64'))
+}
+
+/** Throws when `image` is one solid colour: a frame that was never
+ *  painted (black, or the bare background), never a real screenshot. */
+function assertPainted(image: RgbaImage, what: string): void {
+  if (isSolidColour(image)) {
+    throw new Error(`${what} (${image.width}x${image.height}) is a single solid colour; nothing was painted`)
+  }
+}
 
 export class Page {
   /** Key names are Playwright's (page-keys.ts). */
@@ -436,7 +477,9 @@ export class Page {
    *  the window's size (it does not scroll as a whole), so this is the
    *  full page too. */
   async screenshot(opts: { path: string }): Promise<void> {
-    await browser.saveScreenshot(opts.path)
+    const png = Buffer.from(await browser.takeScreenshot(), 'base64')
+    assertPainted(decodePng(png), 'the screenshot of the window')
+    writeFileSync(opts.path, png)
   }
 
   /** Resizes the window so its page is `size`, and answers whether it got
