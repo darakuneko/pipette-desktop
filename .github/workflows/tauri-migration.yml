@@ -180,8 +180,11 @@ jobs:
       # exactly the window's default size, which the capture requires. They
       # go into a temporary directory, not the committed docs/screenshots,
       # and are uploaded for review.
+      # About twice the run's length, so a hung capture still leaves time to
+      # upload what it took.
       - name: Doc screenshots (Tauri)
         id: doc-screenshots
+        timeout-minutes: 30
         run: |
           out="$(mktemp -d)/doc-screenshots"
           echo "dir=$out" >> "$GITHUB_OUTPUT"
