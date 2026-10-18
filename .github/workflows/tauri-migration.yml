@@ -169,12 +169,22 @@ jobs:
       - name: e2e (Tauri)
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e:tauri
 
-      # The operation guide's screenshots (e2e-tauri/doc-capture) on the same
-      # build. The screen is exactly the window's default size, which the
-      # capture requires. They go into a temporary directory, not the
-      # committed docs/screenshots, and are uploaded for review.
+      # The screenshots show Japanese text (the JIS key legends, the
+      # Japanese packs and Typing Test lists), which the runner has no font
+      # for.
+      - name: Install the CJK font for the doc screenshots
+        run: sudo apt-get install -y fonts-noto-cjk
+
+      # The operation guide's screenshots (e2e-tauri/doc-capture: the main
+      # capture and the one of each area) on the same build. The screen is
+      # exactly the window's default size, which the capture requires. They
+      # go into a temporary directory, not the committed docs/screenshots,
+      # and are uploaded for review.
+      # About twice the run's length, so a hung capture still leaves time to
+      # upload what it took.
       - name: Doc screenshots (Tauri)
         id: doc-screenshots
+        timeout-minutes: 30
         run: |
           out="$(mktemp -d)/doc-screenshots"
           echo "dir=$out" >> "$GITHUB_OUTPUT"

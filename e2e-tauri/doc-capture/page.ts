@@ -3,13 +3,19 @@
 // A thin Playwright-like layer over the WebdriverIO session of the capture,
 // so the capture steps read as they do with Playwright: `page.locator(css,
 // { hasText })`, `.filter({ has })`, `.first()`, `getByRole`, `click`,
-// `waitFor`, `screenshot` and the like. Elements are found in the page by
-// `queryPage` (page-query.ts); actions that need WebDriver (click,
-// element screenshot) mark the element there first and then address it by
-// that mark. Like Playwright, an action waits for its element (30 s unless
-// given a timeout) and refuses a locator that matches more than one.
+// `waitFor`, `fill`, `screenshot`, `page.keyboard`, `page.mouse` and the
+// like. Elements are found in the page by `queryPage` (page-query.ts);
+// actions that need WebDriver (click, element screenshot) mark the element
+// there first and then address it by that mark, and the ones that run in
+// the page (fill, reads, a forced double click) are in page-element.ts.
+// Like Playwright, an action waits for its element (30 s unless given a
+// timeout) and refuses a locator that matches more than one.
 
+import { writeFileSync } from 'node:fs'
 import { $, browser } from '@wdio/globals'
+import { dispatchDoubleClick, fillElement, isSvgElement, readElement, type ElementBox, type ElementRead } from './page-element'
+import { keyCombo, webdriverKey } from './page-keys'
+import { cropImage, decodePng, encodePng, isSolidColour, type RgbaImage } from './png'
 import {
   queryPage,
   REF_ATTRIBUTE,
@@ -23,10 +29,13 @@ import {
 const DEFAULT_TIMEOUT_MS = 30_000
 const POLL_MS = 100
 
-/** The WebDriver codes of the keys the capture presses. */
-const KEY_CODES: Record<string, string> = {
-  Escape: '\uE00C',
-}
+/** The ids of the WebDriver input sources of `page.keyboard` and
+ *  `page.mouse`. One source each, never released between calls, so a key or
+ *  button held by one call (`down`) is still held for the next ones. */
+const KEYBOARD_SOURCE = 'doc-capture-keyboard'
+const MOUSE_SOURCE = 'doc-capture-mouse'
+/** How long `page.keyboard.press` holds its keys. */
+const KEY_HOLD_MS = 10
 
 /** The selectors of the roles the capture looks up with `getByRole`. */
 const ROLE_SELECTORS: Record<string, string> = {
@@ -95,7 +104,7 @@ interface ClickOptions {
   position?: { x: number; y: number }
 }
 
-type WaitState = 'attached' | 'detached' | 'visible'
+type WaitState = 'attached' | 'detached' | 'visible' | 'hidden'
 
 export class Locator {
   constructor(
@@ -183,6 +192,10 @@ export class Locator {
       await this.waitFor({ state: 'visible', timeout: Math.max(0, deadline - Date.now()) })
       if ((await this.state()).enabled) {
         try {
+          if (await runInPage(isSvgElement, await this.mark())) {
+            await this.clickWithPointer(opts.position)
+            return
+          }
           const element = await this.markedElement()
           if (opts.position) {
             // WebDriver takes whole pixels from the element's center.
@@ -203,6 +216,18 @@ export class Locator {
       }
       await sleep(POLL_MS)
     }
+  }
+
+  /** Clicks the element with the mouse at `position` from its top-left
+   *  corner, or at its centre: WebKitWebDriver refuses an element click on
+   *  an SVG element (a key of the keymap is a `<g>`), and a click at the
+   *  point reaches the same handlers a user's click does. */
+  private async clickWithPointer(position?: { x: number; y: number }): Promise<void> {
+    const box = await this.boundingBox()
+    if (!box) throw new Error(`${this.description} has no size to click`)
+    const x = Math.round(box.x + (position?.x ?? box.width / 2))
+    const y = Math.round(box.y + (position?.y ?? box.height / 2))
+    await mouseAction().move({ x, y, origin: 'viewport' }).down({ button: 0 }).up({ button: 0 }).perform(true)
   }
 
   /** Picks the option of a `<select>` whose value (or else label) is
@@ -232,6 +257,38 @@ export class Locator {
     if (picked !== null) throw new Error(`selectOption on ${this.description}: ${picked}`)
   }
 
+  /** Sets the value of the input or textarea, as Playwright's `fill`:
+   *  waits for it to be visible, then sets it and sends `input` and
+   *  `change` (page-element.ts). */
+  async fill(value: string): Promise<void> {
+    await this.waitFor({ state: 'visible' })
+    const error = await runInPage(fillElement, await this.mark(), value)
+    if (error !== null) throw new Error(`fill on ${this.description}: ${error}`)
+  }
+
+  async inputValue(): Promise<string> {
+    return (await this.read('value')) as string
+  }
+
+  async textContent(): Promise<string | null> {
+    return (await this.read('text')) as string | null
+  }
+
+  /** The element's box in the viewport, or null when it has no size. */
+  async boundingBox(): Promise<ElementBox | null> {
+    return (await this.read('box')) as ElementBox | null
+  }
+
+  /** Sends the `dblclick` event in the page without waiting for the
+   *  element to be visible and uncovered: Playwright's forced double click,
+   *  the only one the capture uses. */
+  async dblclick(_opts: { force: true }): Promise<void> {
+    await this.waitFor({ state: 'attached' })
+    if (!(await runInPage(dispatchDoubleClick, await this.mark()))) {
+      throw new Error(`${this.description}: ${REPLACED_MESSAGE}`)
+    }
+  }
+
   async scrollIntoViewIfNeeded(): Promise<void> {
     await this.waitFor({ state: 'attached' })
     await query<boolean>(this.chain, 'scroll')
@@ -242,9 +299,20 @@ export class Locator {
     return this.withElement('attached', (element) => element.execute(fn) as Promise<Awaited<R>>)
   }
 
-  /** Saves a screenshot of the element alone. */
+  /** Saves a screenshot of the element alone: the window's screenshot cut
+   *  to the element's box, once the element is scrolled into view and the
+   *  page has painted. WebKitWebDriver's own element screenshot paints an
+   *  element outside the viewport black. */
   async screenshot(opts: { path: string }): Promise<void> {
-    await this.withElement('visible', (element) => element.saveScreenshot(opts.path))
+    await this.scrollIntoViewIfNeeded()
+    await afterPaint()
+    const box = await this.boundingBox()
+    if (!box) throw new Error(`${this.description} has no size to take a screenshot of`)
+    const image = await windowImage()
+    const scale = image.width / (await runInPage(() => window.innerWidth))
+    const cropped = cropImage(image, { x: box.x * scale, y: box.y * scale, width: box.width * scale, height: box.height * scale })
+    assertPainted(cropped, `the screenshot of ${this.description}`)
+    writeFileSync(opts.path, encodePng(cropped))
   }
 
   /** Waits for the element in `state` and runs `action` on it, finding it
@@ -271,6 +339,12 @@ export class Locator {
     return element
   }
 
+  /** Waits for the element and reads it in the page (page-element.ts). */
+  private async read(what: ElementRead): Promise<string | ElementBox | null> {
+    await this.waitFor({ state: 'attached' })
+    return runInPage(readElement, await this.mark(), what)
+  }
+
   private reached(wanted: WaitState, state: ElementState): boolean {
     switch (wanted) {
       case 'attached':
@@ -279,6 +353,8 @@ export class Locator {
         return state.count === 0
       case 'visible':
         return state.count === 1 && state.visible
+      case 'hidden':
+        return state.count === 0 || !state.visible
     }
   }
 
@@ -305,12 +381,87 @@ export class Locator {
   }
 }
 
+/** Presses `keys` together with the keyboard's input source: down in
+ *  order, held for {@link KEY_HOLD_MS}, then up. Keys a `down` holds stay
+ *  held. */
+async function pressKeys(keys: string[]): Promise<void> {
+  const action = keyAction()
+  for (const key of keys) action.down(key)
+  action.pause(KEY_HOLD_MS)
+  // Released in reverse order, as Playwright does: the modifiers last.
+  for (const key of [...keys].reverse()) action.up(key)
+  await action.perform(true)
+}
+
+function keyAction() {
+  return browser.action('key', { id: KEYBOARD_SOURCE })
+}
+
+function mouseAction() {
+  return browser.action('pointer', { id: MOUSE_SOURCE, parameters: { pointerType: 'mouse' } })
+}
+
+const VIEWPORT_WAIT_MS = 5_000
+/** How long {@link afterPaint} waits for two animation frames at most. */
+const PAINT_WAIT_MS = 1_000
+
+/** Resolves once the page has painted twice (two animation frames), or
+ *  after {@link PAINT_WAIT_MS} when the page paints no frames. */
+async function afterPaint(): Promise<void> {
+  await runInPage(
+    (limitMs: number) =>
+      new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), limitMs)
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))
+      }),
+    PAINT_WAIT_MS,
+  )
+}
+
+/** The window's screenshot, decoded. */
+async function windowImage(): Promise<RgbaImage> {
+  return decodePng(Buffer.from(await browser.takeScreenshot(), 'base64'))
+}
+
+/** Throws when `image` is one solid colour: a frame that was never
+ *  painted (black, or the bare background), never a real screenshot. */
+function assertPainted(image: RgbaImage, what: string): void {
+  if (isSolidColour(image)) {
+    throw new Error(`${what} (${image.width}x${image.height}) is a single solid colour; nothing was painted`)
+  }
+}
+
 export class Page {
+  /** Key names are Playwright's (page-keys.ts). */
   readonly keyboard = {
-    press: async (key: string): Promise<void> => {
-      const code = KEY_CODES[key]
-      if (!code) throw new Error(`keyboard.press does not know the key ${key}`)
-      await browser.keys([code])
+    /** Presses `key`, or a combination such as `Control+z`. */
+    press: (key: string): Promise<void> => pressKeys(keyCombo(key)),
+    /** Types `text` a character at a time, `delay` ms apart. */
+    type: async (text: string, opts: { delay?: number } = {}): Promise<void> => {
+      for (const char of text) {
+        await pressKeys([webdriverKey(char)])
+        if (opts.delay) await sleep(opts.delay)
+      }
+    },
+    down: async (key: string): Promise<void> => {
+      await keyAction().down(webdriverKey(key)).perform(true)
+    },
+    up: async (key: string): Promise<void> => {
+      await keyAction().up(webdriverKey(key)).perform(true)
+    },
+  }
+
+  /** The mouse, at whole pixels of the viewport. A button `down` holds
+   *  stays held until `up`. */
+  readonly mouse = {
+    move: async (x: number, y: number): Promise<void> => {
+      await mouseAction().move({ x: Math.round(x), y: Math.round(y), origin: 'viewport' }).perform(true)
+    },
+    down: async (): Promise<void> => {
+      await mouseAction().down({ button: 0 }).perform(true)
+    },
+    up: async (): Promise<void> => {
+      await mouseAction().up({ button: 0 }).perform(true)
     },
   }
 
@@ -326,14 +477,44 @@ export class Page {
    *  the window's size (it does not scroll as a whole), so this is the
    *  full page too. */
   async screenshot(opts: { path: string }): Promise<void> {
-    await browser.saveScreenshot(opts.path)
+    const png = Buffer.from(await browser.takeScreenshot(), 'base64')
+    assertPainted(decodePng(png), 'the screenshot of the window')
+    writeFileSync(opts.path, png)
+  }
+
+  /** Resizes the window so its page is `size`, and answers whether it got
+   *  there: the window has no frame on the capture's screen, so its size
+   *  is the page's, but the app's own limits (its minimum size) win, and
+   *  a WebDriver that cannot resize the window leaves it as it is. */
+  async setViewportSize(size: { width: number; height: number }): Promise<boolean> {
+    try {
+      await browser.setWindowSize(size.width, size.height)
+    } catch (err) {
+      console.log(`  [warn] the window could not be resized: ${err instanceof Error ? err.message : String(err)}`)
+      return false
+    }
+    const deadline = Date.now() + VIEWPORT_WAIT_MS
+    for (;;) {
+      const actual = await runInPage(() => ({ width: window.innerWidth, height: window.innerHeight }))
+      if (actual.width === size.width && actual.height === size.height) return true
+      if (Date.now() >= deadline) {
+        // Expected where the app keeps its own size (a minimum size, the
+        // keyboard's aspect ratio of the compact window).
+        console.log(`  [info] the page is ${actual.width}x${actual.height}, not ${size.width}x${size.height}: the app keeps its own size limits`)
+        return false
+      }
+      await sleep(POLL_MS)
+    }
   }
 
   waitForTimeout(ms: number): Promise<void> {
     return sleep(ms)
   }
 
-  evaluate<R>(fn: () => R): Promise<Awaited<R>> {
-    return runInPage(fn)
+  /** Runs `fn` in the page, with `arg` when given. */
+  evaluate<R>(fn: () => R): Promise<Awaited<R>>
+  evaluate<A, R>(fn: (arg: A) => R, arg: A): Promise<Awaited<R>>
+  evaluate<A, R>(fn: (arg?: A) => R, ...args: [A?]): Promise<Awaited<R>> {
+    return args.length === 0 ? runInPage(fn) : runInPage(fn as (arg: A) => R, args[0] as A)
   }
 }
