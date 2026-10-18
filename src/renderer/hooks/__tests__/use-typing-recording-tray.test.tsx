@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
+// Runs against both vialAPI implementations for the tray member
+// (tray-backends.ts): a preload-like mock, and the Tauri shim's tray member
+// over a mocked Tauri IPC.
 
 import { StrictMode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useTypingRecordingTray } from '../use-typing-recording-tray'
 import type { DeviceInfo, UnlockStatus } from '../../../shared/types/protocol'
 import { EMPTY_UID } from '../../../shared/constants/protocol'
+import { trayBackends } from './tray-backends'
 
 // Mirrors use-view-mode-routing.test.tsx's approach: the hook's Params type
 // pins down the full return types of useKeyboard / useDevicePrefs, far
@@ -112,213 +117,239 @@ function renderTray(initial: Overrides = {}) {
   return { ...utils, mocks: first.mocks, update }
 }
 
+let trayStatusUpdate: Mock
+
 beforeEach(() => {
-  window.vialAPI = {
-    trayStatusUpdate: vi.fn().mockResolvedValue(undefined),
-    typingAnalyticsSaveKeymapSnapshot: vi.fn().mockResolvedValue(undefined),
-  } as unknown as typeof window.vialAPI
+  trayStatusUpdate = vi.fn().mockResolvedValue(undefined)
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  clearMocks()
 })
 
-describe('useTypingRecordingTray — REC-unlock gate', () => {
-  it('fires once on the rising edge when REC is armed while locked', () => {
-    const { mocks } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
-    })
+const backends = trayBackends((status) => trayStatusUpdate(status), {
+  typingAnalyticsSaveKeymapSnapshot: () => Promise.resolve(),
+})
 
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+describe.each(backends)('useTypingRecordingTray ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
   })
 
-  it('does not re-request after the dialog is dismissed while the condition stays continuously true', () => {
-    const { mocks, update } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
+  describe('tray status', () => {
+    it('reports the connected keyboard and REC', () => {
+      renderTray({ unlocked: true, typingRecordEnabled: true })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyboardName: 'Test Keyboard', recording: true }),
+      )
     })
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
 
-    // Dismiss here means "still locked, still armed" — an unrelated
-    // rerender (e.g. typingTestMode toggling for an unrelated reason) must
-    // not re-request while the gate condition itself never went false.
-    act(() => { update({ typingTestMode: true }) })
-    act(() => { update({ typingTestMode: false }) })
-
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+    it('reports a dummy connection as disconnected', () => {
+      renderTray({ isDummy: true })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyboardName: null, recording: false }),
+      )
+    })
   })
 
-  it('re-fires when REC is toggled off then back on while still locked', () => {
-    const { mocks, update } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: false,
-    })
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+  describe('useTypingRecordingTray — REC-unlock gate', () => {
+    it('fires once on the rising edge when REC is armed while locked', () => {
+      const { mocks } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+      })
 
-    act(() => { update({ typingRecordEnabled: true }) })
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    act(() => { update({ typingRecordEnabled: false }) })
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    act(() => { update({ typingRecordEnabled: true }) })
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(2)
-  })
-
-  it('re-fires after a disconnect and reconnect of the same still-locked keyboard', () => {
-    const { mocks, update } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
-      uid: 'UID1',
-      appliedUid: 'UID1',
-    })
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    act(() => { update({ connectedDevice: null }) })
-    act(() => { update({ connectedDevice: makeDevice(), uid: 'UID1', appliedUid: 'UID1' }) })
-
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(2)
-  })
-
-  it('re-fires when the uid changes to a different locked keyboard while REC stays armed', () => {
-    const { mocks, update } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
-      uid: 'UID1',
-      appliedUid: 'UID1',
-    })
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    act(() => { update({ uid: 'UID2', appliedUid: 'UID2' }) })
-
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(2)
-  })
-
-  it('does not fire while unlock status is unknown', () => {
-    const { mocks } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      unlockStatusKnown: false,
-      typingRecordEnabled: true,
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
     })
 
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
+    it('does not re-request after the dialog is dismissed while the condition stays continuously true', () => {
+      const { mocks, update } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+      })
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
 
-  it('does not fire while the keyboard is still loading', () => {
-    const { mocks } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      loading: true,
-      typingRecordEnabled: true,
+      // Dismiss here means "still locked, still armed" — an unrelated
+      // rerender (e.g. typingTestMode toggling for an unrelated reason) must
+      // not re-request while the gate condition itself never went false.
+      act(() => { update({ typingTestMode: true }) })
+      act(() => { update({ typingTestMode: false }) })
+
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
     })
 
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
+    it('re-fires when REC is toggled off then back on while still locked', () => {
+      const { mocks, update } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: false,
+      })
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
 
-  it('does not fire while devicePrefs.appliedUid has not caught up to the connected uid', () => {
-    const { mocks } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
-      uid: 'UID1',
-      appliedUid: 'UID_OLD',
+      act(() => { update({ typingRecordEnabled: true }) })
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+
+      act(() => { update({ typingRecordEnabled: false }) })
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+
+      act(() => { update({ typingRecordEnabled: true }) })
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(2)
     })
 
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
+    it('re-fires after a disconnect and reconnect of the same still-locked keyboard', () => {
+      const { mocks, update } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+        uid: 'UID1',
+        appliedUid: 'UID1',
+      })
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
 
-  it('does not fire for a dummy device or an empty uid', () => {
-    const dummy = renderTray({
-      connectedDevice: makeDevice(),
-      isDummy: true,
-      unlocked: false,
-      typingRecordEnabled: true,
-    })
-    expect(dummy.mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+      act(() => { update({ connectedDevice: null }) })
+      act(() => { update({ connectedDevice: makeDevice(), uid: 'UID1', appliedUid: 'UID1' }) })
 
-    const emptyUid = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
-      uid: EMPTY_UID,
-      appliedUid: EMPTY_UID,
-    })
-    expect(emptyUid.mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
-
-  it('does not fire once the keyboard is already unlocked', () => {
-    const { mocks } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: true,
-      typingRecordEnabled: true,
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(2)
     })
 
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
+    it('re-fires when the uid changes to a different locked keyboard while REC stays armed', () => {
+      const { mocks, update } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+        uid: 'UID1',
+        appliedUid: 'UID1',
+      })
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
 
-  it('survives StrictMode double-invoke without double-firing', () => {
-    // renderTray already wraps in StrictMode — the "fires once" test above
-    // already covers this implicitly, but this test pins it explicitly as
-    // its own scenario per the task spec.
-    const { mocks } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: false,
-      typingRecordEnabled: true,
+      act(() => { update({ uid: 'UID2', appliedUid: 'UID2' }) })
+
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(2)
     })
 
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-  })
+    it('does not fire while unlock status is unknown', () => {
+      const { mocks } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        unlockStatusKnown: false,
+        typingRecordEnabled: true,
+      })
 
-  it('manual-lock flow: disarming REC before the lock status lands never re-triggers the gate', () => {
-    // Pins the Security row's manual Lock flow (KeycodesOverlayPanel /
-    // LockRecOffConfirmModal): REC is disarmed first, and only then does
-    // the lock land. If REC were still armed by the time `unlocked` flips
-    // to false, this same gate would fire and reopen the unlock dialog —
-    // the disarm-before-lock ordering must prevent that.
-    const { mocks, update } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: true,
-      unlockStatusKnown: true,
-      typingRecordEnabled: true,
-      uid: 'UID1',
-      appliedUid: 'UID1',
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
     })
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
 
-    // REC disarmed first (LockRecOffConfirmModal's onConfirm calls
-    // onTypingRecordDisarm before onLock).
-    act(() => { update({ typingRecordEnabled: false }) })
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+    it('does not fire while the keyboard is still loading', () => {
+      const { mocks } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        loading: true,
+        typingRecordEnabled: true,
+      })
 
-    // Lock status lands afterward.
-    act(() => { update({ unlocked: false }) })
-
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
-
-  it('control: if REC were still armed when the lock status lands, the gate would fire once', () => {
-    // Inverse of the manual-lock flow test above — proves the sequence
-    // actually exercises the gate rather than passing vacuously.
-    const { mocks, update } = renderTray({
-      connectedDevice: makeDevice(),
-      unlocked: true,
-      unlockStatusKnown: true,
-      typingRecordEnabled: true,
-      uid: 'UID1',
-      appliedUid: 'UID1',
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
     })
-    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
 
-    // REC left armed while the lock status lands.
-    act(() => { update({ unlocked: false }) })
+    it('does not fire while devicePrefs.appliedUid has not caught up to the connected uid', () => {
+      const { mocks } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+        uid: 'UID1',
+        appliedUid: 'UID_OLD',
+      })
 
-    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+    })
+
+    it('does not fire for a dummy device or an empty uid', () => {
+      const dummy = renderTray({
+        connectedDevice: makeDevice(),
+        isDummy: true,
+        unlocked: false,
+        typingRecordEnabled: true,
+      })
+      expect(dummy.mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+      const emptyUid = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+        uid: EMPTY_UID,
+        appliedUid: EMPTY_UID,
+      })
+      expect(emptyUid.mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+    })
+
+    it('does not fire once the keyboard is already unlocked', () => {
+      const { mocks } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: true,
+        typingRecordEnabled: true,
+      })
+
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+    })
+
+    it('survives StrictMode double-invoke without double-firing', () => {
+      // renderTray already wraps in StrictMode — the "fires once" test above
+      // already covers this implicitly, but this test pins it explicitly as
+      // its own scenario per the task spec.
+      const { mocks } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: false,
+        typingRecordEnabled: true,
+      })
+
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+    })
+
+    it('manual-lock flow: disarming REC before the lock status lands never re-triggers the gate', () => {
+      // Pins the Security row's manual Lock flow (KeycodesOverlayPanel /
+      // LockRecOffConfirmModal): REC is disarmed first, and only then does
+      // the lock land. If REC were still armed by the time `unlocked` flips
+      // to false, this same gate would fire and reopen the unlock dialog —
+      // the disarm-before-lock ordering must prevent that.
+      const { mocks, update } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: true,
+        unlockStatusKnown: true,
+        typingRecordEnabled: true,
+        uid: 'UID1',
+        appliedUid: 'UID1',
+      })
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+      // REC disarmed first (LockRecOffConfirmModal's onConfirm calls
+      // onTypingRecordDisarm before onLock).
+      act(() => { update({ typingRecordEnabled: false }) })
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+      // Lock status lands afterward.
+      act(() => { update({ unlocked: false }) })
+
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+    })
+
+    it('control: if REC were still armed when the lock status lands, the gate would fire once', () => {
+      // Inverse of the manual-lock flow test above — proves the sequence
+      // actually exercises the gate rather than passing vacuously.
+      const { mocks, update } = renderTray({
+        connectedDevice: makeDevice(),
+        unlocked: true,
+        unlockStatusKnown: true,
+        typingRecordEnabled: true,
+        uid: 'UID1',
+        appliedUid: 'UID1',
+      })
+      expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+      // REC left armed while the lock status lands.
+      act(() => { update({ unlocked: false }) })
+
+      expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+    })
   })
 })
