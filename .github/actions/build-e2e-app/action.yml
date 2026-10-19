@@ -1,0 +1,47 @@
+name: Build the Tauri app for the e2e tests
+description: >-
+  Builds the debug build with the development tools that the e2e tests and
+  the doc screenshots drive (src-tauri/target/debug/pipette), and installs
+  what they run it with: WebKitWebDriver, Xvfb, a session bus, the tray
+  icon's library and tauri-driver. Expects the repository checked out and
+  the pnpm packages installed.
+
+runs:
+  using: composite
+  steps:
+    # Every job that uses this action builds exactly the same, so they share
+    # the key, and whichever finishes first saves the cache.
+    - uses: ./.github/actions/setup-rust
+      with:
+        cache-key: e2e-build
+
+    # Builds the renderer for Tauri too, so it also checks the frontend
+    # build and its wiring in tauri.conf.json.
+    - name: Debug build
+      shell: bash
+      run: pnpm tauri:build:debug
+
+    # The WebDriver of WebKitGTK is webkit2gtk-driver up to Ubuntu 24.04 and
+    # webkitgtk-webdriver from 26.04 on. xvfb gives the app a display and
+    # dbus-run-session a session bus of its own, as a desktop session has
+    # (the tray icon registers on it, and the single-instance guard owns a
+    # name on it). libayatana-appindicator3-1 is the library Tauri loads
+    # at run time to show the tray icon on Linux; the tray tests need it
+    # installed, not only present as a dependency of the build packages.
+    - name: Install the e2e dependencies
+      shell: bash
+      run: |
+        # apt-cache show also succeeds for a name that is only referred to,
+        # so the check is for an installable candidate.
+        if LC_ALL=C apt-cache policy webkitgtk-webdriver | grep -q 'Candidate: [0-9]'; then
+          driver=webkitgtk-webdriver
+        else
+          driver=webkit2gtk-driver
+        fi
+        sudo apt-get install -y "$driver" xvfb dbus libayatana-appindicator3-1
+
+    # rust-cache keeps ~/.cargo/bin, so a cached tauri-driver of this
+    # version makes the install a no-op.
+    - name: Install tauri-driver
+      shell: bash
+      run: cargo install tauri-driver --version 2.1.0 --locked
