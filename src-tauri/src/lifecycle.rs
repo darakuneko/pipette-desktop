@@ -9,8 +9,9 @@
 //! then opens the window again.
 //!
 //! Exit paths and how each reaches the quit sequence:
-//! - the tray's Quit item and SIGTERM / SIGINT call `AppHandle::exit`, which
-//!   raises `RunEvent::ExitRequested` with a code;
+//! - the tray's Quit item, the macOS app menu's Quit (⌘Q, src/app_menu.rs)
+//!   and SIGTERM / SIGINT call `AppHandle::exit` (the menus through
+//!   [`request_quit`]), which raises `RunEvent::ExitRequested` with a code;
 //! - closing the last window when the app does not keep running raises
 //!   `RunEvent::ExitRequested` without one;
 //! - quitting from the macOS Dock, logging out or shutting down on macOS,
@@ -36,8 +37,7 @@
 //! Electron window's close handler does when the app quits; closing the
 //! window saves it too.
 //!
-//! SIGKILL cannot be caught, and this build has no menu (the Electron build
-//! sets none either), so no keyboard shortcut quits it.
+//! SIGKILL cannot be caught.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -112,6 +112,12 @@ pub fn setup(app: &mut App<Wry>) {
     app.manage(Arc::new(Lifecycle::default()));
     #[cfg(unix)]
     listen_for_termination(app.handle().clone());
+}
+
+/// Asks the app to quit, which starts the quit sequence: the tray's Quit
+/// and the macOS app menu's Quit.
+pub fn request_quit(app: &AppHandle<Wry>) {
+    app.exit(0);
 }
 
 /// Restores, shows and focuses the main window.

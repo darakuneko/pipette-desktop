@@ -25,7 +25,9 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, Tray
 use tauri::{App, AppHandle, Manager, Runtime, Wry};
 
 use crate::app_config::AppConfig;
-use crate::lifecycle::show_main_window;
+use crate::lifecycle::{request_quit, show_main_window};
+#[cfg(test)]
+pub(crate) use status::QUIT as QUIT_ITEM;
 use status::{Layout, RowKind, TrayStatus};
 
 /// The tray icon's id.
@@ -246,7 +248,7 @@ fn build_tray(app: &AppHandle<Wry>, status: &TrayStatus) -> tauri::Result<LiveTr
 fn on_menu_item(app: &AppHandle<Wry>, id: &str) -> bool {
     match id {
         status::SHOW => show_main_window(app),
-        status::QUIT => app.exit(0),
+        status::QUIT => request_quit(app),
         _ => return false,
     }
     true
