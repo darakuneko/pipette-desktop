@@ -9,6 +9,11 @@
 //! `resizeIncrements`), so the release here also sets the content's
 //! increments, which is what lets go of a content ratio.
 //!
+//! A window's frame size is its `frame` less its `contentLayoutRect`, the
+//! area the title bar leaves to the content (the content view's frame,
+//! or less of it when the content view extends under the title bar), and
+//! never the webview's frame.
+//!
 //! A window's frame is set in one `setFrame:display:`: Tauri's setters set
 //! the position and the content size apart, and `setContentSize:` keeps the
 //! bottom edge where it is, so a resize after a move shifts the top-left
@@ -20,7 +25,7 @@ use objc2_app_kit::{NSScreen, NSView, NSWindow};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
-use crate::{Error, OuterFrame};
+use crate::{Error, FrameSize, OuterFrame, frame_between};
 
 /// The NSWindow of `window`; `_main_thread` proves this runs on the main
 /// thread.
@@ -64,6 +69,13 @@ pub(crate) fn set_content_aspect_ratio(
         }
     }
     Ok(())
+}
+
+pub(crate) fn frame_size(window: &impl HasWindowHandle) -> Result<FrameSize, Error> {
+    let ns_window = ns_window(window, main_thread()?)?;
+    let outer = ns_window.frame().size;
+    let content = ns_window.contentLayoutRect().size;
+    Ok(frame_between((outer.width, outer.height), (content.width, content.height)))
 }
 
 pub(crate) fn set_outer_frame(window: &impl HasWindowHandle, frame: OuterFrame) -> Result<(), Error> {

@@ -712,6 +712,69 @@ pub(crate) mod tests {
         assert_eq!(controller.window_hints().aspect, Some(2.0));
     }
 
+    /// A window that keeps the bounds it was last given.
+    struct Sized(Cell<Rect>);
+
+    impl ApplyHints for Sized {
+        fn apply_hints(&self, _hints: Hints, _change: Change) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    impl WindowPort for Sized {
+        fn set_bounds(&self, bounds: Rect) {
+            self.0.set(bounds);
+        }
+        fn is_destroyed(&self) -> bool {
+            false
+        }
+    }
+
+    fn run_on(controller: &mut Controller, window: &Sized, mut animation: Animation) {
+        while controller.tick(window, &mut animation) == Tick::Continue {}
+    }
+
+    /// Enters compact mode at `size` on a macOS window with a title bar
+    /// `title_bar` high, then leaves it; answers the content size compact
+    /// mode had, the size the renderer saves from its viewport, with the
+    /// frame the decision was given.
+    fn compact_round_trip(
+        controller: &mut Controller,
+        window: &Sized,
+        title_bar: f64,
+        frame: Size,
+        size: Size,
+    ) -> Size {
+        let animation = controller.enter(window, window.0.get(), frame, Some(size)).unwrap();
+        run_on(controller, window, animation);
+        let outer = window.0.get();
+        let content = Size { width: outer.width, height: outer.height - title_bar };
+        let leave = controller.leave(window, outer, None);
+        run_on(controller, window, leave.animation.unwrap());
+        content
+    }
+
+    #[test]
+    fn a_saved_compact_size_comes_back_after_leaving_and_entering_again() {
+        // The renderer saves the viewport after entering and enters with
+        // it again (after a disconnect, the view mode restores it): with
+        // the title bar as the frame, the size stays.
+        const TITLE_BAR: f64 = 32.0;
+        let title_bar = Size { width: 0.0, height: TITLE_BAR };
+        let window = Sized(Cell::new(WINDOW));
+        let mut controller = Controller::new(Some(MIN_SIZE));
+        let mut size = Size { width: 310.0, height: 308.0 };
+        for _ in 0..3 {
+            size = compact_round_trip(&mut controller, &window, TITLE_BAR, title_bar, size);
+            assert_eq!(size, Size { width: 310.0, height: 308.0 });
+            assert_eq!(window.0.get().size(), WINDOW.size());
+        }
+        // Without it, each entry loses the title bar's height.
+        let first = compact_round_trip(&mut controller, &window, TITLE_BAR, NO_FRAME, size);
+        let second = compact_round_trip(&mut controller, &window, TITLE_BAR, NO_FRAME, first);
+        assert_eq!((first.height, second.height), (276.0, 244.0));
+    }
+
     #[test]
     fn the_normal_size_stays_until_the_last_step_of_leaving() {
         let mut controller = Controller::new(Some(MIN_SIZE));
