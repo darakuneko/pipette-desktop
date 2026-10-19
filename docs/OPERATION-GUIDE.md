@@ -655,15 +655,13 @@ Some events can't be mapped onto a candidate — for example, when the source ch
 
 #### Layer
 
-The Layer tab breaks usage down by keyboard layer.
+The Layer tab breaks usage down by keyboard layer. It shows two charts side by side, each scrolling on its own:
 
-**View Mode**
-
-- **Keystrokes** — sums every press at the layer that was active at the time. Reflects `MO`, `LT`, `TG`, and any other layer op live, because the active layer is recorded when the press happens. Works with or without a keymap snapshot
+- **Keystrokes per layer** (left) — sums every press at the layer that was active at the time. Reflects `MO`, `LT`, `TG`, and any other layer op live, because the active layer is recorded when the press happens. Works with or without a keymap snapshot
 
   ![Analyze — Layer Keystrokes](screenshots/analyze-layer-keystrokes.png)
 
-- **Activations** — counts how many times each layer was *reached* through a layer-op keycode. Requires a keymap snapshot so the layer-op target can be resolved:
+- **Layer activations** (right) — counts how many times each layer was *reached* through a layer-op keycode. Requires a keymap snapshot so the layer-op target can be resolved:
   - `MO` / `TG` / `TO` / `DF` / `PDF` / `OSL` / `TT` — counted on press
   - `LT` / `LM` — counted only on hold (so a tapped `LT0(KC_ESC)` doesn't look like a layer transition)
 
@@ -671,7 +669,7 @@ The Layer tab breaks usage down by keyboard layer.
 
 **Base Layer**
 
-Appears only in Activations mode on keyboards with two or more layers. Selects the layer you are analyzing from — that layer is dropped from the bar list so a "hold the same layer you're already on" press (e.g., `LT0(KC_ESC)` while base = 0) doesn't show up as a transition.
+Appears in the title row of the Layer activations chart when a keymap snapshot is available and the keyboard has two or more layers. Selects the layer you are analyzing from — that layer is dropped from the bar list so a "hold the same layer you're already on" press (e.g., `LT0(KC_ESC)` while base = 0) doesn't show up as a transition.
 
 **Layer names**
 
@@ -679,9 +677,11 @@ If you have named layers in the layer panel (see §2.3), the name is appended to
 
 **Empty states**
 
+Each chart keeps its title and shows its notice underneath:
+
 - **Keystrokes, no activity** — nothing pressed in range
 - **Activations, no activity** — no layer-op keys pressed in range
-- **Activations, no snapshot** — "Layer activations need a keymap snapshot. Start a record session in this range to capture one." Keystrokes mode keeps working without a snapshot
+- **Activations, no snapshot** — "Layer activations need a keymap snapshot. Start a record session in this range to capture one." The keystrokes chart keeps working without a snapshot
 
 #### Export / Upload
 
