@@ -442,7 +442,8 @@ mod tests {
     }
 
     /// A template image is read for its alpha only: every pixel is black,
-    /// and the dropper covers part of the canvas, not all of it.
+    /// and the dropper covers part of the canvas, not all of it, with an
+    /// opaque core and partly covered pixels along its anti-aliased edge.
     #[test]
     fn the_macos_icon_is_a_black_alpha_mask_of_the_menu_bar_size() {
         let icon = &MACOS_TEMPLATE_ICON;
@@ -451,9 +452,12 @@ mod tests {
         assert_eq!(pixels.len(), 36 * 36 * 4);
         assert!(pixels.chunks_exact(4).all(|pixel| pixel[..3] == [0, 0, 0]));
         let alphas: Vec<u8> = pixels.chunks_exact(4).map(|pixel| pixel[3]).collect();
-        assert!(alphas.contains(&0) && alphas.contains(&255));
         let covered = alphas.iter().filter(|&&alpha| alpha > 0).count();
         assert!((36 * 36 / 8..36 * 36 / 2).contains(&covered), "{covered} pixels drawn");
+        let opaque = alphas.iter().filter(|&&alpha| alpha == 255).count();
+        assert!(opaque * 2 >= covered, "{opaque} of {covered} pixels opaque");
+        let partial = alphas.iter().filter(|&&alpha| alpha > 0 && alpha < 255).count();
+        assert!(partial >= 50, "{partial} partly covered pixels");
         // The canvas keeps a clear border so the icon does not touch the
         // menu bar's edges.
         let edge = |x: usize, y: usize| alphas[y * 36 + x];
