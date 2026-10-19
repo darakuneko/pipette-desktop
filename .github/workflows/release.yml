@@ -74,8 +74,41 @@ jobs:
       - name: Verify generated docs are up to date
         run: bash scripts/check-docs-fresh.sh
 
-  # The Rust side of the Tauri app: format, clippy in the debug build with the
-  # development tools and in the release build, and the workspace's tests.
+  # The Rust side of the Tauri app, in two jobs that run side by side: format
+  # and clippy (in the debug build with the development tools and in the
+  # release build), and the workspace's tests. build-tauri waits for both.
+  # On a tag neither reads a Cargo cache.
+  lint-tauri:
+    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The tauri-lint job of tauri-migration.yml checks all of this and
+      # more, and owns the key.
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: lint
+          save-cache: "false"
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy (debug, with the development tools)
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+
+      # Without the development tools: build.rs rejects them in the release
+      # profile.
+      - name: Clippy (release)
+        run: cargo clippy --workspace --all-targets --release -- -D warnings
+
   test-tauri:
     if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
     runs-on: ubuntu-latest
@@ -89,27 +122,17 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
+      # The rust-test job of tauri-migration.yml runs these tests and more,
+      # and owns the key.
       - uses: ./.github/actions/setup-rust
         with:
-          cache-key: release-test
+          cache-key: test
+          save-cache: "false"
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
       # The tests start the Node fakes; the install scripts only serve the
       # Electron build.
       - run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Format
-        working-directory: src-tauri
-        run: cargo fmt --all --check
-
-      - name: Clippy (debug, with the development tools)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
-
-      # Without the development tools: build.rs rejects them in the release
-      # profile.
-      - name: Clippy (release)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --release -- -D warnings
 
       # The X11 active-window test of pipette-active-window starts a private
       # Xvfb of its own (the apt index is fresh from setup-rust).
@@ -125,7 +148,8 @@ jobs:
 
   build-tauri:
     if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
-    needs: [test, test-tauri]
+    # Signing and notarizing start only after every check passed.
+    needs: [test, lint-tauri, test-tauri]
     strategy:
       fail-fast: false
       matrix:
@@ -168,6 +192,7 @@ jobs:
         with:
           # The build of Ubuntu 22.04, which no other job's cache may stand in for.
           cache-key: release-linux
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
       # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
       # the Linux packages of the app and runs on Linux only.
