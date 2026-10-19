@@ -122,6 +122,14 @@ jobs:
           key: bundle-test
           add-job-id-key: false
 
+      # cargo-nextest runs the test binaries side by side, one process per
+      # test; cargo test runs one binary at a time, and a few slow ones keep
+      # the rest waiting. A prebuilt binary, checked against its checksum.
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+
       # The whole workspace, so the code each crate has for systems other
       # than Linux runs too, every test binary even after one fails. The
       # Linux-only tests are not built here, the Node fakes listen on the
@@ -131,7 +139,12 @@ jobs:
       # (pipette-autostart panics in a test that would).
       - name: Test
         working-directory: src-tauri
-        run: cargo test --workspace --no-fail-fast
+        run: |
+          status=0
+          cargo nextest run --workspace --no-fail-fast || status=$?
+          # cargo-nextest runs no doc tests; they run even after a failure.
+          cargo test --workspace --doc --no-fail-fast || status=$?
+          exit "$status"
 
   bundle:
     strategy:

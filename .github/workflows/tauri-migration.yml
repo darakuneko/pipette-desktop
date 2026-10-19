@@ -67,6 +67,14 @@ jobs:
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
 
+      # cargo-nextest runs the test binaries side by side, one process per
+      # test; cargo test runs one binary at a time, and a few slow ones keep
+      # the rest waiting. A prebuilt binary, checked against its checksum.
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+
       # PIPETTE_REQUIRE_FAKE_OAUTH: the sign-in test against the Node fake
       # Google (tests/node_fake_oauth.rs of pipette-google-auth) must run,
       # not skip. PIPETTE_REQUIRE_XVFB: the same for the X11 active-window
@@ -76,7 +84,10 @@ jobs:
         env:
           PIPETTE_REQUIRE_FAKE_OAUTH: "1"
           PIPETTE_REQUIRE_XVFB: "1"
-        run: cargo test --workspace --features pipette-app/dev-tools
+        run: |
+          cargo nextest run --workspace --features pipette-app/dev-tools
+          # cargo-nextest runs no doc tests.
+          cargo test --workspace --features pipette-app/dev-tools --doc
 
       # The step above builds pipette-net with the endpoint variables of the
       # development tools; without them, as in a release build, the
