@@ -16,6 +16,8 @@
 
 mod analytics_commands;
 mod app_config;
+#[cfg(any(target_os = "macos", test))]
+mod app_menu;
 #[cfg(test)]
 mod capability_files;
 mod command_error;
@@ -376,8 +378,8 @@ fn main() {
     // built: a second launch hands over to the running app there and exits
     // with 0. So the log, the app config and the HID service, which the
     // running app owns, start only after `build`.
-    // No app menu on macOS, as the Electron build sets none
-    // (`Menu.setApplicationMenu(null)`); the other systems have none anyway.
+    // Tauri's default macOS menu is replaced by src/app_menu.rs in setup; the
+    // other systems get no menu.
     let builder = tauri::Builder::default()
         .enable_macos_default_menu(false)
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
@@ -400,6 +402,8 @@ fn main() {
             analytics_commands::start(app.handle());
             hub_commands::setup(app.handle());
             tray::setup(app);
+            #[cfg(target_os = "macos")]
+            app_menu::install(app);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);

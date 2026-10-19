@@ -144,6 +144,9 @@ pipette-hub = { path = "crates/pipette-hub", features = ["test-util"] }
 # commands on. Same version as the tauri dependency.
 tauri = { version = "=2.12.1", features = ["tray-icon", "test"] }
 tempfile = { workspace = true }
+# The shortcut parser Tauri's menu items use (src/app_menu.rs tests). Same
+# version as Tauri's.
+muda = { version = "=0.20.0", default-features = false }
 
 [lints]
 workspace = true

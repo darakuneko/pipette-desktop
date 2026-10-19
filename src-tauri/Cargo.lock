@@ -2994,6 +2994,7 @@ dependencies = [
  "hex",
  "log",
  "lzma-rs",
+ "muda",
  "pipette-active-window",
  "pipette-app-config",
  "pipette-autostart",
