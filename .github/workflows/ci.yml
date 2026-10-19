@@ -20,6 +20,13 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A newer push to the same pull request or branch cancels the run in
+    # progress. On the job, not the workflow: run through workflow_call, the
+    # caller's own concurrency group applies to the workflow, and
+    # github.workflow (the caller's name there) keeps the groups apart.
+    concurrency:
+      group: ci-check-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+      cancel-in-progress: true
     env:
       # Tests rely on local wall-clock semantics that the codebase
       # standardises on JST (e.g. analyze-streak-goal `resolveGoalAt`
