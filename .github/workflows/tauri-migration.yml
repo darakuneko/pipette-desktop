@@ -271,7 +271,9 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # This workflow runs on no tag; the guard keeps it so if that changes.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
 
@@ -312,7 +314,9 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # This workflow runs on no tag; the guard keeps it so if that changes.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
 
