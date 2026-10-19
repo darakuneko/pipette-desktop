@@ -171,9 +171,13 @@ jobs:
 
       # The screenshots show Japanese text (the JIS key legends, the
       # Japanese packs and Typing Test lists), which the runner has no font
-      # for.
-      - name: Install the CJK font for the doc screenshots
-        run: sudo apt-get install -y fonts-noto-cjk
+      # for. They are taken in an English (US) locale, which the runner may
+      # not have generated: under its default C.UTF-8 the app's
+      # toLocaleString() prints numbers without thousands separators.
+      - name: Install the CJK font and the en_US locale for the doc screenshots
+        run: |
+          sudo apt-get install -y fonts-noto-cjk locales
+          sudo locale-gen en_US.UTF-8
 
       # The operation guide's screenshots (e2e-tauri/doc-capture: the main
       # capture and the one of each area) on the same build. The screen is
@@ -185,6 +189,9 @@ jobs:
       - name: Doc screenshots (Tauri)
         id: doc-screenshots
         timeout-minutes: 30
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
         run: |
           out="$(mktemp -d)/doc-screenshots"
           echo "dir=$out" >> "$GITHUB_OUTPUT"

@@ -111,6 +111,14 @@ async function captureGlobalSettings(page: Page): Promise<void> {
   if (await isAvailable(dataTab)) {
     await dataTab.click()
     await page.waitForTimeout(500)
+    // Signed in, the Data tab first checks whether a sync password exists
+    // (useSync.ts, up to three tries two seconds apart) and shows a
+    // "Checking sync status..." notice until the check settles. The check
+    // starts once the auth status has loaded, so give it a moment to start
+    // (it may also have finished already) before waiting for it to end.
+    const checking = page.locator('[data-testid="sync-checking-remote"]')
+    await checking.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => { /* already settled */ })
+    await checking.waitFor({ state: 'hidden', timeout: 60_000 })
     await captureNamed(page, 'hub-settings-data-sync', { fullPage: true })
     console.log('  Data tab captured')
   }
