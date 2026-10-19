@@ -3,10 +3,12 @@
 // The pack and label stores of the Tauri build, from the Tools tab of the
 // device selector's settings, with the files of sample-packs/ given to the
 // file dialogs: Key Labels (QWERTY listed, two files imported, one renamed,
-// sorted, exported and deleted), a theme pack (imported, applied, deleted)
-// and a language pack (imported, switched to, still in use after a
-// restart); the changes recorded in local/sync-pending.json; and no page
-// errors on the way. The tests share one app session and run in order.
+// sorted, exported and deleted; the one left picked on the virtual
+// keyboard's keymap, whose pack tabs show vertical labels), a theme pack
+// (imported, applied, deleted) and a language pack (imported, switched to,
+// still in use after a restart); the changes recorded in
+// local/sync-pending.json; and no page errors on the way. The tests share
+// one app session and run in order.
 
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -14,13 +16,18 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { $, browser, expect } from '@wdio/globals'
 import {
+  clickInPage,
   clickIntoFileDialog,
   clickIntoFilesDialog,
+  connectVirtualKeyboard,
+  EDITOR_SELECTOR,
   recordPageErrors,
   recordedPageErrors,
   restartApp,
+  tid,
   vialApi,
   waitForGone,
+  waitForUncovered,
 } from '../helpers/app'
 import { readAppConfig, readPendingUnits } from '../helpers/driver'
 
@@ -194,6 +201,53 @@ describe('Tauri build packs and labels', () => {
 
     await closeToDeviceSelector('key-labels-modal-close', 'key-labels-modal')
     expectedUnits.push('key-labels')
+  })
+
+  it("draws the keymap's Key Label tabs with vertical labels", async () => {
+    await connectVirtualKeyboard()
+    await waitForUncovered(EDITOR_SELECTOR)
+    await clickInPage('button[aria-label="Key Labels"]')
+    await $('[role="listbox"][aria-label="Key Labels"]').waitForDisplayed()
+    // The select's options act on mousedown, not on click.
+    const picked = await browser.execute(() => {
+      const option = [...document.querySelectorAll('[role="listbox"][aria-label="Key Labels"] [role="option"]')].find(
+        (element) => element.textContent?.includes('Eucalyn'),
+      ) as HTMLElement | undefined
+      option?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+      return option !== undefined
+    })
+    expect(picked).toBe(true)
+    await $(tid('keymap-pack-tab-simulation')).waitForDisplayed()
+
+    // WebKit lays a <button> out horizontally whatever its writing-mode, so
+    // the vertical label is a span inside each tab: it must be vertical,
+    // taller than wide, and inside its 28px tab rather than clipped by it.
+    for (const tab of ['keymap-pack-tab-base', 'keymap-pack-tab-simulation']) {
+      const label = await browser.execute((sel: string) => {
+        const button = document.querySelector(sel)
+        const span = button?.querySelector('span')
+        if (!button || !span) return null
+        const outer = button.getBoundingClientRect()
+        const inner = span.getBoundingClientRect()
+        return {
+          writingMode: getComputedStyle(span).writingMode,
+          width: inner.width,
+          height: inner.height,
+          inside:
+            inner.left >= outer.left - 0.5 &&
+            inner.right <= outer.right + 0.5 &&
+            inner.top >= outer.top - 0.5 &&
+            inner.bottom <= outer.bottom + 0.5,
+        }
+      }, tid(tab))
+      expect(label).not.toBeNull()
+      expect(label?.writingMode).toBe('vertical-rl')
+      expect(label?.height).toBeGreaterThan(label?.width ?? Infinity)
+      expect(label?.inside).toBe(true)
+    }
+
+    await clickInPage(tid('disconnect-button'))
+    await $('[data-testid="settings-button"]').waitForDisplayed()
   })
 
   it('imports a theme pack, applies it and deletes it', async () => {
