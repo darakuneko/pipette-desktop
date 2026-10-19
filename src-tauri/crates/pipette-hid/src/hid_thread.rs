@@ -1,21 +1,30 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! One long-lived thread that owns a value and runs every call on it.
 //!
-//! hidapi's macOS backend keeps one global `IOHIDManager` and schedules it
-//! on the run loop of the thread that first initialises the library
-//! (`init_hid_manager` in hidapi's `mac/hid.c`). Every later
-//! `hid_enumerate` resets the manager's matching, which schedules each
-//! attached device on that stored run loop. If the initialising thread has
-//! exited (an idle blocking-pool thread does), the run loop is gone and the
-//! call crashes. So every call that touches the manager runs here, on a
-//! thread that lives as long as its owner. The same thread is used on every
+//! hidapi ties state to the thread that made a call, and the blocking-pool
+//! threads the commands run on exit after being idle:
+//! - hidapi's macOS backend keeps one global `IOHIDManager` and schedules it
+//!   on the run loop of the thread that first initialises the library
+//!   (`init_hid_manager` in hidapi's `mac/hid.c`). Every later
+//!   `hid_enumerate` resets the manager's matching, which schedules each
+//!   attached device on that stored run loop; once the initialising thread
+//!   has exited, the run loop is gone and the call crashes.
+//! - hidapi's Windows backend leaves an overlapped read pending when
+//!   `hid_read_timeout` times out (and a write when `hid_write` does), into
+//!   buffers owned by the device. Windows cancels a thread's pending I/O
+//!   when the thread exits, and `hid_close` cancels with `CancelIo`, which
+//!   only reaches I/O the calling thread issued, before freeing the buffers.
+//!
+//! So the library context and each open device get a thread of their own
+//! that outlives every call made on it. The same threads are used on every
 //! OS so the behaviour is the same everywhere.
 
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Mutex, PoisonError};
 use std::thread;
+use std::time::Duration;
 
 use crate::error::HidError;
 
@@ -44,6 +53,25 @@ impl<S: Default + 'static> OwnerThread<S> {
         R: Send + 'static,
         F: FnOnce(&mut S) -> R + Send + 'static,
     {
+        self.run_waiting(call, None)
+    }
+
+    /// [`OwnerThread::run`], waiting at most `limit` for the result. When the
+    /// limit passes, the call still runs on the thread once its turn comes,
+    /// and its result is dropped.
+    pub(crate) fn run_within<R, F>(&self, call: F, limit: Duration) -> Result<R, HidError>
+    where
+        R: Send + 'static,
+        F: FnOnce(&mut S) -> R + Send + 'static,
+    {
+        self.run_waiting(call, Some(limit))
+    }
+
+    fn run_waiting<R, F>(&self, call: F, limit: Option<Duration>) -> Result<R, HidError>
+    where
+        R: Send + 'static,
+        F: FnOnce(&mut S) -> R + Send + 'static,
+    {
         let (reply, result) = mpsc::sync_channel(1);
         let job: Job<S> = Box::new(move |state| {
             // The receiver is gone only if the caller is; nothing to report.
@@ -52,14 +80,23 @@ impl<S: Default + 'static> OwnerThread<S> {
         self.sender()?
             .send(job)
             .map_err(|_| HidError::Backend(format!("The {} thread is not running", self.name)))?;
-        match result.recv() {
+        let received = match limit {
+            None => result.recv().map_err(|_| RecvTimeoutError::Disconnected),
+            Some(limit) => result.recv_timeout(limit),
+        };
+        match received {
             Ok(Ok(value)) => Ok(value),
             Ok(Err(panic)) => Err(HidError::Backend(format!(
                 "The {} thread panicked: {}",
                 self.name,
                 panic_message(&*panic)
             ))),
-            Err(_) => Err(HidError::Backend(format!("The {} thread stopped", self.name))),
+            Err(RecvTimeoutError::Timeout) => {
+                Err(HidError::Backend(format!("The {} thread did not answer in time", self.name)))
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                Err(HidError::Backend(format!("The {} thread stopped", self.name)))
+            }
         }
     }
 
