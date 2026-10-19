@@ -195,6 +195,15 @@ const MENU_ON_LEFT_CLICK: bool = cfg!(target_os = "macos");
 /// longer one to this; Tauri would fill the buffer and leave out the NUL.
 const WINDOWS_TOOLTIP_UNITS: usize = 127;
 
+/// The macOS menu-bar icon: a black eyedropper on a transparent canvas,
+/// shown as a template image, so macOS uses only its alpha and tints it like
+/// the other menu-bar icons. The tray draws any icon 18pt high, so it is
+/// 36x36 pixels (18pt at 2x). Windows and Linux show the app icon.
+/// Drawn by scripts/generate-tray-template-icon.ts; embedded as pixels when
+/// the crate is compiled.
+#[cfg(any(target_os = "macos", test))]
+const MACOS_TEMPLATE_ICON: tauri::image::Image<'static> = tauri::include_image!("icons/tray-template.png");
+
 /// `tooltip` as the icon is given it: on Windows, cut to what it holds.
 fn os_tooltip(tooltip: &str) -> &str {
     if cfg!(windows) { status::truncate_utf16(tooltip, WINDOWS_TOOLTIP_UNITS) } else { tooltip }
@@ -219,6 +228,11 @@ fn build_tray(app: &AppHandle<Wry>, status: &TrayStatus) -> tauri::Result<LiveTr
                 show_main_window(tray.app_handle());
             }
         });
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.icon(MACOS_TEMPLATE_ICON).icon_as_template(true);
+    }
+    #[cfg(not(target_os = "macos"))]
     match app.default_window_icon() {
         Some(icon) => builder = builder.icon(icon.clone()),
         None => log::warn!("the app has no icon for the tray"),
@@ -425,6 +439,25 @@ mod tests {
             .map(|row| row.id.as_str())
             .collect();
         assert_eq!(enabled, ["show", "quit"]);
+    }
+
+    /// A template image is read for its alpha only: every pixel is black,
+    /// and the dropper covers part of the canvas, not all of it.
+    #[test]
+    fn the_macos_icon_is_a_black_alpha_mask_of_the_menu_bar_size() {
+        let icon = &MACOS_TEMPLATE_ICON;
+        assert_eq!((icon.width(), icon.height()), (36, 36));
+        let pixels = icon.rgba();
+        assert_eq!(pixels.len(), 36 * 36 * 4);
+        assert!(pixels.chunks_exact(4).all(|pixel| pixel[..3] == [0, 0, 0]));
+        let alphas: Vec<u8> = pixels.chunks_exact(4).map(|pixel| pixel[3]).collect();
+        assert!(alphas.contains(&0) && alphas.contains(&255));
+        let covered = alphas.iter().filter(|&&alpha| alpha > 0).count();
+        assert!((36 * 36 / 8..36 * 36 / 2).contains(&covered), "{covered} pixels drawn");
+        // The canvas keeps a clear border so the icon does not touch the
+        // menu bar's edges.
+        let edge = |x: usize, y: usize| alphas[y * 36 + x];
+        assert!((0..36).all(|i| edge(i, 0) == 0 && edge(i, 35) == 0 && edge(0, i) == 0 && edge(35, i) == 0));
     }
 
     #[test]

@@ -36,6 +36,8 @@ fn main() {
     println!("cargo:rerun-if-changed=capabilities");
     println!("cargo:rerun-if-changed=src/app_command_names.rs");
     println!("cargo:rerun-if-changed=src/dev_command_names.rs");
+    // Read by `include_image!` in src/tray.rs, which Cargo does not track.
+    println!("cargo:rerun-if-changed=icons/tray-template.png");
     // Set by Cargo for the crate being built, so they follow its features
     // and the target rather than the build script's own.
     let dev_tools = std::env::var_os("CARGO_FEATURE_DEV_TOOLS").is_some();
