@@ -30,6 +30,7 @@
     "test:e2e:dev": "E2E_MODE=dev playwright test",
     "test:e2e:tauri": "wdio run e2e-tauri/wdio.conf.ts",
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
+    "generate:tray-template-icon": "tsx scripts/generate-tray-template-icon.ts",
     "generate:virtual-device-fixtures": "vitest run --config scripts/virtual-device-fixtures/vitest.config.ts",
     "generate:sync-format-fixtures": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts record-sync-format-fixtures",
     "generate:definition-fixtures": "vitest run --config scripts/definition-fixtures/vitest.config.ts",
