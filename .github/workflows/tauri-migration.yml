@@ -40,6 +40,8 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
 
       - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: tauri
 
       # The install scripts only serve the Electron build (the Electron binary
       # download and the native module rebuild); the Tauri build needs none.
@@ -308,6 +310,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: lint
 
       - name: Format
         run: cargo fmt --all --check

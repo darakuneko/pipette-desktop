@@ -7,6 +7,10 @@ name: Tauri bundle (Windows, macOS)
 # workflow it knows, and it learns of one on a branch other than the
 # default from a push that runs it, so a push that changes this file runs
 # it too.
+#
+# Dispatch it on feat/tauri-migration: a run reads only the Cargo caches of
+# its own ref and of the default branch, so a run on a branch no earlier
+# run built on starts cold.
 on:
   workflow_dispatch:
   push:
@@ -65,9 +69,13 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # Never on a tag (a run by hand can be on one).
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
+          key: bundle
+          add-job-id-key: false
 
       - name: Clippy (debug, with the development tools)
         working-directory: src-tauri

@@ -4,6 +4,27 @@ description: >-
   toolchain of src-tauri/rust-toolchain.toml, and the Cargo cache of
   src-tauri. Expects the repository to be checked out already.
 
+inputs:
+  cache-key:
+    description: >-
+      The kind of build work the job does (test, lint, ...), the cache's key
+      on this OS. Jobs whose builds differ must not share one: rust-cache
+      saves only on a miss, so the first job to finish would save its build
+      and every other job sharing the key would restore it and never save
+      its own. A job that builds a subset of what the key's owner builds may
+      share it with save-cache false.
+    required: true
+  save-cache:
+    description: Whether to save the cache at the end of the job ("true" or "false").
+    required: false
+    default: "true"
+  cache:
+    description: >-
+      Whether to use the cache at all ("true" or "false"). It is never used
+      on a tag, whatever this says: a release is built from scratch.
+    required: false
+    default: "true"
+
 runs:
   using: composite
   steps:
@@ -21,7 +42,14 @@ runs:
         rustup toolchain install
         rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
-    # The cache key includes the job, so each job keeps its own build cache.
+    # The key is the kind of work, not the job, so a job of another workflow
+    # doing the same work reads the same cache (rust-cache adds the OS, the
+    # toolchain, the CARGO_* variables and the lock file to it). A run reads
+    # only the caches of its own ref and of the default branch.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      if: inputs.cache == 'true' && !startsWith(github.ref, 'refs/tags/')
       with:
         workspaces: src-tauri -> target
+        key: ${{ inputs.cache-key }}
+        add-job-id-key: false
+        save-if: ${{ inputs.save-cache == 'true' }}

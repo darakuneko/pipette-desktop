@@ -83,6 +83,8 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
 
       - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: release-test
 
       # The tests start the Node fakes; the install scripts only serve the
       # Electron build.
@@ -151,8 +153,14 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
+      # No Cargo cache on a tag (setup-rust skips it there, and so does the
+      # rust-cache step below): the released files are built from scratch,
+      # never from a cache an earlier run of any ref may have saved.
       - uses: ./.github/actions/setup-rust
         if: runner.os == 'Linux'
+        with:
+          # The build of Ubuntu 22.04, which no other job's cache may stand in for.
+          cache-key: release-linux
 
       # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
       # the Linux packages of the app and runs on Linux only.
@@ -163,10 +171,14 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # The bundle job of tauri-bundle.yml builds the same and owns the key.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: runner.os != 'Linux'
+        if: runner.os != 'Linux' && !startsWith(github.ref, 'refs/tags/')
         with:
           workspaces: src-tauri -> target
+          key: bundle
+          add-job-id-key: false
+          save-if: false
 
       # unsquashfs for scripts/repack-appimage.sh.
       - name: Install squashfs-tools
