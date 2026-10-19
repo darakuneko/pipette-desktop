@@ -2,16 +2,37 @@
 //! The AppKit calls on a real window, which only the main thread may use:
 //! this test runs without the test harness (harness = false in Cargo.toml),
 //! so `main` is the process's main thread. Elsewhere it does nothing.
+//!
+//! It answers the listing cargo-nextest asks every test binary for: with
+//! `--list` it names its one test (`--list --format terse` wants
+//! `<name>: test` lines; with `--ignored` it has none), and nextest then
+//! runs it as `--exact macos_window`. Any other arguments run the test, as
+//! `cargo test` does with none.
 #![allow(unsafe_code)]
 
-#[cfg(target_os = "macos")]
+const NAME: &str = "macos_window";
+
 fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|arg| arg == "--list") {
+        // Nothing is listed where the test does nothing, so it never counts
+        // as passed there.
+        if cfg!(target_os = "macos") && !args.iter().any(|arg| arg == "--ignored") {
+            println!("{NAME}: test");
+        }
+        return;
+    }
+    run();
+}
+
+#[cfg(target_os = "macos")]
+fn run() {
     appkit::run();
-    println!("macos_window: ok");
+    println!("{NAME}: ok");
 }
 
 #[cfg(not(target_os = "macos"))]
-fn main() {}
+fn run() {}
 
 #[cfg(target_os = "macos")]
 mod appkit {

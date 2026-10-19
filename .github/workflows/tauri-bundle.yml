@@ -3,10 +3,14 @@ name: Tauri bundle (Windows, macOS)
 # Builds the Tauri app on Windows and macOS, which no other job compiles:
 # clippy over the whole workspace in the debug build with the development
 # tools and in the release build, the workspace's tests, and an unsigned
-# bundle of each as an artifact. Run by hand. GitHub dispatches only a
+# bundle of each as an artifact, each in a job of its own. Run by hand. GitHub dispatches only a
 # workflow it knows, and it learns of one on a branch other than the
 # default from a push that runs it, so a push that changes this file runs
 # it too.
+#
+# Dispatch it on feat/tauri-migration: a run reads only the Cargo caches of
+# its own ref and of the default branch, so a run on a branch no earlier
+# run built on starts cold.
 on:
   workflow_dispatch:
   push:
@@ -19,11 +23,129 @@ on:
 permissions:
   contents: read
 
+# Line tables are enough for the backtraces of a failed test, and the test
+# binaries and their caches get much smaller. Set the same in every workflow
+# that builds src-tauri: rust-cache puts the CARGO_* variables in its key,
+# and the workflows share keys.
+env:
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
 concurrency:
   group: tauri-bundle-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  clippy:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+        working-directory: src-tauri
+    steps:
+      # The files as committed: Git for Windows would turn the line ends
+      # into CRLF.
+      - name: Keep the line ends
+        working-directory: .
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
+      # the Linux packages of the app and runs on Linux only.
+      - name: Install the Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+      # Clippy checks rather than builds, so it gains little from a cache
+      # of its own; it reads the test job's (the build scripts and the
+      # procedural macros) and saves nothing. Never on a tag (a run by hand
+      # can be on one).
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          workspaces: src-tauri -> target
+          key: bundle-test
+          add-job-id-key: false
+          save-if: false
+
+      - name: Clippy (debug, with the development tools)
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+
+      # Without the development tools: build.rs rejects them in the release
+      # profile.
+      - name: Clippy (release)
+        run: cargo clippy --workspace --all-targets --release -- -D warnings
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The files as committed: Git for Windows would turn the line ends of
+      # the fixtures and sample packs the tests compare byte for byte into
+      # CRLF.
+      - name: Keep the line ends
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      # The tests start the Node fakes; the install scripts only serve the
+      # Electron build.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install the Rust toolchain
+        working-directory: src-tauri
+        run: |
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          workspaces: src-tauri -> target
+          key: bundle-test
+          add-job-id-key: false
+
+      # cargo-nextest runs the test binaries side by side, one process per
+      # test; cargo test runs one binary at a time, and a few slow ones keep
+      # the rest waiting. A prebuilt binary, checked against its checksum.
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+
+      # The whole workspace, so the code each crate has for systems other
+      # than Linux runs too, every test binary even after one fails. The
+      # Linux-only tests are not built here, the Node fakes listen on the
+      # loopback interface only, the OS's key store test skips without
+      # PIPETTE_KEYSTORE_IT (the keystore job of tauri-migration.yml runs it
+      # on purpose), and no test reaches the OS's login item
+      # (pipette-autostart panics in a test that would).
+      - name: Test
+        working-directory: src-tauri
+        run: |
+          status=0
+          cargo nextest run --workspace --no-fail-fast || status=$?
+          # cargo-nextest runs no doc tests; they run even after a failure.
+          cargo test --workspace --doc --no-fail-fast || status=$?
+          exit "$status"
+
   bundle:
     strategy:
       fail-fast: false
@@ -43,9 +165,6 @@ jobs:
       run:
         shell: bash
     steps:
-      # The files as committed: Git for Windows would turn the line ends of
-      # the fixtures and sample packs the tests compare byte for byte into
-      # CRLF.
       - name: Keep the line ends
         run: git config --global core.autocrlf false
 
@@ -57,38 +176,20 @@ jobs:
       # and the frontend build need none.
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
-      # the Linux packages of the app and runs on Linux only.
       - name: Install the Rust toolchain
         working-directory: src-tauri
         run: |
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # The build-tauri job of release.yml builds the same on these systems
+      # and reads this cache (never on a tag).
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
-
-      - name: Clippy (debug, with the development tools)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
-
-      # Without the development tools: build.rs rejects them in the release
-      # profile.
-      - name: Clippy (release)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --release -- -D warnings
-
-      # The whole workspace, so the code each crate has for systems other
-      # than Linux runs too, every test binary even after one fails. The
-      # Linux-only tests are not built here, the Node fakes listen on the
-      # loopback interface only, the OS's key store test skips without
-      # PIPETTE_KEYSTORE_IT (the keystore job of tauri-migration.yml runs it
-      # on purpose), and no test reaches the OS's login item
-      # (pipette-autostart panics in a test that would).
-      - name: Test
-        working-directory: src-tauri
-        run: cargo test --workspace --no-fail-fast
+          key: bundle
+          add-job-id-key: false
 
       # The release build, unsigned (release.yml signs the macOS app), with
       # the bundles tauri.<platform>.conf.json lists.

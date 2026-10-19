@@ -28,6 +28,13 @@ on:
 permissions:
   contents: write
 
+# Line tables are enough for the backtraces of a failed test, and the test
+# binaries and their caches get much smaller. Set the same in every workflow
+# that builds src-tauri: rust-cache puts the CARGO_* variables in its key,
+# and the workflows share keys.
+env:
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -67,8 +74,41 @@ jobs:
       - name: Verify generated docs are up to date
         run: bash scripts/check-docs-fresh.sh
 
-  # The Rust side of the Tauri app: format, clippy in the debug build with the
-  # development tools and in the release build, and the workspace's tests.
+  # The Rust side of the Tauri app, in two jobs that run side by side: format
+  # and clippy (in the debug build with the development tools and in the
+  # release build), and the workspace's tests. build-tauri waits for both.
+  # On a tag neither reads a Cargo cache.
+  lint-tauri:
+    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The tauri-lint job of tauri-migration.yml checks all of this and
+      # more, and owns the key.
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: lint
+          save-cache: "false"
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy (debug, with the development tools)
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+
+      # Without the development tools: build.rs rejects them in the release
+      # profile.
+      - name: Clippy (release)
+        run: cargo clippy --workspace --all-targets --release -- -D warnings
+
   test-tauri:
     if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
     runs-on: ubuntu-latest
@@ -82,41 +122,45 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
+      # The rust-test job of tauri-migration.yml runs these tests and more,
+      # and owns the key.
       - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: test
+          save-cache: "false"
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
       # The tests start the Node fakes; the install scripts only serve the
       # Electron build.
       - run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Format
-        working-directory: src-tauri
-        run: cargo fmt --all --check
-
-      - name: Clippy (debug, with the development tools)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
-
-      # Without the development tools: build.rs rejects them in the release
-      # profile.
-      - name: Clippy (release)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --release -- -D warnings
 
       # The X11 active-window test of pipette-active-window starts a private
       # Xvfb of its own (the apt index is fresh from setup-rust).
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
 
+      # cargo-nextest runs the test binaries side by side, one process per
+      # test; cargo test runs one binary at a time, and a few slow ones keep
+      # the rest waiting. A prebuilt binary, checked against its checksum.
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+
       - name: Test
         working-directory: src-tauri
         env:
           PIPETTE_REQUIRE_FAKE_OAUTH: "1"
           PIPETTE_REQUIRE_XVFB: "1"
-        run: cargo test --workspace --features pipette-app/dev-tools
+        run: |
+          cargo nextest run --workspace --features pipette-app/dev-tools
+          # cargo-nextest runs no doc tests.
+          cargo test --workspace --features pipette-app/dev-tools --doc
 
   build-tauri:
     if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
-    needs: [test, test-tauri]
+    # Signing and notarizing start only after every check passed.
+    needs: [test, lint-tauri, test-tauri]
     strategy:
       fail-fast: false
       matrix:
@@ -151,8 +195,15 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
+      # No Cargo cache on a tag (setup-rust skips it there, and so does the
+      # rust-cache step below): the released files are built from scratch,
+      # never from a cache an earlier run of any ref may have saved.
       - uses: ./.github/actions/setup-rust
         if: runner.os == 'Linux'
+        with:
+          # The build of Ubuntu 22.04, which no other job's cache may stand in for.
+          cache-key: release-linux
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
       # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
       # the Linux packages of the app and runs on Linux only.
@@ -163,10 +214,16 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # The bundle job of tauri-bundle.yml builds the same and owns the key.
+      # A build that signs (the macOS app with the signing secrets, by hand
+      # too) is built from scratch, as on a tag.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: runner.os != 'Linux'
+        if: runner.os != 'Linux' && !startsWith(github.ref, 'refs/tags/') && !(runner.os == 'macOS' && env.MAC_SIGN == 'true')
         with:
           workspaces: src-tauri -> target
+          key: bundle
+          add-job-id-key: false
+          save-if: false
 
       # unsquashfs for scripts/repack-appimage.sh.
       - name: Install squashfs-tools

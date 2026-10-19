@@ -17,6 +17,13 @@ on:
 permissions:
   contents: read
 
+# Line tables are enough for the backtraces of a failed test, and the test
+# binaries and their caches get much smaller. Set the same in every workflow
+# that builds src-tauri: rust-cache puts the CARGO_* variables in its key,
+# and the workflows share keys.
+env:
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
 concurrency:
   group: tauri-migration-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
@@ -27,7 +34,9 @@ jobs:
     with:
       check-fixtures: true
 
-  tauri:
+  # The workspace's tests, and every check that reads what they write (the
+  # userData trees and the generated shim files), in one job.
+  rust-test:
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -40,14 +49,12 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
 
       - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: test
 
       # The install scripts only serve the Electron build (the Electron binary
       # download and the native module rebuild); the Tauri build needs none.
       - run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Clippy (debug, with the development tools)
-        working-directory: src-tauri
-        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
 
       # The export tests in the next step write every file again (the ts-rs
       # declarations and the app command names), so one whose Rust source is
@@ -60,6 +67,14 @@ jobs:
       - name: Install Xvfb
         run: sudo apt-get install -y xvfb
 
+      # cargo-nextest runs the test binaries side by side, one process per
+      # test; cargo test runs one binary at a time, and a few slow ones keep
+      # the rest waiting. A prebuilt binary, checked against its checksum.
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+
       # PIPETTE_REQUIRE_FAKE_OAUTH: the sign-in test against the Node fake
       # Google (tests/node_fake_oauth.rs of pipette-google-auth) must run,
       # not skip. PIPETTE_REQUIRE_XVFB: the same for the X11 active-window
@@ -69,7 +84,10 @@ jobs:
         env:
           PIPETTE_REQUIRE_FAKE_OAUTH: "1"
           PIPETTE_REQUIRE_XVFB: "1"
-        run: cargo test --workspace --features pipette-app/dev-tools
+        run: |
+          cargo nextest run --workspace --features pipette-app/dev-tools
+          # cargo-nextest runs no doc tests.
+          cargo test --workspace --features pipette-app/dev-tools --doc
 
       # The step above builds pipette-net with the endpoint variables of the
       # development tools; without them, as in a release build, the
@@ -134,40 +152,58 @@ jobs:
           git add --intent-to-add src/tauri-shim/generated
           git diff --exit-code HEAD -- src/tauri-shim/generated
 
-      # Builds the renderer for Tauri too, so it also checks the frontend
-      # build and its wiring in tauri.conf.json. The e2e tests below drive
-      # this binary.
-      - name: Debug build
-        run: pnpm tauri:build:debug
+  # The e2e tests in shards of about the same length
+  # (e2e-tauri/helpers/shard.ts), each a job of its own: tauri-driver
+  # listens on fixed ports and the app owns a name on its session bus, so a
+  # runner runs one WebdriverIO run. Each job builds the app from the same
+  # cache, which is quicker than waiting for one job to build it and
+  # passing it on.
+  e2e:
+    name: e2e (${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The WebDriver of WebKitGTK is webkit2gtk-driver up to Ubuntu 24.04 and
-      # webkitgtk-webdriver from 26.04 on. xvfb gives the app a display and
-      # dbus-run-session a session bus of its own, as a desktop session has
-      # (the tray icon registers on it, and the single-instance guard owns a
-      # name on it). libayatana-appindicator3-1 is the library Tauri loads
-      # at run time to show the tray icon on Linux; the tray tests need it
-      # installed, not only present as a dependency of the build packages.
-      - name: Install the e2e dependencies
-        run: |
-          # apt-cache show also succeeds for a name that is only referred to,
-          # so the check is for an installable candidate.
-          if LC_ALL=C apt-cache policy webkitgtk-webdriver | grep -q 'Candidate: [0-9]'; then
-            driver=webkitgtk-webdriver
-          else
-            driver=webkit2gtk-driver
-          fi
-          sudo apt-get install -y "$driver" xvfb dbus libayatana-appindicator3-1
+      - uses: ./.github/actions/setup-node-pnpm
 
-      # rust-cache keeps ~/.cargo/bin, so a cached tauri-driver of this
-      # version makes the install a no-op.
-      - name: Install tauri-driver
-        run: cargo install tauri-driver --version 2.1.0 --locked
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: ./.github/actions/build-e2e-app
 
       # The screen is larger than xvfb-run's default of 1280x1024, which is
       # the window's minimum size: the window-state test moves and resizes
       # the window inside it.
       - name: e2e (Tauri)
+        env:
+          PIPETTE_E2E_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e:tauri
+
+  # The operation guide's screenshots (e2e-tauri/doc-capture: the main
+  # capture and the one of each area, in that order).
+  doc-capture:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: ./.github/actions/build-e2e-app
 
       # The screenshots show Japanese text (the JIS key legends, the
       # Japanese packs and Typing Test lists), which the runner has no font
@@ -179,11 +215,9 @@ jobs:
           sudo apt-get install -y fonts-noto-cjk locales
           sudo locale-gen en_US.UTF-8
 
-      # The operation guide's screenshots (e2e-tauri/doc-capture: the main
-      # capture and the one of each area) on the same build. The screen is
-      # exactly the window's default size, which the capture requires. They
-      # go into a temporary directory, not the committed docs/screenshots,
-      # and are uploaded for review.
+      # The screen is exactly the window's default size, which the capture
+      # requires. The screenshots go into a temporary directory, not the
+      # committed docs/screenshots, and are uploaded for review.
       # About twice the run's length, so a hung capture still leaves time to
       # upload what it took.
       - name: Doc screenshots (Tauri)
@@ -237,7 +271,9 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # This workflow runs on no tag; the guard keeps it so if that changes.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
 
@@ -278,7 +314,9 @@ jobs:
           rustup toolchain install
           rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
 
+      # This workflow runs on no tag; the guard keeps it so if that changes.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
 
@@ -295,7 +333,7 @@ jobs:
           PIPETTE_KEYSTORE_IT: available
         run: cargo test -p pipette-secret-store --test os_keystore -- --test-threads=1
 
-  # Kept off the job above so the release build does not lengthen it.
+  # Kept off the jobs above so the release build does not lengthen them.
   tauri-lint:
     runs-on: ubuntu-latest
     env:
@@ -308,9 +346,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: lint
 
       - name: Format
         run: cargo fmt --all --check
+
+      - name: Clippy (debug, with the development tools)
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
 
       # Without the development tools: build.rs rejects them in the release
       # profile.
