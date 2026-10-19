@@ -11,17 +11,36 @@
 // D-Bus session bus: while a Tauri build of Pipette runs on the desktop's
 // bus, run the tests under dbus-run-session, or every launch hands over to
 // that app and exits.
+//
+// PIPETTE_E2E_SHARD=<index>/<total> runs one shard of the specs
+// (helpers/shard.ts); CI runs each shard as a job of its own, since the
+// driver's ports and the app's single-instance name allow one run per
+// display and session bus. Without it every spec runs.
 
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Options } from '@wdio/types'
 import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver } from './helpers/driver'
 import { startHubDriver, stopHubHarness } from './helpers/hub-harness'
 import { startResidentDriver, stopResidentHarness } from './helpers/resident-harness'
+import { parseShard, shardSpecs } from './helpers/shard'
 import { startSyncDriver, stopSyncHarness } from './helpers/sync-harness'
 
 const SYNC_SPEC = '/specs/sync.e2e.ts'
 const HUB_SPEC = '/specs/hub.e2e.ts'
 const RESIDENT_SPEC = '/specs/resident.e2e.ts'
+
+const SPECS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'specs')
+
+function specFiles(): string[] {
+  const shard = parseShard(process.env.PIPETTE_E2E_SHARD)
+  if (!shard) return ['./specs/**/*.e2e.ts']
+  const all = readdirSync(SPECS_DIR, { recursive: true, encoding: 'utf8' })
+    .filter((name) => name.endsWith('.e2e.ts'))
+    .sort()
+  return shardSpecs(all, shard).map((name) => join(SPECS_DIR, name))
+}
 
 /** Whether a test of the current session failed; afterTest and afterSession
  *  run in the same worker. */
@@ -31,7 +50,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   runner: 'local',
   hostname: DRIVER_HOST,
   port: DRIVER_PORT,
-  specs: ['./specs/**/*.e2e.ts'],
+  specs: specFiles(),
   maxInstances: 1,
   capabilities: [
     {
