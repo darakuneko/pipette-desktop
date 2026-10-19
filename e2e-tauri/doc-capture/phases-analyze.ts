@@ -397,21 +397,13 @@ export async function captureAnalyzePage(page: Page): Promise<void> {
     await page.waitForTimeout(800)
     await captureNamed(page, 'analyze-layer-keystrokes', { fullPage: true })
 
-    const viewModeSelect = page.locator('[data-testid="analyze-filter-layer-view-mode"]')
-    if (await isAvailable(viewModeSelect)) {
-      await viewModeSelect.selectOption('activations')
-      await page.waitForTimeout(500)
-      await captureNamed(page, 'analyze-layer-activations', { fullPage: true })
+    // The Layer tab shows the keystrokes and the activations charts side by
+    // side (AnalyzePaneChart.tsx): the activations shot is the second chart.
+    const charts = page.locator('[data-testid="analyze-layer"]')
+    if ((await charts.count()) === 2) {
+      await captureNamed(page, 'analyze-layer-activations', { element: charts.nth(1) })
     } else {
-      // The Layer tab shows the keystrokes and the activations charts side
-      // by side (AnalyzePaneChart.tsx), with no view-mode select: the
-      // activations shot is the second chart.
-      const charts = page.locator('[data-testid="analyze-layer"]')
-      if ((await charts.count()) === 2) {
-        await captureNamed(page, 'analyze-layer-activations', { element: charts.nth(1) })
-      } else {
-        console.log('  [warn] the activations chart was not found — activations capture skipped')
-      }
+      console.log('  [warn] the activations chart was not found — activations capture skipped')
     }
   } else {
     console.log('  [skip] analyze-tab-layer not found — Layer screenshots skipped')
