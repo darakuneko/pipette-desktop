@@ -6,6 +6,8 @@
 //!   window (`WS_EX_LAYERED`) with `SetLayeredWindowAttributes`' alpha;
 //!   macOS: `NSWindow.alphaValue`.
 //! - [`set_outer_frame`] (macOS): `setBounds`, the frame set at once.
+//! - [`frame_size`] (macOS): the outer size less the content size, as
+//!   `getBounds` and `getContentBounds` differ.
 //! - [`set_content_aspect_ratio`]: `setAspectRatio(ratio, extraSize)` with
 //!   the frame (outer minus content size) as `extraSize`, so the content
 //!   keeps the ratio while the user resizes the window; the app's own
@@ -108,6 +110,35 @@ pub fn set_outer_frame(window: &impl HasWindowHandle, frame: OuterFrame) -> Resu
     Err(Error::Unsupported)
 }
 
+/// The size of a window's frame in points: its outer size less the area
+/// its content is shown in.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FrameSize {
+    pub width: f64,
+    pub height: f64,
+}
+
+/// The frame of `window` on macOS: its `frame` less its
+/// `contentLayoutRect`, the part of the window the title bar does not
+/// cover, which is the web content's viewport. Tauri's inner size is the
+/// webview's frame instead, which is not that area on every macOS version
+/// (it has been seen to be the whole window, title bar included).
+/// [`Error::Unsupported`] elsewhere. Must run on the main thread.
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+pub fn frame_size(window: &impl HasWindowHandle) -> Result<FrameSize, Error> {
+    #[cfg(target_os = "macos")]
+    return macos::frame_size(window);
+    #[cfg(not(target_os = "macos"))]
+    Err(Error::Unsupported)
+}
+
+/// The frame of a window of `outer` size whose content is shown in an area
+/// of `content` size, each side at least 0.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn frame_between(outer: (f64, f64), content: (f64, f64)) -> FrameSize {
+    FrameSize { width: (outer.0 - content.0).max(0.0), height: (outer.1 - content.1).max(0.0) }
+}
+
 /// The window in front as [`active_window`] reads it: the application's
 /// name and the window's title, in UTF-16 code units (either possibly
 /// empty).
@@ -167,6 +198,14 @@ mod tests {
         }
     }
 
+    #[test]
+    fn the_frame_is_the_outer_size_less_the_content_area() {
+        assert_eq!(frame_between((310.0, 340.0), (310.0, 308.0)), FrameSize { width: 0.0, height: 32.0 });
+        // A content area as large as the window, or larger, leaves no frame.
+        assert_eq!(frame_between((310.0, 308.0), (310.0, 308.0)), FrameSize { width: 0.0, height: 0.0 });
+        assert_eq!(frame_between((300.0, 100.0), (302.0, 140.0)), FrameSize { width: 0.0, height: 0.0 });
+    }
+
     #[cfg(not(any(windows, target_os = "macos")))]
     #[test]
     fn other_systems_answer_unsupported() {
@@ -182,6 +221,7 @@ mod tests {
         assert_eq!(set_content_aspect_ratio(&NoWindow, Some(2.0)), Err(Error::Unsupported));
         let frame = OuterFrame { x: 0.0, y: 0.0, width: 1.0, height: 1.0 };
         assert_eq!(set_outer_frame(&NoWindow, frame), Err(Error::Unsupported));
+        assert_eq!(frame_size(&NoWindow), Err(Error::Unsupported));
         assert_eq!(active_window(), Err(Error::Unsupported));
     }
 }

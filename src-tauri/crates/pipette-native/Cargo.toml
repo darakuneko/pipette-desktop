@@ -28,9 +28,9 @@ windows-sys = { version = "=0.61.2", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
-# AppKit: NSWindow's alphaValue, contentAspectRatio and frame (the screens
-# for its coordinates); NSWorkspace's frontmost application. Same versions
-# as tao uses.
+# AppKit: NSWindow's alphaValue, contentAspectRatio, frame (the screens
+# for its coordinates) and contentLayoutRect; NSWorkspace's frontmost
+# application. Same versions as tao uses.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "=0.6.5"
 objc2-foundation = { version = "=0.3.2", default-features = false, features = [

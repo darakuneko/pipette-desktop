@@ -27,10 +27,21 @@ pub fn is_native<R: Runtime>() -> bool {
 }
 
 /// The frame of `window` in DIP: its outer minus its content size, none
-/// where the bounds have no frame or the sizes cannot be read.
+/// where the bounds have no frame or the sizes cannot be read. On macOS the
+/// content is the area the title bar leaves to it (pipette-native's
+/// `frame_size`), the page's viewport: Tauri's inner size there is the
+/// webview's frame, which has been seen to cover the title bar too, and
+/// with no frame a compact size would lose the title bar's height each
+/// time. Off the main thread, the outer minus the inner size.
 pub fn frame<R: Runtime>(window: &Window<R>) -> Size {
     if !is_native::<R>() {
         return NO_FRAME;
+    }
+    if cfg!(target_os = "macos") {
+        match pipette_native::frame_size(window) {
+            Ok(frame) => return Size { width: frame.width, height: frame.height },
+            Err(err) => log::debug!("[window] reading the frame from the inner size: {err}"),
+        }
     }
     let read = || -> tauri::Result<Size> {
         let scale = window.scale_factor()?;
