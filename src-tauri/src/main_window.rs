@@ -203,9 +203,41 @@ fn dip_rect(position: PhysicalPosition<i32>, size: PhysicalSize<u32>, scale: f64
 /// have no frame, or its outer size on Windows and macOS.
 pub fn window_bounds<R: Runtime>(window: &Window<R>) -> tauri::Result<Rect> {
     let scale = window.scale_factor()?;
-    let size =
-        if window_ops::native::is_native::<R>() { window.outer_size()? } else { window.inner_size()? };
-    Ok(dip_rect(window.outer_position()?, size, scale))
+    let size = if window_ops::native::is_native::<R>() {
+        logical_size(window.outer_size()?, scale)
+    } else {
+        content_size(window)?
+    };
+    let position = window.outer_position()?.to_logical::<f64>(scale);
+    Ok(Rect { x: position.x, y: position.y, width: size.width, height: size.height })
+}
+
+/// The content size of `window` in DIP. A GTK window's is the size
+/// `gtk_window_get_size` reads, the one `gtk_window_resize` and the
+/// builder's inner size set ([`gtk_content_size`]); elsewhere tao's inner
+/// size.
+pub fn content_size<R: Runtime>(window: &Window<R>) -> tauri::Result<Size> {
+    #[cfg(target_os = "linux")]
+    if window_ops::has_gtk_window::<R>() {
+        use gtk::prelude::GtkWindowExt;
+        return Ok(gtk_content_size(window.gtk_window()?.size()));
+    }
+    Ok(logical_size(window.inner_size()?, window.scale_factor()?))
+}
+
+/// The content size of a GTK window from `gtk_window_get_size`, in logical
+/// pixels as GTK sizes are. tao's inner size is not it: tao takes the size
+/// of the GDK window from its configure events, which on Wayland includes
+/// the client-side decorations GTK draws around the content (the shadow and
+/// the header bar), so a window resized to it would grow by them.
+#[cfg(any(target_os = "linux", test))]
+pub fn gtk_content_size((width, height): (i32, i32)) -> Size {
+    Size { width: width.into(), height: height.into() }
+}
+
+fn logical_size(size: PhysicalSize<u32>, scale: f64) -> Size {
+    let size = size.to_logical::<f64>(scale);
+    Size { width: size.width, height: size.height }
 }
 
 /// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:
