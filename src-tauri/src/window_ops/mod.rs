@@ -410,10 +410,7 @@ pub struct HintsReport {
 
 #[cfg(feature = "dev-tools")]
 pub fn report<R: Runtime>(window: &Window<R>) -> Result<WindowReport, String> {
-    let size = window
-        .scale_factor()
-        .and_then(|scale| Ok(window.inner_size()?.to_logical::<f64>(scale)))
-        .map_err(|err| err.to_string())?;
+    let size = main_window::content_size(window).map_err(|err| err.to_string())?;
     let controller = with_controller(window, |controller, _| *controller);
     let inner = lock(window);
     let hints = inner.applied_hints.unwrap_or_else(|| controller.window_hints());
@@ -446,7 +443,7 @@ fn is_app_runtime<R: Runtime>() -> bool {
     std::any::TypeId::of::<R>() == std::any::TypeId::of::<tauri::Wry>()
 }
 
-fn has_gtk_window<R: Runtime>() -> bool {
+pub fn has_gtk_window<R: Runtime>() -> bool {
     cfg!(target_os = "linux") && is_app_runtime::<R>()
 }
 
@@ -505,7 +502,9 @@ fn gtk_apply_hints<R: Runtime>(window: &Window<R>, hints: Hints) -> Result<(), S
 
 /// Resizes the GTK window to the content size of `bounds`, and moves it to
 /// their position where the window system lets an app place its windows
-/// (not on Wayland).
+/// (not on Wayland). `gtk_window_resize` takes the size
+/// `main_window::content_size` reads, so bounds read and set back leave
+/// the window as it was.
 #[cfg(target_os = "linux")]
 fn gtk_set_bounds<R: Runtime>(window: &Window<R>, bounds: Rect) {
     use gtk::prelude::GtkWindowExt;
@@ -553,6 +552,72 @@ mod tests {
         let on_second = Rect { x: 2000.0, y: 0.0, width: 100.0, height: 100.0 };
         assert_eq!(pick_display(&displays, Some(0), on_second), Some(displays[1]));
         assert_eq!(pick_display(&[], Some(0), on_second), None);
+    }
+
+    /// A GTK window on Wayland as far as sizes go: `gtk_window_resize`
+    /// sets the content size and `gtk_window_get_size` reads it, while the
+    /// GDK window around it (the size tao's configure events report) is
+    /// larger by the client-side decorations, 52 x 89 for a GTK 3.24 window
+    /// under mutter.
+    struct CsdWindow {
+        content: std::cell::Cell<Size>,
+    }
+
+    impl CsdWindow {
+        fn gtk_window_get_size(&self) -> (i32, i32) {
+            let size = self.content.get();
+            (size.width as i32, size.height as i32)
+        }
+
+        /// The bounds as `main_window::window_bounds` reads them, at 0, 0
+        /// as on Wayland.
+        fn bounds(&self) -> Rect {
+            let size = main_window::gtk_content_size(self.gtk_window_get_size());
+            Rect { x: 0.0, y: 0.0, width: size.width, height: size.height }
+        }
+    }
+
+    impl ApplyHints for CsdWindow {
+        fn apply_hints(&self, _hints: Hints, _change: Change) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    impl WindowPort for CsdWindow {
+        /// `gtk_set_bounds` on Wayland: `gtk_window_resize`, no move.
+        fn set_bounds(&self, bounds: Rect) {
+            self.content.set(bounds.size());
+        }
+
+        fn is_destroyed(&self) -> bool {
+            false
+        }
+    }
+
+    fn run_to_end(window: &CsdWindow, controller: &mut Controller, animation: Option<Animation>) {
+        let mut animation = animation.unwrap();
+        while controller.tick(window, &mut animation) == Tick::Continue {}
+    }
+
+    #[test]
+    fn leaving_compact_mode_gives_a_decorated_gtk_window_its_size_back() {
+        let normal = Size { width: 1547.0, height: 1024.0 };
+        let window = CsdWindow { content: std::cell::Cell::new(normal) };
+        let display = Display {
+            bounds: Rect { x: 0.0, y: 0.0, width: 1920.0, height: 1200.0 },
+            work_area: Rect { x: 0.0, y: 0.0, width: 1920.0, height: 1200.0 },
+        };
+        let mut controller = Controller::new(Some(crate::window_bounds::MIN_SIZE));
+        for _ in 0..2 {
+            let compact = Size { width: 400.0, height: 157.0 };
+            let enter = controller.enter(&window, window.bounds(), native::NO_FRAME, Some(compact));
+            run_to_end(&window, &mut controller, enter);
+            assert_eq!(window.content.get(), compact);
+            let leave = controller.leave(&window, window.bounds(), Some(&display));
+            assert_eq!(leave.size, compact, "the answer is the compact content size");
+            run_to_end(&window, &mut controller, leave.animation);
+            assert_eq!(window.content.get(), normal);
+        }
     }
 
     #[test]
