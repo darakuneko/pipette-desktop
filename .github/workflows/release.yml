@@ -28,6 +28,13 @@ on:
 permissions:
   contents: write
 
+# Line tables are enough for the backtraces of a failed test, and the test
+# binaries and their caches get much smaller. Set the same in every workflow
+# that builds src-tauri: rust-cache puts the CARGO_* variables in its key,
+# and the workflows share keys.
+env:
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
 jobs:
   test:
     runs-on: ubuntu-latest
