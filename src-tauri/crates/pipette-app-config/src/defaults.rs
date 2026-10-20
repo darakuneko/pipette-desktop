@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The defaults, the keys the renderer may set and the zoom factor range,
 //! as src/shared/types/app-config.ts defines them. data/defaults.json is a
-//! recorded copy of those values.
+//! recorded copy of those values; src/shared/__tests__/rust-data-copies.test.ts
+//! fails when the two differ.
 
 use std::sync::LazyLock;
 

@@ -11,6 +11,10 @@
 // NOTE: for monkeytype the commit hash appears in BOTH `version` and
 // `downloadUrlBase`. Bump them together (mirrors the Hub-side note), which
 // is why the commit is a single constant interpolated into both.
+//
+// src-tauri/crates/pipette-typing-datasets/data/provider-defaults.json is a
+// copy of TYPING_TEST_PROVIDER_DEFAULTS; change both together
+// (src/shared/__tests__/rust-data-copies.test.ts compares them).
 
 import type { LanguageManifestEntry, TypingTestProviderDefault } from '../types/language-store'
 import monkeytypeLanguages from './language-manifest.json'

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The bundled provider defaults, `TYPING_TEST_PROVIDER_DEFAULTS` of
 //! src/shared/data/typing-test-providers.ts, recorded in
-//! data/provider-defaults.json. Nothing checks the two against each other:
-//! a change to one has to be made to the other.
+//! data/provider-defaults.json. src/shared/__tests__/rust-data-copies.test.ts
+//! fails when the two differ: a change to one has to be made to the other.
 
 use std::sync::OnceLock;
 

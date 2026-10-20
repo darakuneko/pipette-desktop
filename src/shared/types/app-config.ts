@@ -120,6 +120,9 @@ export interface AppConfig {
   updateSkippedVersion?: string | null
 }
 
+// src-tauri/crates/pipette-app-config/data/defaults.json copies the zoom
+// range, SETTABLE_APP_CONFIG_KEYS and DEFAULT_APP_CONFIG; change both
+// together (src/shared/__tests__/rust-data-copies.test.ts compares them).
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'autoSync',
   'theme',
