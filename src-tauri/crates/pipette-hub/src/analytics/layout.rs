@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Layout Comparison of an Analyze post's export
-//! (`computeLayoutComparisonForExport`, `sanitizeFingerOverrides` and
-//! `remapFingerKeys` of src/main/hub/hub-analytics.ts): the metrics of the
+//! The Layout Comparison of an Analyze post's export: the metrics of the
 //! typing analytics crate on the layouts and key geometry the renderer
 //! sends, with the target names and the Hub's finger names.
 

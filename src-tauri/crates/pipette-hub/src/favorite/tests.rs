@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The favorite reads, checks and posts, after
-//! src/main/__tests__/hub-ipc-favorite.test.ts and
-//! hub-client-feature.test.ts, on the in-memory Hub.
+//! The favorite reads, checks and posts, on the in-memory Hub.
 
 #![allow(clippy::unwrap_used)]
 

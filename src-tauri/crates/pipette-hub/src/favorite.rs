@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The favorite post handlers of `src/main/hub/hub-ipc-favorite.ts` and the
-//! private favorite upload of `hub-ipc-private.ts`, split at the export JSON.
-//! Its keycodes are named by the page's worker
+//! The favorite post handlers and the private favorite upload, split at the
+//! export JSON. Its keycodes are named by the page's worker
 //! (src/tauri-shim/workers/favorite-transfer-requests.ts), so the page runs
 //! the checks of `prepareFavoritePost` in their order, reads the entry here
 //! ([`read_entry`]), builds the JSON and hands it to [`upload`], [`update`]
 //! or [`upload_private`]. These run the same checks again before they send
 //! the post, so a post the page checked passes them.
 //!
-//! The answers and messages are the TS handlers': the Hub errors as
-//! hub-client.ts words them, a 403 or a 429 as its sentinel, and the
-//! `TypeError` texts of a Hub answer or a favorite file that is not shaped
-//! as the TS expects. The text of a file-system error other than a missing
-//! file, and of a file that is not JSON, is not Node's.
+//! The answers and messages: the Hub errors as the HTTP layer words them, a
+//! 403 or a 429 as its sentinel, and the `TypeError` texts of a Hub answer
+//! or a favorite file that is not shaped as expected. The text of a
+//! file-system error other than a missing file, and of a file that is not
+//! JSON, is not Node's.
 
 use std::io;
 use std::path::Path;
@@ -253,7 +252,7 @@ fn feature_body(
 
 /// `submitFeaturePost` (or the private upload) through `withTokenRetry`:
 /// each run builds its body, so a run after a new token has the boundary
-/// of its own time, as the TS's.
+/// of its own time.
 async fn send(
     token: &HubToken,
     endpoint: &Endpoint<'_>,

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The response of the notice query to the result the renderer gets, as
-//! `fetchNotifications` of src/main/notification-store.ts reads it: a
+//! The response of the notice query to the result the renderer gets: a
 //! status outside 2xx is `HTTP <status>`, the body is read as
 //! `response.json()` reads it, a body without a `notifications` array is
 //! `Invalid response format`, items that are not notices are dropped, and
 //! each publication date is kept as given (a string `Date.parse` reads,
 //! date_parse.rs) or written as `toISOString` writes it (a Firestore
 //! timestamp). A Firestore timestamp past the range of a `Date` fails the
-//! whole fetch, as the RangeError of `toISOString` does there. The notices
+//! whole fetch, as `toISOString` throws a RangeError for it. The notices
 //! keep the response's order; the renderer sorts them.
 
 use pipette_js_json::{JsString, Object, Value};
@@ -177,8 +176,6 @@ mod tests {
             published_at: published_at.to_owned(),
         }
     }
-
-    // The cases of src/main/__tests__/notification-store.test.ts.
 
     #[test]
     fn returns_the_notices_of_a_successful_fetch() {

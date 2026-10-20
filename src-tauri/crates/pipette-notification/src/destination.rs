@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Where the startup notices are fetched from: `NOTIFICATION_ENDPOINT` of
-//! src/main/notification-store.ts, or, in a build with the development
-//! tools only, the `PIPETTE_NOTIFICATION_URL` override that the e2e runs
-//! point at a fake notice server. A replaced destination gets a client that
-//! sends nowhere but 127.0.0.1 and ::1, redirects included, so neither the
-//! override nor a redirect from the fake server reaches another machine.
-//!
-//! Electron has no override; without one the destination is Electron's.
+//! Where the startup notices are fetched from: [`NOTIFICATION_ENDPOINT`],
+//! or, in a build with the development tools only, the
+//! `PIPETTE_NOTIFICATION_URL` override that the e2e runs point at a fake
+//! notice server. A replaced destination gets a client that sends nowhere
+//! but 127.0.0.1 and ::1, redirects included, so neither the override nor a
+//! redirect from the fake server reaches another machine.
 
 use std::sync::Arc;
 
@@ -14,7 +12,7 @@ use pipette_net::{HttpRequester, ReqwestClient};
 
 use crate::request::NOTICE_LIMITS;
 
-/// `NOTIFICATION_ENDPOINT` of src/main/notification-store.ts.
+/// The notice server.
 pub const NOTIFICATION_ENDPOINT: &str = "https://getnotifications-svtx62766a-uc.a.run.app";
 
 /// The URL that replaces [`NOTIFICATION_ENDPOINT`] in a build with the

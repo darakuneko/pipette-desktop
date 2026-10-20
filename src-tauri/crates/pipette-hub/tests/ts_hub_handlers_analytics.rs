@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze post scenarios recorded from the Electron Hub handlers
-//! (ts_hub_handlers_analytics.json, written by `pnpm run
-//! generate:hub-fixtures`): on the same userData, typing analytics seed,
-//! machine hash and time, each scenario's scripted Hub answers the Rust
-//! handlers, which must give the same answers, send the same requests (the
-//! multipart bodies byte for byte, with the boundary taken out), wait the
-//! same 429 waits, notify the same sync units and leave the same userData.
-//! The cache groups days by local time, so the scenarios run in a process of
-//! their own in the time zone they were recorded in.
+//! The recorded golden Analyze post scenarios of the Hub handlers
+//! (ts_hub_handlers_analytics.json): on the same userData, typing analytics
+//! seed, machine hash and time, each scenario's scripted Hub answers the
+//! Rust handlers, which must give the same answers, send the same requests
+//! (the multipart bodies byte for byte, with the boundary taken out), wait
+//! the same 429 waits, notify the same sync units and leave the same
+//! userData. The cache groups days by local time, so the scenarios run in a
+//! process of their own in the time zone they were recorded in.
 
 #![allow(clippy::unwrap_used)]
 
@@ -112,7 +111,7 @@ fn replace(haystack: &[u8], needle: &[u8], with: &[u8]) -> Vec<u8> {
     out
 }
 
-/// A request of the log of request-log.ts as [`Sent`].
+/// A request of the recorded request log as [`Sent`].
 fn recorded(request: &Value) -> Sent {
     let query = array(field(request, "query"))
         .iter()
@@ -150,7 +149,7 @@ fn recorded(request: &Value) -> Sent {
     }
 }
 
-/// A rule of the scripted Hub (hub-harness.ts `HubRule`).
+/// A rule of the scripted Hub.
 struct Rule {
     method: String,
     path: String,
@@ -238,8 +237,8 @@ fn write_tree(dir: &Path, tree: &Value) {
     }
 }
 
-/// The tree as hub-harness.ts reads it: every file by its path, and every
-/// empty directory but the root as `path/` with no content.
+/// The tree as the recorded scenarios hold it: every file by its path, and
+/// every empty directory but the root as `path/` with no content.
 fn read_tree(root: &Path) -> Vec<(String, Option<String>)> {
     fn walk(root: &Path, dir: &Path, out: &mut Vec<(String, Option<String>)>) {
         let mut entries: Vec<_> =

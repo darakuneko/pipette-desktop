@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language and theme pack handlers against the Electron ones:
+//! The language and theme pack handlers against the recorded goldens:
 //!
 //! - the `validatePack` and `validateI18nExport` tables of
 //!   ts_hub_pure.json;

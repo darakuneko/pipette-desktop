@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the golden tests share: reading the fixtures that
-//! scripts/hub-fixtures/ records from the Electron Hub code, their tags,
+//! What the golden tests share: reading the recorded fixtures, their tags,
 //! a Hub client on scripted replies with a fixed clock, and the scripted
 //! Hub and userData trees of the handler scenarios ([`scripted_hub`]).
 //!

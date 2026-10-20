@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language and theme pack handlers of `src/main/hub/hub-ipc-packs.ts`,
-//! with the requests of `hub-i18n.ts` and `hub-theme.ts`: the list (its
-//! fields from snake_case to camelCase), the download (a language pack
+//! The language and theme pack handlers and their Hub requests: the list
+//! (its fields from snake_case to camelCase), the download (a language pack
 //! checked by [`validate_i18n_export`], a theme pack by
 //! `validate_theme_pack`), the upload, update and delete with the local
 //! pack's Hub link, and the freshness timestamps.
 //!
 //! The handlers take their arguments as the renderer sent them, as
-//! JavaScript values, and answer the TS's `{ success, … }` objects with the
-//! Hub's values in the order the Hub sent them. Where the TS reads a
-//! property of a value that is not there, the answer carries the
-//! `TypeError` message V8 gives.
+//! JavaScript values, and answer `{ success, … }` objects with the Hub's
+//! values in the order the Hub sent them. Where a property of a value that
+//! is not there would be read, the answer carries the `TypeError` message
+//! V8 gives.
 //!
 //! After an upload, the uploader and the Hub time come from the list of
 //! the pack's name; after an update, the Hub time comes from the
@@ -111,7 +110,7 @@ pub struct LinkChange {
 
 impl LinkChange {
     /// Writes the change through the pack store. A failure is left
-    /// unreported, as the TS ignores the store's answer.
+    /// unreported: the store's answer is ignored.
     pub fn apply(self, stores: &StoreContext) {
         let Self { kind, id, post, uploader, updated } = self;
         let _ = match kind {

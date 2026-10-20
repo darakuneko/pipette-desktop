@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The input checks and small helpers of src/main/hub/hub-ipc-shared.ts,
-//! with JavaScript's meaning: lengths in UTF-16 code units, `trim()` of the
+//! The input checks and small helpers of the Hub handlers, with
+//! JavaScript's meaning: lengths in UTF-16 code units, `trim()` of the
 //! ECMAScript whitespace, `Math.floor` and the non-finite numbers, and the
 //! character replacement of file names per UTF-16 code unit (a character
-//! outside the BMP becomes two `_`). The messages are the TS's, which
+//! outside the BMP becomes two `_`). The messages are the ones
 //! src/renderer/utils/hub-error-i18n.ts maps.
 
 use crate::base64::node_base64_decode;
 use crate::js::{js_length, js_trim};
 use crate::multipart::{KeymapFiles, UploadFile};
 
-/// A rejected input, with the TS's message.
+/// A rejected input, with its message.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{0}")]
 pub struct InvalidInput(pub String);

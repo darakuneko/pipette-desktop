@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Where the Hub requests go, settled once when the app starts.
 //!
-//! The base URL is `getHubApiBase` of src/main/hub/hub-base.ts
-//! (`pipette_net::resolve_hub_api_base`): the production Hub, or the
-//! `PIPETTE_HUB_URL` override where it is allowed. On top of that:
+//! The base URL is `pipette_net::resolve_hub_api_base`: the production Hub,
+//! or the `PIPETTE_HUB_URL` override where it is allowed. On top of that:
 //!
 //! - An override on 127.0.0.1 or ::1 gets clients that send nowhere else,
 //!   redirects included (`ReqwestClient::loopback_only`), so a fake Hub
@@ -14,9 +13,6 @@
 //!   host) is blocked: every Hub request fails before it is sent, and the
 //!   Hub's background work does not start. A missing or ineffective
 //!   override would otherwise send the test's requests to the real Hub.
-//!
-//! Electron has no `PIPETTE_E2E`; without it the destinations are
-//! Electron's.
 
 use std::sync::Arc;
 
@@ -145,7 +141,7 @@ mod tests {
     #[test]
     fn a_build_without_the_tools_ignores_the_override_and_the_e2e_mark() {
         // The override is ignored without PIPETTE_HUB_TEST=1, and the e2e
-        // mark is not read: the destination is Electron's, the real Hub.
+        // mark is not read: the destination is the real Hub.
         let ignored =
             HubDestination::resolve(false, &env(&[(HUB_URL_ENV, "http://127.0.0.1:9"), (E2E_ENV, "1")]));
         assert_eq!(

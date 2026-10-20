@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The key label handlers of `src/main/hub/hub-ipc-key-labels.ts`, with the
-//! requests of `hub-key-labels.ts`: the search, the detail, the freshness
-//! timestamps, the download into the local store, and the upload, update,
-//! sync and delete of a local label linked to its Hub post.
+//! The key label handlers and their Hub requests: the search, the detail,
+//! the freshness timestamps, the download into the local store, and the
+//! upload, update, sync and delete of a local label linked to its Hub post.
 //!
 //! The handlers take their arguments as the renderer sent them, as
-//! JavaScript values, and answer the TS's `{ success, data?, errorCode?,
-//! error? }` as JSON text, with the Hub's values in the order the Hub sent
-//! them. A bad argument is `NOT_FOUND`, a failed Hub request `IO_ERROR` with
-//! the request's message; the store's own failures keep their codes. A 404
-//! of these endpoints is a plain failure (`<label>: 404 <body>`), not the
+//! JavaScript values, and answer `{ success, data?, errorCode?, error? }`
+//! as JSON text, with the Hub's values in the order the Hub sent them. A
+//! bad argument is `NOT_FOUND`, a failed Hub request `IO_ERROR` with the
+//! request's message; the store's own failures keep their codes. A 404 of
+//! these endpoints is a plain failure (`<label>: 404 <body>`), not the
 //! typed one of the posts.
 //!
 //! The Hub requests run without the store's write lock; the store takes it
@@ -84,8 +83,8 @@ fn not_found(message: &str) -> KeyLabelError {
     refused(KeyLabelErrorCode::NotFound, message)
 }
 
-/// A failed Hub request, or a TypeError the TS throws while reading its
-/// answer: `IO_ERROR` with the message (`extractError`).
+/// A failed Hub request, or a TypeError while reading its answer: `IO_ERROR`
+/// with the message (`extractError`).
 fn io_error(message: impl AsRef<str>) -> KeyLabelError {
     refused(KeyLabelErrorCode::IoError, message.as_ref())
 }

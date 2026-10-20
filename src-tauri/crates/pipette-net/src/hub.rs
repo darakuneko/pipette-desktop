@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Hub API base URL, as `getHubApiBase` of src/main/hub/hub-base.ts:
-//! the production Hub, or the `PIPETTE_HUB_URL` override where it is
-//! allowed. The environment is read on every call, as Electron does. Also
-//! the encoding of the values the Hub API routes carry.
+//! The Hub API base URL: the production Hub, or the `PIPETTE_HUB_URL`
+//! override where it is allowed. The environment is read on every call.
+//! Also the encoding of the values the Hub API routes carry.
 
-/// `HUB_API_DEFAULT` of src/main/hub/hub-base.ts.
+/// The production Hub.
 pub const HUB_API_DEFAULT: &str = "https://pipette-hub-worker.keymaps.workers.dev";
 
 /// The base URL that replaces [`HUB_API_DEFAULT`] where an override is
@@ -16,8 +15,8 @@ pub const HUB_URL_ENV: &str = "PIPETTE_HUB_URL";
 pub const HUB_TEST_ENV: &str = "PIPETTE_HUB_TEST";
 
 /// The Hub API base URL for this process. The override is allowed in
-/// builds with the development tools (`dev_tools_build`; Electron allows it
-/// in its development runs) and wherever [`HUB_TEST_ENV`] is `1`. A
+/// builds with the development tools (`dev_tools_build`) and wherever
+/// [`HUB_TEST_ENV`] is `1`. A
 /// variable that is not valid UTF-8 counts as unset.
 pub fn hub_api_base(dev_tools_build: bool) -> String {
     let override_url = std::env::var(HUB_URL_ENV).ok();

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The key labels on the Hub (the handlers of
-//! src/main/hub/hub-ipc-key-labels.ts, on `pipette_hub::key_labels`): the
-//! search, the detail and the freshness timestamps, the download into the
-//! key label store, and the upload, update, sync and delete of a local
-//! label linked to its post.
+//! The key labels on the Hub (on `pipette_hub::key_labels`): the search, the
+//! detail and the freshness timestamps, the download into the key label store,
+//! and the upload, update, sync and delete of a local label linked to its post.
 //!
 //! The arguments arrive as the renderer sent them; the answers are the
 //! handlers' `{success, data?, errorCode?, error?}` as JSON text written by

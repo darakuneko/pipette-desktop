@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Hub's HTTP layer: one request function for the three ways the TS
-//! reads a response (`hubFetch` of hub-client.ts and hub-key-labels.ts,
-//! `hubFetchJson` of hub-i18n.ts and hub-theme.ts, and the downloads that
-//! call `fetch` themselves; [`ReadMode`]), the error each failure becomes
-//! and the one retry after a short 429.
+//! The Hub's HTTP layer: one request function for the three ways a response
+//! is read ([`ReadMode`]), the error each failure becomes and the one retry
+//! after a short 429.
 //!
-//! The messages are the TS's: `<label>: <status> <body>` for a failed
-//! status and `<label>: <error>` for an envelope with `ok: false`, which
+//! The messages are `<label>: <status> <body>` for a failed status and
+//! `<label>: <error>` for an envelope with `ok: false`, which
 //! src/renderer/utils/hub-error-i18n.ts maps to its messages. The body of a
-//! failed status is cut at 64 KiB (`ERROR_BODY_LIMIT` of pipette-net), where
-//! Electron keeps all of it. A request that gets no response and a body
-//! that is not JSON fail with messages of their own, which the renderer
-//! shows as its generic failure, as it does for Electron's.
+//! failed status is cut at 64 KiB (`ERROR_BODY_LIMIT` of pipette-net). A
+//! request that gets no response and a body that is not JSON fail with
+//! messages of their own, which the renderer shows as its generic failure.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -25,15 +22,15 @@ use crate::endpoint::{Endpoint, ReadMode};
 use crate::multipart::MultipartBody;
 use crate::retry_after::parse_retry_after;
 
-/// `MAX_RETRY_AFTER_S` of the TS: a 429 asking for a longer wait (a daily
-/// limit, say) is not retried.
+/// The longest wait a 429 is retried after: a 429 asking for a longer wait
+/// (a daily limit, say) is not retried.
 pub const MAX_RETRY_AFTER_S: f64 = 60.0;
 
 /// The bounds of the Hub requests other than the multipart uploads: 30
-/// seconds to connect, 60 seconds without a byte, 10 minutes in all,
-/// 64 MiB. Electron's `fetch` has no time limit of the app's own. The
-/// multipart uploads take `Limits::DEFAULT` (30 minutes in all): a large
-/// upload that is still sending is only stopped by that total.
+/// seconds to connect, 60 seconds without a byte, 10 minutes in all, 64
+/// MiB. The multipart uploads take `Limits::DEFAULT` (30 minutes in
+/// all): a large upload that is still sending is only stopped by that
+/// total.
 pub const HUB_LIMITS: Limits = Limits {
     connect_timeout: Duration::from_secs(30),
     read_timeout: Duration::from_secs(60),
@@ -41,15 +38,15 @@ pub const HUB_LIMITS: Limits = Limits {
     max_body_bytes: 64 * 1024 * 1024,
 };
 
-/// Which class of the TS's errors a failed status is: the token retry and
-/// the handlers tell these apart (`instanceof Hub401Error` …).
+/// Which class of error a failed status is: the token retry and the
+/// handlers tell these apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StatusKind {
     /// `Hub401Error`.
     Unauthorized,
     /// `Hub403Error`.
     Forbidden,
-    /// `Hub404Error` (hub-client.ts's endpoints only).
+    /// `Hub404Error` (the endpoints with `typed_not_found` only).
     NotFound,
     /// `Hub409Error` (not the downloads').
     Conflict,
@@ -135,7 +132,7 @@ impl HubRequesters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RequestBody {
     None,
-    /// `application/json`; the text is the TS's `JSON.stringify(…)`.
+    /// `application/json`; the text as `JSON.stringify(…)` writes it.
     Json(String),
     Multipart(MultipartBody),
 }
@@ -162,8 +159,8 @@ impl HubHttp {
         &self.timing
     }
 
-    /// The request as the TS's `init` builds it: `Authorization` when there
-    /// is a JWT, then the `Content-Type` of the body.
+    /// The request: `Authorization` when there is a JWT, then the
+    /// `Content-Type` of the body.
     fn request(&self, endpoint: &Endpoint<'_>, jwt: Option<&str>, body: RequestBody) -> HttpRequest {
         let mut headers = Vec::new();
         if let Some(jwt) = jwt {
@@ -191,10 +188,9 @@ impl HubHttp {
         }
     }
 
-    /// Sends a request to `endpoint` and reads the response the way the TS
-    /// function for it does. The result is the envelope's `data` (`None`
-    /// where it is `undefined`) or, where the endpoint takes any body, the
-    /// body itself.
+    /// Sends a request to `endpoint` and reads the response in the endpoint's
+    /// [`ReadMode`]. The result is the envelope's `data` (`None` where it is
+    /// `undefined`) or, where the endpoint takes any body, the body itself.
     pub async fn send(
         &self,
         endpoint: &Endpoint<'_>,

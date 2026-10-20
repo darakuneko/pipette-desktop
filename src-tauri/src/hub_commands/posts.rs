@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keymap posts and the private posts (src/main/hub/hub-ipc-posts.ts and
-//! hub-ipc-private.ts, on `pipette_hub::posts` and `pipette_hub::private`).
+//! The keymap posts and the private posts (on `pipette_hub::posts` and
+//! `pipette_hub::private`).
 //! The arguments arrive as the page sent them, and the answers carry what
 //! the Hub sent as it sent it; the JWT stays here.
 //!
@@ -139,7 +139,7 @@ pub async fn hub_upload_private_post(
     respond(&private::upload_private_prepared(hub.token(), post, expires_in_days).await)
 }
 
-/// `kind` goes into the path unchecked, as Electron's handler sends it.
+/// `kind` goes into the path unchecked.
 #[tauri::command]
 pub async fn hub_delete_private_post(
     hub: State<'_, Arc<Hub>>,

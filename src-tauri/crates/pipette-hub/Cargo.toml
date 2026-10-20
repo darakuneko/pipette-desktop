@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-hub"
-description = "The Pipette Hub client: the HTTP layer of src/main/hub/*.ts (its three ways of reading a response, the 429 retry, the error messages), the multipart bodies, the input checks, where the Hub requests may go, and an in-memory Hub for the tests"
+description = "The Pipette Hub client: the HTTP layer (its three ways of reading a response, the 429 retry, the error messages), the multipart bodies, the input checks, where the Hub requests may go, and an in-memory Hub for the tests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

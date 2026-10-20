@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The favorite posts (src/main/hub/hub-ipc-favorite.ts and the private
-//! favorite upload of hub-ipc-private.ts), on `pipette_hub::favorite`. The
+//! The favorite posts and the private favorite upload, on
+//! `pipette_hub::favorite`. The
 //! export JSON is built by the page's worker, so the page checks the post,
 //! reads the entry with `hub_favorite_entry`, builds the JSON and sends it
 //! with the post's `params` to `hub_upload_favorite_post`,
@@ -61,8 +61,7 @@ pub async fn hub_upload_private_favorite_post(
 
 /// The favorite entry a post is built from: `{success: true, entry:
 /// {label?, savedAt?, body}}` or `{success: false, error}`. It reads the
-/// store's files as they are, without its write lock, as the Electron
-/// handler does.
+/// store's files as they are, without its write lock.
 #[tauri::command]
 pub async fn hub_favorite_entry(
     stores: State<'_, StoreContext>,

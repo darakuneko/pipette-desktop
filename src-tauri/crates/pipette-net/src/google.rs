@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Google endpoints of the sync: the OAuth authorization and token
-//! endpoints (src/main/sync/google-auth.ts) and the Drive API
-//! (src/main/sync/google-drive.ts), and the client their requests go
-//! through.
+//! endpoints and the Drive API, and the client their requests go through.
 //!
 //! Builds with the `url-override` feature (the development tools) replace
 //! all four with servers on the loopback interface from the environment, so
@@ -15,13 +13,13 @@
 
 use crate::client::{Limits, ReqwestClient};
 
-/// `GOOGLE_AUTH_ENDPOINT` of src/main/sync/google-auth.ts.
+/// The OAuth authorization endpoint.
 pub const GOOGLE_AUTH_ENDPOINT: &str = "https://accounts.google.com/o/oauth2/v2/auth";
-/// `GOOGLE_TOKEN_ENDPOINT` of src/main/sync/google-auth.ts.
+/// The OAuth token endpoint.
 pub const GOOGLE_TOKEN_ENDPOINT: &str = "https://oauth2.googleapis.com/token";
-/// `DRIVE_API` of src/main/sync/google-drive.ts.
+/// The Drive API.
 pub const DRIVE_API: &str = "https://www.googleapis.com/drive/v3";
-/// `UPLOAD_API` of src/main/sync/google-drive.ts.
+/// The Drive upload API.
 pub const DRIVE_UPLOAD_API: &str = "https://www.googleapis.com/upload/drive/v3";
 
 /// Where the sync's requests go, without a trailing slash.

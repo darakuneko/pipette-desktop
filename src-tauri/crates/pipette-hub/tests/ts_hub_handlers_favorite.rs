@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The favorite post scenarios recorded from the Electron Hub handlers
-//! (ts_hub_handlers_favorite.json). The Tauri build splits each handler:
-//! the page checks the post (`check_post_id`, `check_post` here, which the
-//! backend runs again), reads the entry through the backend
-//! (`read_entry`), names its keycodes in its worker and sends the export
-//! JSON to the handler. Each step runs those parts in that order on the
-//! recorded userData: a check or a read that fails must fail with the
-//! recorded answer and send nothing. Otherwise the read must give the
-//! entry's label, save time and body as the userData has them, and the
-//! handler, given the export JSON the Electron handler sent, must give the
-//! recorded answer and send the recorded requests (multipart bodies byte
-//! for byte, with the boundary of the fixture's clock) and waits. That the
-//! page's worker builds the same JSON from the same entry is the shim's test
-//! (src/tauri-shim/__tests__/hub-favorite.test.ts).
+//! The recorded golden favorite post scenarios of the Hub handlers
+//! (ts_hub_handlers_favorite.json). Each handler is split: the page checks
+//! the post (`check_post_id`, `check_post` here, which the backend runs
+//! again), reads the entry through the backend (`read_entry`), names its
+//! keycodes in its worker and sends the export JSON to the handler. Each
+//! step runs those parts in that order on the recorded userData: a check or
+//! a read that fails must fail with the recorded answer and send nothing.
+//! Otherwise the read must give the entry's label, save time and body as
+//! the userData has them, and the handler, given the recorded export JSON,
+//! must give the recorded answer and send the recorded requests (multipart
+//! bodies byte for byte, with the boundary of the fixture's clock) and
+//! waits. That the page's worker builds the same JSON from the same entry
+//! is the shim's test (src/tauri-shim/__tests__/hub-favorite.test.ts).
 //!
 //! Also the `isValidHubVialProtocol` table of ts_hub_pure.json.
 
@@ -30,7 +29,7 @@ use pipette_hub::{HubHttp, HubRequesters, node_base64_decode};
 use pipette_js_json::{Object, Value, parse, stringify};
 use pipette_net::{HttpError, HttpReply, HttpRequest};
 
-/// A rule of the scripted Hub (hub-harness.ts `HubRule`).
+/// A rule of the scripted Hub.
 struct Rule {
     method: String,
     path: String,
@@ -135,7 +134,7 @@ fn recorded_line(request: &Value) -> String {
 }
 
 /// The JSON file the recorded multipart requests of a step carry: the
-/// export JSON the Electron handler built (all of them are the same).
+/// recorded export JSON (all of them are the same).
 fn sent_json(step: &Value) -> Option<String> {
     let mut sent = array(field(step, "requests")).iter().filter_map(|request| {
         let multipart = get(field(request, "body"), "multipart")?;

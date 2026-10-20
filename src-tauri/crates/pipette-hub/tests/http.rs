@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Hub's HTTP layer against scripted replies: the request each
 //! endpoint sends, the three ways of reading a response, the error each
-//! failure becomes, and the one retry after a short 429 (the cases of
-//! src/main/__tests__/hub-client.test.ts "429 rate limiting").
+//! failure becomes, and the one retry after a short 429.
 
 #![allow(clippy::unwrap_used)]
 

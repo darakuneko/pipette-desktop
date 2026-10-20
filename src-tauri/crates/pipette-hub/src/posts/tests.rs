@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keymap post handlers as the post tests of
-//! src/main/__tests__/hub-ipc.test.ts check them: on a scripted Hub for the
-//! answers of each status and shape, and on the in-memory Hub for a post's
-//! whole life.
+//! The keymap post handlers on a scripted Hub for the answers of each
+//! status and shape, and on the in-memory Hub for a post's whole life.
 
 #![allow(clippy::unwrap_used)]
 
