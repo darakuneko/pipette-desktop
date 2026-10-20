@@ -1,5 +1,5 @@
 {
-  "version": "0.1.121",
+  "version": "0.1.122",
   "name": "English",
   "common": {
     "save": "Save",
@@ -2080,6 +2080,7 @@
       "permission": "Pipette cannot write to the folder it is installed in.",
       "cancelled": "Pipette started quitting, so the update was not installed.",
       "busy": "An update check is already running. Try again in a moment.",
+      "previousAppNotRestored": "Pipette could not be updated, and the previous version could not be put back. A copy of it was kept at {{path}}. Download the new version from the release page and install it.",
       "unknown": "Something went wrong while updating."
     },
     "about": {

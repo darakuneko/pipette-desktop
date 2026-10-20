@@ -117,7 +117,9 @@ export function UpdateAvailableModal({ prompt, onClose, onSkip }: Props) {
           )}
           {phase === 'failed' && code && (
             <div role="alert" className="space-y-1" data-testid="update-modal-error">
-              <p className="text-danger">{t(`update.error.${code}`)}</p>
+              <p className="text-danger">
+                {t(`update.error.${code}`, { path: prompt.kind === 'failed' ? prompt.backupPath : undefined })}
+              </p>
               <p className="text-content-secondary">{t('update.errorHint')}</p>
             </div>
           )}

@@ -10,10 +10,10 @@ import type { UpdateErrorCode } from '../../shared/types/update'
 export const UPDATE_CHECK_DELAY_MS = 3_000
 
 /** What the update modal shows: an update to offer, or the failure the
- *  last update left (the installer of Windows could not start). */
+ *  last update left (its install, after the app quit, failed). */
 export type UpdatePrompt =
   | { kind: 'available'; version: string; currentVersion: string; releaseUrl: string }
-  | { kind: 'failed'; version: string; code: UpdateErrorCode; releaseUrl: string }
+  | { kind: 'failed'; version: string; code: UpdateErrorCode; releaseUrl: string; backupPath?: string }
 
 export interface UpdateCheckState {
   prompt: UpdatePrompt | null

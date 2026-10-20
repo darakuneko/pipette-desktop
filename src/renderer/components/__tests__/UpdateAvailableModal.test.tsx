@@ -97,6 +97,21 @@ describe('UpdateAvailableModal', () => {
   })
 })
 
+describe('UpdateAvailableModal, a previous app that was not put back', () => {
+  it('says where the copy of the previous app was kept', () => {
+    render(
+      <UpdateAvailableModal
+        prompt={{ kind: 'failed', version: '0.5.0-beta.3', code: 'previousAppNotRestored', releaseUrl: RELEASE_URL, backupPath: '/tmp/tauri_current_app1/Pipette.app' }}
+        onClose={vi.fn()}
+      />,
+    )
+    const text = screen.getByTestId('update-modal-error').textContent ?? ''
+    expect(text).toContain('update.error.previousAppNotRestored')
+    expect(text).toContain('/tmp/tauri_current_app1/Pipette.app')
+    expect(screen.getByTestId('update-modal-release-link')).toBeTruthy()
+  })
+})
+
 describe('AboutUpdateCheck', () => {
   async function checkWith(result: UpdateCheckResult): Promise<string> {
     api.updateCheck.mockResolvedValueOnce(result)
