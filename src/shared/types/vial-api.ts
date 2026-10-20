@@ -69,6 +69,7 @@ import type { AozoraImportResult } from './aozora-import'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse, HubUploadThemePostParams, HubUpdateThemePostParams, HubThemeListParams, HubThemeListResponse, HubThemePackBody, HubThemePackTimestampsResponse, HubPrivateUploadResult, HubPrivateKind, HubPrivateUploadPostParams, HubPrivateUploadFavoritePostParams, HubPrivateUploadAnalyticsPostParams } from './hub'
 import type { HubPrivateLink } from './hub-private'
 import type { NotificationFetchResult } from './notification'
+import type { UpdateCheckResult, UpdateFailure, UpdateInstallResult, UpdateProgress } from './update'
 
 export interface VialAPI {
   // Device Management
@@ -403,6 +404,12 @@ export interface VialAPI {
 
   // Shell
   openExternal(url: string): Promise<void>
+
+  // In-app update (the Tauri build; the Electron build answers `disabled`)
+  updateCheck(): Promise<UpdateCheckResult>
+  updateInstall(version: string): Promise<UpdateInstallResult>
+  updateTakeFailure(): Promise<UpdateFailure | null>
+  updateOnProgress(callback: (progress: UpdateProgress) => void): () => void
 
   // Snapshot Store extensions
   snapshotStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>

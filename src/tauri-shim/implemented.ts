@@ -15,6 +15,7 @@ import { i18nPacksApi } from './api/i18n-packs'
 import { keyLabelsApi } from './api/key-labels'
 import { keyboardDataApi } from './api/keyboard-data'
 import { notificationApi } from './api/notification'
+import { updateApi } from './api/update'
 import { runLogsApi } from './api/run-logs'
 import { settingsApi } from './api/settings'
 import { shellApi } from './api/shell'
@@ -53,6 +54,7 @@ export const real = {
   ...windowApi,
   ...trayApi,
   ...notificationApi,
+  ...updateApi,
   ...syncPendingApi,
   ...filesApi,
   ...keyboardDataApi,

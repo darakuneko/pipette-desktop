@@ -301,6 +301,12 @@ export const VIAL_API_MEMBER_KINDS = {
   // Shell
   openExternal: 'request',
 
+  // In-app update
+  updateCheck: 'request',
+  updateInstall: 'request',
+  updateTakeFailure: 'request',
+  updateOnProgress: 'listener',
+
   // Snapshot Store extensions
   snapshotStoreSetHubPostId: 'request',
   snapshotStoreSetHubPrivate: 'request',

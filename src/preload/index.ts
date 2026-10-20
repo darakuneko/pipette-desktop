@@ -11,6 +11,7 @@ import { createProtocolMembers } from './protocol-members'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { DeviceInfo, ProbeResult } from '../shared/types/protocol'
 import type { TrayStatus } from '../shared/types/vial-api'
+import type { UpdateCheckResult, UpdateFailure, UpdateInstallResult, UpdateProgress } from '../shared/types/update'
 import type { SnapshotMeta, SnapshotUpdateOptions } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { RunKeystrokeLog, RunLogMeta } from '../shared/types/typing-run-log'
@@ -729,6 +730,13 @@ const vialAPI = {
   // --- Shell ---
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.SHELL_OPEN_EXTERNAL, url),
+
+  // --- In-app update: only the Tauri build updates itself ---
+  updateCheck: (): Promise<UpdateCheckResult> => Promise.resolve({ status: 'disabled' }),
+  updateInstall: (version: string): Promise<UpdateInstallResult> =>
+    Promise.resolve({ status: 'failed', code: 'unknown', releaseUrl: `https://github.com/darakuneko/pipette-desktop/releases/tag/v${version}` }),
+  updateTakeFailure: (): Promise<UpdateFailure | null> => Promise.resolve(null),
+  updateOnProgress: (_callback: (progress: UpdateProgress) => void): (() => void) => () => {},
 
   // --- Data Management ---
   listStoredKeyboards: (): Promise<StoredKeyboardInfo[]> =>
