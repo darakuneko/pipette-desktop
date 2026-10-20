@@ -2,7 +2,7 @@
 //
 // WebdriverIO configuration of the operation guide's screenshot capture
 // (`pnpm doc:screenshots`). It drives the same debug build with the
-// development tools as the e2e tests (`pnpm tauri:build:debug`), through the
+// development tools as the e2e tests (`pnpm build:debug`), through the
 // same tauri-driver harness (helpers/driver.ts): the virtual keyboard only,
 // a fresh temporary userData directory per session, and Hub and notice
 // addresses nothing listens on. Each spec under ./specs is one session.
@@ -110,7 +110,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
 
   onPrepare() {
     if (!existsSync(APP_BINARY)) {
-      throw new Error(`${APP_BINARY} does not exist. Build it first with \`pnpm tauri:build:debug\`.`)
+      throw new Error(`${APP_BINARY} does not exist. Build it first with \`pnpm build:debug\`.`)
     }
   },
 

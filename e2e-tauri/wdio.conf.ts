@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // WebdriverIO configuration of the Tauri build's e2e tests
-// (`pnpm test:e2e:tauri`). Each spec file is one session: tauri-driver starts
-// the debug build (`pnpm tauri:build:debug`, which has the dev-tools commands
+// (`pnpm test:e2e`). Each spec file is one session: tauri-driver starts
+// the debug build (`pnpm build:debug`, which has the dev-tools commands
 // the tests drive the virtual keyboard with) with a userData directory of its
 // own. On Linux it needs WebKitWebDriver on PATH and a display (CI runs it
 // under xvfb-run and dbus-run-session). The window-state test needs a screen
@@ -75,7 +75,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
 
   onPrepare() {
     if (!existsSync(APP_BINARY)) {
-      throw new Error(`${APP_BINARY} does not exist. Build it first with \`pnpm tauri:build:debug\`.`)
+      throw new Error(`${APP_BINARY} does not exist. Build it first with \`pnpm build:debug\`.`)
     }
   },
 
