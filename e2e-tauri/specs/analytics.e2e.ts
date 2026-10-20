@@ -78,6 +78,10 @@ interface TypingSyncState {
   uploaded: Record<string, unknown>
 }
 
+/** The window property where {@link watchForInsertion} records, per
+ *  selector, the inserted element's text (null until it is inserted). */
+type InsertionRecord = { __e2eInserted?: Record<string, string | null> }
+
 /** Starts recording, in the page, the text of the first element matching
  *  `selector` that the page adds. A confirmation shown for a moment (the
  *  "Saved" flash lasts 2 s) can come and go between two polls of
@@ -85,7 +89,7 @@ interface TypingSyncState {
  *  longer; the page's own MutationObserver sees every insertion. */
 async function watchForInsertion(selector: string): Promise<void> {
   await browser.execute((sel: string) => {
-    const page = window as unknown as { __e2eInserted?: Record<string, string | null> }
+    const page = window as unknown as InsertionRecord
     const inserted = (page.__e2eInserted ??= {})
     inserted[sel] = null
     const observer = new MutationObserver(() => {
@@ -103,7 +107,7 @@ async function watchForInsertion(selector: string): Promise<void> {
 async function waitForInsertion(selector: string, timeoutMsg: string): Promise<string> {
   const read = (): Promise<string | null> =>
     browser.execute(
-      (sel: string) => (window as unknown as { __e2eInserted?: Record<string, string | null> }).__e2eInserted?.[sel] ?? null,
+      (sel: string) => (window as unknown as InsertionRecord).__e2eInserted?.[sel] ?? null,
       selector,
     )
   await browser.waitUntil(async () => (await read()) !== null, { timeoutMsg })
