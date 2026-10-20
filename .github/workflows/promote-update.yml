@@ -136,13 +136,21 @@ jobs:
           cp "$RUNNER_TEMP/release-files/latest.json" "$RUNNER_TEMP/$CHANNEL.json"
           gh release upload updater-manifest "$RUNNER_TEMP/$CHANNEL.json" --repo "$REPO" --clobber
 
+      # A just-created release or a replaced asset can take a while to be
+      # served: a 404 or the previous manifest is retried for 5 minutes.
       - name: Check the manifest anonymously
         run: |
-          curl -fsSL --retry 5 --retry-delay 5 -o "$RUNNER_TEMP/served.json" \
-            "https://github.com/$REPO/releases/download/updater-manifest/$CHANNEL.json"
-          served=$(node -p "require(process.argv[1]).version" "$RUNNER_TEMP/served.json")
+          served=
+          for _ in $(seq 1 30); do
+            if curl -fsSL -o "$RUNNER_TEMP/served.json" \
+              "https://github.com/$REPO/releases/download/updater-manifest/$CHANNEL.json"; then
+              served=$(node -p "require(process.argv[1]).version" "$RUNNER_TEMP/served.json")
+              [ "$served" = "${TAG#v}" ] && break
+            fi
+            sleep 10
+          done
           if [ "$served" != "${TAG#v}" ]; then
-            echo "::error::$CHANNEL.json serves $served, not ${TAG#v}"
+            echo "::error::$CHANNEL.json serves ${served:-nothing}, not ${TAG#v}"
             exit 1
           fi
           echo "$CHANNEL.json now offers $served"
