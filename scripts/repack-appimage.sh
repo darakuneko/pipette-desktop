@@ -3,15 +3,13 @@
 # dist/Pipette-linux-x86_64.AppImage, the release name, so it uses the static
 # type2 runtime (no libfuse2 needed on the host), embeds AppImage update
 # information that names the release's .zsync, and ships that .zsync next to
-# it. The AppStream metainfo and the desktop entry are the same for both
-# builds: the entry is pipette-desktop.desktop, the name the metainfo's
-# launchable refers to.
+# it. It adds the AppStream metainfo and names the desktop entry
+# pipette-desktop.desktop, the name the metainfo's launchable refers to.
 #
 # Usage: bash scripts/repack-appimage.sh [<AppImage>]
 #   <AppImage>  the AppImage to rebuild, the Tauri bundle's
 #               (src-tauri/target/release/bundle/appimage/*.AppImage). Without
-#               it, dist/Pipette-linux-x86_64.AppImage (after
-#               `electron-builder --linux`) is rebuilt in place.
+#               it, dist/Pipette-linux-x86_64.AppImage is rebuilt in place.
 # Requires: curl, sha256sum, node, unsquashfs (squashfs-tools). x86_64 only.
 set -euo pipefail
 

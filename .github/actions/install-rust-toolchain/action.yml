@@ -1,0 +1,16 @@
+name: Install the Rust toolchain of src-tauri
+description: >-
+  Installs the toolchain of src-tauri/rust-toolchain.toml and makes it the
+  default, so the rustc version rust-cache reads from the repository root is
+  the one that builds. Runs on every OS. Expects the repository to be checked
+  out already.
+
+runs:
+  using: composite
+  steps:
+    - name: Install the Rust toolchain
+      shell: bash
+      working-directory: src-tauri
+      run: |
+        rustup toolchain install
+        rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
