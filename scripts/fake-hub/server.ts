@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // A fake Pipette Hub for the Hub tests: the routes the desktop app calls
-// (src/main/hub/*.ts) with the Hub worker's answers (`{ok, data}` and
+// (src-tauri/crates/pipette-hub) with the Hub worker's answers (`{ok, data}` and
 // `{ok: false, error}`, the same checks and texts, the unwrapped
 // downloads), and control endpoints that inject failures, create records
 // directly, show the state and the request log. It keeps its state in

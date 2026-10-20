@@ -78,8 +78,8 @@ const HIDDEN_LAUNCH_TIMEOUT_MS = 60_000
 /** Under Wayland the app neither reads nor sets its window's position. */
 const positionsKnown = !process.env.WAYLAND_DISPLAY || process.env.GDK_BACKEND === 'x11'
 
-/** The request body of the golden of the notice fetch (recorded from the
- *  Electron build) with the time `now`. */
+/** The request body of the recorded golden of the notice fetch with the
+ *  time `now`. */
 function goldenNoticeBody(now: number): string {
   const golden = JSON.parse(
     readFileSync(join(REPO_ROOT, 'src-tauri/crates/pipette-notification/tests/fixtures/notification.json'), 'utf8'),
@@ -88,8 +88,8 @@ function goldenNoticeBody(now: number): string {
   return first.request.body.replace(`"value":${first.now}`, `"value":${now}`)
 }
 
-/** The autostart entry of the golden of the autostart (recorded from the
- *  Electron build), for the executable `exec`. */
+/** The autostart entry of the recorded golden of the autostart, for the
+ *  executable `exec`. */
 function goldenAutostartEntry(exec: string): string {
   const golden = JSON.parse(
     readFileSync(join(REPO_ROOT, 'src-tauri/crates/pipette-autostart/tests/fixtures/autostart.json'), 'utf8'),

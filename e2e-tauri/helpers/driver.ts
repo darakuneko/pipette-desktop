@@ -232,7 +232,7 @@ export function isWithin(path: string, dir: string): boolean {
 }
 
 /** The autostart directories a session must never point at: the one
- *  Electron writes ($HOME/.config/autostart) and the XDG one, for the home
+ *  the 0.4 build writes ($HOME/.config/autostart) and the XDG one, for the home
  *  and config directories of this process and of the app's environment
  *  `env`. */
 export function realAutostartDirs(env: NodeJS.ProcessEnv): string[] {
