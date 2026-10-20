@@ -2,7 +2,7 @@
 //! The parts every sync entry point runs before it touches data
 //! (`pipette_sync::preflight::Preflight`) on this app's Drive, and the
 //! sync-format status of the update banner (`syncFormatStatus` and
-//! `sync:format-status-changed`, src/main/sync/sync-ipc.ts). The status is
+//! `sync:format-status-changed`). The status is
 //! checked at startup and whenever the sign-in changes.
 
 use std::sync::{Arc, Weak};

@@ -8,11 +8,11 @@ pub const ENVELOPE_VERSION: u32 = 1;
 
 /// One encrypted sync unit as stored on Drive.
 ///
-/// Serializes with the field names and order `JSON.stringify` gives the
-/// TypeScript object (`version`, `syncUnit`, `updatedAt`, `salt`, `iv`,
-/// `ciphertext`). The binary fields are standard Base64 (`+/`, `=` padding):
-/// `salt` 16 bytes, `iv` 12 bytes, `ciphertext` the AES-GCM output with the
-/// 16-byte tag appended; there is no separate tag field.
+/// Serializes with the field names and order other devices write (`version`,
+/// `syncUnit`, `updatedAt`, `salt`, `iv`, `ciphertext`). The binary fields are
+/// standard Base64 (`+/`, `=` padding): `salt` 16 bytes, `iv` 12 bytes,
+/// `ciphertext` the AES-GCM output with the 16-byte tag appended; there is no
+/// separate tag field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Envelope {

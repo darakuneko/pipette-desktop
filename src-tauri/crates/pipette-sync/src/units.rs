@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync unit names and what they say: which store a unit belongs to,
-//! the store lock that guards its files, and the shapes the passes treat
-//! apart (src/main/sync/sync-bundle.ts, src/main/typing-analytics/sync.ts,
-//! src/main/sync/pack-bundle-merge.ts).
+//! The sync unit names and what they say: which store a unit belongs to, the
+//! store lock that guards its files, and the shapes the passes treat apart.
 
 use pipette_entry_store::EntryStore;
 use pipette_keyboard_stores::{KEY_LABEL_SYNC_UNIT, KEYBOARD_META_SYNC_UNIT, TYPING_TEXT_SYNC_UNIT};

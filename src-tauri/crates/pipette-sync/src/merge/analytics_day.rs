@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The merge of a downloaded day file of another device
-//! (`mergeDeviceDayBundle` of src/main/sync/sync-merge-dispatch.ts): the
-//! file replaces the local copy under that device's directory, and every
-//! row in it is replayed into the cache with that device's deleted ranges
-//! hidden in the same transaction. A day is replayed whole; the cache's
-//! last-writer-wins merge makes a replay of rows it already has a no-op.
+//! The merge of a downloaded day file of another device: the file replaces the
+//! local copy under that device's directory, and every row in it is replayed
+//! into the cache with that device's deleted ranges hidden in the same
+//! transaction. A day is replayed whole; the cache's last-writer-wins merge
+//! makes a replay of rows it already has a no-op.
 
 use pipette_entry_store::is_safe_path_segment;
 use pipette_js_json::Value;

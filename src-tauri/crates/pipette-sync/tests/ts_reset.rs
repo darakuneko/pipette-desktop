@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The resets, deletes and trash actions against the recording of the
-//! TypeScript handlers (tests/fixtures/ts_reset.json, from
-//! scripts/sync-fixtures/record-reset-fixtures.test.ts): the same userData,
-//! pending file, Drive and steps give the same answers, calls, changed
-//! units, pending units, userData tree (path → bytes) and Drive files.
+//! The resets, deletes and trash actions against the recorded golden
+//! (tests/fixtures/ts_reset.json): the same userData, pending file, Drive and
+//! steps give the same answers, calls, changed units, pending units, userData
+//! tree (path → bytes) and Drive files.
 //!
-//! The Tauri build also removes this userData's key store entry with
-//! `local/auth/` (`forgetKey`), which the Electron build has none of; that
-//! call is left out of the comparison.
+//! The reset also removes this userData's key store entry with `local/auth/`
+//! (`forgetKey`), which the recording has none of; that call is left out of the
+//! comparison.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -101,8 +100,8 @@ fn pending_state(w: &World) -> Value {
     })
 }
 
-/// The calls the Electron build logs: a typing cleanup with its scope,
-/// always every device's rows here.
+/// The calls the recording logs: a typing cleanup with its scope, always every
+/// device's rows here.
 fn calls(w: &World) -> Vec<String> {
     w.log()
         .into_iter()
@@ -124,7 +123,7 @@ async fn seed_drive(w: &World, seeds: &[Value]) {
 }
 
 #[tokio::test]
-async fn the_resets_match_the_typescript_recording() {
+async fn the_resets_match_the_recorded_golden() {
     let fixture: Value = serde_json::from_str(FIXTURE).unwrap();
     assert_eq!(fixture["now"].as_i64(), Some(NOW));
     assert_eq!(fixture["ownHash"], reset_harness::OWN_HASH);

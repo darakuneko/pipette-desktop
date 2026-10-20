@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The browser sign-in (`startOAuthFlow` of src/main/sync/google-auth.ts)
-//! over a real loopback listener, with the token endpoint scripted. The
-//! tests named `differs_from_electron_*` pin the places where the sign-in
-//! deliberately does not do what Electron does.
+//! The browser sign-in over a real loopback listener, with the token
+//! endpoint scripted.
 
 #![allow(clippy::unwrap_used)]
 
@@ -108,7 +106,7 @@ async fn an_error_with_the_state_fails_the_sign_in() {
 }
 
 #[tokio::test]
-async fn differs_from_electron_an_error_without_the_state_is_refused() {
+async fn an_error_without_the_state_is_refused() {
     let harness = Harness::new();
     let browser = Arc::new(TestBrowser::default());
     harness.endpoint.ok(tokens(json!({})));
@@ -186,7 +184,7 @@ async fn a_silent_or_oversized_connection_does_not_block_the_redirect() {
 }
 
 #[tokio::test]
-async fn differs_from_electron_a_sign_out_cancels_the_wait_for_the_browser() {
+async fn a_sign_out_cancels_the_wait_for_the_browser() {
     let harness = Harness::new();
     let browser = Arc::new(TestBrowser::default());
     let flow = start(&harness, &browser);
@@ -197,7 +195,7 @@ async fn differs_from_electron_a_sign_out_cancels_the_wait_for_the_browser() {
 }
 
 #[tokio::test]
-async fn differs_from_electron_a_sign_out_during_the_exchange_keeps_the_account_signed_out() {
+async fn a_sign_out_during_the_exchange_keeps_the_account_signed_out() {
     let harness = Harness::new();
     let browser = Arc::new(TestBrowser::default());
     let respond = harness.endpoint.later();
@@ -214,7 +212,7 @@ async fn differs_from_electron_a_sign_out_during_the_exchange_keeps_the_account_
 }
 
 #[tokio::test]
-async fn differs_from_electron_a_later_sign_in_replaces_an_earlier_one() {
+async fn a_later_sign_in_replaces_an_earlier_one() {
     let harness = Harness::new();
     let browser = Arc::new(TestBrowser::default());
     harness.endpoint.ok(tokens(json!({ "access_token": "second" })));

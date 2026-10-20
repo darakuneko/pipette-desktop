@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `executeAnalyticsSync` (src/main/sync/sync-analytics.ts): the sync the
-//! Analyze panel runs for one keyboard when it opens (trigger F). It pulls
-//! and pushes that keyboard's typing day files and every device's
+//! The sync the Analyze panel runs for one keyboard when it opens (trigger F).
+//! It pulls and pushes that keyboard's typing day files and every device's
 //! deleted-ranges file, and nothing else.
 //!
 //! It does not take the sync lock. The keyboard is marked as syncing

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The choice between copies and the trash names give what
-//! drive-canonical.ts and drive-trash.ts give on the tables of
-//! tests/fixtures/canonical_trash.json
-//! (scripts/sync-fixtures/record-drive-fixtures.test.ts), and the moves to
-//! the trash do what `moveFilesToTrash` does (drive-trash.test.ts).
+//! The choice between copies and the trash names give the recorded golden
+//! results on the tables of tests/fixtures/canonical_trash.json, and the
+//! moves to the trash.
 
 #![allow(clippy::unwrap_used)]
 

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The unencrypted "password change in progress" lock file in
-//! appDataFolder (src/main/sync/sync-password-lock.ts),
-//! `password-change-lock.json`. A machine re-encrypting every file under a
-//! new sync password holds it so the other machines stop syncing until the
-//! change is finished or rolled back. It carries no secret and is never a
-//! sync unit.
+//! The unencrypted "password change in progress" lock file in appDataFolder,
+//! `password-change-lock.json`. A machine re-encrypting every file under a new
+//! sync password holds it so the other machines stop syncing until the change
+//! is finished or rolled back. It carries no secret and is never a sync unit.
 //!
 //! Which lock wins is decided by Drive's `createdTime` (then the smallest
 //! id), never by a machine's clock; a lock is recognised as this machine's
@@ -296,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_and_reads_the_lock_of_the_electron_build() {
+    fn writes_and_reads_the_lock_file_json() {
         let lock = PasswordChangeLock {
             lock_id: "id".into(),
             machine_hash: "hash".into(),

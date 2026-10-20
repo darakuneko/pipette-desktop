@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Google account the pending units belong to
-//! (src/main/sync/sync-pending-account.ts). The active units always belong
+//! The Google account the pending units belong to. The active units always belong
 //! to the owner (nobody while signed out); another account's units wait in
 //! its held set, which no upload reads, until that account signs in again.
 //! Local data itself is shared by every account; only the record of what
@@ -67,10 +66,9 @@ impl PendingStore {
         state.held.iter().map(|(sub, units)| (sub.clone(), units.iter().cloned().collect())).collect()
     }
 
-    /// The units `adoptPendingForSignedInAccount` of
-    /// src/main/sync/sync-pending-account.ts hands to the account `sub` the
-    /// stored tokens belong to; written now and told to the listener when
-    /// anything changed. Whether anything did.
+    /// Hands the pending units to the account `sub` the stored tokens belong
+    /// to; written now and told to the listener when anything changed.
+    /// Whether anything did.
     pub fn adopt_for_account(&self, sub: Option<&str>) -> bool {
         let changed = lock(&self.shared.state).adopt(sub);
         if changed {

@@ -2,8 +2,8 @@
 //! What the tests share: a [`RetryEnv`] with a fixed clock and jitter that
 //! records its waits, and an HTTP front for the in-memory Drive that
 //! answers the requests of `HttpDrive` as the Node fake Drive
-//! (scripts/fake-drive/server.ts) answers those of google-drive.ts and
-//! logs each as scripts/sync-fixtures/drive-request-log.ts does.
+//! (scripts/fake-drive/server.ts) answers them and logs each in the shape
+//! of the recorded request log.
 
 #![allow(clippy::unwrap_used, dead_code)]
 
@@ -184,7 +184,7 @@ fn boundary(content_type: &str) -> Option<&str> {
     content_type.split_once("boundary=").map(|(_, rest)| rest.split(';').next().unwrap_or(rest))
 }
 
-/// The log entry of `request`, as drive-request-log.ts writes one.
+/// The log entry of `request`, in the shape of the recorded request log.
 pub fn log_entry(request: &HttpRequest) -> Value {
     let method = request.method.as_str();
     let path = request.url.strip_prefix(ORIGIN).unwrap().split('?').next().unwrap();

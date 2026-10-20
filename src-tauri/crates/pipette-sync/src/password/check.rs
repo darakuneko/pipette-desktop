@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync credentials and the password-check (src/main/sync/
-//! sync-password.ts): an envelope on Drive, `password-check.enc`, that
-//! opens only with the sync password. Every pass opens it before it writes
-//! with the stored password, so a machine holding an old password stops
-//! instead of writing data the others cannot read.
+//! The sync credentials and the password-check: an envelope on Drive,
+//! `password-check.enc`, that opens only with the sync password. Every pass
+//! opens it before it writes with the stored password, so a machine holding an
+//! old password stops instead of writing data the others cannot read.
 
 use std::sync::{Arc, MutexGuard, PoisonError};
 

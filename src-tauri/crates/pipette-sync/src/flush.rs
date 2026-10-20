@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trigger A (src/main/sync/sync-flush.ts): the pending units are sent
-//! [`DEBOUNCE`] after the last change, by a flush pass.
+//! Trigger A: the pending units are sent [`DEBOUNCE`] after the last change, by
+//! a flush pass.
 //!
 //! One timer at most. A change ([`Flusher::notify_change`]) replaces it
 //! with one firing the full [`DEBOUNCE`] from now. Everything else that
@@ -125,14 +125,14 @@ impl Flusher {
         self.inner.timer.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// `notifyChange`: records a change of `unit` and pushes the flush out
-    /// by the full [`DEBOUNCE`].
+    /// Records a change of `unit` and pushes the flush out by the full
+    /// [`DEBOUNCE`].
     ///
-    /// Unlike Electron's `notifyChange`, no timer is armed once the app
-    /// quits: a timer firing then would start a second flush racing the
-    /// quit's own flush and exit. The unit stays pending; the quit's flush
-    /// picks it up, and what is still pending is kept for the next launch.
-    /// The quit is checked holding the timer, as in `schedule_flush`.
+    /// No timer is armed once the app quits: a timer firing then would start a
+    /// second flush racing the quit's own flush and exit. The unit stays
+    /// pending; the quit's flush picks it up, and what is still pending is kept
+    /// for the next launch. The quit is checked holding the timer, as in
+    /// `schedule_flush`.
     pub fn notify_change(&self, unit: &str) {
         self.inner.pending.notify_change(unit);
         let mut timer = self.timer();

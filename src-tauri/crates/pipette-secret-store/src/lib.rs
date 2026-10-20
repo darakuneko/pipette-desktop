@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync's secrets at rest, in place of Electron's `safeStorage`
-//! (src/main/sync/sync-secret-file.ts): a master key in the OS key store
+//! The sync's secrets at rest: a master key in the OS key store
 //! ([`keystore`], [`master_key`]) and the files of `local/auth/` encrypted
-//! with it ([`secret_file`]), as Chromium keeps the key of `safeStorage`.
+//! with it ([`secret_file`]).
 //!
-//! The files are `tauri-*.bin`, never Electron's `*.enc`: this crate
-//! neither reads nor writes those, so the Electron build keeps its own
-//! sign-in and password in the same userData directory.
+//! The files are `tauri-*.bin`, never the 0.4 build's `*.enc`: this crate
+//! neither reads nor writes those, so the 0.4 build keeps its own sign-in
+//! and password in the same userData directory.
 
 // The dev key file keeps the master key in plain text, so only a debug
 // build may have the code that reads its variable. Every bundled build is

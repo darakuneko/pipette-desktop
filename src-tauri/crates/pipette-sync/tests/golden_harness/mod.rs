@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the replays of the recorded passes share: the userData tree, the
-//! Drive seeds and files, the requests, the progress reports and the
-//! pending units in the shapes the TypeScript generators write them.
+//! What the replays of the recorded passes share: the userData tree, the Drive
+//! seeds and files, the requests, the progress reports and the pending units in
+//! the shapes the recorded goldens hold them.
 
 #![allow(clippy::unwrap_used, clippy::panic, dead_code)]
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trigger B (src/main/sync/sync-polling.ts): a poll pass every
-//! [`POLL_INTERVAL`] while auto sync is on, and one [`STARTUP_POLL_DELAY`]
-//! after a launch, keyboard connected or not.
+//! Trigger B: a poll pass every [`POLL_INTERVAL`] while auto sync is on, and
+//! one [`STARTUP_POLL_DELAY`] after a launch, keyboard connected or not.
 //!
 //! A pass takes the sync lock as a waitable holder, or does nothing when
 //! it is held. It merges every Drive file whose revision it has not handled

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Google sign-in of the sync (src/main/sync/sync-ipc.ts): its status,
-//! the sign-in through the browser and the sign-out. A sign-in or sign-out
-//! keeps the pending units with the account they were changed under
-//! (`pipette_sync::account`).
+//! The Google sign-in of the sync: its status, the sign-in through the
+//! browser and the sign-out. A sign-in or sign-out keeps the pending units
+//! with the account they were changed under (`pipette_sync::account`).
 
 use std::sync::Arc;
 
@@ -20,8 +19,8 @@ use super::triggers::SyncTriggers;
 use crate::command_error::CommandError;
 use crate::shell::AuthBrowser;
 
-/// `SyncAuthStatus` of src/shared/types/sync.ts; Electron never sets its
-/// `email`.
+/// `SyncAuthStatus` of src/shared/types/sync.ts, without the optional
+/// `email`, which is never set.
 #[derive(Debug, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
 pub struct SyncAuthStatus {

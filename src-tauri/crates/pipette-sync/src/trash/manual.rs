@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the Data > Sync > Trash screen does with Drive trash files
-//! (src/main/sync/sync-trash-manual.ts and the trash handlers of
-//! sync-reset-ipc.ts): list them, rename one back to its original name, or
-//! delete some.
+//! What the Data > Sync > Trash screen does with Drive trash files: list them,
+//! rename one back to its original name, or delete some.
 //!
 //! Restore and delete hold the sync lock as a reset of the keyboards their
 //! files belong to ([`restore_trash`], [`delete_trash`]); those keyboards
@@ -261,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn bulk_failures_read_as_the_electron_build_writes_them() {
+    fn bulk_failures_read_as_a_count_and_the_first_error() {
         let outcome =
             BulkOutcome { attempted: 3, failed: 1, first_error: Some("Drive API error 403".into()) };
         assert_eq!(

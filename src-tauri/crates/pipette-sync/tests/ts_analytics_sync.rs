@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays tests/fixtures/ts_analytics_sync.json, recorded from the
-//! TypeScript sync code by
-//! scripts/sync-fixtures/record-analytics-sync-fixtures.test.ts: the
-//! Analyze sync of a keyboard and the Data modal's reads of the typing data
-//! on Drive, on the in-memory Drive seeded with the same files in the same
-//! order (so the ids and the times match), in the envelope format of the
-//! Electron build and one unit at a time. Each step is compared on what it
-//! answered, its Drive requests, the revisions recorded as handled, the
-//! files remembered as created, the units reported as applied, the applies
-//! of the own deleted ranges queued and the userData tree (byte for byte;
-//! the cache file aside); each scenario on the Drive files left behind,
-//! each data file by its decrypted plaintext.
+//! Replays the recorded golden tests/fixtures/ts_analytics_sync.json: the
+//! Analyze sync of a keyboard and the Data modal's reads of the typing data on
+//! Drive, on the in-memory Drive seeded with the same files in the same order
+//! (so the ids and the times match), in the sync envelope format and one unit
+//! at a time. Each step is compared on what it answered, its Drive requests,
+//! the revisions recorded as handled, the files remembered as created, the
+//! units reported as applied, the applies of the own deleted ranges queued and
+//! the userData tree (byte for byte; the cache file aside); each scenario on
+//! the Drive files left behind, each data file by its decrypted plaintext.
 //!
 //! An error's message is compared only when it is a Drive failure or an
 //! i18n key: other texts are V8's and Node's.
@@ -255,7 +252,7 @@ async fn run_step(world: &World, calls: &Calls, codec: &Arc<KeyCachedCodec>, ste
 }
 
 #[tokio::test]
-async fn analytics_syncs_and_remote_reads_match_typescript() {
+async fn analytics_syncs_and_remote_reads_match_the_recorded_golden() {
     let golden = fixture();
     let password = golden["password"].as_str().unwrap().to_owned();
     let scenarios = golden["scenarios"].as_array().unwrap();

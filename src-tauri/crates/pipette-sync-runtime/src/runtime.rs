@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync lock and the reset lock built on it
-//! (src/main/sync/sync-runtime-state.ts and sync-reset-lock.ts).
+//! The sync lock and the reset lock built on it.
 //!
 //! One holder at a time owns the sync lock: a sync pass, a flush, or a
 //! reset or delete of local data. The deletes, the import and the resets

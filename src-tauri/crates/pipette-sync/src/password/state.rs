@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! This machine's state of a sync password change
-//! (src/main/sync/sync-password-change-state.ts), all under `local/auth/`:
+//! This machine's state of a sync password change, all under `local/auth/`:
 //!
-//! - `sync-password-change.json`: the non-secret progress (direction,
-//!   step, Drive lock identity), plain JSON in the format of the Electron
-//!   build, so a restart can tell where the change stopped. While it
-//!   exists, readable or not, no ordinary sync runs (the guard,
-//!   [`crate::password::guard`]).
+//! - `sync-password-change.json`: the non-secret progress (direction, step,
+//!   Drive lock identity), plain JSON in the format of the 0.4 build, so a
+//!   restart can tell where the change stopped. While it exists, readable or
+//!   not, no ordinary sync runs (the guard, [`crate::password::guard`]).
 //! - the old and new passwords together, as one secret of the secret store
-//!   (`SecretKind::SyncPasswordChangeKeys`), written at once so a crash
-//!   never leaves only one of them. The Electron build keeps them in
-//!   `sync-password-change-keys.enc`, which this build never reads or
-//!   writes: a change the Electron build left behind reads here as keys
-//!   that are missing.
+//!   (`SecretKind::SyncPasswordChangeKeys`), written at once so a crash never
+//!   leaves only one of them. The 0.4 build keeps them in
+//!   `sync-password-change-keys.enc`, which this build never reads or writes: a
+//!   change the 0.4 build left behind reads here as keys that are missing.
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -443,7 +440,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_the_fields_in_the_order_of_the_electron_build() {
+    fn writes_the_fields_in_a_fixed_order() {
         assert_eq!(
             state(None).to_json(),
             r#"{"version":1,"target":"new","step":"locking","lockId":"l","startedAt":5}"#
@@ -552,14 +549,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_keys_of_the_electron_build_are_never_read() {
+    async fn the_0_4_keys_file_is_never_read() {
         let dir = tempfile::tempdir().unwrap();
         let secrets = SecretStore::new(dir.path(), Arc::new(MemoryKeystore::default()));
-        let electron = secrets.auth_dir().join("sync-password-change-keys.enc");
+        let v04_keys = secrets.auth_dir().join("sync-password-change-keys.enc");
         std::fs::create_dir_all(secrets.auth_dir()).unwrap();
-        std::fs::write(&electron, b"electron keys").unwrap();
+        std::fs::write(&v04_keys, b"0.4 keys").unwrap();
         assert_eq!(retrieve_change_keys(&secrets).await.err(), Some(ChangeKeysFailure::NoPasswordFile));
         clear_change_keys(&secrets).await.unwrap();
-        assert_eq!(std::fs::read(&electron).unwrap(), b"electron keys");
+        assert_eq!(std::fs::read(&v04_keys).unwrap(), b"0.4 keys");
     }
 }

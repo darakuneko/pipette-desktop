@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The automatic triggers (the trigger table of the sync rules): the flush
-//! of the pending units (A, [`crate::flush`]), the polling (B,
-//! [`crate::polling`]) and their part of the quit sequence (C), and what
-//! starts and stops them, as src/main/sync/sync-ipc.ts and the before-quit
-//! handler of sync-flush.ts do:
+//! The automatic triggers (the trigger table of the sync rules): the flush of
+//! the pending units (A, [`crate::flush`]), the polling (B, [`crate::polling`])
+//! and their part of the quit sequence (C), and what starts and stops them:
 //!
 //! - at launch, the units the last run left pending are scheduled and
 //!   polling starts when auto sync is on, its first pass delayed;

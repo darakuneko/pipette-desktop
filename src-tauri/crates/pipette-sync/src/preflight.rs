@@ -29,9 +29,8 @@ use crate::password::guard::SyncBlockReason;
 use crate::password::state::ChangeStateFile;
 use crate::single_flight::SingleFlight;
 
-/// How long a marker or password-check this process created and no
-/// listing shows yet still counts as present (Drive's listing lag), as
-/// `syncFormatTiming` and `passwordCheckTiming` of the TypeScript set it.
+/// How long a marker or password-check this process created and no listing
+/// shows yet still counts as present (Drive's listing lag).
 pub const CREATED_MEMORY_MS: u64 = 5 * 60 * 1000;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -71,8 +70,7 @@ impl From<DriveFailure> for PreflightError {
     }
 }
 
-/// The stored sync password (`retrievePasswordResult`, `storePassword` and
-/// `clearPassword` of sync-crypto.ts).
+/// The stored sync password.
 pub trait PasswordStore: Send + Sync {
     /// The password, or the local reason it cannot be had
     /// (`NoPasswordFile`, `DecryptFailed` or `KeystoreUnavailable`).

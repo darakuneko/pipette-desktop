@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The behaviors of the typing-analytics merges and the own-hash reconcile
-//! that the recorded scenarios (ts_analytics_merge.rs) do not reach: the
-//! waits on the flush chain and the store lock, concurrent writers of a
-//! deleted-ranges file, refused unit names, a state of revision 1 and a
-//! state that cannot be saved (src/main/sync/__tests__/
-//! sync-typing-deleted-ranges.test.ts, src/main/__tests__/sync-service.test.ts).
+//! The behaviors of the typing-analytics merges and the own-hash reconcile that
+//! the recorded scenarios (ts_analytics_merge.rs) do not reach: the waits on
+//! the flush chain and the store lock, concurrent writers of a deleted-ranges
+//! file, refused unit names, a state of revision 1 and a state that cannot be
+//! saved.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

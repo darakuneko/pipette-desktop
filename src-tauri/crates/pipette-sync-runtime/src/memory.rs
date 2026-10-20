@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync's memory of the password-check it last opened
-//! (`validatedPasswordCheck`, src/main/sync/sync-password.ts) and of its own
-//! sync-format marker (`syncFormatMarker*`, src/main/sync/sync-format.ts).
-//! Memory only.
+//! The sync's memory of the password-check it last opened and of its own
+//! sync-format marker. Memory only.
 
 use std::sync::Mutex;
 

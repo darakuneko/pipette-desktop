@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the keyboard-name scenarios recorded from the TypeScript code by
-//! scripts/sync-fixtures/record-keyboard-meta-fixtures.test.ts: each seeds a
-//! userData tree and runs tombstones and backfills on it, and every step is
-//! compared with the recording: the outcome (or the kind of error), the
-//! windows notified, the Drive files downloaded and the tree after it,
-//! byte for byte. The recording's Drive hands out plaintexts; here they are
-//! encrypted with the password for real, and a file marked `wrong` with
-//! another one.
+//! Replays the recorded golden keyboard-name scenarios: each seeds a userData
+//! tree and runs tombstones and backfills on it, and every step is compared
+//! with the recording: the outcome (or the kind of error), the windows
+//! notified, the Drive files downloaded and the tree after it, byte for byte.
+//! The recording's Drive hands out plaintexts; here they are encrypted with the
+//! password for real, and a file marked `wrong` with another one.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -171,7 +169,7 @@ async fn backfill(ctx: &StoreContext, files: &[Value], events: &Events) -> (Valu
 }
 
 #[tokio::test]
-async fn tombstones_and_backfills_as_the_typescript_code_does() {
+async fn tombstones_and_backfills_match_the_recorded_golden() {
     for scenario in fixture() {
         let name = text(get(&scenario, "name"));
         let root = tempfile::tempdir().unwrap();

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The export file of the `EXPORT_LOCAL_DATA` handler of
-//! src/main/sync/sync-ipc.ts: the favorites, snapshots and settings
-//! bundles of every unit with local data, as
-//! `{version: 1, exportedAt, snapshots, favorites, settings}` written by
-//! `JSON.stringify(…, null, 2)`. Each category maps the bundle's key (a
-//! keyboard uid, a favorite type) to the bundle's `{index, files}`. The
-//! typing analytics, the keyboard names, the packs, the key labels, the
-//! typing-test texts, the Analyze filters and the run logs are not part
-//! of the file; the run logs never leave the device this way.
+//! The Local Data export file: the favorites, snapshots and settings bundles of
+//! every unit with local data, as `{version: 1, exportedAt, snapshots,
+//! favorites, settings}` written by `JSON.stringify(…, null, 2)`. Each category
+//! maps the bundle's key (a keyboard uid, a favorite type) to the bundle's
+//! `{index, files}`. The typing analytics, the keyboard names, the packs, the
+//! key labels, the typing-test texts, the Analyze filters and the run logs are
+//! not part of the file; the run logs never leave the device this way.
 
 use std::convert::Infallible;
 

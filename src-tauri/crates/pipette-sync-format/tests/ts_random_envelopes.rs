@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! TypeScript → Rust: envelopes from the real random `encrypt`
-//! (`tests/fixtures/ts_random_envelopes.json`, new bytes on every generator
-//! run). Rust decrypts them, and a wrong password or another sync unit does
-//! not open them. The right password's key is derived once per envelope;
-//! the wrong password goes through the full `decrypt`.
+//! Recorded golden envelopes from a random `encrypt` of the 0.4 build
+//! (`tests/fixtures/ts_random_envelopes.json`). They decrypt here, and a wrong
+//! password or another sync unit does not open them. The right password's key
+//! is derived once per envelope; the wrong password goes through the full
+//! `decrypt`.
 
 // Test helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Data modal's reads of Drive (pipette_sync::scan): the scan and one
-//! unit's bundle, the cases of `scanRemoteData` in
-//! src/main/__tests__/sync-service.test.ts. The envelope is the plaintext
-//! itself, except that a file holding `bad` does not open.
+//! unit's bundle. The envelope is the plaintext itself, except that a file
+//! holding `bad` does not open.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The specs of src/main/sync/__tests__/sync-pending-store.test.ts on the
-//! delayed writes, the generations and the startup restore. The settle,
-//! cancel and account hand-over specs are in sync_pending_upload.rs.
+//! The pending store's specs on the delayed writes, the generations and the
+//! startup restore. The settle, cancel and account hand-over specs are in
+//! sync_pending_upload.rs.
 
 #![allow(clippy::unwrap_used)]
 

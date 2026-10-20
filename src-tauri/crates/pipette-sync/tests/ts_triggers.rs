@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays tests/fixtures/ts_triggers.json, recorded from the TypeScript
-//! sync code by scripts/sync-fixtures/record-trigger-fixtures.test.ts: flush
-//! passes and poll passes (with the tidying of the names with several
-//! copies) on the in-memory Drive seeded with the same files in the same
-//! order (so the ids and the times match), one unit at a time, each step
-//! compared on its progress reports, its Drive requests, the pending units,
-//! the revisions recorded as handled, the files remembered as created, the
-//! units reported as applied and when the flush timer fires afterwards;
-//! then the userData tree and the Drive files.
+//! Replays the recorded golden tests/fixtures/ts_triggers.json: flush passes
+//! and poll passes (with the tidying of the names with several copies) on the
+//! in-memory Drive seeded with the same files in the same order (so the ids and
+//! the times match), one unit at a time, each step compared on its progress
+//! reports, its Drive requests, the pending units, the revisions recorded as
+//! handled, the files remembered as created, the units reported as applied and
+//! when the flush timer fires afterwards; then the userData tree and the Drive
+//! files.
 //!
 //! The clock is paused, so the timer is read to the millisecond.
 
@@ -113,7 +112,7 @@ async fn run_step(
 }
 
 #[tokio::test]
-async fn flush_and_poll_passes_match_typescript() {
+async fn flush_and_poll_passes_match_the_recorded_golden() {
     let golden = fixture("ts_triggers.json");
     let password = golden["password"].as_str().unwrap().to_owned();
     let scenarios = golden["scenarios"].as_array().unwrap();

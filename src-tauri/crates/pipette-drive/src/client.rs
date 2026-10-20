@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! [`DriveClient`]: the Drive operations the sync calls
-//! (src/main/sync/google-drive.ts and `moveFilesToTrash` of
-//! drive-trash.ts), each attempt through a [`DriveApi`] with the retries of
-//! [`crate::retry`].
+//! [`DriveClient`]: the Drive operations the sync calls, each attempt
+//! through a [`DriveApi`] with the retries of [`crate::retry`].
 
 use std::sync::Arc;
 
@@ -37,8 +35,7 @@ const DELETE: RetryPolicy = policy("delete", true);
 /// The outcome of a bulk delete or rename (`DeleteMatchingFilesResult`):
 /// `attempted` files, of which `failed` failed. `first_error` is the error
 /// of the first failed file in the order the files were given, not the
-/// first to fail in time (`moveFilesToTrash` of drive-trash.ts keeps the
-/// one that completes first); it is only shown as a message.
+/// first to fail in time; it is only shown as a message.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BulkOutcome {
     pub attempted: usize,

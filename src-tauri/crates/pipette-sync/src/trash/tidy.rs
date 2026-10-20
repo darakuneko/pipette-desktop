@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The automatic tidying of Drive names with several copies
-//! (src/main/sync/sync-trash.ts), which the poll pass runs on its own
-//! listing. Only file metadata changes (renames, and deletes of trash
-//! files); no content is downloaded or merged. Per name:
+//! The automatic tidying of Drive names with several copies, which the poll
+//! pass runs on its own listing. Only file metadata changes (renames, and
+//! deletes of trash files); no content is downloaded or merged. Per name:
 //!
 //! - two or more copies: every copy but the chosen one
 //!   ([`Listing::pick_canonical`]) is renamed to a trash name;

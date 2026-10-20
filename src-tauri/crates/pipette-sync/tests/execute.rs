@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `executeSync` passes (`SyncExecutor`) on the in-memory Drive: the
-//! `executeSync` cases of src/main/__tests__/sync-service.test.ts (the sync
-//! lock, merge-based sync, partial failures, the result, the scopes, the
+//! Full passes (`SyncExecutor`) on the in-memory Drive (the sync lock,
+//! merge-based sync, partial failures, the result, the scopes, the
 //! password-check, the typing-analytics reconcile) and what a pass leaves
-//! behind: the pending units, the revisions recorded as handled, the
-//! progress and the flush it asks for.
+//! behind: the pending units, the revisions recorded as handled, the progress
+//! and the flush it asks for.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

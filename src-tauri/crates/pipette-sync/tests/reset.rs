@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The resets and deletes of synced data (pipette_sync::reset), the cases
-//! of the reset handlers in src/main/sync/__tests__/sync-ipc.test.ts on the
-//! in-memory Drive and a real userData, with the rest of the app as fakes.
+//! The resets and deletes of synced data (pipette_sync::reset) on the in-memory
+//! Drive and a real userData, with the rest of the app as fakes.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -40,7 +39,7 @@ fn seed_local(root: &Path) {
     write(root, "sync/i18n/index.json", "{}");
     write(root, "sync/themes/index.json", "{}");
     write(root, META, &meta(r#"{"uid":"uid1","deviceName":"One","updatedAt":"2026-10-01T00:00:00.000Z"}"#));
-    write(root, "local/auth/oauth-tokens.enc", "electron");
+    write(root, "local/auth/oauth-tokens.enc", "0.4");
     write(root, "local/auth/tauri-sync-password.bin", "tauri");
     write(root, "local/downloads/languages/tatoeba/en.json", "[]");
     write(root, "local/logs/main.log", "log");

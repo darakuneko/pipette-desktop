@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync password (src/main/sync/sync-ipc.ts): its status
-//! (`storedPasswordStatus` of src/main/sync/sync-crypto.ts), the first set,
+//! The sync password: its status, the first set,
 //! the re-enter of a password changed on another machine, and whether
 //! Drive has a password-check. The password never leaves the backend.
 

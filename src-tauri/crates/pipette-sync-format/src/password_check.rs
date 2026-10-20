@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The password-check sentinel (`src/main/sync/sync-password.ts`): an
-//! ordinary envelope under the sync unit `password-check` whose plaintext is
-//! a fixed JSON string. A password is accepted when the envelope opens; the
-//! plaintext itself is not compared.
+//! The password-check sentinel: an ordinary envelope under the sync unit
+//! `password-check` whose plaintext is a fixed JSON string. A password is
+//! accepted when the envelope opens; the plaintext itself is not compared.
 
 use crate::crypto::{CryptoError, decrypt, encrypt};
 use crate::envelope::Envelope;
@@ -19,8 +18,8 @@ pub fn encrypt_password_check(password: &str) -> Result<Envelope, CryptoError> {
     encrypt(PASSWORD_CHECK_PAYLOAD, password, PASSWORD_CHECK_UNIT)
 }
 
-/// Whether `envelope` opens with `password`. Any decryption failure counts
-/// as a mismatch, as in the TypeScript `openPasswordCheck`.
+/// Whether `envelope` opens with `password`. Any decryption failure counts as a
+/// mismatch.
 pub fn password_check_matches(envelope: &Envelope, password: &str) -> bool {
     decrypt(envelope, password).is_ok()
 }

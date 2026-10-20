@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The world of the password-change tests: the in-memory Drive of
-//! pipette-drive behind a wrapper that logs each request as the TypeScript
-//! recorder does (scripts/sync-fixtures/record-password-change-fixtures.test.ts),
+//! The world of the password-change tests: the in-memory Drive of pipette-drive
+//! behind a wrapper that logs each request in the form of the recorded goldens,
 //! hides the files created while listings lag, fails the next request of an
-//! operation and acts after a number of updates; a userData whose secret
-//! store keeps the change keys in a key store in memory; and machines on
-//! that Drive, each with its own sync runtime, which a test can restart.
+//! operation and acts after a number of updates; a userData whose secret store
+//! keeps the change keys in a key store in memory; and machines on that Drive,
+//! each with its own sync runtime, which a test can restart.
 
 #![allow(clippy::unwrap_used, clippy::panic, dead_code)]
 
@@ -289,9 +288,8 @@ impl DriveApi for TestDrive {
     }
 }
 
-/// The envelope format of the Electron build with each key derived once
-/// per password and salt. It seals with one fixed salt and a new IV each
-/// time.
+/// The sync envelope format with each key derived once per password and salt.
+/// It seals with one fixed salt and a new IV each time.
 #[derive(Default)]
 pub struct KeyCachedCodec {
     keys: Mutex<HashMap<KeyId, [u8; KEY_LENGTH]>>,

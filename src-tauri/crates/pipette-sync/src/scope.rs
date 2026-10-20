@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Which units a sync of a scope covers (src/main/sync/sync-scope.ts), and
-//! the scopes the renderer may ask for (`validateSyncScope` of
-//! src/main/sync/sync-ipc.ts).
+//! Which units a sync of a scope covers, and the scopes the renderer may ask
+//! for.
 //!
 //! - `'all'`: every unit; a download takes a keyboard's units only for the
 //!   keyboards that have a local directory (lazy);

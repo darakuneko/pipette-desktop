@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The switch run of a sync password change
-//! (src/main/sync/sync-password-switch.ts): re-encrypt every Drive file
-//! towards the state's target, then commit (password-check and stored
-//! password) and clean up. The same run serves a change (target `new`)
-//! and a rollback (target `old`); every step is safe to repeat after an
-//! interruption, because each file is judged by which key opens it. Until
-//! the commit, every data file opens with the old or the new password, so
-//! a change stopped anywhere leaves Drive readable with the keys it keeps.
+//! The switch run of a sync password change: re-encrypt every Drive file
+//! towards the state's target, then commit (password-check and stored password)
+//! and clean up. The same run serves a change (target `new`) and a rollback
+//! (target `old`); every step is safe to repeat after an interruption, because
+//! each file is judged by which key opens it. Until the commit, every data file
+//! opens with the old or the new password, so a change stopped anywhere leaves
+//! Drive readable with the keys it keeps.
 //!
 //! The callers ([`super::change`]) hold the password-change run (the sync
 //! lock) around [`PasswordChange::run_password_switch`].

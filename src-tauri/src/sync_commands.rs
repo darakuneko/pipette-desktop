@@ -70,8 +70,7 @@ pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
 }
 
 /// Hands the pending units restored at startup to the account the stored
-/// tokens belong to, without anything waiting for it (`setupSyncIpc` of
-/// src/main/sync/sync-ipc.ts): units left while signed out go to it, and
+/// tokens belong to, without anything waiting for it: units left while signed out go to it, and
 /// another account's are held; a sign-in or sign-out meanwhile hands them
 /// over itself. Once the pending state, the sign-in and the sync runtime
 /// are managed.

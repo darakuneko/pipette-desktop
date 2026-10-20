@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync passes of the renderer (`syncExecute` of src/main/sync/sync-ipc.ts)
-//! and what they report: the progress (`sync:progress`) and the units a
-//! merge rewrote (`sync:unit-applied`, and the pack lists' own events), on
-//! the channels of the Electron main process.
+//! The sync passes of the renderer (`syncExecute`) and what they report:
+//! the progress (`sync:progress`) and the units a merge rewrote
+//! (`sync:unit-applied`, and the pack lists' own events).
 //!
 //! The one [`UnitSync`] of the process is managed here too: every entry
 //! point that syncs a unit goes through it, so its `sync:` and `upload:`

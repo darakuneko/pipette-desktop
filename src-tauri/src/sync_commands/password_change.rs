@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync password change (src/main/sync/sync-ipc.ts): the change, its
+//! The sync password change: the change, its
 //! status, resume, revert, abandon, the deletion of the files neither
 //! password opens, the Drive lock's status and release, and the list of
 //! the files the stored password does not open. The change of this machine
