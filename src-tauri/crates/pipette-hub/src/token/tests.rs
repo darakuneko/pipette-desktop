@@ -182,7 +182,7 @@ fn setup(tokens: Vec<Reply>, others: Vec<Reply>) -> Setup {
     setup_with(ScriptHub::new(tokens, others), Some("id-token"))
 }
 
-/// `HUB_FETCH_AUTH_ME` through the cache: `Ok(user)` or the message.
+/// The `hub_fetch_auth_me` command through the cache: `Ok(user)` or the message.
 async fn fetch_me(token: &HubToken) -> Result<String, String> {
     token
         .with_token_retry(|jwt| async move {

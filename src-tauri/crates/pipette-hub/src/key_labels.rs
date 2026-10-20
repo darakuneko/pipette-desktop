@@ -44,7 +44,7 @@ const MAX_PER_PAGE: f64 = 100.0;
 /// `Number.MAX_SAFE_INTEGER`, the largest page the list asks for.
 const MAX_PAGE: f64 = 9_007_199_254_740_991.0;
 
-/// `HubKeyLabelInput`: the body of an upload or update. `None` leaves a
+/// The body of an upload or update. `None` leaves a
 /// field out, as `JSON.stringify` leaves out `undefined`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct KeyLabelInput {
@@ -55,7 +55,7 @@ pub struct KeyLabelInput {
     pub keymap_applicable: bool,
 }
 
-/// `buildBody`: `{ name, map, composite_labels?, keymap_applicable }`.
+/// The upload's body: `{ name, map, composite_labels?, keymap_applicable }`.
 /// `keymap_applicable` is always sent, `false` included, so a re-upload can
 /// clear a flag set before.
 pub fn build_body(input: &KeyLabelInput) -> String {
@@ -143,7 +143,7 @@ where
     }
 }
 
-/// `getRecord`: the live label `id` as `{ meta, data }`.
+/// The live label `id` as `{ meta, data }`.
 async fn record(stores: &StoreContext, id: &JsString) -> Result<Object, KeyLabelError> {
     let id = id.clone();
     in_store(stores, move |stores| get_key_label(stores, &id)).await
@@ -163,7 +163,7 @@ fn linked_post_id(record: &Object) -> Result<String, KeyLabelError> {
     }
 }
 
-/// `buildHubKeyLabelInput`: the label's name (the meta's, which a rename
+/// The upload input of a label: its name (the meta's, which a rename
 /// changes), map and composite labels (when truthy), and its keymap mark.
 fn input_of(record: &Object) -> KeyLabelInput {
     let data = record.get("data");
@@ -176,7 +176,7 @@ fn input_of(record: &Object) -> KeyLabelInput {
     }
 }
 
-/// `HUB_KEY_LABEL_LIST`: the page (1 when not given) and the page size (20
+/// The `key_label_hub_list` command: the page (1 when not given) and the page size (20
 /// when not given, within 1 to 100) the renderer asks for.
 pub async fn list(http: &HubHttp, params: Option<&Value>) -> String {
     let param = |key: &str| params.and_then(Value::as_object).and_then(|object| object.get(key));
@@ -195,7 +195,7 @@ pub async fn list(http: &HubHttp, params: Option<&Value>) -> String {
     key_label_response(data.map_err(hub_failure))
 }
 
-/// The number `clampInt` floors: `Math.floor` turns a string or a boolean
+/// The number [`clamp_int`] floors: `Math.floor` turns a string or a boolean
 /// into a number; `null` and `undefined` are none.
 fn number_param(value: Option<&Value>) -> Option<f64> {
     match value? {
@@ -207,7 +207,7 @@ fn number_param(value: Option<&Value>) -> Option<f64> {
     }
 }
 
-/// `HUB_KEY_LABEL_DETAIL`.
+/// The `key_label_hub_detail` command.
 pub async fn detail(http: &HubHttp, hub_post_id: Option<&Value>) -> String {
     let Some(post_id) = self::hub_post_id(hub_post_id) else {
         return key_label_response(Err(not_found("Invalid hub post id")));
@@ -216,7 +216,7 @@ pub async fn detail(http: &HubHttp, hub_post_id: Option<&Value>) -> String {
     key_label_response(data.map_err(hub_failure))
 }
 
-/// `HUB_KEY_LABEL_TIMESTAMPS`: the ids without repeats, sent 100 to a
+/// The `key_label_hub_timestamps` command: the ids without repeats, sent 100 to a
 /// request, all at once; the answer lists the ids the Hub knows in the
 /// order they were given.
 pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
@@ -267,8 +267,8 @@ pub async fn timestamps(http: &HubHttp, ids: Option<&Value>) -> String {
 }
 
 /// The download's body with the uploader and the Hub time of the post's
-/// detail (`fetchHubKeyLabelPayload`). The detail is best effort: when it
-/// fails, the given fallbacks stay.
+/// detail. The detail is best effort: when it fails, the given fallbacks
+/// stay.
 struct Payload {
     body: Option<Value>,
     uploader_name: Option<Value>,
@@ -293,9 +293,9 @@ async fn payload(
     Ok(Payload { body, uploader_name, hub_updated_at })
 }
 
-/// The save of a downloaded or synced label (`hubBodyToSaveRecordFields`
-/// with the caller's id, name and post id): the Hub body's map, composite
-/// labels and keymap mark, and the uploader and Hub time when truthy.
+/// The save of a downloaded or synced label, with the caller's id, name and
+/// post id: the Hub body's map, composite labels and keymap mark, and the
+/// uploader and Hub time when truthy.
 fn save_of(
     id: JsString,
     name: Option<&Value>,
@@ -327,7 +327,7 @@ async fn save(stores: &StoreContext, save: KeyLabelSave) -> Answer {
     Ok(Some(meta.into()))
 }
 
-/// `HUB_KEY_LABEL_DOWNLOAD`: saves the post as the label whose id is the
+/// The `key_label_hub_download` command: saves the post as the label whose id is the
 /// post id, so a keyboard's layout that names it can still be matched with
 /// the Hub once the label is gone locally.
 pub async fn download(http: &HubHttp, stores: &StoreContext, hub_post_id: Option<&Value>) -> String {
@@ -354,9 +354,9 @@ fn submit_failure(err: HubFailure) -> KeyLabelError {
     }
 }
 
-/// A value the Hub answered for a field `setHubPostId` takes: `None` for
-/// `undefined` (left as it is), `Some(None)` for a value that is not a
-/// string (removed).
+/// A value the Hub answered for a field `set_key_label_hub_post_id` takes:
+/// `None` for `undefined` (left as it is), `Some(None)` for a value that is
+/// not a string (removed).
 fn cached(value: Option<&Value>) -> Option<Option<JsString>> {
     value.map(|value| match value {
         Value::String(text) => Some(text.clone()),
@@ -386,7 +386,7 @@ async fn link(
     Ok(meta.into())
 }
 
-/// `HUB_KEY_LABEL_UPLOAD`: posts the local label and links it to the new
+/// The `key_label_hub_upload` command: posts the local label and links it to the new
 /// post, with the post's uploader and Hub time, so the label shows its
 /// author and its Hub actions at once.
 pub async fn upload(token: &HubToken, stores: &StoreContext, local_id: Option<&Value>) -> String {
@@ -418,7 +418,7 @@ pub async fn upload(token: &HubToken, stores: &StoreContext, local_id: Option<&V
     key_label_response(answer.await)
 }
 
-/// `HUB_KEY_LABEL_UPDATE`: posts the local label over its Hub post and
+/// The `key_label_hub_update` command: posts the local label over its Hub post and
 /// keeps the post's new Hub time; the uploader stays as it is.
 pub async fn update(token: &HubToken, stores: &StoreContext, local_id: Option<&Value>) -> String {
     let answer = async {
@@ -442,7 +442,7 @@ pub async fn update(token: &HubToken, stores: &StoreContext, local_id: Option<&V
     key_label_response(answer.await)
 }
 
-/// `HUB_KEY_LABEL_SYNC`: takes the post's map, composite labels and keymap
+/// The `key_label_hub_sync` command: takes the post's map, composite labels and keymap
 /// mark into the local label, with its uploader and Hub time (the cached
 /// ones when the detail fails). The label keeps its id, its post and the
 /// name it has when the save runs, so a rename made meanwhile stays.
@@ -461,7 +461,7 @@ pub async fn sync(http: &HubHttp, stores: &StoreContext, local_id: Option<&Value
     key_label_response(answer.await)
 }
 
-/// `HUB_KEY_LABEL_DELETE`: deletes the Hub post and unlinks the local
+/// The `key_label_hub_delete` command: deletes the Hub post and unlinks the local
 /// label, which stays.
 pub async fn delete(token: &HubToken, stores: &StoreContext, local_id: Option<&Value>) -> String {
     let answer = async {

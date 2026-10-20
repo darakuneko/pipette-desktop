@@ -68,7 +68,7 @@ fn obj(fields: Vec<(&str, Value)>) -> Value {
     Value::Object(o)
 }
 
-/// The recorded `HubKeyLabelInput` for `key_labels::build_body`.
+/// The recorded key label input for `key_labels::build_body`.
 fn key_label_body(input: &Value) -> String {
     let given = |key: &str| get(input, key).filter(|value| get(value, "$u").is_none()).cloned();
     build_body(&KeyLabelInput {

@@ -83,7 +83,7 @@ fn read_property(value: Option<&Value>, key: &str) -> Result<Option<Value>, HubF
     }
 }
 
-/// `params.title` for `validateTitle`: anything that is not a string is
+/// `params.title` for `validate_title`: anything that is not a string is
 /// rejected as an empty title. A lone surrogate is read as U+FFFD, which
 /// is what Node writes for it in the UTF-8 of the body.
 fn title(params: &Value) -> Result<String, HubFailure> {
@@ -94,7 +94,8 @@ fn title(params: &Value) -> Result<String, HubFailure> {
     Ok(validate_title(title.as_deref())?)
 }
 
-/// `sanitizeFilenameBase(params.keyboard.productName, params.uid)`; the
+/// `sanitize_filename_base` of `params.keyboard.productName` and
+/// `params.uid`; the
 /// preparation has checked that `keyboard` is there and `uid` is a
 /// non-empty string. A product name that is a truthy non-string fails as
 /// `.replace` does on it.
@@ -162,7 +163,7 @@ fn expires_in_days(params: &Value) -> Option<f64> {
 }
 
 impl AnalyticsPosts<'_> {
-    /// `prepareAnalyticsExport(params)` with the Hub client's clock as the
+    /// [`prepare_analytics_export`] of `params` with the Hub client's clock as the
     /// export's time.
     async fn prepare(&self, params: &Value) -> Result<Prepared, PrepareError> {
         let now_ms = self.token.http().timing().now_ms() as i64;
@@ -265,12 +266,12 @@ impl AnalyticsPosts<'_> {
         }
     }
 
-    /// `HUB_UPLOAD_ANALYTICS_POST`.
+    /// The `hub_upload_analytics_post` command.
     pub async fn upload(&self, params: &Value) -> Value {
         self.publish(params, None).await
     }
 
-    /// `HUB_UPDATE_ANALYTICS_POST`: the post id is checked before anything
+    /// The `hub_update_analytics_post` command: the post id is checked before anything
     /// else.
     pub async fn update(&self, params: &Value) -> Value {
         match post_id(params) {
@@ -279,7 +280,7 @@ impl AnalyticsPosts<'_> {
         }
     }
 
-    /// `HUB_UPLOAD_PRIVATE_ANALYTICS_POST`: `{ success: true, id, url,
+    /// The `hub_upload_private_analytics_post` command: `{ success: true, id, url,
     /// expiresAt }`; nothing is linked to the saved filter (the renderer
     /// stores the private link).
     pub async fn upload_private(&self, params: &Value) -> Value {
@@ -302,7 +303,7 @@ impl AnalyticsPosts<'_> {
         }
     }
 
-    /// `HUB_PREVIEW_ANALYTICS_POST`: `{ success: true, preview }`, a
+    /// The `hub_preview_analytics_post` command: `{ success: true, preview }`, a
     /// preparation that fails being a failed validation; only a thrown
     /// error fails the call.
     pub async fn preview(&self, params: &Value) -> Value {

@@ -22,7 +22,7 @@ const MINUTE_MS: f64 = 60_000.0;
 pub struct LayoutComparisonInputs {
     pub source: Value,
     pub targets: Value,
-    /// The known metrics among those sent (`filterValidLayoutMetrics`).
+    /// The known metrics among those sent.
     pub metrics: Vec<&'static str>,
     pub kle_keys: Value,
     pub layer: Value,
@@ -42,10 +42,9 @@ const FINGER_KEY_TO_HUB: [(&str, &str); 10] = [
     ("right-pinky", "pinkyR"),
 ];
 
-/// `sanitizeFingerOverrides`: the entries of an object whose key is a
-/// `"row,col"` position and whose value is one of the ten finger names;
-/// `None` when none is left. A value that is not an object has no entries
-/// that could pass.
+/// The entries of an object whose key is a `"row,col"` position and whose
+/// value is one of the ten finger names; `None` when none is left. A value
+/// that is not an object has no entries that could pass.
 pub fn sanitize_finger_overrides(value: &Value) -> Option<HashMap<String, String>> {
     let Value::Object(entries) = value else { return None };
     let out: HashMap<String, String> = entries
@@ -73,9 +72,9 @@ fn layer(value: &Value) -> (f64, Option<usize>) {
     (n, index)
 }
 
-/// `computeLayoutComparisonForExport`: the comparison over the window
-/// widened to whole minutes, with each target's name (the last target of
-/// an id names it) and the Hub's finger names.
+/// The comparison over the window widened to whole minutes, with each
+/// target's name (the last target of an id names it) and the Hub's finger
+/// names.
 pub(super) fn layout_comparison_for_export(
     db: &TypingAnalyticsDb,
     input: &ExportInput,
@@ -136,7 +135,8 @@ fn named_target(target: &Value, inputs: &[Value]) -> Value {
     out.into()
 }
 
-/// `remapFingerKeys`.
+/// `load` with each finger key renamed to the Hub's name
+/// (`FINGER_KEY_TO_HUB`); any other key stays.
 fn remap_finger_keys(load: &Object) -> Object {
     load.iter()
         .map(|(key, value)| {

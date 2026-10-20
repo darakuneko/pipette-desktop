@@ -150,7 +150,7 @@ impl HubHttp {
         Self { base: base.into(), requesters, timing }
     }
 
-    /// The Hub API base URL the requests go to (`getHubOrigin`).
+    /// The Hub API base URL the requests go to.
     pub fn base(&self) -> &str {
         &self.base
     }

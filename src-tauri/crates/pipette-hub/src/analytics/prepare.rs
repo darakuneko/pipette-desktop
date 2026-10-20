@@ -70,7 +70,7 @@ async fn blocking<T: Send + 'static>(read: impl FnOnce() -> T + Send + 'static) 
     tokio::task::spawn_blocking(read).await.map_err(|err| PrepareError(err.to_string()))
 }
 
-/// `prepareAnalyticsExport(params)` with `now_ms` as the export's time:
+/// The export of `params` with `now_ms` as the export's time:
 /// the saved filters read from `store`, this device's hash read from
 /// `source` once the saved filter has a range (so a failure to read it
 /// never hides the checks before), the snapshot from the userData and the
@@ -185,9 +185,8 @@ fn thrown(text: &str) -> PrepareError {
     PrepareError(message.to_owned())
 }
 
-/// `resolveDeviceScopeFromPayload`: the first scope of the list when it is
-/// `'all'`, `'own'` or a hash scope with a non-empty hash, `'own'`
-/// otherwise.
+/// The first scope of the list when it is `'all'`, `'own'` or a hash
+/// scope with a non-empty hash, `'own'` otherwise.
 fn device_scope(scopes: Option<&Value>) -> DeviceScope {
     let first = match scopes {
         Some(Value::Array(items)) => items.first(),
@@ -208,8 +207,8 @@ fn device_scope(scopes: Option<&Value>) -> DeviceScope {
 
 const VALID_LAYOUT_METRICS: [&str; 4] = ["fingerLoad", "handBalance", "rowDist", "homeRow"];
 
-/// `params.layoutComparisonInputs` when it is truthy, with its metrics
-/// checked (`filterValidLayoutMetrics`).
+/// `params.layoutComparisonInputs` when it is truthy, with only the
+/// metrics of `VALID_LAYOUT_METRICS` kept.
 fn layout_comparison_inputs(value: Option<&Value>) -> Option<LayoutComparisonInputs> {
     let inputs = value.filter(|v| v.is_truthy())?;
     let field = |key: &str| prop(inputs, key).cloned().unwrap_or(Value::Null);
@@ -240,8 +239,8 @@ fn has_own_keys(value: &Value) -> bool {
     }
 }
 
-/// `projectFiltersForHub`: the Hub opens on the summary tab, the tab
-/// filters go as saved (a key the saved filters lack is left out), the
+/// The saved filters as the Hub takes them: it opens on the summary tab, the
+/// tab filters go as saved (a key the saved filters lack is left out), the
 /// bigram limits are fixed with the saved pair interval threshold, and the
 /// renderer's finger assignments go as sent when there are any.
 fn project_filters_for_hub(filters: Option<&Value>, finger_overrides: &Value) -> Value {

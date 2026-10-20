@@ -102,7 +102,8 @@ pub fn check_post_id(params: Option<&Value>) -> Result<String, HubFailure> {
     }
 }
 
-/// `isSafeExportFilename`: its test of `String(filename)`.
+/// Whether `name` (the entry's `String(filename)`) is a safe file name:
+/// ASCII letters, digits, `_`, `.` and `-` only, and not `.` or `..`.
 fn is_safe_export_filename(name: &str) -> bool {
     !name.is_empty()
         && name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b'-'))
@@ -177,14 +178,13 @@ fn find_entry<'a>(index: &'a Value, entry_id: Option<&Value>) -> Result<Option<&
     Ok(None)
 }
 
-/// The favorite entry a post is built from, as `buildFavoriteExportJson`
-/// reads it from `{sync_dir}/favorites/{type}`: the index as it is on
-/// disk (no entry is normalized and no body is renamed), the first entry
-/// with the id that is not deleted, then its body, which must have `data`
-/// and name the type. The result is `{label?, savedAt?, body}`: the entry's
-/// label and save time as they are, and the text of its body, which the
-/// page's worker parses again. `favorite_type` and `entry_id` are the
-/// handler's (`None`: `undefined`).
+/// The favorite entry a post is built from, read from
+/// `{sync_dir}/favorites/{type}`: the index as it is on disk (no entry is
+/// normalized and no body is renamed), the first entry with the id that is
+/// not deleted, then its body, which must have `data` and name the type. The
+/// result is `{label?, savedAt?, body}`: the entry's label and save time as
+/// they are, and the text of its body, which the page's worker parses again.
+/// `favorite_type` and `entry_id` are the handler's (`None`: `undefined`).
 pub fn read_entry(
     sync_dir: &Path,
     favorite_type: Option<&Value>,
@@ -222,7 +222,7 @@ pub fn read_entry(
     Ok(Value::Object(out))
 }
 
-/// `HUB_FAVORITE_ENTRY`'s answer: `{success: true, entry}` or
+/// The `hub_favorite_entry` command's answer: `{success: true, entry}` or
 /// `{success: false, error}`.
 pub fn entry_answer(entry: Result<Value, String>) -> Value {
     match entry {
@@ -231,9 +231,9 @@ pub fn entry_answer(entry: Result<Value, String>) -> Value {
     }
 }
 
-/// `buildFeatureMultipartBody`, with the boundary of now: the title, the
-/// post type, the JSON file `{postType}.json` and, for a private upload
-/// with an expiry, `String(expiresInDays)`.
+/// The body of a favorite post, with the boundary of now: the title, the post
+/// type, the JSON file `{postType}.json` and, for a private upload with an
+/// expiry, `String(expiresInDays)`.
 fn feature_body(
     now_ms: f64,
     post: &FavoritePost,
@@ -250,9 +250,9 @@ fn feature_body(
     builder.build()
 }
 
-/// `submitFeaturePost` (or the private upload) through `withTokenRetry`:
-/// each run builds its body, so a run after a new token has the boundary
-/// of its own time.
+/// Sends the favorite post (or the private upload) through
+/// [`HubToken::with_token_retry`]: each run builds its body, so a run after a
+/// new token has the boundary of its own time.
 async fn send(
     token: &HubToken,
     endpoint: &Endpoint<'_>,
@@ -299,8 +299,8 @@ fn post_id_answer(result: Result<Option<Value>, HubFailure>) -> Value {
     }
 }
 
-/// `toPrivateResult`: `{ success: true, id, url, expiresAt }`, each left
-/// out where the result does not have it.
+/// The answer of a private upload: `{ success: true, id, url, expiresAt }`,
+/// each left out where the result does not have it.
 fn private_answer(result: Result<Option<Value>, HubFailure>) -> Value {
     let read = result.and_then(|data| {
         let mut object = Object::new();
@@ -315,7 +315,7 @@ fn private_answer(result: Result<Option<Value>, HubFailure>) -> Value {
     read.unwrap_or_else(failure)
 }
 
-/// `HUB_UPLOAD_FAVORITE_POST`: the post of `params` with the export `json`
+/// The `hub_upload_favorite_post` command: the post of `params` with the export `json`
 /// the page built for it.
 pub async fn upload(token: &HubToken, params: Option<&Value>, json: &str) -> Value {
     let post = match check_post(params) {
@@ -325,7 +325,7 @@ pub async fn upload(token: &HubToken, params: Option<&Value>, json: &str) -> Val
     post_id_answer(send(token, &Endpoint::UploadFeaturePost, &post, json, None).await)
 }
 
-/// `HUB_UPDATE_FAVORITE_POST`: the post id is checked first.
+/// The `hub_update_favorite_post` command: the post id is checked first.
 pub async fn update(token: &HubToken, params: Option<&Value>, json: &str) -> Value {
     let checked = check_post_id(params).and_then(|post_id| check_post(params).map(|post| (post_id, post)));
     let (post_id, post) = match checked {
@@ -336,7 +336,7 @@ pub async fn update(token: &HubToken, params: Option<&Value>, json: &str) -> Val
     post_id_answer(send(token, &endpoint, &post, json, None).await)
 }
 
-/// `HUB_UPLOAD_PRIVATE_FAVORITE_POST`: `expiresInDays` is sent as
+/// The `hub_upload_private_favorite_post` command: `expiresInDays` is sent as
 /// `String(expiresInDays)` unless it is `null` or `undefined`.
 pub async fn upload_private(token: &HubToken, params: Option<&Value>, json: &str) -> Value {
     let post = match check_post(params) {

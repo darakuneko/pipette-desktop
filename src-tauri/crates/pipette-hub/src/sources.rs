@@ -31,8 +31,8 @@ pub type AnalyticsJob = Box<dyn FnOnce(&TypingAnalyticsDb) + Send>;
 /// machine hash and the cache. [`crate::analytics::TypingAnalyticsSource`] connects it to the
 /// app's analytics; the tests connect it to a seeded cache.
 pub trait AnalyticsSource: Send + Sync {
-    /// `getMachineHash()`: this device's hash, once the analytics are
-    /// ready. The error is the text of what kept them from it.
+    /// This device's machine hash, once the analytics are ready. The error is
+    /// the text of what kept them from it.
     fn machine_hash(&self) -> BoxFuture<'_, Result<String, String>>;
 
     /// Runs `job` on the cache, after the writes sent before it, and

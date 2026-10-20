@@ -14,7 +14,7 @@ use crate::command_error::CommandError;
 use crate::hub_commands::setup::{Hub, run_startup_sync};
 
 /// The counts of a startup update of the Hub-linked language packs
-/// (`I18nStartupSyncResult`, with the number of errors).
+/// ([`StartupSyncResult`], with the number of errors).
 #[derive(Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct StartupSyncCounts {

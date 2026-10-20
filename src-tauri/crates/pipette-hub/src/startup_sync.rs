@@ -32,9 +32,9 @@ use crate::sources::BoxFuture;
 /// off the async runtime, as every store write; a [`StoreContext`] runs it
 /// in place, for the tests.
 pub trait StartupPacks: Send + Sync {
-    /// The live metas (`listMetas`); the error is the text of the failure.
+    /// The live metas; the error is the text of the failure.
     fn list_metas(&self) -> BoxFuture<'_, Result<Vec<Entry>, String>>;
-    /// `savePack`; the error is the store's message.
+    /// Saves the pack of `input`; the error is the store's message.
     fn save_pack(&self, input: SavePackInput) -> BoxFuture<'_, Result<(), String>>;
 }
 
@@ -58,7 +58,7 @@ pub struct SyncError {
     pub reason: String,
 }
 
-/// `I18nStartupSyncResult`.
+/// What a startup update of the Hub-linked language packs found.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StartupSyncResult {
     /// The Hub-linked packs checked.
@@ -84,8 +84,8 @@ pub struct StartupSyncOutcome {
 }
 
 impl StartupSyncOutcome {
-    /// The log lines of the pass and of its summary (`reportSyncResult`):
-    /// the summary only when packs were checked, one line per error.
+    /// The log lines of the pass and of its summary: the summary only when
+    /// packs were checked, one line per error.
     pub fn report(&self) -> Vec<LogLine> {
         let mut lines = self.logs.clone();
         let result = &self.result;
@@ -142,8 +142,8 @@ fn error_line(err: &HubError) -> String {
     format!("{class}: {err}")
 }
 
-/// A live pack linked to a Hub post (`pickHubLinked`): its id and the post
-/// id, trimmed and not empty.
+/// A live pack linked to a Hub post: its id and the post id, trimmed and
+/// not empty.
 struct Linked {
     meta: Entry,
     id: JsString,
@@ -165,7 +165,7 @@ fn pick_hub_linked(metas: Vec<Entry>) -> Vec<Linked> {
         .collect()
 }
 
-/// `fetchTimestampsByPostId`: the Hub time of each distinct post id, by id.
+/// The Hub time of each distinct post id, by id.
 /// The batches go out at once and the first to fail ends the lookup.
 async fn fetch_timestamps(http: &HubHttp, post_ids: &[JsString]) -> Result<HashMap<JsString, Value>, String> {
     let mut seen = HashSet::new();
@@ -244,8 +244,8 @@ async fn update_pack(
     }
 }
 
-/// `syncHubI18nPacksOnStartup`: one pass over the Hub-linked packs. The
-/// downloads run at once; the errors are listed in the order of the packs.
+/// One pass over the Hub-linked packs. The downloads run at once; the errors
+/// are listed in the order of the packs.
 pub async fn run(
     http: &HubHttp,
     packs: &dyn StartupPacks,

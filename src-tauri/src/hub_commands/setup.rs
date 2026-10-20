@@ -68,7 +68,7 @@ impl Hub {
     }
 }
 
-/// The Google id_token of the sync's sign-in (`getIdToken`).
+/// The Google id_token of the sync's sign-in.
 struct GoogleIdTokens(Arc<GoogleAuth>);
 
 impl IdTokenSource for GoogleIdTokens {
@@ -154,11 +154,10 @@ impl StartupPacks for BlockingPacks {
     }
 }
 
-/// Runs the startup update of the Hub-linked language packs once
-/// (`startI18nStartupSync`): logs what it did, sends `i18n-pack:changed`
-/// to every window when a pack changed, and records the counts. The pass
-/// stops at a save boundary once the app quits; a stopped pass reports
-/// nothing and records nothing.
+/// Runs the startup update of the Hub-linked language packs once: logs
+/// what it did, sends `i18n-pack:changed` to every window when a pack
+/// changed, and records the counts. The pass stops at a save boundary once
+/// the app quits; a stopped pass reports nothing and records nothing.
 pub async fn run_startup_sync<R: Runtime>(
     app: &AppHandle<R>,
     hub: &Hub,

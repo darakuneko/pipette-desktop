@@ -42,9 +42,8 @@ impl Validation {
     }
 }
 
-/// `validateAnalyticsExport`: enough keystrokes, a window that does not
-/// end before it starts, and no longer than thirty days. A NaN fails no
-/// check, as in JavaScript.
+/// Checks for enough keystrokes, a window that does not end before it starts,
+/// and no longer than thirty days. A NaN fails no check, as in JavaScript.
 pub fn validate_analytics_export(export: &AnalyticsExport) -> Validation {
     if export.total_keystrokes < ANALYTICS_MIN_KEYSTROKES {
         return Validation::Failed("keystrokes below threshold");
@@ -59,9 +58,8 @@ pub fn validate_analytics_export(export: &AnalyticsExport) -> Validation {
     Validation::Ok
 }
 
-/// `estimateAnalyticsExportSizeBytes`: the UTF-8 length of the export's
-/// JSON text. The text escapes lone surrogates, so it is the length Node's
-/// `Buffer.byteLength` gives.
+/// The UTF-8 length of the export's JSON text. The text escapes lone
+/// surrogates, so it is the length Node's `Buffer.byteLength` gives.
 pub fn estimate_analytics_export_size_bytes(export: &AnalyticsExport) -> usize {
     export.to_json().len()
 }
