@@ -115,6 +115,12 @@ export async function startFakeUpdate(options: { port?: number } = {}): Promise<
   const requests: LoggedUpdateRequest[] = []
   let base = ''
 
+  function reset(): void {
+    release = null
+    mode = 'release'
+    requests.length = 0
+  }
+
   async function control(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
     if (req.method === 'GET' && path === '/__control/requests') return send(res, 200, JSON.stringify(requests))
     if (req.method !== 'POST') return send(res, 405, '{}')
@@ -128,9 +134,7 @@ export async function startFakeUpdate(options: { port?: number } = {}): Promise<
         mode = body.mode as Mode
         break
       case '/__control/reset':
-        release = null
-        mode = 'release'
-        requests.length = 0
+        reset()
         break
       default:
         return send(res, 404, '{}')
@@ -168,11 +172,7 @@ export async function startFakeUpdate(options: { port?: number } = {}): Promise<
     requests,
     setRelease: (next) => { release = next },
     setMode: (next) => { mode = next },
-    reset: () => {
-      release = null
-      mode = 'release'
-      requests.length = 0
-    },
+    reset,
     close,
   }
 }

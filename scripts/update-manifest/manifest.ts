@@ -16,14 +16,10 @@ import { compareVersions, isPreRelease, parseVersion } from './version'
 
 export const DOWNLOAD_BASE = 'https://github.com/darakuneko/pipette-desktop/releases/download/'
 
-/** The pre-release that holds the channel manifests. */
-export const MANIFEST_TAG = 'updater-manifest'
-
 /** beta: what the pre-releases read; stable: what the releases read;
  *  staging: a manifest a release build reads only when told to, for
  *  trying an update before it reaches anyone. */
 export const CHANNELS = ['beta', 'stable', 'staging'] as const
-export type Channel = (typeof CHANNELS)[number]
 
 /** The update files of a release (each with `<file>.sig` beside it) and the
  *  manifest platforms each serves: the updater looks for
@@ -90,13 +86,15 @@ export function buildLatestJson(options: {
   for (const { file, platforms: names } of UPDATE_ASSETS) {
     const signed = options.files.get(file)
     if (!signed) throw new Error(`${file} or its signature is missing`)
+    const signature = signed.signature.trim()
     try {
-      verifySignature(signed.data, signed.signature.trim(), options.pubkey, options.version)
+      verifySignature(signed.data, signature, options.pubkey, options.version)
     } catch (err) {
       throw new Error(`${file}: ${(err as Error).message}`)
     }
+    const url = releaseDownloadUrl(`v${options.version}`, file)
     for (const name of names) {
-      platforms[name] = { url: releaseDownloadUrl(`v${options.version}`, file), signature: signed.signature.trim() }
+      platforms[name] = { url, signature }
     }
   }
   return {
@@ -175,13 +173,14 @@ export function promotionProblems(input: PromotionInput): string[] {
     if (!assetNames.has(file)) problems.push(`the release has no ${file}`)
     if (!assetNames.has(`${file}.sig`)) problems.push(`the release has no ${file}.sig`)
     const signature = input.signatures[file]?.trim()
+    const url = releaseDownloadUrl(tag, file)
     for (const name of names) {
       const entry = platforms[name]
       if (!isRecord(entry)) {
         problems.push(`latest.json has no ${name}`)
         continue
       }
-      if (entry.url !== releaseDownloadUrl(tag, file)) problems.push(`${name} points at ${String(entry.url)}, not ${releaseDownloadUrl(tag, file)}`)
+      if (entry.url !== url) problems.push(`${name} points at ${String(entry.url)}, not ${url}`)
       if (signature === undefined || entry.signature !== signature) problems.push(`${name}'s signature is not the one of ${file}.sig`)
     }
   }
