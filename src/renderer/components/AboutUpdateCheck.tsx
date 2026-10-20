@@ -60,7 +60,7 @@ export function AboutUpdateCheck() {
             })
           }
         >
-          {t('update.about.open')}
+          {t('update.about.open', { version: state.version })}
         </button>
       )}
       {prompt && <UpdateAvailableModal key={prompt.version} prompt={prompt} onClose={() => setPrompt(null)} />}
