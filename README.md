@@ -66,6 +66,17 @@ On a display whose usable work area (screen space minus the Dock, taskbar, or me
 3.  The keyboard will be detected automatically.
 4.  Select a layer and start editing key assignments.
 
+## Updating
+
+Pipette checks for a new version shortly after it starts (after any startup notice is closed) and shows what it found: open the release page to see what changed, **Update** to download, verify and install it, **Not now**, or **Skip this version** (a newer version is still offered). Settings → About → **Check for updates** checks at any time.
+
+- Every update is verified with Pipette's signing key before it is installed. Pipette saves your work and quits as usual, then starts again as the new version.
+- A pre-release (beta) gets the betas and the releases; a release gets releases only.
+- If an update fails, Pipette keeps running as it was (on Windows, the error is shown at the next start). You can always download the new version from the [releases page](https://github.com/darakuneko/pipette-desktop/releases) and install it over the old one; your settings and data are kept.
+- **Windows:** the installer runs without questions and starts Pipette again. Pipette is installed for your user only, so no administrator rights are needed.
+- **macOS:** move Pipette to Applications first: an app run from the disk image (or from a quarantined copy) does not update itself. If Pipette cannot write to the folder it is in, macOS asks for an administrator password.
+- **Linux:** only the AppImage updates itself (an extracted AppImage does not). The file is replaced where it is, so it must be writable.
+
 ## Operation Guide
 
 For complete instructions with screenshots:
@@ -88,7 +99,7 @@ The AppImage uses the static AppImage runtime, so `libfuse2` does not need to be
 
 #### Updating the AppImage
 
-The AppImage embeds update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place, downloading only the changed parts.
+Pipette updates the AppImage itself (see [Updating](#updating)). The AppImage also embeds update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place, downloading only the changed parts.
 
 #### AppImage Sandbox (Ubuntu 24.04+ / Debian 13+)
 
