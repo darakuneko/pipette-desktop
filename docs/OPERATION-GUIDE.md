@@ -1793,11 +1793,11 @@ The editor settings panel now provides a single **Save** panel with the followin
 
 Pipette can sync your saved snapshots, favorites, and per-keyboard settings across multiple devices via Google Drive.
 
-Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Data** tab:
+Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Connect** tab:
 
-![Data Tab](screenshots/hub-settings-data-sync.png)
+![Connect Tab](screenshots/hub-settings-data-sync.png)
 
-The Data tab contains the following sections: Google Account, Data Sync, and Pipette Hub. Additional troubleshooting and data management options are available in the Data panel (§1.3).
+The Connect tab contains the following sections: Google Account, Data Sync, and Pipette Hub. Additional troubleshooting and data management options are available in the Data panel (§1.3).
 
 #### Google Account
 
@@ -1896,13 +1896,13 @@ Operational errors (shown as the message directly, no reason code):
 
 #### Password Troubleshooting
 
-Start from what you see in the **Data** tab and follow the branch to an action. The messages in the charts are shortened with "…"; the sections above give each one in full.
+Start from what you see in the **Connect** tab and follow the branch to an action. The messages in the charts are shortened with "…"; the sections above give each one in full.
 
 **When sync doesn't work**
 
 ```mermaid
 flowchart LR
-  start["Cloud Sync isn't working, or a password message is shown"] --> what{"What does the Data tab show?"}
+  start["Cloud Sync isn't working, or a password message is shown"] --> what{"What does the Connect tab show?"}
   what -->|"Set a sync password to enable sync"| first{"Do your other PCs already sync?"}
   first -->|Yes| samepw["Enter the password they use, then Set Password"]
   first -->|"No, this is the first PC"| newpw["Choose a new password, then Set Password"]
@@ -1967,11 +1967,11 @@ A: **Change Password** asks only for the new password; it uses the password save
   1. Close Pipette on every PC. While Google Drive has no password check, a running Pipette that syncs creates a new one with the password it has saved. If a PC other than the one you set the new password on does that, the new password won't match it
   2. In Google Drive on the web, open **Settings** (gear icon) › **Settings** › **Manage apps**, find Pipette, open its **Options** menu and choose **Delete hidden app data**
   3. Open Pipette on ONE PC and set the new password there. If it shows **Password is set**, use **Change Password**. It works whether or not this PC's own sync has already created a new password check: such a check uses this PC's saved password, which is the one **Change Password** starts from. Otherwise enter the new password and click **Set Password**
-  4. Only after that, open Pipette on the other PCs. On each one, click **Sync** in the **Data** tab of **Settings**: it fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears. Use it with the new password. A PC without a saved password just enters the new password and clicks **Set Password**
+  4. Only after that, open Pipette on the other PCs. On each one, click **Sync** in the **Connect** tab of **Settings**: it fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears. Use it with the new password. A PC without a saved password just enters the new password and clicks **Set Password**
 
 **Q: I changed the password on one PC. What do I do on the others?**
 
-A: Their saved password no longer matches, but the periodic background check doesn't report that, so their sync can stop without a message. On each of them, click **Sync** in the **Data** tab of **Settings**. It fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears; use it and enter the new password. See **Re-entering the password after a change on another PC** above.
+A: Their saved password no longer matches, but the periodic background check doesn't report that, so their sync can stop without a message. On each of them, click **Sync** in the **Connect** tab of **Settings**. It fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears; use it and enter the new password. See **Re-entering the password after a change on another PC** above.
 
 **Q: Can I use Pipette on my other PCs while the password is being changed?**
 
@@ -2024,7 +2024,7 @@ Before syncing, each Pipette puts a small marker on Google Drive that names the 
 - **What keeps working**: keyboard editing and every other feature that does not use Cloud Sync
 - **Sync Status** shows **"Sync data on this Google Drive was made by a newer version of Pipette. Update Pipette to keep syncing."**
 - **Banner**: a banner at the top of the screen (on the device selection screen too) shows **"Cloud Sync needs a newer version of Pipette. Update the app to keep syncing."** **Open Download Page** opens the Pipette releases page on GitHub. Close the banner with its **×** button; it stays closed until Pipette is restarted
-- While the banner applies, the password change lock banner in the Data tab is hidden
+- While the banner applies, the password change lock banner in the Connect tab is hidden
 - **When it is checked**: at startup when signed in to Google, after signing in with **Connect**, and whenever a sync stops for this reason. Signing out clears it
 
 #### Sync Unavailable Alert
@@ -2418,8 +2418,8 @@ A pre-release (beta) of Pipette is offered both betas and releases; a release is
 
 Hub features require Google account authentication. Please complete Google account authentication first. Configure Hub in the **Settings** modal (gear icon on the device selection screen):
 
-1. In the **Data** tab, click **Connect** under the Google Account section to sign in with your Google account
-2. Scroll down to the **Pipette Hub** section in the same Data tab — it should show **Connected**
+1. In the **Connect** tab, click **Connect** under the Google Account section to sign in with your Google account
+2. Scroll down to the **Pipette Hub** section in the same Connect tab — it should show **Connected**
 3. Set your **Display Name** — this name is shown on your Hub posts
 4. Your uploaded keymaps appear in the **My Posts** list
 

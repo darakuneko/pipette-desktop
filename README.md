@@ -85,7 +85,7 @@ There is no supported way back to 0.4; the backup is the safety net.
 
 ### After the first launch
 
-- Sign in to Google again (Settings › Data › Google Account › **Connect**) and enter your sync encryption password again. Sign-in data is now protected by the OS key store, and the files 0.4 saved are not read. Changes 0.4 had not uploaded are sent once you sign in with the same Google account.
+- Sign in to Google again (Settings › Connect › Google Account › **Connect**) and enter your sync encryption password again. Sign-in data is now protected by the OS key store, and the files 0.4 saved are not read. Changes 0.4 had not uploaded are sent once you sign in with the same Google account.
 - **Launch at Login** is taken over: when on, the autostart entry starts 0.5; when off, it is removed.
 - Do not run 0.4 and 0.5 at the same time. 0.5 refuses to start while 0.4 is running; on Linux and macOS it cannot stop 0.4 from starting afterwards.
 
