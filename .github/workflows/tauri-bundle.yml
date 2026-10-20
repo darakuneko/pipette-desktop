@@ -18,11 +18,12 @@ permissions:
   contents: read
 
 # Line tables are enough for the backtraces of a failed test, and the test
-# binaries and their caches get much smaller. Set the same in every workflow
-# that builds src-tauri: rust-cache puts the CARGO_* variables in its key,
-# and the workflows share keys.
+# binaries and their caches get much smaller; Cargo colours its output in the
+# logs. Set the same in every workflow that builds src-tauri: rust-cache puts
+# the CARGO_* variables in its key, and the workflows share keys.
 env:
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_TERM_COLOR: always
 
 concurrency:
   group: tauri-bundle-${{ github.ref }}
@@ -35,8 +36,6 @@ jobs:
       matrix:
         os: [windows-2022, macos-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -50,12 +49,9 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The toolchain of src-tauri/rust-toolchain.toml; setup-rust installs
-      # the Linux packages of the app and runs on Linux only.
-      - name: Install the Rust toolchain
-        run: |
-          rustup toolchain install
-          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+      # Not setup-rust: it installs the Linux packages of the app and runs on
+      # Linux only.
+      - uses: ./.github/actions/install-rust-toolchain
 
       # Clippy checks rather than builds, so it gains little from a cache
       # of its own; it reads the test job's (the build scripts and the
@@ -83,8 +79,6 @@ jobs:
       matrix:
         os: [windows-2022, macos-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -102,11 +96,7 @@ jobs:
       # The tests start the Node fakes.
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Install the Rust toolchain
-        working-directory: src-tauri
-        run: |
-          rustup toolchain install
-          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+      - uses: ./.github/actions/install-rust-toolchain
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
@@ -152,8 +142,6 @@ jobs:
           - os: macos-latest
             artifact: src-tauri/target/release/bundle/dmg/*.dmg
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -167,11 +155,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Install the Rust toolchain
-        working-directory: src-tauri
-        run: |
-          rustup toolchain install
-          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+      - uses: ./.github/actions/install-rust-toolchain
 
       # The build-tauri job of release.yml builds the same on these systems
       # and reads this cache (never on a tag).

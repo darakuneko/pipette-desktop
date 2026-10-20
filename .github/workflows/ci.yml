@@ -18,11 +18,12 @@ permissions:
   contents: read
 
 # Line tables are enough for the backtraces of a failed test, and the test
-# binaries and their caches get much smaller. Set the same in every workflow
-# that builds src-tauri: rust-cache puts the CARGO_* variables in its key,
-# and the workflows share keys.
+# binaries and their caches get much smaller; Cargo colours its output in the
+# logs. Set the same in every workflow that builds src-tauri: rust-cache puts
+# the CARGO_* variables in its key, and the workflows share keys.
 env:
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_TERM_COLOR: always
 
 # A newer push to the same pull request or branch cancels the run in
 # progress; on main every commit keeps its run (and the caches it saves).
@@ -59,8 +60,6 @@ jobs:
   # Kept off the jobs below so the release build does not lengthen them.
   rust-lint:
     runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -100,8 +99,6 @@ jobs:
   # generated shim files), in one job.
   rust-test:
     runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -196,8 +193,6 @@ jobs:
       matrix:
         shard: [1, 2]
     runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -243,8 +238,6 @@ jobs:
   # the app, so a failing capture does not hold a change back.
   doc-capture:
     runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -303,8 +296,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -315,13 +306,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # The toolchain of src-tauri/rust-toolchain.toml; the crate needs none
-      # of the Linux packages setup-rust installs for the app.
-      - name: Install the Rust toolchain
-        working-directory: src-tauri
-        run: |
-          rustup toolchain install
-          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+      # Not setup-rust: the crate needs none of the Linux packages it installs
+      # for the app.
+      - uses: ./.github/actions/install-rust-toolchain
 
       # This workflow runs on no tag; the guard keeps it so if that changes.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -348,8 +335,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TERM_COLOR: always
     defaults:
       run:
         shell: bash
@@ -360,11 +345,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y gnome-keyring dbus libdbus-1-dev pkg-config
 
-      - name: Install the Rust toolchain
-        working-directory: src-tauri
-        run: |
-          rustup toolchain install
-          rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+      - uses: ./.github/actions/install-rust-toolchain
 
       # This workflow runs on no tag; the guard keeps it so if that changes.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
