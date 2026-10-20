@@ -13,5 +13,5 @@
     "resolveJsonModule": true
   },
   // The scripts/ globs must match the scripts/ entries in eslint.config.js.
-  "include": ["scripts/fixture-vitest-config.ts", "scripts/fake-drive/**/*.ts", "scripts/fake-hub/**/*.ts", "scripts/fake-notification/**/*.ts", "scripts/fake-update/**/*.ts", "scripts/update-manifest/**/*.ts", "scripts/fake-server/**/*.ts", "scripts/node-identity/**/*.ts", "scripts/takeover-rehearsal/**/*.ts"]
+  "include": ["scripts/script-vitest-config.ts", "scripts/fake-drive/**/*.ts", "scripts/fake-hub/**/*.ts", "scripts/fake-notification/**/*.ts", "scripts/fake-update/**/*.ts", "scripts/update-manifest/**/*.ts", "scripts/fake-server/**/*.ts", "scripts/node-identity/**/*.ts", "scripts/takeover-rehearsal/**/*.ts"]
 }

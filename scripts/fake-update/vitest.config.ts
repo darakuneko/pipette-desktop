@@ -3,6 +3,6 @@
 //
 // Run: pnpm run test:fake-update
 
-import { fixtureConfig } from '../fixture-vitest-config'
+import { scriptVitestConfig } from '../script-vitest-config'
 
-export default fixtureConfig('fake-update')
+export default scriptVitestConfig('fake-update')

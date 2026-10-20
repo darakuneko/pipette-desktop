@@ -3,6 +3,6 @@
 //
 // Run: pnpm run test:update-manifest
 
-import { fixtureConfig } from '../fixture-vitest-config'
+import { scriptVitestConfig } from '../script-vitest-config'
 
-export default fixtureConfig('update-manifest')
+export default scriptVitestConfig('update-manifest')

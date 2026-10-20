@@ -3,6 +3,6 @@
 //
 // Run: pnpm run test:fake-notification
 
-import { fixtureConfig } from '../fixture-vitest-config'
+import { scriptVitestConfig } from '../script-vitest-config'
 
-export default fixtureConfig('fake-notification')
+export default scriptVitestConfig('fake-notification')
