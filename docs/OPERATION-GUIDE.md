@@ -1625,7 +1625,7 @@ When the Monitor App toggle is on (and recording is in the Stop / recording stat
 - The button is greyed out while recording is in the **Start** (not recording) state — turning it on without recording active has no effect, so the UI funnels you through Start first
 - The on/off state is global (AppConfig), not per-keyboard, and is **not** synced to other machines
 - **Linux / Wayland**: requires the FocusedWindow GNOME Shell extension (see README). Without it, every minute is recorded as `null`
-- **macOS**: requires the Accessibility permission (see README). Without it, every minute is recorded as `null`
+- **macOS**: normally works without any permission. If the application name does not appear (macOS behaviour can change between versions), allowing Pipette in **System Settings → Privacy & Security → Accessibility** may help
 - Turning Monitor App off keeps existing tags in the database; only newly recorded minutes go untagged
 
 **Tray toggles**

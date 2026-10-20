@@ -184,11 +184,9 @@ Community-maintained packages may exist, but they are not officially supported.
 
 ### macOS
 
-#### Accessibility permission for Monitor App
+#### Monitor App
 
-The typing-view Monitor App toggle requires the **Accessibility** permission on macOS to resolve the foreground application name. Grant access in **System Settings → Privacy & Security → Accessibility** and add Pipette Desktop to the allowed list.
-
-Without this permission, Monitor App silently records `null` for every minute on macOS — keystroke counts still flow to the analytics, but per-app breakdowns are unavailable.
+The typing-view Monitor App toggle reads the name of the frontmost application, which normally works without any permission on macOS. If the application name does not appear (macOS behaviour can change between versions), allowing Pipette in **System Settings → Privacy & Security → Accessibility** may help.
 
 #### Launch at Login on macOS 12
 
