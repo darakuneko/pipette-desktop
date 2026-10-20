@@ -106,14 +106,18 @@ jobs:
       # of pipette-drive passes (in the step above), the Node fake Hub passes
       # the cases it shares with the in-memory Hub of pipette-hub and serves
       # the desktop app's Hub client, the Node fake notice server answers,
-      # records and fails as the resident e2e tests script it, and the
+      # records and fails as the resident e2e tests script it, the fake
+      # update server serves signed and tampered releases the release
+      # scripts' minisign check agrees with, and the
       # harness of the sync fixture generators keeps the Electron code off
       # the network and the real userData.
-      - name: Fake Drive, fake Hub, fake notice server and sync fixture harness
+      - name: Fake Drive, fake Hub, fake notice and update servers, update manifests and sync fixture harness
         run: |
           pnpm run test:fake-drive
           pnpm run test:fake-hub
           pnpm run test:fake-notification
+          pnpm run test:fake-update
+          pnpm run test:update-manifest
           pnpm run test:sync-fixtures-harness
 
       # The harness of the Hub fixture generators keeps the Electron Hub
