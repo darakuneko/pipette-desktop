@@ -11,16 +11,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    // Explicit like tsconfig.main.json's "types": ["node"] — renderer test
-    // files (`node:fs`, `Buffer`, `__dirname`, ...) previously relied on
-    // TypeScript's implicit @types auto-inclusion to see @types/node's
-    // ambient globals. The vitest 3 -> 4 upgrade changed vitest's own
-    // dependency graph enough that TS silently stopped auto-including
-    // @types/node for this program, so it's declared explicitly instead
-    // of depending on that implicit behavior again.
+    // Explicit: renderer test files (`node:fs`, `Buffer`, `__dirname`,
+    // ...) need @types/node's ambient globals, and TypeScript does not
+    // auto-include @types/node for this program.
     "types": ["node"]
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "src/tauri-shim/**/*"],
-  // Checked by tsconfig.main.json.
-  "exclude": ["src/tauri-shim/__tests__/contract-types.ts"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/tauri-shim/**/*"]
 }

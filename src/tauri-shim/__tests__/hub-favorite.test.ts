@@ -10,8 +10,8 @@
 // sending of those steps are the Rust test of the same file
 // (crates/pipette-hub/tests/ts_hub_handlers_favorite.rs).
 //
-// Also: the copies of the Electron checks are the Electron code, and the
-// `isValidHubVialProtocol` table of ts_hub_pure.json holds at the members.
+// Also: the `isValidHubVialProtocol` table of ts_hub_pure.json holds at the
+// members.
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -178,17 +178,5 @@ describe('favorite post members on their own', () => {
       const answer = await hubFavoriteApi.hubUploadFavoritePost({ ...params, vialProtocol: untag(input) as number })
       expect(answer, JSON.stringify(input)).toEqual({ success: false, error: ok ? 'read' : 'Invalid vialProtocol' })
     }
-  })
-})
-
-describe('the copied checks', () => {
-  it('are the Electron code', () => {
-    const source = readFileSync(resolve(__dirname, '../../main/hub/hub-ipc-shared.ts'), 'utf8')
-    const copy = readFileSync(resolve(__dirname, '../api/hub-favorite-checks.ts'), 'utf8')
-    const between = copy.split('// --- copied from src/main/hub/hub-ipc-shared.ts ---\n')[1]?.split('// --- end of the copy ---')[0]
-    expect(between).toBeDefined()
-    const chunks = (between ?? '').trim().split('\n\n')
-    expect(chunks).toHaveLength(5)
-    for (const chunk of chunks) expect(source).toContain(chunk)
   })
 })

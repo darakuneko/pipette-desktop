@@ -152,7 +152,7 @@ describe('KeyboardWidget decal handling', () => {
     const fixturePath = join(
       __dirname,
       '../../../../..',
-      'e2e/fixtures/e2e_test_decal_blocker.json',
+      'e2e-tauri/fixtures/e2e_test_decal_blocker.json',
     )
     const fixture = JSON.parse(readFileSync(fixturePath, 'utf-8')) as {
       layouts: { keymap: unknown[][] }

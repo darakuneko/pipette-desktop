@@ -73,7 +73,7 @@ function loadLayoutFixture(fixturePath: string, label: string): KeyboardLayout {
  *  exercise matrix-wires geometry against actual keyboard data instead of
  *  hand-built fixtures. */
 export function loadVirtualDeviceLayout(): KeyboardLayout {
-  const fixturePath = join(__dirname, '../../../../main/virtual-device/gpk60-63r-definition.json')
+  const fixturePath = join(__dirname, '../../../../../e2e-tauri/fixtures/gpk60-63r-definition.json')
   return loadLayoutFixture(fixturePath, 'gpk60-63r-definition.json')
 }
 
@@ -83,6 +83,6 @@ export function loadVirtualDeviceLayout(): KeyboardLayout {
  *  and 7) carry asymmetric rotation origins, so their label anchors land
  *  a fraction of a pixel apart. */
 export function loadSplitThumbLayout(): KeyboardLayout {
-  const fixturePath = join(__dirname, '../../../../../e2e/fixtures/e2e_test_split_thumb.json')
+  const fixturePath = join(__dirname, '../../../../../e2e-tauri/fixtures/e2e_test_split_thumb.json')
   return loadLayoutFixture(fixturePath, 'e2e_test_split_thumb.json')
 }

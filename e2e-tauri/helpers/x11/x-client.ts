@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The few X11 core requests the active-window fixture generator needs to put
-// windows and properties on its private server (x-server.ts): InternAtom,
-// CreateWindow (InputOnly, never mapped), DestroyWindow, ChangeProperty and
+// A minimal X11 client for the e2e tests (../x11-window.ts): they read
+// windows with QueryTree, GetWindowAttributes and GetProperty and ask one to
+// close with SendEvent. The module also has InternAtom, CreateWindow
+// (InputOnly, never mapped), DestroyWindow, ChangeProperty and
 // DeleteProperty, with GetInputFocus as the round trip that surfaces errors.
-// The Tauri e2e tests (e2e-tauri/helpers/x11-window.ts) read windows with
-// QueryTree, GetWindowAttributes and GetProperty and ask one to close with
-// SendEvent. Little-endian, over the server's local socket,
-// MIT-MAGIC-COOKIE-1 or no authorization.
+// Little-endian, over the server's local socket, MIT-MAGIC-COOKIE-1 or no
+// authorization.
 
 import { createConnection, type Socket } from 'node:net'
 

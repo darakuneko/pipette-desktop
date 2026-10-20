@@ -190,7 +190,7 @@ describe('generateAllLayoutOptionsPdf', () => {
 
 describe('generateAllLayoutOptionsPdf with e2e fixture', () => {
   function loadFixtureInput(): LayoutPdfInput {
-    const fixturePath = join(__dirname, '../../..', 'e2e/fixtures/e2e_test_001_32layers.json')
+    const fixturePath = join(__dirname, '../../..', 'e2e-tauri/fixtures/e2e_test_001_32layers.json')
     const fixture = JSON.parse(readFileSync(fixturePath, 'utf-8'))
     const parsedLayout = parseKle(fixture.layouts.keymap)
     const layoutOptions = parseLayoutLabels(fixture.layouts.labels)

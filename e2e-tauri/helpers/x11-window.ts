@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs'
 import { homedir, hostname } from 'node:os'
 import { join } from 'node:path'
-import { clientMessage, connectX, type XClient } from '../../scripts/resident-fixtures/x11/x-client'
+import { clientMessage, connectX, type XClient } from './x11/x-client'
 
 const COOKIE_NAME = 'MIT-MAGIC-COOKIE-1'
 

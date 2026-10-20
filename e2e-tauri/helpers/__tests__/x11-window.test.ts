@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { describe, expect, it } from 'vitest'
-import { clientMessage } from '../../../scripts/resident-fixtures/x11/x-client'
+import { clientMessage } from '../x11/x-client'
 import { xauthCookie } from '../x11-window'
 
 /** One Xauthority entry: family, address, display number, name, data. */
