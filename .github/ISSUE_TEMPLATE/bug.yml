@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in Pipette does the wrong thing
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this! The more of the form you fill in, the faster the problem can be found.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you clicked or typed, in order.
+      placeholder: |
+        1. Connect the keyboard
+        2. In the keymap editor, click a key on layer 1
+        3. Pick a new keycode for it
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Pipette version and OS
+      description: Settings › About shows the version.
+      placeholder: 0.5.0, Windows 11
+    validations:
+      required: true
+  - type: input
+    id: keyboard
+    attributes:
+      label: Keyboard
+      description: Optional. The keyboard's name, and its firmware or Vial version if you know it.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Optional. The log is `logs/pipette-0.log` in Pipette's data folder ([where the data folder is on each OS](https://github.com/darakuneko/pipette-desktop/blob/main/docs/Data.md#local-data)). No keyboard data or personal information is logged. Paste the lines from around the time of the problem.
+      render: text
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or recording
+      description: |
+        For anything you can see in the app, a screenshot or short recording helps the most. Please leave out personal details.
