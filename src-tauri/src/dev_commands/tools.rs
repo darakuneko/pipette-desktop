@@ -45,8 +45,8 @@ const DEV_SCRIPT_ENV: &str = "PIPETTE_DEV_SCRIPT";
 #[cfg(target_os = "linux")]
 const DEV_SHOT_DIR_ENV: &str = "PIPETTE_DEV_SHOT_DIR";
 
-/// Same shape as `VirtualDeviceControllerState` in
-/// src/main/virtual-device/index.ts.
+/// The virtual device controller's state, as `virtual_device_get_state`
+/// answers it to the e2e helpers.
 #[derive(Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, rename = "VirtualDeviceControllerState")]

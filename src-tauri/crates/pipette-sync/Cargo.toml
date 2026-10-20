@@ -62,9 +62,7 @@ pipette-sync-format = { path = "../pipette-sync-format", features = ["test-util"
 # Reads the cache tables the analytics merges wrote.
 rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
 tempfile = { workspace = true }
-# rt-multi-thread: the runtime of the sync peer (examples/sync_peer.rs), as
-# the app's.
-tokio = { version = "=1.53.3", features = ["rt", "rt-multi-thread", "sync", "macros", "time", "test-util"] }
+tokio = { version = "=1.53.3", features = ["rt", "sync", "macros", "time", "test-util"] }
 
 [lints]
 workspace = true

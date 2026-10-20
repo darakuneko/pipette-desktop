@@ -4,7 +4,7 @@
 import { useCallback } from 'react'
 import type { useKeyboard } from './useKeyboard'
 import type { decodeLayoutOptions } from '../../shared/kle/layout-options'
-import type { deserializeAllMacros } from '../../preload/macro'
+import type { deserializeAllMacros } from '../../shared/macro'
 import { generateKeymapC } from '../../shared/keymap-export'
 import { generateKeymapPdf } from '../../shared/pdf-export'
 import {

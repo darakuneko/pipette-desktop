@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The HID transport that src/preload/protocol.ts imports as
-// src/preload/hid-transport.ts. The Electron build bundles that module
-// (IPC to the main process); the Tauri build resolves the same import to
-// src/tauri-shim/hid-transport.ts (Tauri commands), see
-// vite.tauri.config.ts. Both modules check their exports against this
-// interface, so the swap cannot leave an import unresolved.
+// The HID transport that src/tauri-shim/protocol.ts imports
+// (src/tauri-shim/hid-transport.ts), which checks its exports against
+// this interface.
 
 import type { DeviceInfo } from './protocol'
 

@@ -94,12 +94,12 @@ impl Write for LimitedWriter {
 }
 
 /// The `compressed` argument of `DecompressDefinition` in
-/// src/preload/protocol-members.ts: the raw bytes as an array of numbers.
+/// src/tauri-shim/protocol-members.ts: the raw bytes as an array of numbers.
 #[derive(Debug, PartialEq, Eq, Deserialize, TS)]
 #[ts(export)]
 pub struct CompressedDefinition(Vec<u8>);
 
-/// What `DecompressDefinition` in src/preload/protocol-members.ts resolves
+/// What `DecompressDefinition` in src/tauri-shim/protocol-members.ts resolves
 /// to: the definition JSON text, or null when `decompress` gives up.
 #[derive(Debug, PartialEq, Eq, Serialize, TS)]
 #[cfg_attr(test, derive(Deserialize))]

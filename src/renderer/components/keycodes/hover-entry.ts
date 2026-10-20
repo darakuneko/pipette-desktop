@@ -6,7 +6,7 @@
 // choose between a summary and "N/C", so a tile that reads N/C never opens
 // a bubble.
 
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { AltRepeatKeyEntry, ComboEntry, KeyOverrideEntry, TapDanceEntry } from '../../../shared/types/protocol'
 
 export type HoverEntryKind = 'macro' | 'tapDance' | 'combo' | 'keyOverride' | 'altRepeatKey'

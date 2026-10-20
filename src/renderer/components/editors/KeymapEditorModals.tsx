@@ -10,7 +10,7 @@ import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } f
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import { FALLBACK_VIAL_PROTOCOL } from '../../../shared/favorite-data'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import { TapDanceModal } from './TapDanceModal'
 import { MacroModal } from './MacroModal'
 import { TapDanceJsonEditor } from './TapDanceJsonEditor'

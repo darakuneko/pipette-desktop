@@ -6,7 +6,7 @@ import {
   VIAL_PROTOCOL_KEY_OVERRIDE,
 } from '../../shared/constants/protocol'
 import { recordToMap, deriveLayerCount } from '../../shared/vil-file'
-import { splitMacroBuffer, jsonToMacroActions } from '../../preload/macro'
+import { splitMacroBuffer, jsonToMacroActions } from '../../shared/macro'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
 import { emptyState } from './keyboard-types'
 import type { SetState, KeyboardRefs } from './keyboard-types'

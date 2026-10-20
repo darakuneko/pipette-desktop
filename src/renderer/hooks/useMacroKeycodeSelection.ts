@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { type MacroAction } from '../../preload/macro'
+import { type MacroAction } from '../../shared/macro'
 import { type Keycode, deserialize } from '../../shared/keycodes/keycodes'
 import type { TapDanceEntry } from '../../shared/types/protocol'
 import { useMaskedKeycodeSelection } from './useMaskedKeycodeSelection'

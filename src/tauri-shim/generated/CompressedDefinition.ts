@@ -2,6 +2,6 @@
 
 /**
  * The `compressed` argument of `DecompressDefinition` in
- * src/preload/protocol-members.ts: the raw bytes as an array of numbers.
+ * src/tauri-shim/protocol-members.ts: the raw bytes as an array of numbers.
  */
 export type CompressedDefinition = Array<number>;

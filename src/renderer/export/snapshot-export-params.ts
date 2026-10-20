@@ -8,7 +8,7 @@ import {
   deserializeMacro,
   macroActionsToJson,
   jsonToMacroActions,
-} from '../../preload/macro'
+} from '../../shared/macro'
 import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
 import type { VilFile, KeyboardDefinition } from '../../shared/types/protocol'
 import type { VilExportContext } from '../../shared/vil-compat'

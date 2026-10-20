@@ -41,7 +41,7 @@ import { AnalyzePage } from './components/analyze/AnalyzePage'
 import type { ConnectedTappingTerm } from './components/analyze/analyze-types'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { resolveConnectedTappingTerm, resolveTappingTerm } from '../shared/qmk-settings-tapping-term'
-import { deserializeAllMacros } from '../preload/macro'
+import { deserializeAllMacros } from '../shared/macro'
 import { EMPTY_UID } from '../shared/constants/protocol'
 import { PickerPrefsProvider } from './components/keycodes/PickerPrefsProvider'
 

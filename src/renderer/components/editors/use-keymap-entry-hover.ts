@@ -12,7 +12,7 @@
 import { useCallback, useMemo } from 'react'
 import { getMacroIndex, getTapDanceIndex, isTapDanceKeycode } from '../../../shared/keycodes/keycodes'
 import type { KleKey } from '../../../shared/kle/types'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { HoverEntryKind, HoverEntrySources } from '../keycodes/hover-entry'
 import { useEntryHover, type EntryHoverBubbleState } from '../keycodes/use-entry-hover'

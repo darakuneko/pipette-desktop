@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import { GripVertical, X } from 'lucide-react'
 import { ICON_SM, ICON_LG } from '../../constants/ui-tokens'
-import { isValidMacroText, type MacroAction } from '../../../preload/macro'
+import { isValidMacroText, type MacroAction } from '../../../shared/macro'
 import { INPUT_BASE } from './store-modal-shared'
 import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 import { Tooltip } from '../ui/Tooltip'

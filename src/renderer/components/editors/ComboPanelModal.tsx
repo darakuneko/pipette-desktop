@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { ComboEntry, TapDanceEntry } from '../../../shared/types/protocol'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { KeycodeEntryModalAdapter } from '../../hooks/useKeycodeEntryModal'
 import { useKeycodeEntryModal } from '../../hooks/useKeycodeEntryModal'

@@ -85,7 +85,7 @@ vi.mock('../../keycodes/ModifierCheckboxStrip', () => ({
   ModifierCheckboxStrip: () => null,
 }))
 
-vi.mock('../../../../preload/macro', () => ({
+vi.mock('../../../../shared/macro', () => ({
   deserializeAllMacros: () => [],
 }))
 
@@ -96,7 +96,7 @@ import { KeymapEditor } from '../KeymapEditor'
 import { EntryHoverPreviewContext } from '../../keycodes/entry-hover-context'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { KleKey } from '../../../../shared/kle/types'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 const KEY_DEFAULTS: KleKey = {
   x: 0, y: 0, width: 1, height: 1, row: 0, col: 0,

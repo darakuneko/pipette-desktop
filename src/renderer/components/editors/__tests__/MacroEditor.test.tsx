@@ -44,7 +44,7 @@ vi.mock('../FavoriteStoreContent', () => ({
   FavoriteStoreContent: () => <div data-testid="favorite-store-content">Favorites</div>,
 }))
 
-vi.mock('../../../../preload/macro', () => ({
+vi.mock('../../../../shared/macro', () => ({
   deserializeAllMacros: (_buf: number[], _proto: number, count: number) =>
     Array.from({ length: count }, () => []),
   serializeAllMacros: () => [0],

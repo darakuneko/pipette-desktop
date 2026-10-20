@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useMacroKeycodeSelection } from '../useMacroKeycodeSelection'
 import { recreateKeyboardKeycodes, deserialize } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 
 beforeEach(() => {
   recreateKeyboardKeycodes({

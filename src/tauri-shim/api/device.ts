@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VialAPI device and protocol members for the Tauri build: the protocol
-// members are the Electron preload's (src/preload/protocol-members.ts)
-// around the same src/preload/protocol.ts, whose transport is the Tauri one
-// (../hid-transport, see vite.tauri.config.ts). The definition is
-// decompressed by the backend (src-tauri/src/definition.rs), as the Electron
-// main process does it. probeDevice runs the shared probe sequence
+// The VialAPI device and protocol members: the protocol members of
+// ../protocol-members.ts around ../protocol.ts, whose transport is
+// ../hid-transport. The definition is decompressed by the backend
+// (src-tauri/src/definition.rs). probeDevice runs the shared probe sequence
 // (src/shared/hid/probe-sequence.ts) over the backend's probe handle
 // (the hid_probe_* commands of src-tauri/src/hid_commands.rs).
 
-import * as protocol from '../../preload/protocol'
-import { createProtocolMembers, type DecompressDefinition } from '../../preload/protocol-members'
+import * as protocol from '../protocol'
+import { createProtocolMembers, type DecompressDefinition } from '../protocol-members'
 import { runProbeSequence } from '../../shared/hid/probe-sequence'
 import type { ProbeResult } from '../../shared/types/protocol'
 import type { VialAPI } from '../../shared/types/vial-api'

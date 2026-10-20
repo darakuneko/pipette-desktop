@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// HID transport for the Tauri build: the HidTransport members of
-// src/preload/hid-transport.ts, answered by the Rust HID commands
-// (src-tauri/src/hid_commands.rs). vite.tauri.config.ts resolves the
-// Electron transport to this module, so src/preload/protocol.ts runs in the
-// WebView unchanged.
+// The HID transport of ./protocol.ts: the HidTransport members
+// (src/shared/types/hid-transport.ts), answered by the Rust HID commands
+// (src-tauri/src/hid_commands.rs).
 
 import type { ImplementsHidTransport } from '../shared/types/hid-transport'
 import type { DeviceInfo } from './generated/DeviceInfo'

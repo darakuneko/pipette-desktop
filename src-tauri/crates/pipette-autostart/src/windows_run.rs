@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Windows login item: a value in the current user's Run key, as
-//! Electron's `app.setLoginItemSettings({ openAtLogin })` writes one.
+//! the 0.4 build writes one.
 //!
 //! - On: the value `Pipette` holds the executable's path in double quotes
 //!   (an unquoted path with a space would start another program), and the
 //!   value of the same name under `Explorer\StartupApproved\Run`, where Task
-//!   Manager records an entry the user turned off, is removed, as Electron
-//!   does for an item it turns on.
+//!   Manager records an entry the user turned off, is removed, as the 0.4
+//!   build does for an item it turns on.
 //! - Off: both values are removed.
-//! - Either way, the values the Electron build registered (named after its
+//! - Either way, the values the 0.4 build registered (named after its
 //!   AppUserModelID, likely `electron.app.Pipette`) are removed with their
 //!   StartupApproved values, so one item is left and it starts this build.
 //!   They are found by what they start: `Pipette.exe` in a folder Pipette
-//!   was installed in (this executable's, the Electron build's default
+//!   was installed in (this executable's, the 0.4 build's default
 //!   folders, the folder its uninstall entry names), or `Pipette.exe`
 //!   anywhere under a name starting with `electron.app.`. The file name is
 //!   compared without case, so a value under another name that starts this
@@ -25,12 +25,12 @@
 /// The name of this build's value: the product name.
 pub(crate) const VALUE_NAME: &str = crate::PRODUCT_NAME;
 
-/// The file name of the Electron build's executable.
-const ELECTRON_EXE: &str = "Pipette.exe";
+/// The file name of the 0.4 build's executable.
+const V04_EXE: &str = "Pipette.exe";
 
-/// The start of Electron's default AppUserModelID, the value name its login
-/// item gets when the app sets none.
-const ELECTRON_NAME_PREFIX: &str = "electron.app.";
+/// The start of the 0.4 build's default AppUserModelID, the value name its
+/// login item gets when the app sets none.
+const V04_NAME_PREFIX: &str = "electron.app.";
 
 /// One registry change, in the order [`plan`] lists them.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,14 +45,14 @@ pub(crate) enum Change {
 
 /// The changes that turn this build's item on (`enabled`) or off for `exe`,
 /// given the Run key's `values` (name and string data; `None` for a value
-/// that is not a string) and the folders the Electron build was installed
+/// that is not a string) and the folders the 0.4 build was installed
 /// in. This build's value comes first, so an interruption after it leaves
-/// the item starting this build; the Electron build's values follow.
+/// the item starting this build; the 0.4 build's values follow.
 pub(crate) fn plan(
     enabled: bool,
     exe: &str,
     values: &[(String, Option<String>)],
-    electron_dirs: &[String],
+    v04_dirs: &[String],
 ) -> Vec<Change> {
     let own = if enabled {
         Change::SetRun { name: VALUE_NAME.to_owned(), data: quoted(exe) }
@@ -60,12 +60,12 @@ pub(crate) fn plan(
         Change::RemoveRun(VALUE_NAME.to_owned())
     };
     let mut changes = vec![own, Change::RemoveApproved(VALUE_NAME.to_owned())];
-    let mut dirs: Vec<String> = electron_dirs.iter().map(|dir| normalized(dir)).collect();
+    let mut dirs: Vec<String> = v04_dirs.iter().map(|dir| normalized(dir)).collect();
     if let Some((dir, _)) = split_dir(exe) {
         dirs.push(normalized(dir));
     }
     for (name, data) in values {
-        if data.as_deref().is_some_and(|data| is_electron_value(name, data, &dirs)) {
+        if data.as_deref().is_some_and(|data| is_v04_value(name, data, &dirs)) {
             changes.push(Change::RemoveRun(name.clone()));
             changes.push(Change::RemoveApproved(name.clone()));
         }
@@ -78,23 +78,22 @@ pub(crate) fn quoted(path: &str) -> String {
     format!("\"{path}\"")
 }
 
-/// Whether the value `name` with `data` is one the Electron build
+/// Whether the value `name` with `data` is one the 0.4 build
 /// registered: not this build's own, and starting `Pipette.exe` in one of
-/// `dirs` (normalized) or anywhere under Electron's default name.
-fn is_electron_value(name: &str, data: &str, dirs: &[String]) -> bool {
+/// `dirs` (normalized) or anywhere under the 0.4 build's default name.
+fn is_v04_value(name: &str, data: &str, dirs: &[String]) -> bool {
     if name.eq_ignore_ascii_case(VALUE_NAME) {
         return false;
     }
     let Some((dir, file)) = program(data).and_then(split_dir) else {
         return false;
     };
-    if !file.eq_ignore_ascii_case(ELECTRON_EXE) {
+    if !file.eq_ignore_ascii_case(V04_EXE) {
         return false;
     }
-    let electron_name = name
-        .get(..ELECTRON_NAME_PREFIX.len())
-        .is_some_and(|start| start.eq_ignore_ascii_case(ELECTRON_NAME_PREFIX));
-    electron_name || dirs.contains(&normalized(dir))
+    let v04_name =
+        name.get(..V04_NAME_PREFIX.len()).is_some_and(|start| start.eq_ignore_ascii_case(V04_NAME_PREFIX));
+    v04_name || dirs.contains(&normalized(dir))
 }
 
 /// The program a command line starts: the quoted part when it starts with
@@ -133,15 +132,12 @@ fn normalized(dir: &str) -> String {
     dir.replace('/', "\\").trim_end_matches('\\').to_lowercase()
 }
 
-/// The folders the Electron build installs into by default:
-/// electron-builder's per-user `%LOCALAPPDATA%\Programs\<name>` and its
+/// The folders the 0.4 build installs into by default:
+/// its installer's per-user `%LOCALAPPDATA%\Programs\<name>` and its
 /// per-machine `%ProgramFiles%\<name>`, `<name>` being the package name
-/// (the name of the Electron build's userData directory too).
-pub(crate) fn electron_default_dirs(
-    local_app_data: Option<&str>,
-    program_files: Option<&str>,
-) -> Vec<String> {
-    let name = pipette_fs::ELECTRON_USER_DATA_NAME;
+/// (the name of the 0.4 build's userData directory too).
+pub(crate) fn v04_default_dirs(local_app_data: Option<&str>, program_files: Option<&str>) -> Vec<String> {
+    let name = pipette_fs::V04_USER_DATA_NAME;
     let mut dirs = Vec::new();
     if let Some(base) = local_app_data.filter(|base| !base.is_empty()) {
         dirs.push(format!(r"{base}\Programs\{name}"));
@@ -160,18 +156,18 @@ pub(crate) mod system {
 
     use windows_registry::{CURRENT_USER, Key, LOCAL_MACHINE};
 
-    use super::{Change, electron_default_dirs, plan};
+    use super::{Change, plan, v04_default_dirs};
 
     const RUN: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
     const APPROVED: &str = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
-    /// The uninstall entry electron-builder writes for the Electron build:
+    /// The uninstall entry the 0.4 installer writes:
     /// the UUID v5 of its appId, as in src-tauri/windows/hooks.nsh.
-    const ELECTRON_UNINSTALL: &str =
+    const V04_UNINSTALL: &str =
         r"Software\Microsoft\Windows\CurrentVersion\Uninstall\ea2785fe-f9f8-5f54-9882-47312c59a4b9";
     /// `HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)`: no such key or value.
     const NOT_FOUND: i32 = 0x8007_0002_u32 as i32;
 
-    /// Turns the item on or off for `exe` and removes the Electron build's.
+    /// Turns the item on or off for `exe` and removes the 0.4 build's.
     /// Every failure is logged as an error; the other changes still run.
     pub(crate) fn apply(enabled: bool, exe: Result<&Path, &str>) {
         let exe = exe.map_err(str::to_owned).and_then(|exe| {
@@ -186,12 +182,12 @@ pub(crate) mod system {
                 return;
             }
         };
-        // Unread values only keep the Electron build's values in place.
+        // Unread values only keep the 0.4 build's values in place.
         let values = run_values().unwrap_or_else(|err| {
             log::error!("auto-launch: failed to read the Run key: {err}");
             Vec::new()
         });
-        for change in plan(enabled, &exe, &values, &electron_dirs()) {
+        for change in plan(enabled, &exe, &values, &v04_dirs()) {
             if let Err(err) = make(&change) {
                 log::error!("auto-launch: failed to update the login item ({change:?}): {err}");
             }
@@ -208,14 +204,12 @@ pub(crate) mod system {
         Ok(key.values()?.map(|(name, value)| (name, String::try_from(value).ok())).collect())
     }
 
-    /// The folders the Electron build may be installed in.
-    fn electron_dirs() -> Vec<String> {
+    /// The folders the 0.4 build may be installed in.
+    fn v04_dirs() -> Vec<String> {
         let var = |name: &str| std::env::var(name).ok();
-        let mut dirs = electron_default_dirs(var("LOCALAPPDATA").as_deref(), var("ProgramFiles").as_deref());
+        let mut dirs = v04_default_dirs(var("LOCALAPPDATA").as_deref(), var("ProgramFiles").as_deref());
         for root in [CURRENT_USER, LOCAL_MACHINE] {
-            if let Ok(location) =
-                root.open(ELECTRON_UNINSTALL).and_then(|key| key.get_string("InstallLocation"))
-            {
+            if let Ok(location) = root.open(V04_UNINSTALL).and_then(|key| key.get_string("InstallLocation")) {
                 dirs.push(location);
             }
         }
@@ -246,7 +240,7 @@ mod tests {
     use super::*;
 
     const EXE: &str = r"C:\Users\u\AppData\Local\Pipette\pipette.exe";
-    const ELECTRON_DIR: &str = r"C:\Users\u\AppData\Local\Programs\pipette-desktop";
+    const V04_DIR: &str = r"C:\Users\u\AppData\Local\Programs\pipette-desktop";
 
     fn values(pairs: &[(&str, Option<&str>)]) -> Vec<(String, Option<String>)> {
         pairs.iter().map(|(name, data)| ((*name).to_owned(), data.map(str::to_owned))).collect()
@@ -279,13 +273,13 @@ mod tests {
     }
 
     #[test]
-    fn the_electron_values_go_after_this_builds_own_whether_on_or_off() {
+    fn the_v04_values_go_after_this_builds_own_whether_on_or_off() {
         let run = values(&[
-            ("electron.app.Pipette", Some(&format!(r#""{ELECTRON_DIR}\Pipette.exe""#))),
+            ("electron.app.Pipette", Some(&format!(r#""{V04_DIR}\Pipette.exe""#))),
             ("OneDrive", Some(r#""C:\Program Files\Microsoft OneDrive\OneDrive.exe" /background"#)),
         ]);
         for enabled in [true, false] {
-            let changes = plan(enabled, EXE, &run, &[ELECTRON_DIR.to_owned()]);
+            let changes = plan(enabled, EXE, &run, &[V04_DIR.to_owned()]);
             assert_eq!(changes[..2], own(enabled)[..]);
             assert_eq!(
                 changes[2..],
@@ -298,32 +292,31 @@ mod tests {
     }
 
     #[test]
-    fn electron_values_are_found_by_what_they_start() {
-        let dirs = electron_default_dirs(Some(r"C:\Users\u\AppData\Local"), Some(r"C:\Program Files"));
-        let electron =
-            |name: &str, data: &str| plan(true, EXE, &values(&[(name, Some(data))]), &dirs).len() == 4;
-        // Electron's quoted path, with arguments, in any case, with forward
+    fn v04_values_are_found_by_what_they_start() {
+        let dirs = v04_default_dirs(Some(r"C:\Users\u\AppData\Local"), Some(r"C:\Program Files"));
+        let v04 = |name: &str, data: &str| plan(true, EXE, &values(&[(name, Some(data))]), &dirs).len() == 4;
+        // The 0.4 build's quoted path, with arguments, in any case, with forward
         // slashes, unquoted, in the per-machine folder.
-        assert!(electron("some name", r#""C:\Users\u\AppData\Local\Programs\pipette-desktop\Pipette.exe""#));
-        assert!(electron("x", r#""c:\users\u\appdata\local\programs\PIPETTE-DESKTOP\pipette.EXE" --hidden"#));
-        assert!(electron("x", "C:/Users/u/AppData/Local/Programs/pipette-desktop/Pipette.exe"));
-        assert!(electron("x", r"C:\Users\u\AppData\Local\Programs\pipette-desktop\Pipette.exe --flag"));
-        assert!(electron("x", r#""C:\Program Files\pipette-desktop\Pipette.exe""#));
-        // This build's folder (the Electron build was installed into it).
-        assert!(electron("x", r#""C:\Users\u\AppData\Local\Pipette\Pipette.exe""#));
-        // Electron's default name, Pipette.exe anywhere.
-        assert!(electron("electron.app.Pipette", r#""D:\Apps\Pipette\Pipette.exe""#));
-        assert!(electron("ELECTRON.APP.pipette-desktop", r"D:\Apps\Pipette\Pipette.exe"));
+        assert!(v04("some name", r#""C:\Users\u\AppData\Local\Programs\pipette-desktop\Pipette.exe""#));
+        assert!(v04("x", r#""c:\users\u\appdata\local\programs\PIPETTE-DESKTOP\pipette.EXE" --hidden"#));
+        assert!(v04("x", "C:/Users/u/AppData/Local/Programs/pipette-desktop/Pipette.exe"));
+        assert!(v04("x", r"C:\Users\u\AppData\Local\Programs\pipette-desktop\Pipette.exe --flag"));
+        assert!(v04("x", r#""C:\Program Files\pipette-desktop\Pipette.exe""#));
+        // This build's folder (the 0.4 build was installed into it).
+        assert!(v04("x", r#""C:\Users\u\AppData\Local\Pipette\Pipette.exe""#));
+        // The 0.4 build's default name, Pipette.exe anywhere.
+        assert!(v04("electron.app.Pipette", r#""D:\Apps\Pipette\Pipette.exe""#));
+        assert!(v04("ELECTRON.APP.pipette-desktop", r"D:\Apps\Pipette\Pipette.exe"));
         // An unquoted path with spaces.
-        assert!(electron("electron.app.Pipette", r"D:\My Apps\Pipette\Pipette.exe"));
+        assert!(v04("electron.app.Pipette", r"D:\My Apps\Pipette\Pipette.exe"));
         // Not ours: another program, Pipette.exe elsewhere under another
         // name, this build's own value, a value that is not a string.
-        assert!(!electron("OneDrive", r#""C:\Program Files\Microsoft OneDrive\OneDrive.exe" /background"#));
-        assert!(!electron("Pipette Tools", r#""D:\Other\Pipette.exe""#));
-        assert!(!electron("x", r#""C:\Users\u\AppData\Local\Programs\pipette-desktop\Pipette Updater.exe""#));
-        assert!(!electron("x", r#""C:\Users\u\AppData\Local\Programs\pipette-desktop""#));
-        assert!(!electron("x", ""));
-        assert!(!electron("x", r#"""#));
+        assert!(!v04("OneDrive", r#""C:\Program Files\Microsoft OneDrive\OneDrive.exe" /background"#));
+        assert!(!v04("Pipette Tools", r#""D:\Other\Pipette.exe""#));
+        assert!(!v04("x", r#""C:\Users\u\AppData\Local\Programs\pipette-desktop\Pipette Updater.exe""#));
+        assert!(!v04("x", r#""C:\Users\u\AppData\Local\Programs\pipette-desktop""#));
+        assert!(!v04("x", ""));
+        assert!(!v04("x", r#"""#));
         assert_eq!(plan(true, EXE, &values(&[("pipette", Some(r#""D:\x\Pipette.exe""#))]), &dirs).len(), 2);
         assert_eq!(plan(true, EXE, &values(&[("electron.app.Pipette", None)]), &dirs).len(), 2);
     }
@@ -344,10 +337,10 @@ mod tests {
     #[test]
     fn the_default_folders_follow_the_environment() {
         assert_eq!(
-            electron_default_dirs(Some(r"C:\L"), Some(r"C:\P")),
+            v04_default_dirs(Some(r"C:\L"), Some(r"C:\P")),
             [r"C:\L\Programs\pipette-desktop".to_owned(), r"C:\P\pipette-desktop".to_owned()]
         );
-        assert!(electron_default_dirs(None, Some("")).is_empty());
+        assert!(v04_default_dirs(None, Some("")).is_empty());
     }
 
     #[test]

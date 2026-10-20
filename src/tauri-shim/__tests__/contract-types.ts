@@ -21,8 +21,7 @@
 //   declaration, so this check does not cover that field. Each one is
 //   listed here; there are none.
 
-import type { DecompressDefinition } from '../../preload/protocol-members'
-import type { VirtualDeviceControllerState } from '../../main/virtual-device/index'
+import type { DecompressDefinition } from '../protocol-members'
 import type { PackImportFile } from '../../shared/types/pack-import'
 import type { DeviceInfo, DeviceType } from '../../shared/types/protocol'
 import type { VialAPI } from '../../shared/types/vial-api'
@@ -43,7 +42,6 @@ import type { UpdateFailure } from '../generated/UpdateFailure'
 import type { UpdateInstallResult } from '../generated/UpdateInstallResult'
 import type { UpdateProgress } from '../generated/UpdateProgress'
 import type { UpdateProgress as SharedUpdateProgress } from '../../shared/types/update'
-import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
 /** `true` when each type is assignable to the other. The tuples stop the
  *  conditional from distributing over unions. */
@@ -72,8 +70,6 @@ export type ContractChecks = [
   // file's text into the PackImportFile the renderer gets)
   Assert<MutuallyAssignable<PackImportFileRead['filePath'], PackImportFile['filePath']>>,
   Assert<MutuallyAssignable<PackImportFileRead['fileSizeBytes'], PackImportFile['fileSizeBytes']>>,
-  // src-tauri/src/dev_commands/tools.rs
-  Assert<MutuallyAssignable<GeneratedControllerState, VirtualDeviceControllerState>>,
   // Cloud Sync
   Assert<MutuallyAssignable<SyncAuthStatus, Awaited<ReturnType<VialAPI['syncAuthStatus']>>>>,
   Assert<MutuallyAssignable<StoredPasswordStatus, Awaited<ReturnType<VialAPI['syncPasswordStatus']>>>>,

@@ -20,7 +20,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../../../preload/macro', () => ({
+vi.mock('../../../../shared/macro', () => ({
   jsonToMacroActions: (json: string) => {
     try {
       const parsed = JSON.parse(json)

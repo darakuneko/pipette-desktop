@@ -10,7 +10,7 @@ import type {
   DynamicEntryCounts,
   UnlockStatus,
 } from '../../shared/types/protocol'
-import type { MacroAction } from '../../preload/macro'
+import type { MacroAction } from '../../shared/macro'
 import type { KeyboardLayout } from '../../shared/kle/types'
 import { EMPTY_UID, ECHO_DETECTED_MSG } from '../../shared/constants/protocol'
 

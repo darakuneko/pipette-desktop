@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const invoke = vi.hoisted(() => vi.fn())
 vi.mock('@tauri-apps/api/core', () => ({ invoke }))
-vi.mock('../../preload/protocol', () => ({
+vi.mock('../protocol', () => ({
   getDefinitionSize: vi.fn(() => Promise.resolve(3)),
   getDefinitionRaw: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
 }))

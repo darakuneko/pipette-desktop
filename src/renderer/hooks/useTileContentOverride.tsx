@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import type { Keycode } from '../../shared/keycodes/keycodes'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../shared/types/protocol'
-import type { MacroAction } from '../../preload/macro'
+import type { MacroAction } from '../../shared/macro'
 import { TdTileGrid, MacroTileGrid, ComboTileGrid, KeyOverrideTileGrid, AltRepeatKeyTileGrid } from '../components/keycodes/TileGrids'
 import { useEntryHoverPreviewEnabled } from '../components/keycodes/entry-hover-context'
 import { TileEntryHoverBubble, useTileEntryHover } from '../components/keycodes/tile-entry-hover'

@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
 import { codeToLabel, findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import { MACRO_PREFIX, macroActionLabel } from './macro-action-format'
 import {
   isAltRepeatKeyConfigured, isComboConfigured, isKeyOverrideConfigured, isMacroConfigured, isTapDanceConfigured,

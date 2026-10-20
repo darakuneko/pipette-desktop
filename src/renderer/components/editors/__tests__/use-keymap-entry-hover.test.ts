@@ -6,7 +6,7 @@ import { renderHook, act } from '@testing-library/react'
 import { hoverTargetOf, useKeymapEntryHover, type UseKeymapEntryHoverOptions } from '../use-keymap-entry-hover'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { KleKey } from '../../../../shared/kle/types'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 const getMacroIndex = vi.fn((code: number) => (code >= 20 && code < 30 ? code - 20 : -1))
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Keycode } from '../../shared/keycodes/keycodes'
 import { deserialize } from '../../shared/keycodes/keycodes'
-import type { MacroAction } from '../../preload/macro'
+import type { MacroAction } from '../../shared/macro'
 import type { TapDanceEntry } from '../../shared/types/protocol'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'

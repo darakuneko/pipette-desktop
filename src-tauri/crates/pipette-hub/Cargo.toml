@@ -55,10 +55,5 @@ pipette-time = { path = "../pipette-time", features = ["test-util"] }
 tempfile = { workspace = true }
 tokio = { version = "=1.53.3", features = ["rt", "macros", "time", "test-util"] }
 
-# The path checks of the Hub peer run with this crate's tests.
-[[example]]
-name = "hub_peer"
-test = true
-
 [lints]
 workspace = true

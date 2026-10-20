@@ -15,7 +15,7 @@ import { assertDevToolsBinary } from './hub-env'
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
-/** The binary of `pnpm tauri:build:debug` (`mainBinaryName` in
+/** The binary of `pnpm build:debug` (`mainBinaryName` in
  *  src-tauri/tauri.conf.json). A debug build of `tauri build` embeds the
  *  renderer of out-tauri/renderer; a plain `cargo build` would load the Vite
  *  dev server instead. */

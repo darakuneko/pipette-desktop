@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Refusing to start while the Electron build runs on the same userData
+//! Refusing to start while the 0.4 build runs on the same userData
 //! directory: the reason goes to stderr and into a native message box
 //! (English, as the app has no translations before the page loads), then
 //! the process exits with 1. Without a display the message box is skipped.
@@ -9,9 +9,9 @@ use std::path::Path;
 /// The title of the message box.
 const TITLE: &str = "Pipette";
 
-/// Why the app does not start: the Electron build (process `pid`, when
+/// Why the app does not start: the 0.4 build (process `pid`, when
 /// known) holds `dir`, as its lock file `lock` says.
-pub fn electron_running(dir: &Path, pid: Option<u32>, lock: &Path) -> String {
+pub fn v04_running(dir: &Path, pid: Option<u32>, lock: &Path) -> String {
     let process = pid.map(|pid| format!(" (process {pid})")).unwrap_or_default();
     format!(
         "Pipette can't start because an older version of Pipette{process} is running with the same data \
@@ -23,7 +23,7 @@ pub fn electron_running(dir: &Path, pid: Option<u32>, lock: &Path) -> String {
 }
 
 /// Why the app does not start: the lock file `lock` in the data folder could
-/// not be opened to lock the folder against the Electron build.
+/// not be opened to lock the folder against the 0.4 build.
 #[cfg(target_os = "windows")]
 pub fn lock_failed(lock: &Path, err: &dyn std::fmt::Display) -> String {
     format!(
@@ -78,10 +78,10 @@ mod tests {
     fn the_message_names_the_folder_the_process_and_the_lock_file() {
         let dir = std::env::temp_dir().join("pipette-desktop");
         let lock = dir.join("SingletonLock");
-        let message = electron_running(&dir, Some(4242), &lock);
+        let message = v04_running(&dir, Some(4242), &lock);
         assert!(message.contains(" (process 4242) "), "{message}");
         assert!(message.contains(&format!("{}\n", dir.display())), "{message}");
         assert!(message.contains(&format!("remove\n{}\n", lock.display())), "{message}");
-        assert!(!electron_running(&dir, None, &lock).contains("(process"));
+        assert!(!v04_running(&dir, None, &lock).contains("(process"));
     }
 }

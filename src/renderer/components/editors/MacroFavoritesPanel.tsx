@@ -8,7 +8,7 @@
 
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { Props as MacroEditorProps } from './macro-editor-types'
 
 interface Props {

@@ -8,7 +8,7 @@ import {
   type EntryBubbleLayout, type EntryBubbleMeasurement,
 } from '../EntryHoverBubble'
 import type { EntryHoverBubbleState } from '../use-entry-hover'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),

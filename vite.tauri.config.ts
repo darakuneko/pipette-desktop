@@ -1,58 +1,32 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Renderer build for the Tauri shell. Takes the renderer settings shared with
-// the Electron build and swaps the HTML entry for tauri.html, whose entry
-// module installs the vialAPI shim before loading the renderer.
+// Renderer build for the Tauri shell. The HTML entry is tauri.html, whose
+// entry module installs the vialAPI shim before loading the renderer.
 
+import { statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, normalizePath, type Plugin } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite'
 import { devServerHeaders } from './src/tauri-shim/csp-policy'
-import { rendererViteConfig } from './vite.renderer.shared'
+import pkg from './package.json'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const RENDERER_ROOT = resolve(__dirname, 'src/renderer')
 const DEV_PORT = 5173
+const TARGET = 'esnext'
 
-// In the form Vite gives resolved ids: with `/` separators on Windows too.
-const ELECTRON_HID_TRANSPORT = normalizePath(resolve(__dirname, 'src/preload/hid-transport.ts'))
-const TAURI_HID_TRANSPORT = normalizePath(resolve(__dirname, 'src/tauri-shim/hid-transport.ts'))
-
-const shared = rendererViteConfig()
-
-/** src/preload/protocol.ts runs in the WebView as is; its import of the
- *  Electron transport (ipcRenderer) is served by the Tauri one. Both export
- *  the HidTransport members (src/shared/types/hid-transport.ts). A
- *  production build that never resolved the Electron transport fails: the
- *  swap would no longer be doing anything, so the protocol must have
- *  stopped importing the transport the way this plugin expects. */
-function tauriHidTransport(): Plugin {
-  let isBuild = false
-  let swapped = false
-  return {
-    name: 'pipette-tauri-hid-transport',
-    enforce: 'pre',
-    configResolved(config) {
-      isBuild = config.command === 'build'
-    },
-    async resolveId(source, importer, options) {
-      const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
-      if (resolved?.id !== ELECTRON_HID_TRANSPORT) return null
-      swapped = true
-      return TAURI_HID_TRANSPORT
-    },
-    buildEnd(error) {
-      if (isBuild && !error && !swapped) {
-        this.error(`the build never imported ${ELECTRON_HID_TRANSPORT}, so the Tauri HID transport was not swapped in`)
-      }
-    },
-  }
-}
-
-// The root stays at src/renderer, as in the Electron build: Tailwind scans
-// for class names under the Vite root.
+// The root is src/renderer: Tailwind scans for class names under the Vite
+// root.
 export default defineConfig({
-  ...shared,
-  plugins: [tauriHidTransport(), ...shared.plugins],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_TIME__: JSON.stringify(statSync('src/renderer/i18n/locales/english.json').mtime.toISOString()),
+  },
+  plugins: [react(), tailwindcss()],
+  esbuild: {
+    target: TARGET,
+  },
   root: RENDERER_ROOT,
   base: './',
   clearScreen: false,
@@ -62,7 +36,7 @@ export default defineConfig({
     headers: devServerHeaders(),
   },
   build: {
-    ...shared.build,
+    target: TARGET,
     outDir: resolve(__dirname, 'out-tauri/renderer'),
     emptyOutDir: true,
     rollupOptions: {

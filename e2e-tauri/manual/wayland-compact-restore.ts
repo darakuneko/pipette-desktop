@@ -5,7 +5,7 @@
 // GTK draws client-side decorations there, and the window grows by them
 // when the size the app keeps and the size it sets back are not the same
 // measure. Not part of the e2e suite (the suite runs on Xvfb, where GTK
-// draws none); run by hand on Linux after `pnpm tauri:build:debug`:
+// draws none); run by hand on Linux after `pnpm build:debug`:
 //
 //   npx tsx e2e-tauri/manual/wayland-compact-restore.ts
 //

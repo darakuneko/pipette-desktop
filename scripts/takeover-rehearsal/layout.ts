@@ -7,8 +7,8 @@
 import { existsSync, realpathSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 
-/** The directory name of the Electron build's userData, the one a
- *  distributed release takes over (`ELECTRON_USER_DATA_NAME` of
+/** The directory name of the 0.4 build's userData, the one a
+ *  distributed release takes over (`V04_USER_DATA_NAME` of
  *  src-tauri/crates/pipette-fs/src/user_data.rs). */
 export const USER_DATA_NAME = 'pipette-desktop'
 

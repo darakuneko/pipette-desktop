@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The Tauri window's CSP (src-tauri/tauri.conf.json) must stay the Electron
-// policy from src/main/csp.ts plus only the sources Tauri's IPC needs, and
-// its response headers the Electron ones, so a change to either side cannot
+// The Tauri window's CSP (src-tauri/tauri.conf.json) must stay the base
+// policy from src/shared/csp.ts plus only the sources Tauri's IPC needs, and
+// its response headers the base ones, so a change to either side cannot
 // loosen or drift from the other unnoticed.
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildCsp, securityHeaders } from '../../main/csp'
+import { buildCsp, securityHeaders } from '../../shared/csp'
 import viteTauriConfig from '../../../vite.tauri.config'
 import { devServerHeaders, TAURI_IPC_SOURCES } from '../csp-policy'
 
@@ -39,7 +39,7 @@ function expectedPolicy(isDev: boolean): Policy {
 }
 
 /**
- * Electron headers Tauri cannot send, each with the directive of the CSP
+ * Base headers Tauri cannot send, each with the directive of the CSP
  * that does the same job. Tauri accepts only a fixed list of header names.
  */
 const REPLACED_HEADERS: Record<string, [directive: string, sources: string[]]> = {
@@ -67,11 +67,11 @@ function tauriPolicy(key: 'csp' | 'devCsp'): Policy {
 }
 
 describe('Tauri CSP', () => {
-  it('matches the Electron production policy plus the Tauri IPC sources', () => {
+  it('matches the base production policy plus the Tauri IPC sources', () => {
     expect(tauriPolicy('csp')).toEqual(expectedPolicy(false))
   })
 
-  it('matches the Electron dev policy plus the Tauri IPC sources', () => {
+  it('matches the base dev policy plus the Tauri IPC sources', () => {
     expect(tauriPolicy('devCsp')).toEqual(expectedPolicy(true))
   })
 
@@ -83,11 +83,9 @@ describe('Tauri CSP', () => {
 })
 
 describe('Tauri security headers', () => {
-  it('sends the Electron headers it can, and no others', () => {
+  it('sends the base headers it can, and no others', () => {
     const expected = Object.fromEntries(
-      Object.entries(securityHeaders)
-        .filter(([name]) => !(name in REPLACED_HEADERS))
-        .map(([name, values]) => [name, values.join(', ')]),
+      Object.entries(securityHeaders).filter(([name]) => !(name in REPLACED_HEADERS)),
     )
     expect(security.headers).toEqual(expected)
   })
@@ -108,11 +106,9 @@ describe('Tauri dev server headers', () => {
     expect(sortedPolicy(parseCsp(headers['Content-Security-Policy']))).toEqual(tauriPolicy('devCsp'))
   })
 
-  it('carry the Electron security headers', () => {
+  it('carry the base security headers', () => {
     const { 'Content-Security-Policy': _csp, ...rest } = headers
-    expect(rest).toEqual(
-      Object.fromEntries(Object.entries(securityHeaders).map(([name, values]) => [name, values.join(', ')])),
-    )
+    expect(rest).toEqual(securityHeaders)
   })
 
   it('are what vite.tauri.config.ts serves', () => {

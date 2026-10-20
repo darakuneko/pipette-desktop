@@ -54,7 +54,7 @@ export interface PdfExportInput {
   macros?: PdfMacroAction[][]
 }
 
-// Structurally compatible with MacroAction from preload/macro.ts
+// Structurally compatible with MacroAction from ./macro.ts
 export type PdfMacroAction =
   | { type: 'text'; text: string }
   | { type: 'tap'; keycodes: number[] }

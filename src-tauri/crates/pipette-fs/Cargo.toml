@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-fs"
-description = "File system groundwork: atomic writes, the userData directory and the Electron profile lock check"
+description = "File system groundwork: atomic writes, the userData directory and the 0.4 profile lock check"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,12 +10,12 @@ rust-version.workspace = true
 
 [dependencies]
 # The OS config directory, the base of the default userData (the same one
-# Electron's app.getPath('userData') is under). Tauri already pulls it in.
+# the 0.4 build's userData is under). Tauri already pulls it in.
 dirs = "=7.0.0"
 thiserror = "=2.0.21"
 
-# The host name and the process liveness check of the Electron lock
-# (src/electron_lock.rs), without unsafe code.
+# The host name and the process liveness check of the 0.4 lock
+# (src/v04_lock.rs), without unsafe code.
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "=1.1.2", features = ["process", "system"] }
 

@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The input checks the favorite post members run before they read the
-// entry, as the Electron handlers run them before they read it: copies of
-// src/main/hub/hub-ipc-shared.ts, byte for byte between the markers.
-// __tests__/hub-favorite.test.ts compares them with that file; when it
-// changes, copy them again.
+// entry.
 
-// --- copied from src/main/hub/hub-ipc-shared.ts ---
 export const POST_ID_RE = /^[a-zA-Z0-9_-]+$/
 
 export function validatePostId(postId: string): void {
@@ -26,4 +22,3 @@ export function validateTitle(title: unknown): string {
 export function extractError(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback
 }
-// --- end of the copy ---

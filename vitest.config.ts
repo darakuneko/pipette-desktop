@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import os from 'node:os'
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // Leave 2 cores free so high-parallelism workers don't starve fake-timer-based
 // polling tests (race-prone under saturated CPU).
@@ -16,28 +12,14 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify('0.1.0'),
-    // Mirror electron.vite.config.ts: the renderer reads
+    // Mirror vite.tauri.config.ts: the renderer reads
     // `__BUILD_TIME__` for the built-in English language pack row.
     // Without this, every component that imports LanguagePacksModal
     // throws at module-init time inside vitest.
     __BUILD_TIME__: JSON.stringify('1970-01-01T00:00:00.000Z'),
   },
-  resolve: {
-    alias: {
-      // Route better-sqlite3 to a sql.js-backed adapter so vitest doesn't
-      // depend on the Electron-ABI prebuilt binary. Production code path is
-      // untouched — the alias only applies inside vitest's module graph.
-      'better-sqlite3': resolve(__dirname, 'src/main/__tests__/better-sqlite3-adapter.ts'),
-      // Replace the real `electron` package with a stub. The real package's
-      // `index.js` throws "Electron failed to install correctly" at module
-      // load when `path.txt` is missing, which can happen on fresh CI
-      // installs where the postinstall script silently short-circuits.
-      // Tests that need specific behavior still override via `vi.mock`.
-      electron: resolve(__dirname, 'src/main/__tests__/electron-stub.ts'),
-    },
-  },
   test: {
-    // Default: node environment for preload/shared tests
+    // Default: node environment for shim/shared tests
     // Component tests use // @vitest-environment jsdom directive
     // The e2e harness's own checks run here too; the specs run under wdio.
     // So do the takeover rehearsal script's.
@@ -47,10 +29,7 @@ export default defineConfig({
       'e2e-tauri/doc-capture/__tests__/**/*.test.ts',
       'scripts/takeover-rehearsal/__tests__/**/*.test.ts',
     ],
-    setupFiles: [
-      'src/renderer/__tests__/setup.ts',
-      'src/main/__tests__/setup-sqlite-mock.ts',
-    ],
+    setupFiles: ['src/renderer/__tests__/setup.ts'],
     // Retry timer/concurrency-sensitive tests up to 3 times before failing the suite.
     retry: 3,
     // Vitest 4's pool rework moved poolOptions.threads.{maxThreads,minThreads}

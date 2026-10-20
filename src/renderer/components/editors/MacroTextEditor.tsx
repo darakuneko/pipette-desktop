@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { MacroAction } from '../../../preload/macro'
-import { jsonToMacroActions } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
+import { jsonToMacroActions } from '../../../shared/macro'
 import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 interface Props {
