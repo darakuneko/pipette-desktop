@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // The typing analytics in the Tauri build: a keyboard's data seeded as day
-// files under this device's machine hash (the seed of the Electron build's
-// Analyze e2e, helpers/analyze-seed.ts) and another device's day file,
-// rebuilt into the cache at launch, and every Analyze tab drawn from it; an
-// Analyze filter saved, loaded, renamed and deleted; a restart that keeps
-// the cache, and one without sync_state.json and the cache that rebuilds
-// it; the Data modal's typing operations (a day exported into a folder
-// and the exported file imported, through the file dialogs; a local day
-// deleted; every local day deleted) and the delete of the other device's
-// data; the virtual keyboard recorded with REC on, into its day file and a
-// sync unit; a Typing Test run and its run log; keys typed right before a
-// quit, whose minute the quit writes; the recorded keyboard in Analyze;
-// and no page errors on the way. The tests share one app session and run
-// in order.
+// files under this device's machine hash (helpers/analyze-seed.ts) and
+// another device's day file, rebuilt into the cache at launch, and every
+// Analyze tab drawn from it; an Analyze filter saved, loaded, renamed and
+// deleted; a restart that keeps the cache, and one without sync_state.json
+// and the cache that rebuilds it; the Data modal's typing operations (a day
+// exported into a folder and the exported file imported, through the file
+// dialogs; a local day deleted; every local day deleted) and the delete of
+// the other device's data; the virtual keyboard recorded with REC on, into
+// its day file and a sync unit; a Typing Test run and its run log; keys
+// typed right before a quit, whose minute the quit writes; the recorded
+// keyboard in Analyze; and no page errors on the way. The tests share one
+// app session and run in order.
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -77,6 +76,38 @@ interface DaySummary {
 interface TypingSyncState {
   my_device_id: string
   uploaded: Record<string, unknown>
+}
+
+/** Starts recording, in the page, the text of the first element matching
+ *  `selector` that the page adds. A confirmation shown for a moment (the
+ *  "Saved" flash lasts 2 s) can come and go between two polls of
+ *  waitForDisplayed when the WebDriver round trips of a slow runner take
+ *  longer; the page's own MutationObserver sees every insertion. */
+async function watchForInsertion(selector: string): Promise<void> {
+  await browser.execute((sel: string) => {
+    const page = window as unknown as { __e2eInserted?: Record<string, string | null> }
+    const inserted = (page.__e2eInserted ??= {})
+    inserted[sel] = null
+    const observer = new MutationObserver(() => {
+      const element = document.querySelector(sel)
+      if (!element) return
+      inserted[sel] = element.textContent ?? ''
+      observer.disconnect()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+  }, selector)
+}
+
+/** Waits until {@link watchForInsertion} saw `selector` inserted, and
+ *  returns its text at that moment. */
+async function waitForInsertion(selector: string, timeoutMsg: string): Promise<string> {
+  const read = (): Promise<string | null> =>
+    browser.execute(
+      (sel: string) => (window as unknown as { __e2eInserted?: Record<string, string | null> }).__e2eInserted?.[sel] ?? null,
+      selector,
+    )
+  await browser.waitUntil(async () => (await read()) !== null, { timeoutMsg })
+  return (await read()) ?? ''
 }
 
 function utcDay(ms: number): string {
@@ -328,8 +359,11 @@ describe('Tauri build typing analytics', () => {
     await $(tid('analyze-filter-store-toggle')).click()
     await $(tid('analyze-filter-store-panel')).waitForDisplayed()
     await $(tid('analyze-filter-store-save-input')).setValue(FILTER_LABEL)
+    const savedFlash = tid('analyze-filter-store-saved-flash')
+    expect(await $(savedFlash).isExisting()).toBe(false)
+    await watchForInsertion(savedFlash)
     await $(tid('analyze-filter-store-save-submit')).click()
-    await $(tid('analyze-filter-store-saved-flash')).waitForDisplayed()
+    expect(await waitForInsertion(savedFlash, 'the Saved confirmation did not show')).toBe('Saved')
 
     const listed = async () =>
       (await vialApi<{ success: boolean; entries?: { id: string; label: string }[] }>('analyzeFilterStoreList', DUMMY_TA_UID))
