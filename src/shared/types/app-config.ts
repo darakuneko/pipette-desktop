@@ -107,13 +107,11 @@ export interface AppConfig {
    * exposes no Settings UI toggle — nothing for the user to turn on or
    * off. True once the app has successfully run a one-time `'packs'`-
    * scoped download (i18n + theme packs) after sync credentials became
-   * ready — see `useDeviceLifecycle`'s first-sync seam. Exists because
-   * the 3-minute poll cannot discover a pack that was already on Drive
-   * before this machine ever polled (see `matchesScope`'s doc in
-   * sync-service.ts), so a fresh machine would otherwise never learn
-   * about pre-existing remote packs without the user manually opening a
-   * Pack Manager modal and clicking pull. Stays false on failure so the
-   * next launch retries. */
+   * ready — see `useDeviceLifecycle`'s first-sync seam. The poll merges
+   * packs too, but only on its passes (the first about 15 s after launch,
+   * then every 3 minutes); this pull brings the packs already on Drive in
+   * at the first connect. Stays false on failure so the next launch
+   * retries. */
   packsPulledOnce: boolean
   /** The version the user chose to skip in the update modal ("Skip this
    * version"), as the manifest names it. The startup check does not offer

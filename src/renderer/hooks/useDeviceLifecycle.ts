@@ -36,10 +36,9 @@ interface Options {
   hasPassword: boolean
   syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>
   deviceSyncing: boolean
-  // First-sync auto-fire (i18n/theme pack discovery — see
-  // matchesScope's doc in sync-service.ts for why the 3-minute poll
-  // alone cannot discover a pack that predates this machine's first
-  // poll). `packsPulledOnce` is read from AppConfig; `markPacksPulledOnce`
+  // First-sync auto-fire (i18n/theme packs on Drive arrive at the first
+  // connect instead of at the next poll pass). `packsPulledOnce` is read
+  // from AppConfig; `markPacksPulledOnce`
   // persists it back — called only after a successful pull, so a
   // failure retries on the next connect.
   packsPulledOnce: boolean
