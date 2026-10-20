@@ -5,14 +5,6 @@ on:
     branches: [main]
   # tauri-migration.yml runs this check on the Tauri migration branches.
   workflow_call:
-    inputs:
-      check-fixtures:
-        description: >-
-          Also check that the fixtures under src-tauri match their generators.
-          The generators exist only on the Tauri migration branches.
-        type: boolean
-        required: false
-        default: false
 
 permissions:
   contents: read
@@ -38,66 +30,11 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
-      # Native modules build against libusb and libudev; Xvfb runs the
-      # Electron E2E specs.
-      - uses: ./.github/actions/install-linux-deps
-        with:
-          extra-packages: xvfb
-
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
       - run: npx tsx scripts/check-hook-deps-tdz.ts
       - run: pnpm test
-      - run: pnpm build
-
-      # The analytics DB generator runs under Electron acting as Node, with
-      # better-sqlite3 rebuilt for Electron by the install above. The resident
-      # generator starts its own Xvfb (installed above) for the X11 golden.
-      - name: Regenerate the fixtures under src-tauri
-        if: inputs.check-fixtures
-        run: |
-          pnpm generate:virtual-device-fixtures
-          pnpm generate:definition-fixtures
-          pnpm generate:fs-logger-fixtures
-          pnpm generate:js-json-fixtures
-          pnpm generate:app-config-fixtures
-          pnpm generate:entry-store-fixtures
-          pnpm generate:sync-pending-fixtures
-          pnpm generate:keyboard-store-fixtures
-          pnpm generate:pack-store-fixtures
-          pnpm generate:hid-fixtures
-          pnpm generate:sync-format-fixtures
-          pnpm generate:sync-fixtures
-          pnpm generate:analytics-db-fixtures
-          pnpm generate:typing-text-fixtures
-          pnpm generate:typing-dataset-fixtures
-          pnpm generate:active-window-fixtures
-          pnpm generate:hub-fixtures
-          pnpm generate:resident-fixtures
-
-      # ts_random_envelopes.json is recorded with real random salts and IVs,
-      # so it differs on every run.
-      - name: Verify the fixtures under src-tauri match their generators
-        if: inputs.check-fixtures
-        run: |
-          git diff --exit-code -- src-tauri ':(exclude)src-tauri/crates/pipette-sync-format/tests/fixtures/ts_random_envelopes.json'
-          untracked="$(git ls-files --others --exclude-standard -- src-tauri)"
-          if [ -n "$untracked" ]; then
-            echo "Untracked files under src-tauri:"
-            echo "$untracked"
-            exit 1
-          fi
-
-      - name: Install Playwright OS dependencies for the Electron E2E specs
-        run: npx playwright install-deps
-
-      # Only specs tagged @virtual run in CI — they're self-contained: they
-      # drive the software-emulated Virtual Keyboard device or a dummy JSON
-      # definition. Other e2e specs assume real hardware or a local Hub
-      # instance and can't run on a CI runner.
-      - name: Run @virtual-tagged E2E specs against the virtual device
-        run: xvfb-run -a npx playwright test --grep @virtual
 
       - run: pnpm run doc:guide
       - name: Verify generated docs are up to date

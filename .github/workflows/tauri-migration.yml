@@ -31,8 +31,6 @@ concurrency:
 jobs:
   electron-check:
     uses: ./.github/workflows/ci.yml
-    with:
-      check-fixtures: true
 
   # The workspace's tests, and every check that reads what they write (the
   # userData trees and the generated shim files), in one job.
@@ -106,47 +104,16 @@ jobs:
       # of pipette-drive passes (in the step above), the Node fake Hub passes
       # the cases it shares with the in-memory Hub of pipette-hub and serves
       # the desktop app's Hub client, the Node fake notice server answers,
-      # records and fails as the resident e2e tests script it, the fake
+      # records and fails as the resident e2e tests script it, and the fake
       # update server serves signed and tampered releases the release
-      # scripts' minisign check agrees with, and the
-      # harness of the sync fixture generators keeps the Electron code off
-      # the network and the real userData.
-      - name: Fake Drive, fake Hub, fake notice and update servers, update manifests and sync fixture harness
+      # scripts' minisign check agrees with.
+      - name: Fake Drive, fake Hub, fake notice and update servers and update manifests
         run: |
           pnpm run test:fake-drive
           pnpm run test:fake-hub
           pnpm run test:fake-notification
           pnpm run test:fake-update
           pnpm run test:update-manifest
-          pnpm run test:sync-fixtures-harness
-
-      # The harness of the Hub fixture generators keeps the Electron Hub
-      # code off the real Hub, Google and the real userData.
-      - name: Hub fixture harness
-        run: pnpm run test:hub-fixtures-harness
-
-      # The test above wrote userData trees with the Rust stores (the
-      # tests/rust_user_data.rs of pipette-keyboard-stores,
-      # pipette-pack-stores and pipette-typing-datasets) and with the Rust
-      # Hub handlers (that of pipette-hub); the Electron build's handlers
-      # must read them, answer as the crates do and write nothing, and
-      # Electron's startup update must find the Hub-linked language packs
-      # up to date. The tree of pipette-typing-analytics (its
-      # tests/rust_user_data.rs) must give the same machine hash, keep or
-      # rebuild the same cache and answer every query member the same.
-      # The sync interop test runs the Electron sync code and the Rust
-      # engine (pipette-sync's example sync_peer) against one Node fake
-      # Drive, and has the Electron code sync a copy of the userData the
-      # Rust engine synced without changing it.
-      - name: Read the Rust stores' userData with the Electron handlers
-        run: |
-          pnpm run verify:keyboard-store-rust-user-data
-          pnpm run verify:pack-store-rust-user-data
-          pnpm run verify:hub-rust-user-data
-          pnpm run verify:typing-dataset-rust-user-data
-          pnpm run verify:analytics-rust-user-data
-          (cd src-tauri && cargo build -p pipette-sync --example sync_peer)
-          pnpm run test:sync-interop
 
       # --intent-to-add makes a new file show up in the diff too;
       # comparing with HEAD keeps a deleted one in it even when the add
@@ -189,7 +156,7 @@ jobs:
       - name: e2e (Tauri)
         env:
           PIPETTE_E2E_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e:tauri
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e
 
   # The operation guide's screenshots (e2e-tauri/doc-capture: the main
   # capture and the one of each area, in that order).

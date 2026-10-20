@@ -19,7 +19,7 @@ runs:
     # build and its wiring in tauri.conf.json.
     - name: Debug build
       shell: bash
-      run: pnpm tauri:build:debug
+      run: pnpm build:debug
 
     # The WebDriver of WebKitGTK is webkit2gtk-driver up to Ubuntu 24.04 and
     # webkitgtk-webdriver from 26.04 on. xvfb gives the app a display and
