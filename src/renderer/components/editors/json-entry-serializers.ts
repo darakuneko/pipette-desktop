@@ -2,7 +2,7 @@
 
 import type { ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
 import { serialize, deserialize } from '../../../shared/keycodes/keycodes'
-import { macroActionsToJson, jsonToMacroActions, type MacroAction } from '../../../preload/macro'
+import { macroActionsToJson, jsonToMacroActions, type MacroAction } from '../../../shared/macro'
 
 type TFunction = (key: string, opts?: Record<string, unknown>) => string
 

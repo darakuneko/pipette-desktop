@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The vialAPI members that run the Vial protocol (./protocol), shared by the
-// Electron preload (./index.ts) and the Tauri shim
-// (src/tauri-shim/device-api.ts). This module imports nothing at run time,
-// so the Tauri renderer bundle can use it without pulling in Electron; each
-// host passes its protocol module and its way of decompressing the
-// keyboard definition.
+// The vialAPI members that run the Vial protocol (./protocol), used by
+// ./api/device.ts. This module imports nothing at run time; the caller
+// passes the protocol module and its way of decompressing the keyboard
+// definition.
 
 import type * as Protocol from './protocol'
 import type { KeyboardDefinition } from '../shared/types/protocol'

@@ -10,7 +10,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { EntryJsonEditor, MacroJsonEditor } from './useKeymapJsonEditors'
 
 export interface UseKeymapTabFooterOptions {

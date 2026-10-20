@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { RemapKind } from '../keyboard/constants'
 import { EMPTY_REMAPPED } from './keymap-editor-types'

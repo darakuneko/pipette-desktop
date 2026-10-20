@@ -22,7 +22,7 @@ import {
   VIAL_MACRO_EXT_DOWN,
   VIAL_MACRO_EXT_UP,
   VIAL_PROTOCOL_ADVANCED_MACROS,
-} from '../../shared/constants/protocol'
+} from '../constants/protocol'
 
 // Convenience: v1 protocol version (below VIAL_PROTOCOL_ADVANCED_MACROS)
 const V1 = VIAL_PROTOCOL_ADVANCED_MACROS - 1

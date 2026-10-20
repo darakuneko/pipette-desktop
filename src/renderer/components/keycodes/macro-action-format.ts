@@ -5,7 +5,7 @@
 // both show the same prefix and label for the same action.
 
 import { codeToLabel } from '../../../shared/keycodes/keycodes'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 
 export const MACRO_PREFIX: Record<MacroAction['type'], string> = {
   tap: 'T',

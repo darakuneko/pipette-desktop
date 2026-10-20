@@ -1,6 +1,6 @@
 /**
  * VIA/Vial protocol command implementation.
- * Runs in preload context, directly uses WebHID transport.
+ * Runs in the WebView; ./hid-transport carries the reports.
  *
  * Byte-level packet construction follows the vial-gui Python reference:
  * - VIA commands: [cmd, ...args] padded to 32 bytes

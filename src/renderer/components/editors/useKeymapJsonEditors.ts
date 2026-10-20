@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
-import { serializeAllMacros, type MacroAction } from '../../../preload/macro'
+import { serializeAllMacros, type MacroAction } from '../../../shared/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
 
 /** Extracts the raw keycodes an entry holds, for the QK_BOOT unlock check. */

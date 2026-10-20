@@ -13,7 +13,7 @@ import { EntryHoverPreviewContext } from '../../keycodes/entry-hover-context'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { UseViewMatrixModeReturn } from '../useViewMatrixMode'
 import type { KleKey } from '../../../../shared/kle/types'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 const CODES: Record<number, string> = {
   1: 'MO(1)', 10: 'KC_A', 11: 'KC_1', 12: 'KC_2', 13: 'KC_3', 20: 'M0', 21: 'M1', 22: 'M2', 25: 'M5',

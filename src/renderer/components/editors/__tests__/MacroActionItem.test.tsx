@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MacroActionItem } from '../MacroActionItem'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -98,7 +98,7 @@ vi.mock('../../keycodes/ModifierCheckboxStrip', () => ({
   ModifierCheckboxStrip: () => null,
 }))
 
-vi.mock('../../../../preload/macro', () => ({
+vi.mock('../../../../shared/macro', () => ({
   deserializeAllMacros: () => [],
 }))
 

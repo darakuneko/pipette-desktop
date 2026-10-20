@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { VilFile } from '../../shared/types/protocol'
 import { isVilFile } from '../../shared/vil-file'
 import { isVialGuiFile, vialGuiToVil } from '../../shared/vil-compat'
-import { serializeMacro, jsonToMacroActions } from '../../preload/macro'
+import { serializeMacro, jsonToMacroActions } from '../../shared/macro'
 import { applyVilErrorKey, type ApplyVilResult } from './keyboard-types'
 
 export interface UseFileIOOptions {

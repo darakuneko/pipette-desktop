@@ -14,7 +14,7 @@ import {
   macroActionsToJson,
   jsonToMacroActions,
   isValidMacroText,
-} from '../../../preload/macro'
+} from '../../../shared/macro'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useEscapeClose } from '../../hooks/useEscapeClose'

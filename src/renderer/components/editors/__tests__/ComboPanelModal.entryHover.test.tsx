@@ -12,7 +12,7 @@ import { ComboPanelModal } from '../ComboPanelModal'
 import { EntryHoverPreviewContext } from '../../keycodes/entry-hover-context'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { ComboEntry } from '../../../../shared/types/protocol'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string, opts?: Record<string, unknown>) => (opts?.index !== undefined ? `${key} ${String(opts.index)}` : key) }),

@@ -16,8 +16,8 @@ import {
   VIAL_MACRO_EXT_DOWN,
   VIAL_MACRO_EXT_UP,
   VIAL_PROTOCOL_ADVANCED_MACROS,
-} from '../shared/constants/protocol'
-import { serialize, deserialize } from '../shared/keycodes/keycodes'
+} from './constants/protocol'
+import { serialize, deserialize } from './keycodes/keycodes'
 
 // --- Validation ---
 

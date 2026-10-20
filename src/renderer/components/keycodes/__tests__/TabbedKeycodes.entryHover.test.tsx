@@ -10,7 +10,7 @@ import { TabbedKeycodes } from '../TabbedKeycodes'
 import { EntryHoverPreviewContext } from '../entry-hover-context'
 import { useTileContentOverride } from '../../../hooks/useTileContentOverride'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),

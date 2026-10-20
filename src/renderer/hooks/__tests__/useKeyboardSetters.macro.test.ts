@@ -11,7 +11,7 @@ import type { BootGuardRef, KeyboardState } from '../keyboard-types'
 import { useKeyboard } from '../useKeyboard'
 import type { KeyboardDefinition } from '../../../shared/types/protocol'
 import { padMacroBuffer } from '../pad-macro-buffer'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 
 const mockSetMacroBuffer = vi.fn<(data: number[]) => Promise<void>>()
 

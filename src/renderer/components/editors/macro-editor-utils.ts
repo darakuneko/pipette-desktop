@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { type MacroAction, deserializeAllMacros } from '../../../preload/macro'
+import { type MacroAction, deserializeAllMacros } from '../../../shared/macro'
 
 export const KC_TRNS = 1
 export const KC_NO = 0

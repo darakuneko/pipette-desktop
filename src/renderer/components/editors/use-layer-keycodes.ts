@@ -9,7 +9,7 @@
 import { useCallback, useMemo } from 'react'
 import { serialize, isMask, findInnerKeycode } from '../../../shared/keycodes/keycodes'
 import { posKey, encoderPosKey } from '../../../shared/kle/pos-key'
-import { deserializeAllMacros, type MacroAction } from '../../../preload/macro'
+import { deserializeAllMacros, type MacroAction } from '../../../shared/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { EMPTY_KEYCODES, EMPTY_REMAPPED, EMPTY_ENCODER_KEYCODES } from './keymap-editor-types'
 

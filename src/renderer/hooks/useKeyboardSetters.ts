@@ -7,7 +7,7 @@ import type {
   KeyOverrideEntry,
   AltRepeatKeyEntry,
 } from '../../shared/types/protocol'
-import type { MacroAction } from '../../preload/macro'
+import type { MacroAction } from '../../shared/macro'
 import type { BootGuardRef, BulkKeyEntry, SetState, KeyboardState } from './keyboard-types'
 import { BulkKeyWriteError } from './keyboard-types'
 import { isResetKeycode } from '../../shared/keycodes/keycodes'

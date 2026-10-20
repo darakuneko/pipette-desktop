@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -33,7 +33,7 @@ vi.mock('../MacroRecorder', () => ({
   MacroRecorder: () => <button>Record</button>,
 }))
 
-vi.mock('../../../../preload/macro', () => ({
+vi.mock('../../../../shared/macro', () => ({
   deserializeAllMacros: (_buf: number[], _proto: number, count: number) =>
     Array.from({ length: count }, () => [{ type: 'text', text: 'a' }]),
   serializeAllMacros: () => [0x61, 0],

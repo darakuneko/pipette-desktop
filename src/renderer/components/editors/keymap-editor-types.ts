@@ -3,7 +3,7 @@
 import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
-import type { MacroAction } from '../../../preload/macro'
+import type { MacroAction } from '../../../shared/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'

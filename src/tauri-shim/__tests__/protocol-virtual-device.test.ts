@@ -1,26 +1,43 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Integration test: the REAL preload protocol parsers (src/preload/protocol.ts)
-// wired to the virtual GPK60-63R emulator (src/main/virtual-device), proving
-// wire-format compatibility without Playwright/Electron. Runs under plain
-// Vitest so CI's `test` step exercises it.
+// The protocol parsers of ../protocol.ts against the virtual GPK60-63R's
+// recorded reports: the transport replays the report events of the
+// pipette-virtual-device golden transcript in order, so each call must send
+// the recorded request and parse the recorded response.
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
-import { MSG_LEN } from '../../shared/constants/protocol'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, it, expect, vi } from 'vitest'
 
-// Mocked in place of the real IPC bridge: routes straight into the virtual
-// device's report handler. Uses a dynamic import inside each function body
-// (rather than a module-level import) so it resolves after Vitest's mock
-// hoisting has fully linked the module graph.
-vi.mock('../hid-transport', () => ({
-  sendReceive: async (data: Uint8Array): Promise<Uint8Array> => {
-    const { handleVirtualReport } = await import('../../main/virtual-device')
-    return Uint8Array.from(handleVirtualReport(Array.from(data)))
-  },
-  send: async (data: Uint8Array): Promise<void> => {
-    const { handleVirtualReport } = await import('../../main/virtual-device')
-    handleVirtualReport(Array.from(data))
-  },
-}))
+interface TranscriptEvent {
+  op: string
+  request?: string
+  response?: string
+}
+
+const TRANSCRIPT = resolve(__dirname, '../../../src-tauri/crates/pipette-virtual-device/tests/fixtures/transcript.json')
+
+const replay = vi.hoisted(() => ({ reports: [] as { request: string; response: string }[], next: 0 }))
+
+vi.mock('../hid-transport', () => {
+  function answer(data: Uint8Array): Uint8Array {
+    const padded = new Uint8Array(32)
+    padded.set(data)
+    const request = Buffer.from(padded).toString('hex')
+    const report = replay.reports[replay.next]
+    if (!report) throw new Error(`no recorded report left for ${request}`)
+    if (report.request !== request) {
+      throw new Error(`report ${replay.next}: sent ${request}, recorded ${report.request}`)
+    }
+    replay.next++
+    return Uint8Array.from(Buffer.from(report.response, 'hex'))
+  }
+  return {
+    sendReceive: async (data: Uint8Array): Promise<Uint8Array> => answer(data),
+    send: async (data: Uint8Array): Promise<void> => {
+      answer(data)
+    },
+  }
+})
 
 import {
   getProtocolVersion,
@@ -45,47 +62,20 @@ import {
   getVialRGBMode,
   getVialRGBSupported,
 } from '../protocol'
-import { openVirtualDevice, closeVirtualDevice, getVirtualDeviceController } from '../../main/virtual-device'
-import {
-  LAYERS,
-  VIRTUAL_DEVICE_UID_BYTES,
-  VIRTUAL_DEVICE_UNLOCK_COMBO,
-  VIALRGB_SUPPORTED_EFFECTS,
-  buildDefaultKeymap,
-} from '../../main/virtual-device/gpk60-63r'
-import { decompressLzma } from '../../main/lzma'
+import { MSG_LEN } from '../../shared/constants/protocol'
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+const events = (JSON.parse(readFileSync(TRANSCRIPT, 'utf8')) as { events: TranscriptEvent[] }).events
+replay.reports = events.flatMap((event) =>
+  event.op === 'report' && event.request && event.response ? [{ request: event.request, response: event.response }] : [],
+)
+
+/** The recorded response of the next report, read before the call that sends it. */
+function nextResponse(): number[] {
+  return Array.from(Buffer.from(replay.reports[replay.next].response, 'hex'))
 }
 
-/** Mirrors protocol.ts's readLE64Hex so the expected uid isn't a hand-transcribed magic string. */
-function expectedUidHex(bytes: Uint8Array): string {
-  let hex = '0x'
-  for (let i = bytes.length - 1; i >= 0; i--) {
-    hex += bytes[i].toString(16).padStart(2, '0')
-  }
-  return hex
-}
-
-/** Flattens the first `count` keycodes of a keymap into BE16 byte pairs, matching the wire format. */
-function keymapToBE16Bytes(keymap: Uint16Array, count: number): number[] {
-  const bytes: number[] = []
-  for (let i = 0; i < count; i++) {
-    bytes.push((keymap[i] >> 8) & 0xff, keymap[i] & 0xff)
-  }
-  return bytes
-}
-
-beforeAll(async () => {
-  await openVirtualDevice()
-})
-
-afterAll(() => {
-  closeVirtualDevice()
-})
-
-describe('preload protocol against the virtual device emulator', () => {
+// The cases run in the transcript's order and share its cursor.
+describe('protocol against the recorded virtual device', () => {
   it('getProtocolVersion resolves to VIA protocol 9', async () => {
     await expect(getProtocolVersion()).resolves.toBe(9)
   })
@@ -93,32 +83,35 @@ describe('preload protocol against the virtual device emulator', () => {
   it('getKeyboardId resolves to vial protocol 6 and the VIRTGPK uid', async () => {
     const id = await getKeyboardId()
     expect(id.vialProtocol).toBe(6)
-    expect(id.uid).toBe(expectedUidHex(VIRTUAL_DEVICE_UID_BYTES))
+    // "VIRTGPK\0" read as a little-endian 64-bit number.
+    expect(id.uid).toBe('0x004b504754524956')
   })
 
-  it('getLayerCount resolves to the emulator layer count', async () => {
-    await expect(getLayerCount()).resolves.toBe(LAYERS)
+  it('getLayerCount resolves to 4 layers', async () => {
+    await expect(getLayerCount()).resolves.toBe(4)
   })
 
-  it('getKeymapBuffer round-trips the first chunk of buildDefaultKeymap', async () => {
-    const expectedKeymap = buildDefaultKeymap()
-    const chunk = await getKeymapBuffer(0, 28)
-    expect(chunk).toEqual(keymapToBE16Bytes(expectedKeymap, 14))
+  it('getKeymapBuffer returns the payload of the first chunk', async () => {
+    const expected = nextResponse().slice(4, 4 + 28)
+    await expect(getKeymapBuffer(0, 28)).resolves.toEqual(expected)
   })
 
   it('getUnlockStatus reports locked with the two-key unlock combo', async () => {
     const status = await getUnlockStatus()
     expect(status.unlocked).toBe(false)
-    expect(status.keys).toEqual(VIRTUAL_DEVICE_UNLOCK_COMBO)
+    expect(status.keys).toEqual([
+      [0, 0],
+      [0, 1],
+    ])
   })
 
-  it('getDefinitionSize/getDefinitionRaw decompress to the Virtual Keyboard definition', async () => {
+  it('getDefinitionSize/getDefinitionRaw read the whole LZMA stream', async () => {
     const size = await getDefinitionSize()
+    expect(size).toBe(0x18d)
     const raw = await getDefinitionRaw(size)
-    const jsonStr = await decompressLzma(Array.from(raw))
-    expect(jsonStr).not.toBeNull()
-    const definition = JSON.parse(jsonStr as string) as { name: string }
-    expect(definition.name).toBe('Virtual Keyboard')
+    expect(raw).toHaveLength(size)
+    // LZMA-alone header: properties byte 0x5d.
+    expect(raw[0]).toBe(0x5d)
   })
 
   it('getDynamicEntryCount reports the 32-entry tier and caps-word/layer-lock feature flags', async () => {
@@ -185,29 +178,27 @@ describe('preload protocol against the virtual device emulator', () => {
     expect(typeof mode.sat).toBe('number')
     expect(typeof mode.val).toBe('number')
 
+    // Effect 0 (off) and the recorded pages: 2..16, then 17..26.
     const supported = await getVialRGBSupported()
-    expect(supported.has(0)).toBe(true)
-    expect(supported.size).toBe(VIALRGB_SUPPORTED_EFFECTS.length)
+    expect([...supported].sort((a, b) => a - b)).toEqual([0, ...Array.from({ length: 25 }, (_, i) => i + 2)])
   })
 
-  it('unlocks via unlockStart + repeated unlockPoll while the combo is held', async () => {
-    const controller = getVirtualDeviceController()
-    controller.reset()
-    controller.holdKeys(VIRTUAL_DEVICE_UNLOCK_COMBO as [number, number][])
-    controller.setUnlockCounterMax(2)
-
+  it('unlocks via unlockStart + unlockPoll while the combo is held', async () => {
     await unlockStart()
 
     let result: number[] = []
     for (let attempt = 0; attempt < 3 && result[0] !== 1; attempt++) {
-      await delay(120)
       result = await unlockPoll()
     }
     expect(result[0]).toBe(1)
 
     const status = await getUnlockStatus()
     expect(status.unlocked).toBe(true)
+  })
 
-    controller.releaseAll()
+  it('sent exactly the recorded reports up to the unlock', () => {
+    const unlocked = events.findIndex((event) => event.op === 'state' && (event as { expected?: { unlocked?: boolean } }).expected?.unlocked === true)
+    const reportsBefore = events.slice(0, unlocked).filter((event) => event.op === 'report').length
+    expect(replay.next).toBe(reportsBefore)
   })
 })

@@ -9,7 +9,7 @@ import {
 import { EntryHoverPreviewContext } from '../entry-hover-context'
 import { useTileContentOverride } from '../../../hooks/useTileContentOverride'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
-import type { MacroAction } from '../../../../preload/macro'
+import type { MacroAction } from '../../../../shared/macro'
 import type { Keycode } from '../../../../shared/keycodes/keycodes'
 
 vi.mock('react-i18next', () => ({
