@@ -7,25 +7,17 @@ name: Release
 # .app.tar.gz), its minisign signature (.sig, bound to the version) and
 # latest.json, the manifest naming them. Publishing the release does not
 # offer the update to anyone: promote-update.yml makes a published
-# release's latest.json a channel's manifest. Run by hand, it builds the same files as
-# artifacts and publishes nothing; the version input builds them under another
-# version (to try a pre-release version before tagging one), and app: electron
-# builds the Electron app instead, as this workflow did before the Tauri app.
+# release's latest.json a channel's manifest. Run by hand, it builds the same
+# files as artifacts and publishes nothing; the version input builds them under
+# another version (to try a pre-release version before tagging one).
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
     inputs:
-      app:
-        description: The app to build
-        type: choice
-        options:
-          - tauri
-          - electron
-        default: tauri
       version:
-        description: Build under this version instead of package.json's (Tauri, no release)
+        description: Build under this version instead of package.json's (no release)
         type: string
         required: false
         default: ""
@@ -68,9 +60,6 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install Linux build dependencies for native modules
-        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
-
       - run: pnpm install --frozen-lockfile
 
       # A release must carry the updater's real public key: with the
@@ -91,7 +80,6 @@ jobs:
   # release build), and the workspace's tests. build-tauri waits for both.
   # On a tag neither reads a Cargo cache.
   lint-tauri:
-    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -102,8 +90,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The tauri-lint job of tauri-migration.yml checks all of this and
-      # more, and owns the key.
+      # The rust-lint job of ci.yml checks all of this and more, and owns
+      # the key.
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: lint
@@ -122,7 +110,6 @@ jobs:
         run: cargo clippy --workspace --all-targets --release -- -D warnings
 
   test-tauri:
-    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -134,16 +121,15 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
-      # The rust-test job of tauri-migration.yml runs these tests and more,
-      # and owns the key.
+      # The rust-test job of ci.yml runs these tests and more, and owns the
+      # key.
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: test
           save-cache: "false"
           cache: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
-      # The tests start the Node fakes; the install scripts only serve the
-      # Electron build.
+      # The tests start the Node fakes.
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       # The X11 active-window test of pipette-active-window starts a private
@@ -170,7 +156,6 @@ jobs:
           cargo test --workspace --features pipette-app/dev-tools --doc
 
   build-tauri:
-    if: github.event_name != 'workflow_dispatch' || inputs.app == 'tauri'
     # Signing and notarizing start only after every check passed.
     needs: [test, lint-tauri, test-tauri]
     strategy:
@@ -181,7 +166,7 @@ jobs:
           # glibc than Ubuntu 22.04's.
           - os: ubuntu-22.04
             platform: linux
-          # Visual Studio 2022, as the Electron build of this workflow.
+          # Visual Studio 2022.
           - os: windows-2022
             platform: win
           # Apple silicon, the only macOS build that is released.
@@ -246,8 +231,6 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get install -y squashfs-tools
 
-      # The install scripts only serve the Electron build; the Tauri CLI and
-      # the frontend build need none.
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Set the version
@@ -329,9 +312,9 @@ jobs:
             exit 1
           fi
 
-      # Tauri's names for the secrets of the Electron build: the certificate
-      # (base64 of the .p12) and its password, and the Apple ID, app-specific
-      # password and team the app is notarized with. Tauri signs, notarizes
+      # Tauri's names for the secrets: the certificate (base64 of the .p12)
+      # and its password, and the Apple ID, app-specific password and team
+      # the app is notarized with. Tauri signs, notarizes
       # and staples the app before it builds the dmg.
       - name: Build (macOS, signed)
         if: runner.os == 'macOS' && env.MAC_SIGN == 'true'
@@ -359,7 +342,7 @@ jobs:
           # shellcheck disable=SC2086
           pnpm exec tauri build --ci --no-sign $UPDATER_CONFIG
 
-      # Windows is not code-signed, as the Electron build was not.
+      # Windows is not code-signed.
       - name: Build (Linux, Windows)
         if: runner.os != 'macOS'
         env:
@@ -369,8 +352,8 @@ jobs:
           # shellcheck disable=SC2086
           pnpm exec tauri build --ci $UPDATER_CONFIG
 
-      # The release file names of the Electron build, which the README links
-      # to and the AppImage update information names. The update files take
+      # The release file names, which the README links to and the AppImage
+      # update information names. The update files take
       # the name of what they update, their signatures that name plus .sig:
       # the Windows update is the installer itself. The AppImage changes
       # when it is repacked, so it is signed again afterwards (bound to the
@@ -462,68 +445,6 @@ jobs:
             dist/*.app.tar.gz
             dist/*.sig
           if-no-files-found: error
-
-  build-electron:
-    if: github.event_name == 'workflow_dispatch' && inputs.app == 'electron'
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            platform: mac
-            arch: arm64
-          # Pin to windows-2022 (VS 2022 / v17): node-gyp 11 cannot yet
-          # detect the VS 18 toolchain that windows-latest now ships.
-          - os: windows-2022
-            platform: win
-            arch: x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev squashfs-tools
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm exec electron-vite build
-
-      - name: Build Electron app
-        run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-      # Static runtime (no libfuse2), update information and .zsync.
-      - name: Repack AppImage
-        if: matrix.platform == 'linux'
-        run: bash scripts/repack-appimage.sh
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: artifact-${{ matrix.platform }}
-          path: |
-            dist/*.dmg
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.AppImage.zsync
 
   release:
     if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
