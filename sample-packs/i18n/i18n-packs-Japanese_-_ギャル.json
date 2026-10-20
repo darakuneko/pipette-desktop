@@ -1,5 +1,5 @@
 {
-  "version": "0.1.120",
+  "version": "0.1.122",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -2049,6 +2049,38 @@
       "Info": "情報っしょ☆",
       "Warning": "警告！",
       "Update": "アプデ☆"
+    }
+  },
+  "update": {
+    "title": "アプデきてるよ☆",
+    "failedTitle": "アプデ失敗しちゃった…",
+    "message": "Pipette {{version}} 出てるよ！今のは {{currentVersion}} だよん☆",
+    "releasePage": "{{version}} の新しいとこ見てみる？",
+    "install": "アプデする☆",
+    "retry": "もっかいやる！",
+    "later": "今はいいや〜",
+    "skip": "このバージョンはパス☆",
+    "downloading": "ダウンロード中… {{size}} MB",
+    "downloadingPercent": "ダウンロード中… {{percent}}%",
+    "restarting": "仕上げ中〜！Pipette 再起動するね♡",
+    "errorHint": "リリースページから新しいの落として自分で入れてもOKだよ☆",
+    "error": {
+      "network": "アプデ落とせなかった…ネットつながってるか見てもっかいやってみて！",
+      "signature": "アプデが本物か確かめられなかったから、入れなかったよ！",
+      "permission": "Pipette が入ってるフォルダに書き込めないっぽい…",
+      "cancelled": "Pipette 終わりかけてたから、アプデは入れなかったよ〜",
+      "busy": "今アプデ確認中だよ！ちょい待ってからもっかいね☆",
+      "previousAppNotRestored": "アプデできなかったし、前のも戻せなかった…ごめん！前のやつのコピーは {{path}} に置いてあるよ。リリースページから新しいの落として入れてね☆",
+      "unknown": "アプデ中になんかバグった…"
+    },
+    "about": {
+      "check": "アプデ確認する☆",
+      "checking": "アプデ確認中…",
+      "disabled": "このPipetteは自分でアプデしないやつだよ〜",
+      "upToDate": "Pipette 最新だよ☆",
+      "available": "Pipette {{version}} 出てるよ！",
+      "availableSkipped": "Pipette {{version}} 出てるよ！（パスしたやつ）",
+      "open": "アプデ見る☆"
     }
   },
   "favoriteStore": {

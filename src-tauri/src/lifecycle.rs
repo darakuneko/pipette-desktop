@@ -37,12 +37,18 @@
 //! Electron window's close handler does when the app quits; closing the
 //! window saves it too.
 //!
+//! An update (src/updater.rs) quits through [`quit_for_update`], which only
+//! starts a quit that has not started yet, and says what follows the
+//! sequence ([`AfterQuit`]): the update is installed only once the
+//! sequence has ended, on every system, and the app then starts again or
+//! exits ([`Ending`]); it never goes back to normal operation.
+//!
 //! SIGKILL cannot be caught.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use pipette_hid::HidService;
@@ -91,6 +97,36 @@ const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
+/// What follows the quit sequence.
+pub enum AfterQuit {
+    /// The process exits, as after every quit but an update's.
+    Exit,
+    /// After the window state is saved, this installs the update and says
+    /// how the app ends. The Windows installer ends the process itself
+    /// when it starts, and restarts the app when done.
+    Install(Box<dyn FnOnce() -> Ending + Send>),
+}
+
+/// How the app ends after the quit sequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ending {
+    Exit,
+    /// Start the app again: the update replaced it.
+    Relaunch,
+}
+
+/// Runs what follows the sequence: an install, after `save_state`. Every
+/// path ends the app.
+pub(crate) fn ending_after(after: AfterQuit, save_state: impl FnOnce()) -> Ending {
+    match after {
+        AfterQuit::Exit => Ending::Exit,
+        AfterQuit::Install(install) => {
+            save_state();
+            install()
+        }
+    }
+}
+
 /// The quit guard, shared by the window and exit handlers and the handling
 /// of a second launch.
 #[derive(Default)]
@@ -99,6 +135,27 @@ pub struct Lifecycle {
     /// Whether an exit request has gone through, having waited for the
     /// sequence's marker update already.
     exit_let_through: AtomicBool,
+    /// What follows the sequence; set only together with the guard's start
+    /// by [`quit_for_update`], so it never applies to another quit.
+    after_quit: Mutex<Option<AfterQuit>>,
+    /// macOS: start the app bundle again through LaunchServices once the
+    /// event loop has ended.
+    relaunch_bundle: Mutex<Option<PathBuf>>,
+}
+
+impl Lifecycle {
+    /// Starts the quit with `after` following it, unless a quit has started.
+    fn start_quit_for_update(&self, after: AfterQuit) -> bool {
+        if !self.quit.start_if_idle() {
+            return false;
+        }
+        *self.after_quit.lock().unwrap_or_else(PoisonError::into_inner) = Some(after);
+        true
+    }
+
+    fn take_after_quit(&self) -> AfterQuit {
+        self.after_quit.lock().unwrap_or_else(PoisonError::into_inner).take().unwrap_or(AfterQuit::Exit)
+    }
 }
 
 /// The shared lifecycle state; `None` before setup has run.
@@ -118,6 +175,21 @@ pub fn setup(app: &mut App<Wry>) {
 /// and the macOS app menu's Quit.
 pub fn request_quit(app: &AppHandle<Wry>) {
     app.exit(0);
+}
+
+/// Starts the quit sequence for an update, with `after` following it.
+/// `false`, changing nothing, once a quit has started or before setup has
+/// run: the update is then not applied.
+pub fn quit_for_update(app: &AppHandle<Wry>, after: AfterQuit) -> bool {
+    let Some(lifecycle) = lifecycle_state(app).map(|state| Arc::clone(&state)) else {
+        return false;
+    };
+    if !lifecycle.start_quit_for_update(after) {
+        return false;
+    }
+    log::info!("[quit] an update requested the quit; starting the quit sequence");
+    start_quit_sequence(app.clone(), lifecycle);
+    true
 }
 
 /// Restores, shows and focuses the main window.
@@ -284,6 +356,7 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                 hid.0.close_probe();
             }
             log::info!("[quit] event loop ended");
+            relaunch_bundle_if_asked(app);
         }
         #[cfg(target_os = "macos")]
         RunEvent::Reopen { .. } => on_reopen(app),
@@ -341,11 +414,69 @@ fn user_data_dir(app: &AppHandle<Wry>) -> PathBuf {
 }
 
 fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
-    let sequence = quit_sequence(&app, lifecycle);
+    let sequence = quit_sequence(&app, Arc::clone(&lifecycle));
     tauri::async_runtime::spawn(async move {
         sequence.await;
-        app.exit(0);
+        after_quit_sequence(&app, &lifecycle);
     });
+}
+
+/// Ends the app once the sequence has ended, as `after_quit` says.
+fn after_quit_sequence(app: &AppHandle<Wry>, lifecycle: &Lifecycle) {
+    match ending_after(lifecycle.take_after_quit(), || main_window::save_main_window_state(app)) {
+        Ending::Exit => app.exit(0),
+        Ending::Relaunch => relaunch(app, lifecycle),
+    }
+}
+
+/// Starts the app again once the event loop has ended, when the
+/// single-instance lock is released. On macOS an app bundle is started
+/// through LaunchServices (`open -n`): Tauri's restart starts the
+/// executable directly, and the system would then hold the old process
+/// responsible for the new one's privacy permissions (Input Monitoring).
+/// Elsewhere Tauri's restart starts the executable, or the AppImage file
+/// itself, again.
+fn relaunch(app: &AppHandle<Wry>, lifecycle: &Lifecycle) {
+    let bundle = if cfg!(target_os = "macos") {
+        std::env::current_exe().ok().as_deref().and_then(app_bundle_of)
+    } else {
+        None
+    };
+    match bundle {
+        Some(bundle) => {
+            log::info!("[quit] starting {} again once the app has ended", bundle.display());
+            *lifecycle.relaunch_bundle.lock().unwrap_or_else(PoisonError::into_inner) = Some(bundle);
+            app.exit(0);
+        }
+        None => {
+            log::info!("[quit] restarting the app");
+            app.request_restart();
+        }
+    }
+}
+
+/// The `.app` bundle an executable at `<bundle>.app/Contents/MacOS/` is in.
+fn app_bundle_of(exe: &Path) -> Option<PathBuf> {
+    let macos = exe.parent()?;
+    let contents = macos.parent()?;
+    let bundle = contents.parent()?;
+    let is_bundle = macos.file_name()? == "MacOS"
+        && contents.file_name()? == "Contents"
+        && bundle.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("app"));
+    is_bundle.then(|| bundle.to_path_buf())
+}
+
+/// Starts the bundle [`relaunch`] recorded, if any. Runs when the event
+/// loop has ended, after the single-instance lock is released.
+fn relaunch_bundle_if_asked(app: &AppHandle<Wry>) {
+    let Some(lifecycle) = lifecycle_state(app) else { return };
+    let Some(bundle) = lifecycle.relaunch_bundle.lock().unwrap_or_else(PoisonError::into_inner).take() else {
+        return;
+    };
+    match std::process::Command::new("/usr/bin/open").arg("-n").arg(&bundle).spawn() {
+        Ok(_) => log::info!("[quit] asked LaunchServices to start {}", bundle.display()),
+        Err(err) => log::error!("[quit] failed to start {} again: {err}", bundle.display()),
+    }
 }
 
 /// The quit sequence, ending with the guard marked finished. Polling stops
@@ -571,6 +702,50 @@ mod tests {
         assert!(!keeps(None, true, true, true));
         // The exit the tray, a signal or the sequence requests.
         assert!(!keeps(Some(0), false, true, true));
+    }
+
+    #[test]
+    fn an_update_sets_what_follows_only_when_it_starts_the_quit() {
+        let lifecycle = Lifecycle::default();
+        assert!(matches!(lifecycle.take_after_quit(), AfterQuit::Exit));
+        assert!(lifecycle.start_quit_for_update(AfterQuit::Install(Box::new(|| Ending::Relaunch))));
+        assert!(lifecycle.quit.is_quitting());
+        assert!(!lifecycle.start_quit_for_update(AfterQuit::Install(Box::new(|| Ending::Exit))));
+        assert_eq!(ending_after(lifecycle.take_after_quit(), || {}), Ending::Relaunch);
+        assert!(matches!(lifecycle.take_after_quit(), AfterQuit::Exit));
+
+        // A quit already under way (the tray's Quit) is neither interrupted
+        // nor followed by the update's step.
+        let quitting = Lifecycle::default();
+        assert_eq!(quitting.quit.on_exit_requested(), ExitDecision::StartSequence);
+        assert!(!quitting.start_quit_for_update(AfterQuit::Install(Box::new(|| Ending::Relaunch))));
+        assert!(matches!(quitting.take_after_quit(), AfterQuit::Exit));
+        assert_eq!(quitting.quit.on_exit_requested(), ExitDecision::ExitNow);
+    }
+
+    #[test]
+    fn the_install_runs_after_the_state_is_saved_and_ends_the_app() {
+        let order = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let (saved, installed) = (Arc::clone(&order), Arc::clone(&order));
+        let after = AfterQuit::Install(Box::new(move || {
+            installed.lock().unwrap().push("install");
+            Ending::Exit
+        }));
+        assert_eq!(ending_after(after, || saved.lock().unwrap().push("save")), Ending::Exit);
+        assert_eq!(*order.lock().unwrap(), ["save", "install"]);
+        // A plain quit saves nothing here (its exit request saves the state).
+        assert_eq!(ending_after(AfterQuit::Exit, || panic!("saved")), Ending::Exit);
+    }
+
+    #[test]
+    fn the_app_bundle_is_found_from_its_executable() {
+        assert_eq!(
+            app_bundle_of(Path::new("/Applications/Pipette.app/Contents/MacOS/pipette")),
+            Some(PathBuf::from("/Applications/Pipette.app"))
+        );
+        assert_eq!(app_bundle_of(Path::new("/opt/pipette/pipette")), None);
+        assert_eq!(app_bundle_of(Path::new("/x/Pipette/Contents/MacOS/pipette")), None);
+        assert_eq!(app_bundle_of(Path::new("pipette")), None);
     }
 
     #[test]

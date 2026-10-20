@@ -351,4 +351,7 @@ export const IpcChannels = {
 
   // Tray status (renderer → main)
   TRAY_STATUS_UPDATE: 'tray:status-update',
+
+  // In-app update (main → renderer; the Tauri build only)
+  UPDATE_PROGRESS: 'update:progress',
 } as const

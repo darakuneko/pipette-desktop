@@ -139,6 +139,20 @@ impl QuitGuard {
         }
     }
 
+    /// The first request's [`ExitDecision::StartSequence`] for a caller that
+    /// must never interrupt or follow a quit already under way (the update
+    /// of src/updater.rs): `true` when the guard was idle and is now
+    /// running the sequence, `false`, changing nothing, otherwise.
+    pub fn start_if_idle(&self) -> bool {
+        let mut inner = self.lock();
+        if inner.state == State::Idle {
+            inner.state = State::Running;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Claims the marker for the sequence's own update. `false` when a second
     /// exit request already owns it: the sequence then neither writes nor
     /// removes the marker.
@@ -617,6 +631,28 @@ mod tests {
         assert_eq!(guard.on_exit_requested(), ExitDecision::Exit);
         assert_eq!(guard.on_exit_requested(), ExitDecision::Exit);
         assert!(guard.is_quitting());
+    }
+
+    #[test]
+    fn start_if_idle_starts_only_an_idle_guard_and_leaves_a_running_quit_alone() {
+        let guard = QuitGuard::default();
+        assert!(guard.start_if_idle());
+        assert!(guard.is_quitting());
+        // Neither a second start nor a running sequence's marker changes.
+        assert!(!guard.start_if_idle());
+        assert!(guard.claim_marker());
+
+        let running = QuitGuard::default();
+        assert_eq!(running.on_exit_requested(), ExitDecision::StartSequence);
+        assert!(!running.start_if_idle());
+        // The next exit request still owns the marker.
+        assert_eq!(running.on_exit_requested(), ExitDecision::ExitNow);
+
+        let done = QuitGuard::default();
+        assert!(done.start_if_idle());
+        done.finish();
+        assert!(!done.start_if_idle());
+        assert_eq!(done.on_exit_requested(), ExitDecision::Exit);
     }
 
     #[test]

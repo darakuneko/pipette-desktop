@@ -42,6 +42,7 @@ mod store_commands;
 mod sync_commands;
 mod tray;
 mod typing_dataset_commands;
+mod updater;
 mod window_bounds;
 mod window_commands;
 mod window_ops;
@@ -76,6 +77,9 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         app_config::app_config_get_all,
         app_config::app_config_set,
         shell::open_external,
+        updater::update_check,
+        updater::update_install,
+        updater::update_take_failure,
         window_commands::set_window_zoom,
         window_commands::window_show,
         window_commands::window_hide,
@@ -350,10 +354,21 @@ fn startup_user_data() -> PathBuf {
     dir
 }
 
+/// How long a launch tries again to open the Electron build's `lockfile`
+/// while it is in use: the installer of an update starts the new app while
+/// the old process may still be ending, holding the file.
+#[cfg(target_os = "windows")]
+const LOCKFILE_RETRY: std::time::Duration = std::time::Duration::from_secs(5);
+
+#[cfg(target_os = "windows")]
+const LOCKFILE_RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
+
 /// On Windows, opens the Electron build's `lockfile` in `dir` sharing
 /// nothing and keeps it open until the process ends: a running Electron
 /// build makes the open fail, and an Electron build started later cannot
-/// take the directory. Runs after the single-instance check, so a second
+/// take the directory. A file in use is tried again for up to
+/// `LOCKFILE_RETRY` before the launch is refused; it is never opened
+/// without the lock. Runs after the single-instance check, so a second
 /// launch of this build hands over to the first instead of finding the
 /// file in use, and before the log, so nothing is written to the directory
 /// of a running Electron build.
@@ -361,14 +376,21 @@ fn startup_user_data() -> PathBuf {
 fn lock_against_electron(dir: &Path) {
     static HELD: OnceLock<std::fs::File> = OnceLock::new();
     let lock = dir.join(pipette_fs::ELECTRON_LOCKFILE);
-    match pipette_fs::hold_lockfile(dir) {
-        Ok(file) => {
-            let _ = HELD.set(file);
+    let deadline = std::time::Instant::now() + LOCKFILE_RETRY;
+    loop {
+        match pipette_fs::hold_lockfile(dir) {
+            Ok(file) => {
+                let _ = HELD.set(file);
+                return;
+            }
+            Err(pipette_fs::LockfileError::InUse) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(LOCKFILE_RETRY_INTERVAL);
+            }
+            Err(pipette_fs::LockfileError::InUse) => {
+                refusal::refuse(&refusal::electron_running(dir, None, &lock))
+            }
+            Err(err) => refusal::refuse(&refusal::lock_failed(&lock, &err)),
         }
-        Err(pipette_fs::LockfileError::InUse) => {
-            refusal::refuse(&refusal::electron_running(dir, None, &lock))
-        }
-        Err(err) => refusal::refuse(&refusal::lock_failed(&lock, &err)),
     }
 }
 
@@ -383,6 +405,8 @@ fn main() {
     let builder = tauri::Builder::default()
         .enable_macos_default_menu(false)
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
+        // Used from src/updater.rs only; no capability grants its commands.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             dev_commands::manage_dialogs(app.handle());
@@ -407,6 +431,7 @@ fn main() {
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
+            updater::manage(app.handle(), &app.state::<UserDataDir>().0);
             hub_commands::setup::start_background(app.handle());
             Ok(())
         })

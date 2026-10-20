@@ -11,6 +11,7 @@ import { ComboPanelModal } from './editors/ComboPanelModal'
 import { AltRepeatKeyPanelModal } from './editors/AltRepeatKeyPanelModal'
 import { KeyOverridePanelModal } from './editors/KeyOverridePanelModal'
 import { NotificationModal } from './NotificationModal'
+import { StartupUpdateModal } from './UpdateAvailableModal'
 import { MissingKeyLabelDialog } from './key-labels/MissingKeyLabelDialog'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
 import type { decodeLayoutOptions } from '../../shared/kle/layout-options'
@@ -21,6 +22,7 @@ import type { useEditorUIState } from '../hooks/useEditorUIState'
 import type { UseDevicePrefsReturn } from '../hooks/useDevicePrefs'
 import type { useHubState } from '../hooks/useHubState'
 import type { useStartupNotification } from '../hooks/useStartupNotification'
+import type { UpdateCheckState } from '../hooks/useUpdateCheck'
 import type { useMissingKeyLabelNotice } from '../hooks/useMissingKeyLabelNotice'
 
 interface Props {
@@ -30,6 +32,7 @@ interface Props {
   devicePrefs: UseDevicePrefsReturn
   hub: ReturnType<typeof useHubState>
   startupNotification: ReturnType<typeof useStartupNotification>
+  updateCheck: UpdateCheckState
   missingKeyLabel: ReturnType<typeof useMissingKeyLabelNotice>
   decodedLayoutOptions: ReturnType<typeof decodeLayoutOptions>
   deserializedMacros: ReturnType<typeof deserializeAllMacros> | undefined
@@ -42,6 +45,7 @@ export function AppModals({
   devicePrefs,
   hub,
   startupNotification,
+  updateCheck,
   missingKeyLabel,
   decodedLayoutOptions,
   deserializedMacros,
@@ -203,6 +207,7 @@ export function AppModals({
           onClose={startupNotification.dismiss}
         />
       )}
+      <StartupUpdateModal updateCheck={updateCheck} />
 
       <MissingKeyLabelDialog
         open={missingKeyLabel.missingName !== null}

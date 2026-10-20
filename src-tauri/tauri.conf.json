@@ -52,6 +52,15 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVGNDVEOTNGN0ZFRDYzOTEKUldTUlkrMS9QOWxGNzM4WElhcmRjRFByUXFHdzJhTjlpdHNXQ0FFdDVtN3V4YlFPUWliUzdpSjEK",
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "publisher": "darakuneko",

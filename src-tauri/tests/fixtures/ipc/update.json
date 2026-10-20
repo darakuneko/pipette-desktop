@@ -1,0 +1,27 @@
+[
+  {
+    "member": "updateCheck",
+    "args": [],
+    "command": "update_check",
+    "invokeArgs": {},
+    "response": { "status": "disabled" }
+  },
+  {
+    "member": "updateInstall",
+    "args": ["0.5.0-beta.3"],
+    "command": "update_install",
+    "invokeArgs": { "version": "0.5.0-beta.3" },
+    "response": {
+      "status": "failed",
+      "code": "unknown",
+      "releaseUrl": "https://github.com/darakuneko/pipette-desktop/releases/tag/v0.5.0-beta.3"
+    }
+  },
+  {
+    "member": "updateTakeFailure",
+    "args": [],
+    "command": "update_take_failure",
+    "invokeArgs": {},
+    "response": null
+  }
+]

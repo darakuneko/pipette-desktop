@@ -63,11 +63,12 @@ function makeProps(overrides: { fileLoadError?: string | null; deviceError?: str
   const devicePrefs = {} as unknown as UseDevicePrefsReturn
   const appConfig = { config: {}, set: vi.fn() } as unknown as ReturnType<typeof useAppConfig>
   const hub = {} as unknown as ReturnType<typeof useHubState>
-  const startupNotification = { visible: false, notifications: [], dismiss: vi.fn() } as unknown as ReturnType<typeof useStartupNotification>
+  const startupNotification = { visible: false, settled: true, notifications: [], dismiss: vi.fn() } as unknown as ReturnType<typeof useStartupNotification>
+  const updateCheck = { prompt: null, close: vi.fn(), skip: vi.fn() }
 
   const syncUpdate = { visible: overrides.syncUpdateVisible ?? false, dismiss: vi.fn() }
 
-  return { deviceSyncing: false, device, sync, lifecycle, themeCtx, devicePrefs, appConfig, hub, startupNotification, syncUpdate }
+  return { deviceSyncing: false, device, sync, lifecycle, themeCtx, devicePrefs, appConfig, hub, startupNotification, updateCheck, syncUpdate }
 }
 
 describe('AppDisconnectedView', () => {

@@ -88,6 +88,7 @@ interface Shim {
   window: typeof import('../api/window')
   tray: typeof import('../api/tray')
   notification: typeof import('../api/notification')
+  update: typeof import('../api/update')
   hubAccount: typeof import('../api/hub-account')
   hubPosts: typeof import('../api/hub-posts')
   hubFavorite: typeof import('../api/hub-favorite')
@@ -132,6 +133,7 @@ async function load(): Promise<Shim> {
     window: await import('../api/window'),
     tray: await import('../api/tray'),
     notification: await import('../api/notification'),
+    update: await import('../api/update'),
     hubAccount: await import('../api/hub-account'),
     hubPosts: await import('../api/hub-posts'),
     hubFavorite: await import('../api/hub-favorite'),
@@ -231,6 +233,9 @@ const CALLERS: Record<string, Caller> = {
     void: true,
   },
   notificationFetch: { run: ({ notification }) => notification.notificationApi.notificationFetch() },
+  updateCheck: { run: ({ update }) => update.updateApi.updateCheck() },
+  updateInstall: { run: ({ update }, [version]) => update.updateApi.updateInstall(version as string) },
+  updateTakeFailure: { run: ({ update }) => update.updateApi.updateTakeFailure() },
   syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
   syncAuthStatus: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStatus() },
   syncAuthStart: { run: ({ syncAuth }) => syncAuth.syncAuthApi.syncAuthStart() },

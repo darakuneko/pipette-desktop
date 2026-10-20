@@ -38,6 +38,11 @@ import type { TypingDatasetCheckResult } from '../generated/TypingDatasetCheckRe
 import type { PackImportFileRead } from '../generated/PackImportFileRead'
 import type { StoredPasswordStatus } from '../generated/StoredPasswordStatus'
 import type { SyncAuthStatus } from '../generated/SyncAuthStatus'
+import type { UpdateCheckResult } from '../generated/UpdateCheckResult'
+import type { UpdateFailure } from '../generated/UpdateFailure'
+import type { UpdateInstallResult } from '../generated/UpdateInstallResult'
+import type { UpdateProgress } from '../generated/UpdateProgress'
+import type { UpdateProgress as SharedUpdateProgress } from '../../shared/types/update'
 import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
 
 /** `true` when each type is assignable to the other. The tuples stop the
@@ -72,4 +77,9 @@ export type ContractChecks = [
   // Cloud Sync
   Assert<MutuallyAssignable<SyncAuthStatus, Awaited<ReturnType<VialAPI['syncAuthStatus']>>>>,
   Assert<MutuallyAssignable<StoredPasswordStatus, Awaited<ReturnType<VialAPI['syncPasswordStatus']>>>>,
+  // src-tauri/src/updater.rs
+  Assert<MutuallyAssignable<UpdateCheckResult, Awaited<ReturnType<VialAPI['updateCheck']>>>>,
+  Assert<MutuallyAssignable<UpdateInstallResult, Awaited<ReturnType<VialAPI['updateInstall']>>>>,
+  Assert<MutuallyAssignable<UpdateFailure | null, Awaited<ReturnType<VialAPI['updateTakeFailure']>>>>,
+  Assert<MutuallyAssignable<UpdateProgress, SharedUpdateProgress>>,
 ]

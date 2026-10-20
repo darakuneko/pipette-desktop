@@ -1,0 +1,137 @@
+name: Promote update
+
+# Makes a published release's latest.json the manifest of an update channel,
+# `<channel>.json` of the fixed pre-release `updater-manifest`, which the
+# app reads (src-tauri/src/updater.rs): beta for the pre-releases (the
+# releases go there too, so the betas get them), stable for the releases,
+# staging for trying an update before anyone gets it. Run by hand only,
+# after the release is published and checked.
+#
+# Before the upload it checks, against what an anonymous user downloads:
+# the release is published and is the tag's; latest.json is the tag's
+# version and names every platform, each at its asset of this release and
+# with that asset's .sig, and the release has no other update signature;
+# every update file verifies with minisign and the Node check against the
+# public key of src-tauri/tauri.conf.json, bound to the version; a
+# pre-release goes to beta or staging only; the version is newer than the
+# channel's manifest now.
+#
+# Deleting a release whose version a channel's manifest names leaves that
+# manifest pointing at files that are gone: promote another release first.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag (v0.5.0-beta.2)
+        type: string
+        required: true
+      channel:
+        description: The channel whose manifest it becomes
+        type: choice
+        options:
+          - beta
+          - stable
+          - staging
+        required: true
+
+permissions:
+  contents: write
+
+# One promotion at a time: two would race on the same manifest.
+concurrency:
+  group: promote-update
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
+      CHANNEL: ${{ inputs.channel }}
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Check the tag
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::$TAG is not a version tag"
+            exit 1
+          fi
+
+      - name: Read the release
+        run: gh release view "$TAG" --repo "$REPO" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
+
+      # Without credentials, as the app downloads them: a draft's assets or
+      # a missing one fail here.
+      - name: Download the update files anonymously
+        run: |
+          dir="$RUNNER_TEMP/release-files"
+          mkdir -p "$dir"
+          for name in latest.json \
+            Pipette-linux-x86_64.AppImage Pipette-linux-x86_64.AppImage.sig \
+            Pipette-win-x64.exe Pipette-win-x64.exe.sig \
+            Pipette-mac-arm64.app.tar.gz Pipette-mac-arm64.app.tar.gz.sig; do
+            curl -fsSL --retry 3 -o "$dir/$name" "https://github.com/$REPO/releases/download/$TAG/$name"
+          done
+
+      # The channel's manifest now, if it has one: 404 means none yet.
+      - name: Download the channel's manifest
+        run: |
+          status=$(curl -sSL --retry 3 -o "$RUNNER_TEMP/current.json" -w '%{http_code}' \
+            "https://github.com/$REPO/releases/download/updater-manifest/$CHANNEL.json")
+          case "$status" in
+            200) echo "CURRENT_ARGS=--current $RUNNER_TEMP/current.json" >> "$GITHUB_ENV" ;;
+            404) echo "The $CHANNEL channel has no manifest yet" ;;
+            *) echo "::error::$CHANNEL.json answered $status"; exit 1 ;;
+          esac
+
+      # The key line comes from src-tauri/tauri.conf.json, the key the app has.
+      - name: Verify the signatures with minisign
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y minisign
+          key=$(npx tsx scripts/update-manifest/cli.ts pubkey)
+          dir="$RUNNER_TEMP/release-files"
+          for file in Pipette-linux-x86_64.AppImage Pipette-win-x64.exe Pipette-mac-arm64.app.tar.gz; do
+            base64 -d "$dir/$file.sig" > "$RUNNER_TEMP/$file.minisig"
+            minisign -V -P "$key" -m "$dir/$file" -x "$RUNNER_TEMP/$file.minisig"
+          done
+
+      - name: Check the release against the channel
+        run: |
+          # CURRENT_ARGS is two words (--current and the path) or nothing.
+          # shellcheck disable=SC2086
+          npx tsx scripts/update-manifest/cli.ts check-promotion --tag "$TAG" --channel "$CHANNEL" \
+            --release "$RUNNER_TEMP/release.json" --dir "$RUNNER_TEMP/release-files" $CURRENT_ARGS
+
+      # A pre-release that is never the latest release, so it never stands
+      # in for the app's own releases.
+      - name: Create the manifest release if it is missing
+        run: |
+          if ! gh release view updater-manifest --repo "$REPO" > /dev/null 2>&1; then
+            gh release create updater-manifest --repo "$REPO" --prerelease --latest=false \
+              --target "${{ github.sha }}" --title "Update manifests" \
+              --notes "The manifests the app's in-app update reads. Not a release of the app."
+          fi
+
+      - name: Upload the manifest
+        run: |
+          cp "$RUNNER_TEMP/release-files/latest.json" "$RUNNER_TEMP/$CHANNEL.json"
+          gh release upload updater-manifest "$RUNNER_TEMP/$CHANNEL.json" --repo "$REPO" --clobber
+
+      - name: Check the manifest anonymously
+        run: |
+          curl -fsSL --retry 5 --retry-delay 5 -o "$RUNNER_TEMP/served.json" \
+            "https://github.com/$REPO/releases/download/updater-manifest/$CHANNEL.json"
+          served=$(node -p "require(process.argv[1]).version" "$RUNNER_TEMP/served.json")
+          if [ "$served" != "${TAG#v}" ]; then
+            echo "::error::$CHANNEL.json serves $served, not ${TAG#v}"
+            exit 1
+          fi
+          echo "$CHANNEL.json now offers $served"

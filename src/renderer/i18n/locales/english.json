@@ -1,5 +1,5 @@
 {
-  "version": "0.1.120",
+  "version": "0.1.122",
   "name": "English",
   "common": {
     "save": "Save",
@@ -2059,6 +2059,38 @@
       "Info": "Info",
       "Warning": "Warning",
       "Update": "Update"
+    }
+  },
+  "update": {
+    "title": "Update available",
+    "failedTitle": "The update failed",
+    "message": "Pipette {{version}} is available. You have {{currentVersion}}.",
+    "releasePage": "See what's new in {{version}}",
+    "install": "Update",
+    "retry": "Try again",
+    "later": "Not now",
+    "skip": "Skip this version",
+    "downloading": "Downloading… {{size}} MB",
+    "downloadingPercent": "Downloading… {{percent}}%",
+    "restarting": "Finishing up. Pipette will restart.",
+    "errorHint": "You can also download the new version from the release page and install it yourself.",
+    "error": {
+      "network": "The update could not be downloaded. Check your connection and try again.",
+      "signature": "The update could not be verified, so it was not installed.",
+      "permission": "Pipette cannot write to the folder it is installed in.",
+      "cancelled": "Pipette started quitting, so the update was not installed.",
+      "busy": "An update check is already running. Try again in a moment.",
+      "previousAppNotRestored": "Pipette could not be updated, and the previous version could not be put back. A copy of it was kept at {{path}}. Download the new version from the release page and install it.",
+      "unknown": "Something went wrong while updating."
+    },
+    "about": {
+      "check": "Check for updates",
+      "checking": "Checking for updates…",
+      "disabled": "This copy of Pipette does not update itself.",
+      "upToDate": "Pipette is up to date.",
+      "available": "Pipette {{version}} is available.",
+      "availableSkipped": "Pipette {{version}} is available (you chose to skip it).",
+      "open": "Show the update"
     }
   },
   "favoriteStore": {

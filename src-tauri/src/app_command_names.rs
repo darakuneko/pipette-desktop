@@ -27,6 +27,10 @@ pub const APP_COMMANDS: &[&str] = &[
     "app_config_set",
     // src/shell.rs
     "open_external",
+    // src/updater.rs
+    "update_check",
+    "update_install",
+    "update_take_failure",
     // src/window_commands.rs
     "set_window_zoom",
     "window_show",

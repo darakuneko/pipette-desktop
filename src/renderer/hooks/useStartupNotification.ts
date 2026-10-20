@@ -4,6 +4,10 @@ import type { AppNotification } from '../../shared/types/notification'
 
 interface StartupNotificationState {
   visible: boolean
+  /** True once the startup fetch has finished, whatever it found: the
+   *  update check (useUpdateCheck) waits for it so the two modals never
+   *  show at once. */
+  settled: boolean
   notifications: AppNotification[]
   dismiss: () => void
 }
@@ -11,6 +15,7 @@ interface StartupNotificationState {
 export function useStartupNotification(): StartupNotificationState {
   const appConfig = useAppConfig()
   const [visible, setVisible] = useState(false)
+  const [settled, setSettled] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const fetchedRef = useRef(false)
 
@@ -19,6 +24,7 @@ export function useStartupNotification(): StartupNotificationState {
     fetchedRef.current = true
 
     let cancelled = false
+    let finished = false
     window.vialAPI.notificationFetch().then((result) => {
       if (cancelled) return
       if (!result.success || !result.notifications || result.notifications.length === 0) return
@@ -36,8 +42,17 @@ export function useStartupNotification(): StartupNotificationState {
       setVisible(true)
     }).catch(() => {
       // Network errors are non-critical
+    }).finally(() => {
+      finished = true
+      if (!cancelled) setSettled(true)
     })
-    return () => { cancelled = true }
+    // A fetch cut off before it finished (StrictMode's mount, unmount and
+    // mount again in development) is made again by the next run; a
+    // finished one is not repeated.
+    return () => {
+      cancelled = true
+      if (!finished) fetchedRef.current = false
+    }
   }, [appConfig.loading, appConfig.config.lastNotificationSeen])
 
   const dismiss = useCallback(() => {
@@ -47,5 +62,5 @@ export function useStartupNotification(): StartupNotificationState {
     }
   }, [notifications, appConfig])
 
-  return { visible, notifications, dismiss }
+  return { visible, settled, notifications, dismiss }
 }

@@ -48,7 +48,8 @@
     "startInTray",
     "restoreLastSession",
     "lastDevice",
-    "packsPulledOnce"
+    "packsPulledOnce",
+    "updateSkippedVersion"
   ],
   "zoomFactor": {
     "min": 50,
