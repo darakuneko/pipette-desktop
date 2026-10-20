@@ -12,6 +12,7 @@ interface TranscriptEvent {
   op: string
   request?: string
   response?: string
+  expected?: { unlocked?: boolean }
 }
 
 const TRANSCRIPT = resolve(__dirname, '../../../src-tauri/crates/pipette-virtual-device/tests/fixtures/transcript.json')
@@ -197,7 +198,7 @@ describe('protocol against the recorded virtual device', () => {
   })
 
   it('sent exactly the recorded reports up to the unlock', () => {
-    const unlocked = events.findIndex((event) => event.op === 'state' && (event as { expected?: { unlocked?: boolean } }).expected?.unlocked === true)
+    const unlocked = events.findIndex((event) => event.op === 'state' && event.expected?.unlocked === true)
     const reportsBefore = events.slice(0, unlocked).filter((event) => event.op === 'report').length
     expect(replay.next).toBe(reportsBefore)
   })
