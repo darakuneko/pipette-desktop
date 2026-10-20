@@ -178,8 +178,8 @@ enum Target {
 }
 
 /// Registers the app to start at sign-in when `enabled`, else unregisters
-/// it, as `applyAutoLaunch` does: at every launch and on every change of
-/// `autoLaunch`. Failures are logged, never returned.
+/// it: at every launch and on every change of `autoLaunch`. Failures are
+/// logged, never returned.
 pub fn apply(enabled: bool, env: &Environment) {
     run(target(env), enabled, env);
 }

@@ -36,7 +36,7 @@ pub fn js_round(value: f64) -> f64 {
     if value - floor >= 0.5 { floor + 1.0 } else { floor }
 }
 
-/// One run of `animateBounds`.
+/// One run of the bounds animation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Animation {
     generation: u64,
@@ -79,8 +79,8 @@ pub struct Leave {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Controller {
     pub geometry: Geometry,
-    /// The size the window had before compact mode (`normalWindowSize`),
-    /// while compact mode is on.
+    /// The size the window had before compact mode, while compact mode is
+    /// on.
     normal_size: Option<Size>,
     /// Bumped by each animation that starts; an older one stops at its next
     /// step.

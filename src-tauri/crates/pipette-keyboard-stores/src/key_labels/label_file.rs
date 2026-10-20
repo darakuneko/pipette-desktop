@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The rules of a key label's content: the label maps and the body file read
-//! back or imported (`normalizeFile`). The name rules are those of
-//! crate::entry_index.
+//! The rules of a key label's content: the label maps and the body file
+//! read back or imported. The name rules are those of crate::entry_index.
 
 use pipette_js_json::{Object, Value};
 
@@ -11,9 +10,9 @@ use crate::entry_files::method_type_error_text;
 /// Keys a label map may not have.
 const DANGEROUS_KEYS: [&str; 3] = ["__proto__", "constructor", "prototype"];
 
-/// Whether `value` is a label map (`isLabelMap`): an object (an array
-/// counts, its keys being indices) whose values are all strings, with none
-/// of [`DANGEROUS_KEYS`].
+/// Whether `value` is a label map: an object (an array counts, its keys
+/// being indices) whose values are all strings, with none of
+/// [`DANGEROUS_KEYS`].
 pub(crate) fn is_label_map(value: &Value) -> bool {
     match value {
         Value::Object(map) => map.iter().all(|(key, value)| {
@@ -32,14 +31,14 @@ fn nullish<'a>(a: Option<&'a Value>, b: Option<&'a Value>) -> Option<&'a Value> 
     }
 }
 
-/// A body file read back or imported (`normalizeFile`): `{name, map,
-/// compositeLabels?, keymapApplicable?}`, taking the Hub download's
-/// `composite_labels` / `keymap_applicable` when the camel-case field is
-/// missing or null. `None` when the name is not a string, the map or the
-/// composite labels are not label maps. Only a literal `true` keeps
-/// `keymapApplicable`: the keymap rewrite re-derives applicability from
-/// the map before using the flag, so a malformed flag reads as "not
-/// applicable" instead of refusing the label.
+/// A body file read back or imported: `{name, map, compositeLabels?,
+/// keymapApplicable?}`, taking the Hub download's `composite_labels` /
+/// `keymap_applicable` when the camel-case field is missing or null. `None`
+/// when the name is not a string, the map or the composite labels are not
+/// label maps. Only a literal `true` keeps `keymapApplicable`: the keymap
+/// rewrite re-derives applicability from the map before using the flag, so
+/// a malformed flag reads as "not applicable" instead of refusing the
+/// label.
 pub(crate) fn normalize_file(parsed: &Value) -> Option<Object> {
     let Value::Object(file) = parsed else { return None };
     let name = file.get("name").filter(|name| matches!(name, Value::String(_)))?;

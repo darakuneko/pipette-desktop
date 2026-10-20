@@ -74,7 +74,7 @@ pub struct TypingTextSource {
     pub work_id: JsString,
 }
 
-/// What a save writes (`SaveTextInput`).
+/// What a save writes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypingTextSave {
     /// The entry to write over or create; a new UUID when `None`.
@@ -136,8 +136,8 @@ fn store_dir(ctx: &StoreContext) -> PathBuf {
     ctx.sync_dir().join(TYPING_TEXT_SYNC_UNIT)
 }
 
-/// `source` as the store reads it (`sanitizeSource`): `{provider, workId}`
-/// when both are strings, otherwise no `source` at all.
+/// `source` as the store reads it: `{provider, workId}` when both are
+/// strings, otherwise no `source` at all.
 fn sanitize_source(entry: &mut Entry) {
     let Some(source) = entry.get("source") else { return };
     let kept = source.as_object().and_then(|source| match (source.get("provider"), source.get("workId")) {
@@ -154,8 +154,8 @@ fn sanitize_source(entry: &mut Entry) {
     }
 }
 
-/// The text of a body file (`normalizeFile`): `None` unless the file is an
-/// object with a string `name` and a string `text`.
+/// The text of a body file: `None` unless the file is an object with a
+/// string `name` and a string `text`.
 fn body_text(parsed: &Value) -> Option<&JsString> {
     let file = parsed.as_object()?;
     match (file.get("name"), file.get("text")) {
@@ -203,9 +203,8 @@ impl TypingTextStore {
         capable
     }
 
-    /// The entries of a list (`TYPING_TEST_TEXT_LIST`; `listAllMetas` with
-    /// `include_deleted`), in the index's order, each with its
-    /// `romajiCapable`.
+    /// The live entries, and the deleted ones too when `include_deleted`, in
+    /// the index's order, each with its `romajiCapable`.
     pub fn list(&self, ctx: &StoreContext, include_deleted: bool) -> Result<Vec<Entry>, TypingTextError> {
         let dir = store_dir(ctx);
         let entries = read_index(&INDEX, &dir)?
@@ -221,7 +220,7 @@ impl TypingTextStore {
             .collect())
     }
 
-    /// The live entry `id` and its body (`TYPING_TEST_TEXT_GET`): `{meta,
+    /// The live entry `id` and its body (the `typing_test_text_store_get` command): `{meta,
     /// data}`, the meta with its `romajiCapable` and the body with the
     /// entry's name, which a rename changes in the index only.
     pub fn get(&self, ctx: &StoreContext, id: &JsString) -> Result<Object, TypingTextError> {
@@ -243,9 +242,9 @@ impl TypingTextStore {
         Ok([("meta", Value::from(meta)), ("data", Value::Object(data))].into_iter().collect())
     }
 
-    /// Saves a text (`saveRecord`): a new entry last in the index, or the
-    /// entry `input.id` written over in its place, brought back if deleted
-    /// (every save is a user action). The previous body file is removed.
+    /// Saves a text: a new entry last in the index, or the entry `input.id`
+    /// written over in its place, brought back if deleted (every save is a
+    /// user action). The previous body file is removed.
     /// Returns the entry, without `romajiCapable`.
     pub fn save(&self, ctx: &StoreContext, input: &TypingTextSave) -> Result<Entry, TypingTextError> {
         let validated = validate_name(&input.name)?;
@@ -328,8 +327,8 @@ impl TypingTextStore {
         })
     }
 
-    /// Renames the live entry `id` (`renameRecord`): the index only, the
-    /// body file keeps the name it was saved with. Returns the entry.
+    /// Renames the live entry `id`: the index only, the body file keeps the
+    /// name it was saved with. Returns the entry.
     pub fn rename(
         &self,
         ctx: &StoreContext,
@@ -357,8 +356,8 @@ impl TypingTextStore {
         })
     }
 
-    /// Tombstones the entry `id` (`deleteRecord`), again when it already
-    /// is; its body stays for sync.
+    /// Tombstones the entry `id`, again when it already is; its body stays
+    /// for sync.
     pub fn delete(&self, ctx: &StoreContext, id: &JsString) -> Result<(), TypingTextError> {
         ctx.locks().with_write_lock(TYPING_TEXT_SYNC_UNIT, || {
             let dir = store_dir(ctx);

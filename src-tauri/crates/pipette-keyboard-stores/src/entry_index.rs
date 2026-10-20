@@ -33,7 +33,7 @@ pub(crate) struct IndexSpec {
     /// changes entries in place (the key labels'), rather than every write
     /// writing `{entries}` alone (the typing test texts').
     pub keeps_other_fields: bool,
-    /// What the store's `readIndex` does to each entry it reads.
+    /// What the store does to each entry [`read_index`] reads.
     pub on_read: fn(&mut Entry),
 }
 
@@ -61,8 +61,8 @@ impl EntryList for EntryIndex {
     }
 }
 
-/// The index in `dir` (`readIndex`): empty when the file is missing,
-/// unreadable, not JSON, or not an object with an `entries` list.
+/// The index in `dir`: empty when the file is missing, unreadable, not
+/// JSON, or not an object with an `entries` list.
 pub(crate) fn read_index<C: ErrorCode>(
     spec: &IndexSpec,
     dir: &Path,
@@ -109,9 +109,8 @@ pub(crate) fn has_id(entry: &Entry, id: &JsString) -> bool {
 }
 
 /// The first live entry other than `exclude_id` whose name is `name`,
-/// ignoring case and surrounding whitespace (`findActiveByName`). Fails as
-/// JavaScript does on a name that is not a string: `name` read as `name`,
-/// or a checked entry's.
+/// ignoring case and surrounding whitespace. Fails as JavaScript does on a
+/// name that is not a string: `name` read as `name`, or a checked entry's.
 pub(crate) fn find_active_by_name<'a, C: ErrorCode>(
     entries: &'a [Entry],
     name: &Value,

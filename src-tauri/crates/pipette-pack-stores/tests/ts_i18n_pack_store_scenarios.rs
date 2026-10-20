@@ -34,7 +34,7 @@ fn the_language_pack_handlers_answer_and_write_as_recorded() {
             ),
             "importApply" => {
                 let raw = raw_of(arg("raw").unwrap().as_object().unwrap(), &user_data);
-                // The preload passes `options ?? {}`.
+                // The shim passes `options ?? {}` (src/tauri-shim/api/i18n-packs.ts).
                 let options = arg("options").cloned().unwrap_or_else(|| Value::Object(Object::new()));
                 handlers::import_apply(ctx, raw.as_ref(), Some(&options))
             }

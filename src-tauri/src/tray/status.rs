@@ -54,7 +54,7 @@ impl TrayStatus {
         Layout { name: self.shown_name().is_some(), recording: self.recording }
     }
 
-    /// The tooltip of `formatTrayTooltip`.
+    /// The tray icon's tooltip.
     pub fn tooltip(&self) -> String {
         match self.shown_name() {
             None => "Pipette".to_owned(),

@@ -237,11 +237,10 @@ fn logical_size(size: PhysicalSize<u32>, scale: f64) -> Size {
     Size { width: size.width, height: size.height }
 }
 
-/// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:
-/// directly, without telling the config listeners, and a failure is only
-/// logged. While compact mode is on, the size saved is the one it goes back
-/// to. A hidden or minimized window keeps the state saved before
-/// ([`window_state::state_to_save`]).
+/// Saves the bounds of `window` as `windowState` directly, without telling
+/// the config listeners, and a failure is only logged. While compact mode
+/// is on, the size saved is the one it goes back to. A hidden or minimized
+/// window keeps the state saved before ([`window_state::state_to_save`]).
 pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore) {
     let bounds = match window_bounds(window) {
         Ok(bounds) => bounds_to_save(bounds, window_ops::compact_normal_size(window)),

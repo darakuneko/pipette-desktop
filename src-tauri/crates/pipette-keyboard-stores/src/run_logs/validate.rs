@@ -76,7 +76,8 @@ fn is_short_string(value: &Value) -> bool {
     matches!(value, Value::String(s) if utf16_len(s) <= MAX_MISTAKE_FIELD_LENGTH)
 }
 
-/// `isValidRowColKeycode` of the analytics pipeline.
+/// Whether `k` has a non-negative integer `row` and `col` and a finite
+/// `keycode`.
 fn is_valid_row_col_keycode(k: &Object) -> bool {
     non_negative_integer(k, "row") && non_negative_integer(k, "col") && finite(k, "keycode").is_some()
 }

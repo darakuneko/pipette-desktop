@@ -59,7 +59,7 @@ fn entries(list: Vec<pipette_entry_store::Entry>) -> Value {
     Value::Array(list.into_iter().map(Value::from).collect())
 }
 
-/// The save of a `save` step (`SaveTextInput`).
+/// The save of a `save` step.
 fn save_input(input: &Object) -> TypingTextSave {
     let source = input.get("source").map(|source| {
         let source = source.as_object().unwrap();

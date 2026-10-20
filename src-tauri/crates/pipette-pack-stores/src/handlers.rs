@@ -58,7 +58,7 @@ pub(crate) fn entries(metas: Vec<Entry>) -> Value {
 }
 
 /// What an export of a pack is called: the default file name's prefix
-/// (`{prefix}-{safe name}.json`) and the name `safeFilename` falls back to.
+/// (`{prefix}-{safe name}.json`) and the name [`safe_filename`] falls back to.
 pub(crate) struct ExportName {
     pub prefix: &'static str,
     pub fallback: &'static str,

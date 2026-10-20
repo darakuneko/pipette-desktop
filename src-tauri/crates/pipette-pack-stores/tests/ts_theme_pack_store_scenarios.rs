@@ -42,7 +42,7 @@ fn the_theme_pack_handlers_answer_and_write_as_recorded() {
             ),
             "importApply" => {
                 let raw = raw_of(arg("raw").unwrap().as_object().unwrap(), &user_data);
-                // The preload passes `options ?? {}`.
+                // The shim passes `options ?? {}` (src/tauri-shim/api/theme-packs.ts).
                 let options = arg("options").cloned().unwrap_or_else(|| Value::Object(Object::new()));
                 let changing = handlers::import_apply(ctx, raw.as_ref(), Some(&options));
                 // The shim answers a pack that fails the page's check itself,

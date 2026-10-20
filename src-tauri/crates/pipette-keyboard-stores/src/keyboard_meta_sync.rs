@@ -87,9 +87,8 @@ fn effective_time(entry: &Value) -> f64 {
     source.filter(|s| s.is_truthy()).and_then(date_value_ms).unwrap_or(0.0)
 }
 
-/// Merges `remote` (the `index` of a remote bundle) into the local entries
-/// (`mergeKeyboardMetaIndex`): the merged entries and whether Drive needs
-/// this device's index.
+/// Merges `remote` (the `index` of a remote bundle) into the local entries:
+/// the merged entries and whether Drive needs this device's index.
 fn merge_entries(
     local: &[Value],
     remote: &Value,
@@ -148,10 +147,10 @@ fn merge_entries(
     Ok((kept.clone(), remote_needs_update || kept.len() != count))
 }
 
-/// Merges a remote index into the local one under the store's lock
-/// (`applyRemoteKeyboardMetaIndex`). The merged index is written, as
-/// `{type, version, entries}`, only when its entries differ from the local
-/// ones; a change of the tombstone GC alone counts.
+/// Merges a remote index into the local one under the store's lock. The
+/// merged index is written, as `{type, version, entries}`, only when its
+/// entries differ from the local ones; a change of the tombstone GC alone
+/// counts.
 pub fn apply_remote_keyboard_meta_index(
     ctx: &StoreContext,
     remote: &Value,

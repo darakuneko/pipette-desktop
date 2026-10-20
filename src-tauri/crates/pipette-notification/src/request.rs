@@ -21,7 +21,7 @@ pub const NOTICE_LIMITS: Limits =
 /// How many notices the query asks for.
 const LIMIT: f64 = 10.0;
 
-/// The query `fetchNotifications` posts, with `Date.now()` as `now_ms`:
+/// The query the notice request posts, with `Date.now()` as `now_ms`:
 /// the published notices, newest first, at most ten.
 pub fn request_body(now_ms: i64) -> String {
     let object = |pairs: Vec<(&str, Value)>| Value::Object(pairs.into_iter().collect::<Object>());

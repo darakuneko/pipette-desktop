@@ -10,9 +10,8 @@
 //! together as one set ([`Hints`]). The app sets no maximum size, so the set
 //! has none, as tao's has none then.
 //!
-//! The aspect ratio (`ratio`, `extraSize`) is the ratio of the window's size
-//! less `extraSize`, the frame (outer minus
-//! content size). GTK applies the hints to the size of the GTK window, which
+//! The aspect ratio is the ratio of the window's size less the frame (outer
+//! minus content size). GTK applies the hints to the size of the GTK window, which
 //! is its content size: the window manager draws its frame outside it, and
 //! the webview fills it. So the ratio applies as it is, with nothing to take
 //! off; GTK ignores the `geometry_widget` argument (since 3.20), so that is

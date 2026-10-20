@@ -162,14 +162,14 @@ impl AppConfigStore {
         self.replace(DEFAULTS.values.clone())
     }
 
-    /// `saveAppConfig(config)`: `config` as the whole content, plus the
+    /// Saves `config` as the whole content, plus the
     /// current `__internal__` when it has none.
     pub fn replace(&self, config: Object) -> Result<(), AppConfigError> {
         let _guard = self.lock();
         write_store(&self.path, with_current_internal(&self.path, config))
     }
 
-    /// `onAppConfigChange`: `listener` gets each key and value
+    /// `listener` gets each key and value
     /// [`set_from_renderer`](Self::set_from_renderer) stores, and nothing
     /// else. It runs under the store lock: it must not use the store, which
     /// would deadlock, nor wait for work that does.

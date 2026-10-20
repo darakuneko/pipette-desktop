@@ -44,7 +44,7 @@ pub(crate) enum IndexError {
     Io(io::Error),
 }
 
-/// The index of `uid` in `dir` (the stores' `readIndex`).
+/// The index of `uid` in `dir`.
 pub(crate) fn read_index(store: EntryStore, dir: &Path, uid: &str) -> Result<KeyboardIndex, IndexError> {
     let empty = || {
         let mut root = Object::new();

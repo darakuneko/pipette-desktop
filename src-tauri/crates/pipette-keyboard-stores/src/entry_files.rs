@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What the index-based stores of this crate share: the body file an entry
 //! names and how it is read, the text of a clock error,
-//! and the name comparison of `findActiveByName`.
+//! and the name comparison of the active-name checks.
 
 use std::fs;
 use std::io;
@@ -31,9 +31,8 @@ pub(crate) fn body_path_of(dir: &Path, filename: &str) -> Option<PathBuf> {
     (is_safe_path_segment(filename) && single).then(|| dir.join(filename))
 }
 
-/// The body file of `entry` (the stores' `getSafeFilePath` /
-/// `getEntryPath`). A filename with a lone surrogate maps to the file of its
-/// lossy form, as Node's file calls do.
+/// The body file of `entry`. A filename with a lone surrogate maps to the
+/// file of its lossy form, as Node's file calls do.
 pub(crate) fn body_path(dir: &Path, entry: &Entry) -> Result<PathBuf, BodyPathError> {
     match entry.get("filename") {
         Some(Value::String(name)) => body_path_of(dir, &name.to_string_lossy()).ok_or(BodyPathError::Invalid),

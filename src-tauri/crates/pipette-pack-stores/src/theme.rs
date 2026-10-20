@@ -29,12 +29,12 @@ pub const THEME_PACKS: PackStore = PackStore {
     max_name_length: MAX_NAME_LENGTH,
 };
 
-/// The live metas, in the index's order (`listMetas`).
+/// The live metas, in the index's order.
 pub fn list_metas(ctx: &StoreContext) -> PackResult<Vec<Entry>> {
     Ok(list_all_metas(ctx)?.into_iter().filter(|meta| !meta.is_deleted()).collect())
 }
 
-/// Every meta, tombstones included (`listAllMetas`), read without the lock.
+/// Every meta, tombstones included, read without the lock.
 pub fn list_all_metas(ctx: &StoreContext) -> PackResult<Vec<Entry>> {
     Ok(THEME_PACKS.read_index(ctx)?.metas)
 }
@@ -70,7 +70,7 @@ fn named_pack(meta: &Entry, parsed: Value) -> Object {
     pack
 }
 
-/// `{meta, pack}` of the live pack `id` (`getPack`).
+/// `{meta, pack}` of the live pack `id`.
 pub fn get_pack(ctx: &StoreContext, id: &JsString) -> PackResult<Object> {
     let (meta, parsed) = THEME_PACKS.read_live_pack(ctx, id)?;
     let pack = named_pack(&meta, parsed);
@@ -89,7 +89,7 @@ pub fn export_text(ctx: &StoreContext, id: &JsString) -> PackResult<(Option<Valu
     Ok((meta.get("name").cloned(), pipette_js_json::stringify_with_gap(&Value::Object(pack), "  ")))
 }
 
-/// A save of a pack (`savePack`'s input).
+/// A save of a pack: the input of [`save_pack`].
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SaveThemeInput {
     /// The pack to save over; a new one (or the live one of the same name)
@@ -102,9 +102,9 @@ pub struct SaveThemeInput {
     pub uploader_name: Field<JsString>,
 }
 
-/// Saves a pack (`savePack`), over the pack `input.id`, over the live pack
-/// of the same name, or as a new pack. Every save is the user's (an import
-/// or a Hub download), so it brings a deleted pack back. Answers its meta.
+/// Saves a pack, over the pack `input.id`, over the live pack of the same
+/// name, or as a new pack. Every save is the user's (an import or a Hub
+/// download), so it brings a deleted pack back. Answers its meta.
 ///
 /// The pack is checked as the page checks it (`validateThemePack`) before
 /// anything is read or written; a pack that fails answers `INVALID_FILE`
@@ -140,18 +140,17 @@ pub fn save_pack(ctx: &StoreContext, input: SaveThemeInput) -> PackResult<Entry>
     })
 }
 
-/// Gives the live pack `id` the name `new_name`, trimmed (`renamePack`).
+/// Gives the live pack `id` the name `new_name`, trimmed.
 pub fn rename_pack(ctx: &StoreContext, id: &JsString, new_name: &JsString) -> PackResult<Entry> {
     THEME_PACKS.rename_pack(ctx, id, new_name)
 }
 
-/// Deletes the pack `id` (`deletePack`): tombstoned, its body kept for
-/// sync.
+/// Deletes the pack `id`: tombstoned, its body kept for sync.
 pub fn delete_pack(ctx: &StoreContext, id: &JsString) -> PackResult<()> {
     THEME_PACKS.tombstone(ctx, id, |_, _| Ok(()))
 }
 
-/// Links the pack `id` to a Hub post or unlinks it (`setHubPostId`, see
+/// Links the pack `id` to a Hub post or unlinks it (see
 /// [`PackStore::set_hub_post_id`]).
 pub fn set_hub_post_id(
     ctx: &StoreContext,
@@ -163,13 +162,12 @@ pub fn set_hub_post_id(
     THEME_PACKS.set_hub_post_id(ctx, id, hub_post_id, uploader_name, hub_updated_at)
 }
 
-/// Whether a live pack other than `exclude` has the name `name`
-/// (`hasActiveName`).
+/// Whether a live pack other than `exclude` has the name `name`.
 pub fn has_active_name(ctx: &StoreContext, name: &JsString, exclude: Option<&JsString>) -> PackResult<bool> {
     THEME_PACKS.has_active_name(ctx, name, exclude)
 }
 
-/// Puts the live packs of `ordered_ids` first (`reorderActive`).
+/// Puts the live packs of `ordered_ids` first.
 pub fn reorder_active(ctx: &StoreContext, ordered_ids: &[JsString]) -> PackResult<()> {
     THEME_PACKS.reorder_active(ctx, ordered_ids)
 }

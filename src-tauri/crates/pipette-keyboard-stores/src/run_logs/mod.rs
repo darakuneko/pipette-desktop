@@ -144,7 +144,7 @@ fn unlink_bodies<'a>(dir: &Path, entries: impl IntoIterator<Item = &'a Entry>) {
 }
 
 /// Saves `raw`, the log the renderer sent (`None` when it sent none), as
-/// the run log of `uid` (`TYPING_RUN_LOG_SAVE`), replacing a saved run of
+/// the run log of `uid` (the `typing_run_log_save` command), replacing a saved run of
 /// the same id. `consent_accepted` is the app config's
 /// `typingRecordingConsentAccepted`. Returns the run's entry as saved,
 /// before the trim.
@@ -209,13 +209,13 @@ fn read_runs(ctx: &StoreContext, uid: &str) -> Result<(PathBuf, KeyboardIndex), 
     Ok((dir, index))
 }
 
-/// The live runs of `uid` (`TYPING_RUN_LOG_LIST`), in the index's order.
+/// The live runs of `uid` (the `typing_run_log_list` command), in the index's order.
 pub fn list_run_logs(ctx: &StoreContext, uid: &str) -> Result<Vec<Entry>, RunLogError> {
     let (_, index) = read_runs(ctx, uid)?;
     Ok(index.entries.into_iter().filter(|entry| !entry.is_deleted()).collect())
 }
 
-/// The log of `uid`'s run `run_id` (`TYPING_RUN_LOG_GET`), as `JSON.parse`
+/// The log of `uid`'s run `run_id` (the `typing_run_log_get` command), as `JSON.parse`
 /// reads its body.
 pub fn get_run_log(ctx: &StoreContext, uid: &str, run_id: &str) -> Result<Value, RunLogError> {
     let (dir, index) = read_runs(ctx, uid)?;

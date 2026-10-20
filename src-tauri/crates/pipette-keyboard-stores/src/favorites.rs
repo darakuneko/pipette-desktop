@@ -139,9 +139,8 @@ fn favorite_dir(ctx: &StoreContext, ty: FavoriteType) -> PathBuf {
     ctx.sync_dir().join("favorites").join(ty.name())
 }
 
-/// The index of `ty` in `dir` (`readIndex`): empty when the file is
-/// missing, unreadable, not JSON, not an object naming `ty`, or without an
-/// `entries` list.
+/// The index of `ty` in `dir`: empty when the file is missing, unreadable,
+/// not JSON, not an object naming `ty`, or without an `entries` list.
 fn read_index(dir: &Path, ty: FavoriteType) -> Result<FavoriteIndex, FavoriteError> {
     let empty = || {
         let mut root = Object::new();
@@ -211,14 +210,14 @@ fn write_new_favorite(
     Ok(create_entry(STORE, fields, now))
 }
 
-/// The live favorites of `ty` (`FAVORITE_STORE_LIST`), newest first.
+/// The live favorites of `ty` (the `favorite_store_list` command), newest first.
 pub fn list_favorites(ctx: &StoreContext, ty: FavoriteType) -> Result<Vec<Entry>, FavoriteError> {
     let index = read_index(&favorite_dir(ctx, ty), ty)?;
     Ok(index.entries.into_iter().filter(|entry| !entry.is_deleted()).collect())
 }
 
 /// Saves `json` as a new favorite of `ty` labelled `label`
-/// (`FAVORITE_STORE_SAVE`), first in the index. Returns the new entry.
+/// (the `favorite_store_save` command), first in the index. Returns the new entry.
 pub fn save_favorite(
     ctx: &StoreContext,
     ty: FavoriteType,
@@ -242,7 +241,7 @@ fn find_entry<'a>(entries: &'a [Entry], id: &str) -> Option<&'a Entry> {
     entries.iter().find(|entry| entry.id().is_some_and(|own| own.as_str() == Some(id)))
 }
 
-/// The body of the favorite `id` of `ty` (`FAVORITE_STORE_LOAD`).
+/// The body of the favorite `id` of `ty` (the `favorite_store_load` command).
 pub fn load_favorite(ctx: &StoreContext, ty: FavoriteType, id: &str) -> Result<String, FavoriteError> {
     let dir = favorite_dir(ctx, ty);
     let index = read_index(&dir, ty)?;
@@ -253,9 +252,8 @@ pub fn load_favorite(ctx: &StoreContext, ty: FavoriteType, id: &str) -> Result<S
     Ok(read_text(&body_path(&dir, entry)?)?)
 }
 
-/// A meta-only change of the favorite `id` of `ty` (`updateEntry`):
-/// `mutate` edits the entry, then `mutation` moves its clock or tombstones
-/// it.
+/// A meta-only change of the favorite `id` of `ty`: `mutate` edits the
+/// entry, then `mutation` moves its clock or tombstones it.
 fn change_entry(
     ctx: &StoreContext,
     ty: FavoriteType,
@@ -277,7 +275,7 @@ fn change_entry(
 }
 
 /// Gives the favorite `id` of `ty` the label `label`
-/// (`FAVORITE_STORE_RENAME`).
+/// (the `favorite_store_rename` command).
 pub fn rename_favorite(
     ctx: &StoreContext,
     ty: FavoriteType,
@@ -287,14 +285,14 @@ pub fn rename_favorite(
     change_entry(ctx, ty, id, EntryMutation::Meta(MetaGroup::Name), |entry| entry.set("label", label))
 }
 
-/// Tombstones the favorite `id` of `ty` (`FAVORITE_STORE_DELETE`); its
+/// Tombstones the favorite `id` of `ty` (the `favorite_store_delete` command); its
 /// body stays for sync.
 pub fn delete_favorite(ctx: &StoreContext, ty: FavoriteType, id: &str) -> Result<(), FavoriteError> {
     change_entry(ctx, ty, id, EntryMutation::Delete, |_| {})
 }
 
 /// Links the favorite `id` of `ty` to a public Hub post
-/// (`FAVORITE_STORE_SET_HUB_POST_ID`), dropping any private link: the two
+/// (the `favorite_store_set_hub_post_id` command), dropping any private link: the two
 /// are exclusive. A post id that is `None` or blank once trimmed clears the
 /// link instead.
 pub fn set_favorite_hub_post_id(
@@ -320,7 +318,7 @@ pub fn set_favorite_hub_post_id(
 }
 
 /// Links the favorite `id` of `ty` to a private Hub post
-/// (`FAVORITE_STORE_SET_HUB_PRIVATE`), dropping any public post id, or
+/// (the `favorite_store_set_hub_private` command), dropping any public post id, or
 /// clears the private link when `link` is `None`.
 pub fn set_favorite_hub_private(
     ctx: &StoreContext,
@@ -339,7 +337,8 @@ pub fn set_favorite_hub_private(
     })
 }
 
-/// The live favorites of `ty` an export reads (`FAVORITE_STORE_EXPORT`):
+/// The live favorites of `ty` an export reads (the
+/// `favorite_store_read_for_export` command):
 /// all of them, or those with the id `id`, as `{label, savedAt, body}`
 /// with the entry's label and save time as they are and the text of its
 /// body. A favorite whose body cannot be read is left out. Fails with
@@ -391,8 +390,8 @@ pub struct ImportCounts {
     pub skipped: usize,
 }
 
-/// Imports `favorites` into the store of `ty` (one category of
-/// `FAVORITE_STORE_IMPORT`), each first in the index in turn. A favorite
+/// Imports `favorites` into the store of `ty` (the
+/// `favorite_store_import_batch` command), each first in the index in turn. A favorite
 /// with the label and save time of a live one (one imported earlier in the
 /// same call included) is skipped; the others keep the exported save time
 /// and get every clock at now. The index is read and migrated, and the

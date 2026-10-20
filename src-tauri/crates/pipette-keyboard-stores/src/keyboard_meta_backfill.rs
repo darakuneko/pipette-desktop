@@ -15,8 +15,8 @@ const SNAPSHOT_FILE_PREFIX: &str = "keyboards_";
 const SNAPSHOT_FILE_SUFFIX: &str = "_snapshots.enc";
 
 /// The keyboard uids of the snapshot files among Drive file `names`
-/// (`extractKeyboardUidsFromDriveFiles`, `/^keyboards_(.+?)_snapshots\.enc$/`),
-/// each once, in the order first named. A uid has no line terminator.
+/// (`/^keyboards_(.+?)_snapshots\.enc$/`), each once, in the order first
+/// named. A uid has no line terminator.
 pub fn keyboard_uids_of_drive_names<'a>(names: impl IntoIterator<Item = &'a str>) -> Vec<String> {
     let mut uids: Vec<String> = Vec::new();
     for name in names {
@@ -50,11 +50,9 @@ pub fn keyboard_meta_uids(ctx: &StoreContext) -> Result<Vec<String>, StoreError>
 }
 
 /// The device name of the first entry of a snapshot `index` that is not
-/// deleted, read from its filename
-/// (`index?.entries?.find((e) => !e.deletedAt)` and
-/// `extractDeviceNameFromFilename`); `None` where that reading throws in
-/// JavaScript (a `null` entry before it, a filename that is not a string)
-/// or finds nothing.
+/// deleted, read from its filename by [`extract_device_name_from_filename`];
+/// `None` when an entry that is not an object comes before it, its
+/// filename is not a string, or nothing is found.
 pub fn snapshot_index_device_name(index: Option<&Value>) -> Option<JsString> {
     let Some(Value::Object(index)) = index else { return None };
     let Some(Value::Array(entries)) = index.get("entries") else { return None };
@@ -72,10 +70,9 @@ pub fn snapshot_index_device_name(index: Option<&Value>) -> Option<JsString> {
     None
 }
 
-/// The device name the local snapshots of `uid` give it
-/// (`resolveDeviceNameFromLocalSnapshots`); `None` when the index is
-/// missing, unreadable or names none. A uid that is not one safe path
-/// segment has no local snapshots.
+/// The device name the local snapshots of `uid` give it; `None` when the
+/// index is missing, unreadable or names none. A uid that is not one safe
+/// path segment has no local snapshots.
 pub fn resolve_device_name_from_local_snapshots(ctx: &StoreContext, uid: &str) -> Option<JsString> {
     if !is_safe_path_segment(uid) {
         return None;

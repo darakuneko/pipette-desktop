@@ -96,7 +96,7 @@ fn is_js_object(value: Option<&Value>) -> bool {
     matches!(value, Some(Value::Object(_) | Value::Array(_)))
 }
 
-/// An object `m` whose `id` is a string (`isPackMetaCandidate`).
+/// The `id` of `meta` when it is an object whose `id` is a string.
 fn meta_candidate_id(meta: &Value) -> Option<&pipette_js_json::JsString> {
     match meta {
         Value::Object(o) => match o.get("id") {

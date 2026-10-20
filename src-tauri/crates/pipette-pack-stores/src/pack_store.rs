@@ -140,11 +140,11 @@ impl PackStore {
         ctx.locks().with_write_lock(&self.index_unit(), task)
     }
 
-    /// The index with every meta read as a v2 entry (`readIndex`): `{metas:
-    /// []}` when the file is missing, unreadable, not JSON, or not an
-    /// object with a `metas` list; other fields of the file are kept. An
-    /// index nested deeper than pipette-js-json reads (`JSON.parse` reads
-    /// it) fails instead, so a write never replaces it.
+    /// The index with every meta read as a v2 entry: `{metas: []}` when the
+    /// file is missing, unreadable, not JSON, or not an object with a `metas`
+    /// list; other fields of the file are kept. An index nested deeper than
+    /// pipette-js-json reads (`JSON.parse` reads it) fails instead, so a write
+    /// never replaces it.
     pub fn read_index(&self, ctx: &StoreContext) -> PackResult<PackIndex> {
         let path = self.index_path(ctx);
         let Ok(bytes) = fs::read(&path) else { return Ok(PackIndex::default()) };
@@ -203,7 +203,7 @@ impl PackStore {
         metas
     }
 
-    /// Writes `index` (`writeIndex`), atomically.
+    /// Writes `index`, atomically.
     pub fn write_index(&self, ctx: &StoreContext, index: &PackIndex) -> PackResult<()> {
         let dir = self.store_dir(ctx);
         fs::create_dir_all(&dir)?;
@@ -227,8 +227,8 @@ impl PackStore {
         Ok(())
     }
 
-    /// Whether a live pack other than `exclude` has the name `name`
-    /// (`hasActiveName`), read without the lock.
+    /// Whether a live pack other than `exclude` has the name `name`, read
+    /// without the lock.
     pub fn has_active_name(
         &self,
         ctx: &StoreContext,
@@ -239,11 +239,11 @@ impl PackStore {
         Ok(find_active_by_name(&index.metas, &Value::String(name.clone()), exclude)?.is_some())
     }
 
-    /// Puts the live metas named in `ordered_ids` first, in that order
-    /// (`reorderActive`); every other meta follows in its current order. A
-    /// meta listed by id is the last one with that id, and every meta with
-    /// a listed id leaves the tail. Only the metas are written: the order
-    /// is per device, so no clock moves and nothing is reported for sync.
+    /// Puts the live metas named in `ordered_ids` first, in that order; every
+    /// other meta follows in its current order. A meta listed by id is the last
+    /// one with that id, and every meta with a listed id leaves the tail. Only
+    /// the metas are written: the order is per device, so no clock moves and
+    /// nothing is reported for sync.
     pub fn reorder_active(&self, ctx: &StoreContext, ordered_ids: &[JsString]) -> PackResult<()> {
         self.with_lock(ctx, || {
             let index = self.read_index(ctx)?;
@@ -269,14 +269,14 @@ impl PackStore {
     }
 }
 
-/// The error `getPackPath` throws for an id that is not a safe pack id.
+/// The error for an id that is not a safe pack id.
 fn invalid_pack_id(id: &JsString) -> PackError {
     PackError::io(format!("Error: Invalid packId: {}", id.to_string_lossy()))
 }
 
 /// The first live meta other than `exclude` named `name`, ignoring case and
-/// surrounding whitespace (`findActiveByName`). A name that is not a
-/// string fails as `trim` does in JavaScript.
+/// surrounding whitespace. A name that is not a string fails as `trim` does
+/// in JavaScript.
 pub fn find_active_by_name<'a>(
     metas: &'a [Entry],
     name: &Value,

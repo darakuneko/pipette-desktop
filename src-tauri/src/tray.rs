@@ -252,8 +252,7 @@ fn on_menu_item(app: &AppHandle<Wry>, id: &str) -> bool {
 }
 
 impl LiveTray {
-    /// Shows `status`, as `applyCachedTrayStatus` does. Tauri sets no tooltip
-    /// on Linux.
+    /// Shows `status`. Tauri sets no tooltip on Linux.
     fn apply(&mut self, status: &TrayStatus) {
         self.tooltip = status.tooltip();
         if let Err(err) = self.icon.set_tooltip(Some(os_tooltip(&self.tooltip))) {

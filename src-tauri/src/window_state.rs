@@ -42,7 +42,7 @@ fn stored_rect(stored: Option<&Value>) -> Option<Rect> {
     Some(Rect { x: number("x")?, y: number("y")?, width: number("width")?, height: number("height")? })
 }
 
-/// `loadWindowState()`: the stored state grown to the minimum size, or
+/// The stored state grown to the minimum size, or
 /// [`DEFAULT_STATE`] when there is none, it is malformed, or its center is on
 /// none of `displays` (the displays' full bounds).
 pub fn load_window_state(stored: Option<&Value>, displays: &[Rect]) -> Rect {
