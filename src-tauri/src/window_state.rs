@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn load_window_state_matches_the_typescript_table() {
+    fn load_window_state_matches_the_recorded_table() {
         let fixture = fixture();
         let cases = fixture["loadWindowState"].as_array().unwrap();
         assert!(!cases.is_empty());

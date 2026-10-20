@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keymap snapshot handlers against what the TypeScript handlers did on
-//! the same userData directory, step by step (the recorded golden
-//! tests/fixtures/keymap_snapshots.json): each answer as JSON text and the tree
+//! The keymap snapshot handlers on the same userData directory, step by
+//! step, against the recorded golden tests/fixtures/keymap_snapshots.json: each answer as JSON text and the tree
 //! left at the end.
 
 // Helpers outside #[test] functions unwrap fixture data too.
@@ -16,7 +15,7 @@ use pipette_typing_analytics::keymap_snapshots::{
 };
 
 #[test]
-fn the_handlers_match_typescript() {
+fn the_handlers_match_the_golden() {
     let fixture = fixture("keymap_snapshots.json");
     let hash = text(&fixture, "machineHash").to_owned();
     let now = number(field(&fixture, "nowMs")) as i64;

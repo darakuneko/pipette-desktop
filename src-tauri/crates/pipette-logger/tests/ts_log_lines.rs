@@ -33,7 +33,7 @@ fn level(name: &str) -> Level {
 }
 
 #[test]
-fn the_lines_are_the_typescript_ones() {
+fn the_lines_are_the_recorded_ones() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_log_lines.json");
     let fixture: Fixture = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
     assert!(!fixture.lines.is_empty());

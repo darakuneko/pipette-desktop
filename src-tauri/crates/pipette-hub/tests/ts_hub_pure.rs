@@ -27,7 +27,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 #[test]
-fn the_text_checks_match_the_ts() {
+fn the_text_checks_match_the_golden() {
     let golden = fixture("ts_hub_pure.json");
     let mut failures = Vec::new();
     let mut skipped = 0;
@@ -70,7 +70,7 @@ fn the_text_checks_match_the_ts() {
 }
 
 #[test]
-fn the_number_helpers_match_the_ts() {
+fn the_number_helpers_match_the_golden() {
     let golden = fixture("ts_hub_pure.json");
     let mut failures = Vec::new();
     for case in array(field(&golden, "clampInt")) {
@@ -95,7 +95,7 @@ fn the_number_helpers_match_the_ts() {
 }
 
 #[test]
-fn file_names_base64_and_build_files_match_the_ts() {
+fn file_names_base64_and_build_files_match_the_golden() {
     let golden = fixture("ts_hub_pure.json");
     let mut failures = Vec::new();
     let mut skipped = 0;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the function tables recorded from the TypeScript helpers and
+//! Replays the recorded golden function tables and
 //! compares every result byte for byte.
 
 #![allow(clippy::unwrap_used)]

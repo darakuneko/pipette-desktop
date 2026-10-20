@@ -50,7 +50,6 @@ pub fn aozora_text_from_zip(zip: &[u8]) -> Result<Vec<u16>, AozoraTextError> {
         largest_text_entry(zip).map_err(AozoraTextError::Unzip)?.ok_or(AozoraTextError::NoTextEntry)?;
     let decoded = decode_shift_jis(&bytes);
     let replacements = decoded.iter().filter(|&&unit| unit == REPLACEMENT_CHARACTER).count();
-    // Same f64 division as the TypeScript.
     if !decoded.is_empty() && replacements as f64 / decoded.len() as f64 > REPLACEMENT_RATIO_THRESHOLD {
         return Err(AozoraTextError::DecodeFailed);
     }

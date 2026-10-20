@@ -4,7 +4,7 @@
 //! finger, hand and row and divided by the placed events.
 //!
 //! The sums run in the order of the matrix counts and the shares keep the
-//! keys in the order they first got a count, as the TypeScript objects do.
+//! keys in the order they first got a count, as JavaScript objects do.
 
 use std::collections::HashMap;
 
@@ -213,8 +213,8 @@ fn ratio(numerator: f64, denominator: f64) -> f64 {
 }
 
 /// `computeLayoutComparison` on layer 0 of `snapshot`, with the counts of
-/// one heatmap aggregate. Fails where the TypeScript resolver throws: on a
-/// layout map entry that is neither a string nor falsy.
+/// one heatmap aggregate. Fails on a layout map entry that is neither a
+/// string nor falsy.
 pub fn compute(
     counts: &[MatrixCounts],
     snapshot: &Value,

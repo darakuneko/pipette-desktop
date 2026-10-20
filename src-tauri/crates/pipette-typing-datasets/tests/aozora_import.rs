@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Aozora Bunko import where it differs from the TypeScript handler,
-//! which the recorded scenarios (ts_aozora_import_scenarios.rs) cannot
+//! The Aozora Bunko import in the cases the recorded scenarios (ts_aozora_import_scenarios.rs) cannot
 //! show: a body past the client's size limit, and an overrides file nested
 //! too deeply to read.
 

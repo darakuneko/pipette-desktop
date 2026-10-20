@@ -83,7 +83,7 @@ fn send(
 }
 
 #[test]
-fn sends_the_ts_requests_headers_and_body() {
+fn sends_the_recorded_requests_headers_and_body() {
     let h = harness(vec![reply(200, None, r#"{"ok":true,"data":{"token":"t"}}"#)]);
     let data =
         send(&h, Endpoint::AuthToken, None, RequestBody::Json(r#"{"id_token":"x"}"#.to_owned())).unwrap();
@@ -160,7 +160,7 @@ fn a_long_or_missing_retry_after_and_a_second_429_are_rate_limited() {
 }
 
 #[test]
-fn failed_statuses_get_the_ts_classes_and_messages() {
+fn failed_statuses_get_the_recorded_classes_and_messages() {
     let cases = [
         (Endpoint::AuthMe, 401, Some(StatusKind::Unauthorized)),
         (Endpoint::AuthMe, 403, Some(StatusKind::Forbidden)),

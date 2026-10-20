@@ -162,7 +162,7 @@ fn same_answer(actual: Option<&Value>, recorded: &Value) -> bool {
 }
 
 #[test]
-fn the_account_scenarios_match_the_ts() {
+fn the_account_scenarios_match_the_golden() {
     let f = fixture("ts_hub_handlers_account.json");
     let base = text(field(&f, "hubBase")).to_owned();
     let now = number(field(&f, "nowMs")).unwrap();

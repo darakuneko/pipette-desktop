@@ -216,7 +216,7 @@ struct Coercion {
 }
 
 #[test]
-fn coercions_match_typescript() {
+fn coercions_match_the_golden() {
     for case in fixture::<Vec<Coercion>>("coercions.json") {
         let value = (case.input != "undefined").then(|| parse(&case.input).unwrap());
         assert_eq!(clamp_zoom_factor(value.as_ref()), case.zoom_factor, "clampZoomFactor({})", case.input);

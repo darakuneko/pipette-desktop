@@ -4,7 +4,7 @@
 //! minute written twice adds up, and a tag that differs between two writes of a
 //! minute becomes null (a mixed minute).
 //!
-//! The inputs deserialize from the TypeScript row shapes (camelCase keys,
+//! The inputs deserialize from the JavaScript row shapes (camelCase keys,
 //! an optional field absent or null).
 
 use rusqlite::named_params;

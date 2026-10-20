@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The data operations against the TypeScript code: each scenario of
+//! The data operations against the recorded goldens: each scenario of
 //! data_ops.json and of data_ops_local_days/<zone>.json (recorded goldens)
 //! replayed on the recorder and [`DataOps`] must answer every step the
 //! same, announce the same sync units in order, log the same lines and
@@ -381,16 +381,15 @@ async fn replay(golden: &Value, label: &str) {
 }
 
 #[tokio::test]
-async fn replays_every_scenario_as_the_typescript_code() {
+async fn replays_every_recorded_scenario() {
     replay(&fixture("data_ops.json"), "data ops:").await;
 }
 
 const ZONES: &[&str] = &["UTC", "Asia/Tokyo", "America/New_York", "America/Santiago", "America/Havana"];
 
 #[test]
-fn deletes_local_days_as_the_typescript_code_in_each_time_zone() {
-    let Some(zone) = in_each_time_zone("deletes_local_days_as_the_typescript_code_in_each_time_zone", ZONES)
-    else {
+fn deletes_local_days_as_recorded_in_each_time_zone() {
+    let Some(zone) = in_each_time_zone("deletes_local_days_as_recorded_in_each_time_zone", ZONES) else {
         return;
     };
     let golden = fixture(&format!("data_ops_local_days/{}.json", zone.to_lowercase().replace('/', "-")));

@@ -221,7 +221,7 @@ impl GoogleAuth {
         .await
     }
 
-    /// Signs out (`signOut`): cancels a sign-in under way, forgets the
+    /// Signs out: cancels a sign-in under way, forgets the
     /// tokens and removes their file. The tokens are not revoked.
     pub async fn sign_out(&self) {
         self.attempts.send_modify(|current| *current += 1);
@@ -229,7 +229,7 @@ impl GoogleAuth {
         self.account_changed();
     }
 
-    /// Whether the sync is signed in (`getAuthStatus`): tokens are stored,
+    /// Whether the sync is signed in: tokens are stored,
     /// or the Hub test account is set.
     pub async fn is_authenticated(&self) -> bool {
         (self.config.hub_test_account)().is_some() || self.tokens.load().await.is_some()

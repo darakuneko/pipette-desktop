@@ -56,7 +56,7 @@ fn run_command(h: &Harness, command: &str, args: &Object) -> Result<Value, Strin
 }
 
 #[test]
-fn the_shim_commands_leave_the_files_of_the_typescript_handlers() {
+fn the_shim_commands_leave_the_recorded_files() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_settings_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

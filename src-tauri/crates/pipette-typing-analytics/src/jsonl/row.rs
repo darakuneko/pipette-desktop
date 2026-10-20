@@ -5,7 +5,7 @@
 //! A row is held as the object `JSON.parse` made of the line, so a row read
 //! from a file is written back (a delete mark, an import) with its keys in
 //! their order, its number forms, its lone surrogates and the fields this
-//! build does not know, as the TypeScript code writes the object it read.
+//! build does not know.
 
 use std::fmt::Write;
 

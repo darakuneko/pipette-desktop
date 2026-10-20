@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The values the queries answer, as the JavaScript values the TypeScript
-//! DB layer returns: every number a double, a SQL NULL `null`, and each row
+//! The values the queries answer, as JavaScript values: every number a double, a SQL NULL `null`, and each row
 //! an object whose keys are the statement's column aliases in their order,
 //! as better-sqlite3 builds it. [`ToJs`] gives that value, which
 //! `pipette_js_json::stringify` writes as the same JSON text, and writes

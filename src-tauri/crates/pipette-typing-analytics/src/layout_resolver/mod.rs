@@ -43,7 +43,7 @@ pub enum Resolved {
 }
 
 /// A layout map entry that `parseLayoutEntry` cannot split (a truthy value
-/// that is not a string), where the TypeScript handler throws.
+/// that is not a string).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("layout map entry {0} is not a string")]
 pub struct BadLayoutEntry(pub String);
@@ -139,8 +139,7 @@ pub struct SnapshotKeys {
 impl SnapshotKeys {
     /// `keymap` is the snapshot's `keymap` (layers of rows of serialized
     /// keycodes); `keys` its layout's KLE keys. A cell that is not a
-    /// non-empty string has no keycode: the app's snapshots hold strings,
-    /// where the TypeScript resolver would throw on another truthy value.
+    /// non-empty string has no keycode: the app's snapshots hold strings.
     pub fn new(keymap: &Value, layer: usize, keys: &[KleKey]) -> Self {
         let rows: &[Value] = match keymap {
             Value::Array(layers) => match layers.get(layer) {

@@ -68,8 +68,7 @@ impl Fixture {
         self.db.write_minute(&stats, chars, matrix, at).unwrap();
     }
 
-    /// A matrix cell and its minute's stats (`writeMatrix` of the TypeScript
-    /// tests).
+    /// A matrix cell and its minute's stats.
     fn matrix(
         &mut self,
         scope_id: &str,

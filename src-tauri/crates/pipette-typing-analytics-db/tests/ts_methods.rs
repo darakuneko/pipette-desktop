@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! TypeScript → Rust, method by method: the calls and write scenarios of
-//! tests/fixtures/methods.json and methods_tz/, which the real TypeScript
-//! DB layer on better-sqlite3 answered on the same seed, recorded as
-//! goldens. Every answer must be equal
+//! Method by method: the calls and write scenarios of
+//! tests/fixtures/methods.json and methods_tz/, recorded goldens of the
+//! answers on better-sqlite3 for the same seed. Every answer must be equal
 //! to the bit in canonical form, and after each write scenario every table
 //! cell by cell. The calls that group by local days run once per time zone
 //! they were recorded in, each in a process of its own.
@@ -39,7 +38,7 @@ fn assert_calls(db: &mut TypingAnalyticsDb, calls: &Value, label: &str) {
 }
 
 #[test]
-fn reads_match_typescript() {
+fn reads_match_the_golden() {
     let expected = read_json(fixtures_dir().join("methods.json"));
     let mut db = TypingAnalyticsDb::open_in_memory().unwrap();
     let applied = db.apply_day_jsonl(&seed()).unwrap();
@@ -48,7 +47,7 @@ fn reads_match_typescript() {
 }
 
 #[test]
-fn write_scenarios_match_typescript() {
+fn write_scenarios_match_the_golden() {
     let expected = read_json(fixtures_dir().join("methods.json"));
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("pipette-typing-analytics-db");
     std::fs::create_dir_all(&dir).unwrap();
@@ -66,7 +65,7 @@ fn write_scenarios_match_typescript() {
 }
 
 #[test]
-fn local_time_reads_match_typescript() {
+fn local_time_reads_match_the_golden() {
     let dir = fixtures_dir().join("methods_tz");
     let mut fixtures: Vec<Value> =
         std::fs::read_dir(&dir).unwrap().map(|entry| read_json(entry.unwrap().path())).collect();
@@ -74,7 +73,7 @@ fn local_time_reads_match_typescript() {
     let zones: Vec<&str> = fixtures.iter().map(|f| f["timeZone"].as_str().unwrap()).collect();
     assert_eq!(zones.len(), 5);
     let zones = sqlite_time_zones(&zones);
-    let Some(zone) = in_each_time_zone("local_time_reads_match_typescript", &zones) else { return };
+    let Some(zone) = in_each_time_zone("local_time_reads_match_the_golden", &zones) else { return };
     let fixture = fixtures.iter().find(|f| f["timeZone"].as_str() == Some(&zone)).unwrap();
     assert_calls(&mut seeded(), &fixture["calls"], &zone);
 }

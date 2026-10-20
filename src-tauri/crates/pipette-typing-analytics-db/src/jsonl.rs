@@ -9,11 +9,9 @@
 //! in place of the surrogate, as better-sqlite3 writes a JavaScript string
 //! as UTF-8.
 //!
-//! Numbers stay `f64` all the way to SQLite: the TypeScript side holds them
-//! as JavaScript numbers and better-sqlite3 binds every number as a double,
-//! so an INTEGER column stores a whole value as INTEGER (column affinity)
-//! and a fractional one as REAL. Binding the same doubles keeps both sides
-//! storing the same storage class.
+//! Numbers stay `f64` all the way to SQLite and are bound as doubles, so an
+//! INTEGER column stores a whole value as INTEGER (column affinity) and a
+//! fractional one as REAL, the storage classes the recorded goldens hold.
 
 use pipette_js_json::{JsString, Object, Value};
 

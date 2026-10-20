@@ -54,7 +54,7 @@ fn answered(result: &Object) -> ThemeCheck {
 }
 
 #[test]
-fn the_limits_and_keys_are_those_of_the_typescript_build() {
+fn the_limits_and_keys_are_the_recorded_ones() {
     let root = fixture();
     assert_eq!(root.get("maxNameLength"), Some(&Value::from(MAX_NAME_LENGTH as f64)));
     let keys = |key: &str| strings(root.get(key).unwrap());
@@ -63,7 +63,7 @@ fn the_limits_and_keys_are_those_of_the_typescript_build() {
 }
 
 #[test]
-fn every_pack_is_checked_as_the_typescript_check_does() {
+fn every_pack_is_checked_as_recorded() {
     let root = fixture();
     let Some(Value::Array(cases)) = root.get("cases") else { panic!() };
     let mut failures = Vec::new();

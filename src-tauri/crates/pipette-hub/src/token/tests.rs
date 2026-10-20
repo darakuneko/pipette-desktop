@@ -300,7 +300,7 @@ async fn a_token_taken_while_the_cache_is_cleared_is_not_kept() {
 /// overtook is still cached when it ends, and its end forgets the shared
 /// request started after the display name was set.
 #[tokio::test]
-async fn a_display_name_set_during_a_request_keeps_the_ts_quirks() {
+async fn a_display_name_set_during_a_request_keeps_the_recorded_quirks() {
     let first = Arc::new(Notify::new());
     let second = Arc::new(Notify::new());
     let s = setup(

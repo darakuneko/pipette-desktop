@@ -81,10 +81,10 @@ fn check(case: &Value, got: Result<Prepared, PrepareError>) {
 }
 
 #[test]
-fn the_export_matches_typescript() {
+fn the_export_matches_the_golden() {
     let golden = fixture(FIXTURE);
     let zone = text(field(&golden, "timeZone"));
-    let Some(_) = in_each_time_zone("the_export_matches_typescript", &[zone]) else { return };
+    let Some(_) = in_each_time_zone("the_export_matches_the_golden", &[zone]) else { return };
 
     let dir = tempfile::tempdir().unwrap();
     build_tree(dir.path(), field(&golden, "tree"));

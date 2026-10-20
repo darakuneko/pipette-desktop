@@ -95,8 +95,8 @@ fn is_colophon_line(line: &[u16]) -> bool {
 }
 
 /// `removeFooter`: cuts the text at the first line that is the colophon
-/// (`底本：`) or holds the end-of-body marker. Both searches of the
-/// TypeScript match at a line start, so the earlier of the two is the
+/// (`底本：`) or holds the end-of-body marker. Both searches match at a
+/// line start, so the earlier of the two is the
 /// first line that satisfies either.
 fn remove_footer(mut text: Vec<u16>) -> Vec<u16> {
     let mut start = 0;

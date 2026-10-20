@@ -38,10 +38,10 @@ pub struct SchemaOutcome {
     pub cache_needs_rebuild: bool,
 }
 
-/// The stored version as the TypeScript side reads it with `Number()` for
-/// decimal text: blank is 0, anything else unparsable is NaN (`None`). A
-/// NaN never equals SCHEMA_VERSION and fails every `<` test, so it gets no
-/// migration and is overwritten. JavaScript-only forms (`0x10`, `Infinity`)
+/// The stored version read as JavaScript's `Number()` reads decimal text:
+/// blank is 0, anything else unparsable is NaN (`None`). A NaN never
+/// equals SCHEMA_VERSION and fails every `<` test, so it gets no migration
+/// and is overwritten. JavaScript-only forms (`0x10`, `Infinity`)
 /// are not reproduced; only this layer writes the value, always decimal.
 fn js_number(text: &str) -> Option<f64> {
     let trimmed = text.trim();

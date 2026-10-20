@@ -132,7 +132,7 @@ fn open_failure_logs() -> Vec<OpenFailureLog> {
 }
 
 #[test]
-fn a_failed_enumeration_logs_the_typescript_message() {
+fn a_failed_enumeration_logs_the_recorded_message() {
     for log in open_failure_logs() {
         capture();
         let f = fixture(VirtualDeviceMode::Off);
@@ -143,7 +143,7 @@ fn a_failed_enumeration_logs_the_typescript_message() {
 }
 
 #[test]
-fn only_the_last_failed_open_attempt_logs_the_typescript_message() {
+fn only_the_last_failed_open_attempt_logs_the_recorded_message() {
     for log in open_failure_logs() {
         capture();
         let f = fixture(VirtualDeviceMode::Off);

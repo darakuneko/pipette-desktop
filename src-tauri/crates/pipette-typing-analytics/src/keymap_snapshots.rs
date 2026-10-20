@@ -9,8 +9,7 @@
 //! record sessions. They are this device's own and never synced.
 //!
 //! The files are read as the JSON values they hold, whatever their shape,
-//! and handed back as such, as the TypeScript code does with what
-//! `JSON.parse` gives.
+//! and handed back as such.
 //!
 //! A uid that is not a single path segment (empty, `.`, `..`, or with `/` or
 //! `\`) has no snapshot directory, so nothing is saved, picked or listed for

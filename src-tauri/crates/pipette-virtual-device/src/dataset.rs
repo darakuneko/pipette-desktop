@@ -30,8 +30,8 @@ pub const MACRO_BUFFER_SIZE: usize = 900;
 pub const VIALRGB_SUPPORTED_EFFECTS: [u16; 26] =
     [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 
-/// The keyboard definition JSON, LZMA-alone compressed exactly as the
-/// TypeScript device serves it.
+/// The keyboard definition JSON, LZMA-alone compressed, served as these
+/// exact bytes.
 pub const COMPRESSED_DEFINITION: &[u8] = include_bytes!("../data/definition.lzma");
 
 /// True for the QK_BOOT keycode. vial-qmk's vial_keycode_firewall() refuses to

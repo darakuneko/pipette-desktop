@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The deleted-ranges store, the clip to a UTC day, the applied record and
-//! the ranges of local days against what the TypeScript code did
-//! (the recorded goldens tests/fixtures/deleted_ranges.json and
-//! deleted_ranges_local_days/). The local days run once
-//! per recorded time zone, each in a process of its own.
+//! the ranges of local days against the recorded goldens
+//! (tests/fixtures/deleted_ranges.json and deleted_ranges_local_days/).
+//! The local days run once per recorded time zone, each in a process of its own.
 
 // Helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]
@@ -33,7 +32,7 @@ fn text_or_null(text: Option<String>) -> Value {
 }
 
 #[test]
-fn the_store_matches_typescript() {
+fn the_store_matches_the_golden() {
     let fixture = fixture("deleted_ranges.json");
     let (uid, hash) = (text(&fixture, "uid"), text(&fixture, "hash"));
     let other = entries_of(text(&fixture, "other"));
@@ -90,7 +89,7 @@ fn range(value: &Value) -> DeleteRange {
 }
 
 #[test]
-fn clips_match_typescript() {
+fn clips_match_the_golden() {
     for case in array(&fixture("deleted_ranges.json"), "clips") {
         let ranges: Vec<DeleteRange> = array(case, "entries").iter().map(range).collect();
         let clipped = clip_to_utc_day(&ranges, text(case, "day"));
@@ -105,7 +104,7 @@ fn clips_match_typescript() {
 }
 
 #[test]
-fn the_applied_record_matches_typescript() {
+fn the_applied_record_matches_the_golden() {
     let fixture = fixture("deleted_ranges.json");
     let (uid, own_hash) = (text(&fixture, "uid"), text(&fixture, "ownHash"));
     for case in array(&fixture, "applied") {
@@ -148,10 +147,10 @@ fn local_day_fixtures() -> Vec<(String, Value)> {
 }
 
 #[test]
-fn ranges_of_local_days_match_typescript_in_each_time_zone() {
+fn ranges_of_local_days_match_the_golden_in_each_time_zone() {
     let fixtures = local_day_fixtures();
     let zones: Vec<&str> = fixtures.iter().map(|(zone, _)| zone.as_str()).collect();
-    let Some(zone) = in_each_time_zone("ranges_of_local_days_match_typescript_in_each_time_zone", &zones)
+    let Some(zone) = in_each_time_zone("ranges_of_local_days_match_the_golden_in_each_time_zone", &zones)
     else {
         return;
     };

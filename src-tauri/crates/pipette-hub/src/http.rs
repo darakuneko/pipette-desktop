@@ -325,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    fn the_envelope_is_unwrapped_as_the_ts_does() {
+    fn the_envelope_is_unwrapped_as_recorded() {
         let parse = |text: &str| pipette_js_json::parse(text).unwrap();
         assert_eq!(unwrap_strict("L", parse(r#"{"ok":true,"data":[1]}"#)).unwrap(), Some(parse("[1]")));
         assert_eq!(unwrap_strict("L", parse(r#"{"ok":1}"#)).unwrap(), None);

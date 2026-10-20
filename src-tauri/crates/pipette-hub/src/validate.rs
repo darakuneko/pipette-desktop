@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn clamps_and_counts_pages_as_the_ts_does() {
+    fn clamps_and_counts_pages_as_recorded() {
         assert_eq!(clamp_int(Some(5.9), 1.0, 100.0), Some(5.0));
         assert_eq!(clamp_int(Some(f64::NAN), 1.0, 100.0), None);
         assert_eq!(clamp_int(None, 1.0, 100.0), None);

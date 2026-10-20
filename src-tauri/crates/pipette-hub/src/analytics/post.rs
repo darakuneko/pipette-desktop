@@ -221,9 +221,10 @@ impl AnalyticsPosts<'_> {
             .await
     }
 
-    /// `setAnalyzeFilterHubPostId(params.uid, params.entryId, id)`, whose
-    /// answer the handlers ignore. `undefined` and `null` clear the link; a
-    /// value that is not a string writes nothing.
+    /// Links the post to the saved Analyze filter `params.entryId` of
+    /// `params.uid` (`set_analyze_filter_hub_post_id`), ignoring the result.
+    /// `undefined` and `null` clear the link; a value that is not a string
+    /// writes nothing.
     async fn link(&self, params: &Value, id: Option<&Value>) {
         let post_id = match id {
             None | Some(Value::Null) => None,

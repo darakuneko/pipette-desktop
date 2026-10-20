@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the store-directory scenarios recorded from the TypeScript body
+//! Replays the recorded golden store-directory scenarios of the body
 //! filename migration: the same files in a temp directory, the same call, then the result and
 //! every file left behind compared byte for byte.
 

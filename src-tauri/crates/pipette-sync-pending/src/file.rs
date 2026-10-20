@@ -89,9 +89,9 @@ fn from_value(parsed: &Value, keyboards_dir: &Path) -> PendingFile {
     let mut held = Vec::new();
     if let Some(Value::Object(accounts)) = file.get("held") {
         for (sub, list) in accounts.iter() {
+            // The 0.4 build's reader drops an account named `__proto__`:
             // `held[sub] = kept` on a plain object sets its prototype for
-            // `__proto__` instead of adding a property, so the TypeScript
-            // reader drops that account.
+            // that name instead of adding a property.
             if sub.is_empty() || sub.as_str() == Some("__proto__") {
                 continue;
             }

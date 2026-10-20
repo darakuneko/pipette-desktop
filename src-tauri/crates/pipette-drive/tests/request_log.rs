@@ -156,7 +156,7 @@ async fn run_scenario(golden: &Value, scenario: &Value) {
 }
 
 #[tokio::test]
-async fn sends_the_requests_of_google_drive_ts() {
+async fn sends_the_recorded_requests() {
     let golden: Value = serde_json::from_str(LOG).unwrap();
     let scenarios = golden["scenarios"].as_array().unwrap();
     assert_eq!(scenarios.len(), 12);

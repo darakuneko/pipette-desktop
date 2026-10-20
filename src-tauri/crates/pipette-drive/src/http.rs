@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_the_multipart_body_of_google_drive_ts() {
+    fn writes_the_recorded_multipart_body() {
         assert_eq!(
             multipart_body("a.enc", "{\"v\":1}"),
             "-----pipette-sync-boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n\

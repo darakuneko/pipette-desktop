@@ -312,7 +312,7 @@ fn call<'a>(
 }
 
 #[test]
-fn each_request_matches_the_ts() {
+fn each_request_matches_the_golden() {
     let f = fixture("ts_hub_request_log.json");
     let base = get(&f, "hubBase").unwrap().as_str().unwrap().to_owned();
     let now = number(get(&f, "nowMs").unwrap()).unwrap();

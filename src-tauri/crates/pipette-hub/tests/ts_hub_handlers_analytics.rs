@@ -284,10 +284,10 @@ async fn run_call(posts: &AnalyticsPosts<'_>, call: &str, params: &Value) -> Val
 }
 
 #[test]
-fn the_analytics_scenarios_match_the_ts() {
+fn the_analytics_scenarios_match_the_golden() {
     let golden = fixture(FIXTURE);
     let zone = text(field(&golden, "timeZone"));
-    let Some(_) = in_each_time_zone("the_analytics_scenarios_match_the_ts", &[zone]) else { return };
+    let Some(_) = in_each_time_zone("the_analytics_scenarios_match_the_golden", &[zone]) else { return };
 
     let base = text(field(&golden, "hubBase")).to_owned();
     let now = number(field(&golden, "nowMs")).unwrap();

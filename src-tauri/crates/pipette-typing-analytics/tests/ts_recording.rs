@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The recording against the TypeScript pipeline: each scenario of
+//! The recording against the recorded goldens: each scenario of
 //! recording.json (a recorded golden) replayed on
 //! the [`Recorder`] must leave the same pending work and announced sync
 //! units after every step, the same bytes in every day file and in
@@ -113,7 +113,7 @@ impl Harness {
 }
 
 #[tokio::test]
-async fn replays_every_scenario_as_the_typescript_pipeline() {
+async fn replays_every_recorded_scenario() {
     let golden = fixture("recording.json");
     for scenario in array(&golden, "scenarios") {
         let name = text(scenario, "name");

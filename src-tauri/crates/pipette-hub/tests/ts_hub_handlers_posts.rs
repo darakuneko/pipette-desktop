@@ -343,11 +343,11 @@ fn run_fixture(name: &str, scenario_count: usize) {
 }
 
 #[test]
-fn the_keymap_post_scenarios_match_the_ts() {
+fn the_keymap_post_scenarios_match_the_golden() {
     run_fixture("ts_hub_handlers_posts.json", 6);
 }
 
 #[test]
-fn the_private_post_scenarios_match_the_ts() {
+fn the_private_post_scenarios_match_the_golden() {
     run_fixture("ts_hub_handlers_private.json", 2);
 }

@@ -51,7 +51,7 @@ fn trash_json(trash: &TrashInfo) -> Value {
 }
 
 #[test]
-fn chooses_the_copies_drive_canonical_ts_chooses() {
+fn chooses_the_recorded_copies() {
     let tables = tables();
     for case in tables["canonical"].as_array().unwrap() {
         let listing = Listing::new(case["files"].as_array().unwrap().iter().map(drive_file).collect());
@@ -87,7 +87,7 @@ fn ranks_copies_as_is_newer_copy_does() {
 }
 
 #[test]
-fn names_trash_files_as_drive_trash_ts_does() {
+fn names_trash_files_as_recorded() {
     let tables = tables();
     assert_eq!(tables["trashQuarantineMs"].as_i64(), Some(TRASH_QUARANTINE_MS));
     for case in tables["trashFileName"].as_array().unwrap() {

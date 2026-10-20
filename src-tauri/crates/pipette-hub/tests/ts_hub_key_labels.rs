@@ -44,7 +44,7 @@ async fn run_call(token: &HubToken, stores: &StoreContext, call: &str, args: &[V
 }
 
 #[test]
-fn the_key_label_scenarios_match_the_ts() {
+fn the_key_label_scenarios_match_the_golden() {
     let f = fixture("ts_hub_handlers_key_labels.json");
     let base = text(field(&f, "hubBase")).to_owned();
     let now = number(field(&f, "nowMs")).unwrap();

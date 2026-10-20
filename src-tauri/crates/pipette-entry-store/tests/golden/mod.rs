@@ -81,9 +81,9 @@ pub fn check_outcome(
                 failures.push(format!("{label}:\n  got  {out:?}\n  want {want:?}"));
             }
         }
-        (true, Ok(out)) => failures.push(format!("{label}: got {out:?}, TypeScript throws")),
+        (true, Ok(out)) => failures.push(format!("{label}: got {out:?}, the golden throws")),
         (false, Err(err)) => {
-            failures.push(format!("{label}: {err}, TypeScript returns {}", stringify(expected)))
+            failures.push(format!("{label}: {err}, the golden returns {}", stringify(expected)))
         }
     }
 }

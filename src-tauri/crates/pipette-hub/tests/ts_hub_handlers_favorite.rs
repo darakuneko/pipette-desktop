@@ -183,7 +183,7 @@ fn failure(message: String) -> Value {
 }
 
 #[test]
-fn the_favorite_scenarios_match_the_ts() {
+fn the_favorite_scenarios_match_the_golden() {
     let f = fixture("ts_hub_handlers_favorite.json");
     let base = text(field(&f, "hubBase")).to_owned();
     let now = number(field(&f, "nowMs")).unwrap();
@@ -309,7 +309,7 @@ fn tagged_input(value: &Value) -> Option<Value> {
 }
 
 #[test]
-fn the_hub_vial_protocol_check_matches_the_ts() {
+fn the_hub_vial_protocol_check_matches_the_golden() {
     let f = fixture("ts_hub_pure.json");
     let cases = array(field(&f, "isValidHubVialProtocol"));
     assert!(cases.len() >= 13);

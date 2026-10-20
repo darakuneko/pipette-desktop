@@ -118,7 +118,7 @@ fn temp_path_for(path: &Path) -> PathBuf {
 
 /// The temp file name for a target named `name`:
 /// `<name>.<pid>.<12 hex digits>.tmp`, the hex digits being the low 48 bits
-/// of `random` (the 6 random bytes of the TypeScript writer), with `name`
+/// of `random` (the 6 random bytes of the 0.4 build's writer), with `name`
 /// cut short when the whole would pass [`MAX_NAME_BYTES`].
 pub fn temp_file_name(name: &str, pid: u32, random: u64) -> String {
     let suffix = format!(".{pid}.{:012x}.tmp", random & 0xffff_ffff_ffff);
@@ -182,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn the_temp_name_matches_the_typescript_writer() {
+    fn the_temp_name_matches_the_recorded_one() {
         let tmp = temp_path_for(Path::new("/d/quit-pending.json"));
         let name = tmp.file_name().unwrap().to_str().unwrap();
         let rest = name.strip_prefix("quit-pending.json.").unwrap().strip_suffix(".tmp").unwrap();

@@ -62,7 +62,7 @@ fn run_step(h: &Harness, step: &Object) -> Option<String> {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     replay_scenarios(
         "ts_analyze_filter_store_scenarios.json",
         &[],

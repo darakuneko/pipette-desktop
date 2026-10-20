@@ -131,13 +131,13 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_typescript_tables_have_nan_cases() {
+    fn the_recorded_tables_have_nan_cases() {
         let text = fixture().to_string();
         assert!(text.contains("\"NaN\""));
     }
 
     #[test]
-    fn effective_min_size_matches_the_typescript_table() {
+    fn effective_min_size_matches_the_recorded_table() {
         let fixture = fixture();
         let cases = fixture["effectiveMinSize"].as_array().unwrap();
         assert!(!cases.is_empty());
@@ -152,7 +152,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn clamp_bounds_to_work_area_matches_the_typescript_table() {
+    fn clamp_bounds_to_work_area_matches_the_recorded_table() {
         let fixture = fixture();
         let cases = fixture["clampBoundsToWorkArea"].as_array().unwrap();
         assert!(!cases.is_empty());

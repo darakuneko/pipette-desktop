@@ -16,7 +16,7 @@ use pipette_js_json::{JsString, Object, Value};
 
 /// `THEME_PACK_LIMITS.MAX_NAME_LENGTH` (src/shared/types/theme-store.ts):
 /// the longest pack name (UTF-16 units). The validator's fixture records the
-/// TypeScript value and its test checks this one against it.
+/// value and its test checks this one against it.
 pub const MAX_NAME_LENGTH: usize = 64;
 
 /// `THEME_COLOR_KEYS`: the colors every pack has.

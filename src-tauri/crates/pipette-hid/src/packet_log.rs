@@ -65,7 +65,7 @@ mod tests {
     /// The recorded lines of the 0.4 build's logger for the same packets (the
     /// fixture of pipette-logger).
     #[test]
-    fn the_packet_lines_are_the_typescript_ones() {
+    fn the_packet_lines_are_the_recorded_ones() {
         let path =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../pipette-logger/tests/fixtures/ts_log_lines.json");
         let fixture: Fixture = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();

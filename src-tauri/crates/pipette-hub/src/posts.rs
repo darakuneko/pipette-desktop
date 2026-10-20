@@ -260,7 +260,7 @@ pub async fn fetch_my_posts(token: &HubToken, params: MyPostsParams) -> Value {
         let endpoint = Endpoint::MyPosts { page, per_page };
         let data = token.with_token_retry(|jwt| send(token, &endpoint, jwt, RequestBody::None)).await?;
         let data = data.as_ref();
-        // The TS reads `result.total` first.
+        // `total` is read first.
         let total = property(data, "total")?;
         let per_page = property(data, "per_page")?;
         let total_pages =

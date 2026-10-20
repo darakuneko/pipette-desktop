@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the recorded entry merges of the TypeScript merge and compares
+//! Replays the recorded golden entry merges and compares
 //! every result byte for byte.
 
 #![allow(clippy::unwrap_used)]

@@ -64,7 +64,7 @@ fn run(via: &str, header: Option<&str>, now: f64) -> Run {
 }
 
 #[test]
-fn the_retry_matches_the_ts() {
+fn the_retry_matches_the_golden() {
     let golden = fixture("ts_hub_retry_after.json");
     let now = number(field(&golden, "nowMs")).unwrap();
     let mut failures = Vec::new();

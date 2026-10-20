@@ -19,7 +19,7 @@ use pipette_pack_stores::theme_handlers as handlers;
 use pipette_pack_stores::{ErrorCode, PackError};
 
 #[test]
-fn the_theme_pack_handlers_answer_and_write_as_the_typescript_ones() {
+fn the_theme_pack_handlers_answer_and_write_as_recorded() {
     replay("ts_theme_pack_store_scenarios.json", &mut |h, op, step, effects| {
         let user_data = h.user_data().to_path_buf();
         let arg = |key: &str| step.get(key);

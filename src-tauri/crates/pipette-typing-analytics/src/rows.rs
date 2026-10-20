@@ -2,8 +2,8 @@
 //! The JSONL rows a flush writes: the drained
 //! minutes, the closed sessions and their scopes, split by keyboard and
 //! UTC day. Every row of one flush has the same `updated_at`. The rows are
-//! built as the objects the TypeScript code builds, key order included, so
-//! the lines are the same bytes.
+//! built with the keys in the recorded goldens' order, so the lines are the
+//! same bytes.
 
 use std::sync::Arc;
 

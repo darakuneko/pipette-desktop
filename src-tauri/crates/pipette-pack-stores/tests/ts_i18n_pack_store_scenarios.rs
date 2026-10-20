@@ -11,7 +11,7 @@ use pipette_js_json::{Object, Value};
 use pipette_pack_stores::i18n_handlers as handlers;
 
 #[test]
-fn the_language_pack_handlers_answer_and_write_as_the_typescript_ones() {
+fn the_language_pack_handlers_answer_and_write_as_recorded() {
     replay("ts_i18n_pack_store_scenarios.json", &mut |h, op, step, effects| {
         let user_data = h.user_data().to_path_buf();
         let arg = |key: &str| step.get(key);

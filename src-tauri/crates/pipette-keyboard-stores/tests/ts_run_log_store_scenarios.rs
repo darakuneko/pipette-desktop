@@ -81,7 +81,7 @@ fn run_step(h: &Harness, consent: &Cell<bool>, step: &Object) -> Option<String> 
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_store() {
+fn the_scenarios_match_the_golden() {
     let consent = Cell::new(true);
     replay_scenarios(
         FIXTURE,

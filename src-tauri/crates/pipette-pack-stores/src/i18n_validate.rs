@@ -2,8 +2,8 @@
 //! The check of a language pack (`validatePack` of
 //! src/shared/i18n/validate.ts), with the same errors, warnings, dangerous
 //! keys and header. The Hub download of a language pack is refused when it
-//! fails (crates/pipette-hub). The size of a pack is not checked here, as the TS
-//! does not check it: the Hub enforces it.
+//! fails (crates/pipette-hub). The size of a pack is not checked here: the Hub
+//! enforces it.
 //!
 //! The patterns are matched on UTF-16 code units with JavaScript's meaning
 //! (theme_validate.rs).

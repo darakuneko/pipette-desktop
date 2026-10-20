@@ -5,7 +5,7 @@
 //! work runs one at a time in call order (`queueTokenFileWork`).
 //!
 //! The session generation is two counters. The sign-outs asked for advance
-//! when `signOut` is called, so a write under way or queued by then fails.
+//! when a sign-out is asked for, so a write under way or queued by then fails.
 //! The session advances inside the queue only, at the store of a sign-in
 //! and at the turn of a sign-out: other threads could run between advancing
 //! a generation and queueing the work, and a read queued there would cache
@@ -207,7 +207,7 @@ impl TokenFile {
     }
 
     /// Ends the session, forgets the cached tokens and removes the file,
-    /// ignoring every failure (`signOut`). The sign-out counts as asked for
+    /// ignoring every failure. The sign-out counts as asked for
     /// at once; the new session, the emptied cache and the removal come at
     /// its turn in the queue, so whatever a read queued before it cached is
     /// dropped there, and a read queued after it finds no file. A sign-in

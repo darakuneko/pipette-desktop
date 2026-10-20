@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The installation id, the sync state file and the cache freshness check
-//! against what the TypeScript code did on the same userData directories
-//! (the recorded goldens in tests/fixtures).
+//! against the recorded goldens in tests/fixtures, on the same userData
+//! directories.
 
 // Helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]
@@ -76,7 +76,7 @@ fn write_entry(path: &Path, entry: &Entry) {
 }
 
 #[test]
-fn installation_ids_match_typescript() {
+fn installation_ids_match_the_golden() {
     let fixture = fixture("installation_id.json");
     let new_id = text(&fixture, "newId");
     for case in cases(&fixture) {
@@ -96,7 +96,7 @@ fn installation_ids_match_typescript() {
 }
 
 #[test]
-fn sync_states_match_typescript() {
+fn sync_states_match_the_golden() {
     for case in cases(&fixture("sync_state.json")) {
         let name = text(case, "name");
         let dir = tempfile::tempdir().unwrap();
@@ -114,7 +114,7 @@ fn sync_states_match_typescript() {
 }
 
 #[test]
-fn cache_freshness_matches_typescript() {
+fn cache_freshness_matches_the_golden() {
     let fixture = fixture("cache_freshness.json");
     let device = text(&fixture, "device");
     let Value::Number(now) = field(&fixture, "nowMs") else { panic!("nowMs") };

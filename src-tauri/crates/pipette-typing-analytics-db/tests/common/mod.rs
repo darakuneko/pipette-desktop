@@ -146,7 +146,7 @@ pub fn canonical(value: &JsValue) -> Value {
     }
 }
 
-/// A heatmap aggregate as the TypeScript side returns it: a Map keyed
+/// A heatmap aggregate as the goldens record it: a Map keyed
 /// `${row},${col}`, in canonical form the array of its entries.
 fn matrix_counts(cells: &[MatrixCounts]) -> Value {
     Value::Array(
@@ -217,7 +217,7 @@ impl<T: ToJs + ?Sized> CheckedJs for T {
     }
 }
 
-/// Runs a call recorded by the method fixtures on `db`, by its TypeScript
+/// Runs a call recorded by the method fixtures on `db`, by its recorded
 /// method name and arguments, and returns its answer in canonical form.
 pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Value {
     let a = Args(args);

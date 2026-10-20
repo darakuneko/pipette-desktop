@@ -17,7 +17,7 @@
 //!   (`replayDayRowsHidingDeletedRanges`).
 //! - tombstone.rs, ingest.rs — the other writes; summary.rs, range.rs,
 //!   ngram.rs, scopes.rs — the reads, whose rows (rows.rs) give the objects
-//!   the TypeScript side returns ([`ToJs`]).
+//!   as JavaScript values ([`ToJs`]).
 
 mod apply;
 mod ingest;

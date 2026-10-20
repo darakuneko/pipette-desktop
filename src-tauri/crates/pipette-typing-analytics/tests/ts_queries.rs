@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The query layer against the TypeScript IPC handlers, member call by
-//! member call (the recorded goldens tests/fixtures/queries.json and
-//! queries_tz/): on the same seed and
-//! userData tree, each answer must be the same JSON text, and a call the
+//! The query layer, member call by member call, against the recorded
+//! goldens (tests/fixtures/queries.json and queries_tz/): on the same seed
+//! and userData tree, each answer must be the same JSON text, and a call the
 //! handler threw on must fail. The calls that go through local days run
 //! once per time zone they were recorded in, each in a process of its own.
 //!
@@ -76,13 +75,13 @@ fn user_data() -> tempfile::TempDir {
 }
 
 #[test]
-fn members_match_typescript() {
+fn members_match_the_golden() {
     let dir = user_data();
     assert_calls(array(&fixture("queries.json"), "calls"), dir.path(), "queries");
 }
 
 #[test]
-fn local_time_members_match_typescript_in_each_time_zone() {
+fn local_time_members_match_the_golden_in_each_time_zone() {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/queries_tz");
     let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().path()).collect();
     paths.sort();
@@ -91,7 +90,7 @@ fn local_time_members_match_typescript_in_each_time_zone() {
     let zones: Vec<&str> = fixtures.iter().map(|f| text(f, "timeZone")).collect();
     assert_eq!(zones.len(), 5);
     let zones = sqlite_time_zones(&zones);
-    let Some(zone) = in_each_time_zone("local_time_members_match_typescript_in_each_time_zone", &zones)
+    let Some(zone) = in_each_time_zone("local_time_members_match_the_golden_in_each_time_zone", &zones)
     else {
         return;
     };

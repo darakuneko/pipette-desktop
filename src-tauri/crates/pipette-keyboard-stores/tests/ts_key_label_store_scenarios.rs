@@ -176,7 +176,7 @@ fn recorded_dialogs(dialogs: &Value) -> Shown {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_key_label_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };
