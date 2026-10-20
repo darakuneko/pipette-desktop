@@ -74,14 +74,14 @@ function tauriSettingsMembers(): SettingsMembers {
   }
 }
 
-// The hook runs on both vialAPI implementations: a preload-like mock whose
+// The hook runs on both vialAPI implementations: a plain mock whose
 // members are the spies, and the Tauri shim (tauriSettingsMembers).
 // `anyStoredValue`: the hook gets whatever mockPipetteSettingsGet answers.
 // The shim answers null for settings the content rules refuse (src/shared/pipette-settings-normalize.ts), so the
 // tests of the hook's own checks of such values run on the mock only.
 const BACKENDS: { name: string; members: () => SettingsMembers; anyStoredValue: boolean }[] = [
   {
-    name: 'preload-like mock',
+    name: 'plain mock',
     anyStoredValue: true,
     members: () => ({
       pipetteSettingsGet: mockPipetteSettingsGet,

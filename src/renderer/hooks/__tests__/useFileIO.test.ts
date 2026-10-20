@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// Runs against both vialAPI implementations: a preload-like mock, and the
+// Runs against both vialAPI implementations: a plain mock, and the
 // Tauri shim's file members over a mocked Tauri IPC whose commands answer
 // what the same mocks return.
 
@@ -44,7 +44,7 @@ function memberArgs(...args: unknown[]): unknown[] {
 
 const BACKENDS = [
   {
-    name: 'preload-like mock',
+    name: 'plain mock',
     install: () => {
       installVialAPI({
         saveLayout: mockSaveLayout,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// Runs against both vialAPI implementations: a preload-like mock, and the
+// Runs against both vialAPI implementations: a plain mock, and the
 // Tauri shim's app config members over a mocked Tauri IPC.
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
@@ -29,10 +29,10 @@ function installVialAPI(value: object): void {
   Object.defineProperty(window, 'vialAPI', { value, writable: true, configurable: true })
 }
 
-const preloadLikeMock: Backend = (() => {
+const plainMock: Backend = (() => {
   const set = vi.fn<(key: string, value: unknown) => Promise<void>>()
   return {
-    name: 'preload-like mock',
+    name: 'plain mock',
     install: ({ config = DEFAULT_APP_CONFIG, getAllFails, setFails } = {}) => {
       set.mockReset()
       set.mockImplementation(() => (setFails ? Promise.reject(new Error('write fail')) : Promise.resolve()))
@@ -74,7 +74,7 @@ afterEach(() => {
   clearMocks()
 })
 
-describe.each([preloadLikeMock, shimOverMockIPC])('useAppConfig ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('useAppConfig ($name)', (backend) => {
   it('loads config on mount', async () => {
     backend.install({ config: { ...DEFAULT_APP_CONFIG, theme: 'dark' } })
     const { result } = renderHookWithConfig(() => useAppConfig())

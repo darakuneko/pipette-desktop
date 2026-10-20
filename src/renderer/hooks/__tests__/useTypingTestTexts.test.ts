@@ -28,12 +28,12 @@ function installVialAPI(members: object): void {
   Object.defineProperty(window, 'vialAPI', { value: { ...members }, writable: true, configurable: true })
 }
 
-// Both vialAPI implementations answer from the same spies: a preload-like
+// Both vialAPI implementations answer from the same spies: a plain
 // mock, and the Tauri shim's typing test text members over a mocked Tauri
 // IPC, whose commands hand their arguments to the spies in the members'
 // order.
 const backends = [
-  { name: 'preload-like mock', install: () => installVialAPI(storeMembers) },
+  { name: 'plain mock', install: () => installVialAPI(storeMembers) },
   {
     name: 'Tauri shim over mockIPC',
     install: () => {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 // The word list tab's calls against both vialAPI implementations: a
-// preload-like mock, and the Tauri shim's members over a mocked Tauri IPC
+// plain mock, and the Tauri shim's members over a mocked Tauri IPC
 // (./typing-dataset-backends.ts).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { clearMocks } from '@tauri-apps/api/mocks'
 import { LanguagePackTab } from '../LanguagePackTab'
 import type { LanguageListEntry } from '../../../shared/types/language-store'
-import { type DatasetSpies, datasetSpies, preloadLikeMock, shimOverMockIPC } from './typing-dataset-backends'
+import { type DatasetSpies, datasetSpies, plainMock, shimOverMockIPC } from './typing-dataset-backends'
 
 const LANGUAGES: LanguageListEntry[] = [
   { name: 'english', wordCount: 200, rightToLeft: false, fileSize: 5000, status: 'bundled' },
@@ -21,7 +21,7 @@ afterEach(() => {
   clearMocks()
 })
 
-describe.each([preloadLikeMock, shimOverMockIPC])('LanguagePackTab ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('LanguagePackTab ($name)', (backend) => {
   let spies: DatasetSpies
 
   beforeEach(() => {

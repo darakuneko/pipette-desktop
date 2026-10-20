@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// Runs against both vialAPI implementations: a preload-like mock, and the
+// Runs against both vialAPI implementations: a plain mock, and the
 // Tauri shim's window members over a mocked Tauri IPC. Both answer from the
 // same spies, so the tests read the same for each.
 
@@ -34,10 +34,10 @@ function installVialAPI(value: object): void {
   Object.defineProperty(window, 'vialAPI', { value, writable: true, configurable: true })
 }
 
-const preloadLikeMock: Backend = (() => {
+const plainMock: Backend = (() => {
   let visibilityCallback: ((visible: boolean) => void) | undefined
   return {
-    name: 'preload-like mock',
+    name: 'plain mock',
     install: () => {
       visibilityCallback = undefined
       installVialAPI({
@@ -137,7 +137,7 @@ function renderBootHiddenWindow(initialProps: Partial<Props> = {}) {
   return utils
 }
 
-describe.each([preloadLikeMock, shimOverMockIPC])('useBootHiddenWindow ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('useBootHiddenWindow ($name)', (backend) => {
   beforeEach(() => {
     backend.install()
   })

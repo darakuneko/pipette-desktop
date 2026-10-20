@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 // Runs against both vialAPI implementations (notification-backends.ts): a
-// preload-like mock, and the Tauri shim's notification member over a
+// plain mock, and the Tauri shim's notification member over a
 // mocked Tauri IPC. Both answer with the same spy.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'

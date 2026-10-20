@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
 // useSync's pending status against both vialAPI implementations: a
-// preload-like mock, and the Tauri shim's pending members over a mocked
+// plain mock, and the Tauri shim's pending members over a mocked
 // Tauri IPC. Both answer from the same spy, so the tests read the same for
 // each.
 
@@ -40,10 +40,10 @@ function installVialAPI(members: object): void {
   })
 }
 
-const preloadLikeMock: Backend = (() => {
+const plainMock: Backend = (() => {
   let pendingCallback: ((pending: boolean) => void) | undefined
   return {
-    name: 'preload-like mock',
+    name: 'plain mock',
     install: () => {
       pendingCallback = undefined
       installVialAPI({
@@ -92,7 +92,7 @@ afterEach(() => {
   clearMocks()
 })
 
-describe.each([preloadLikeMock, shimOverMockIPC])('useSync pending status ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('useSync pending status ($name)', (backend) => {
   beforeEach(() => {
     backend.install()
   })

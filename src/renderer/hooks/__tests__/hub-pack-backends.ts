@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the language and theme pack modals'
 // tests run against, both answering from the same VialAPI-shaped spies: a
-// preload-like mock (the spies themselves), and the same spies with the
+// plain mock (the spies themselves), and the same spies with the
 // Tauri shim's Hub pack members over a mocked Tauri IPC, whose commands
 // hand the spies their arguments in the members' order. The pack of an
 // upload or update crosses as JSON text and is parsed back here.
@@ -60,7 +60,7 @@ function installShim<T extends Record<string, unknown>>(spies: T): Partial<VialA
 
 export function hubPackBackends<T extends Record<string, unknown>>(spies: T): HubPackBackend[] {
   return [
-    { name: 'preload-like mock', install: () => spies as Partial<VialAPI> },
+    { name: 'plain mock', install: () => spies as Partial<VialAPI> },
     { name: 'Tauri shim over mockIPC', install: () => installShim(spies) },
   ]
 }

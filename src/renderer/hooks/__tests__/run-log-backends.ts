@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the run log hooks' tests run against,
-// both answering from the same VialAPI-shaped spies: a preload-like mock
+// both answering from the same VialAPI-shaped spies: a plain mock
 // (the spies themselves), and the Tauri shim's run log members over a
 // mocked Tauri IPC, whose commands hand the spies their arguments in the
 // members' order, a saved log as the value of the JSON text the shim
@@ -32,7 +32,7 @@ function spy<K extends RunLogMember>(spies: RunLogSpies, member: K): NonNullable
 
 export function runLogBackends(spies: RunLogSpies, extra: object = {}): RunLogBackend[] {
   return [
-    { name: 'preload-like mock', install: () => installVialAPI({ ...extra, ...spies }) },
+    { name: 'plain mock', install: () => installVialAPI({ ...extra, ...spies }) },
     {
       name: 'Tauri shim over mockIPC',
       install: () => {

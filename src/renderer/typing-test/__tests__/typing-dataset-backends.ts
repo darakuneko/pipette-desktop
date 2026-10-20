@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the word list, dataset and Aozora Bunko
 // catalog tests run against, both answering from the same VialAPI-shaped
-// spies: a preload-like mock (the spies themselves), and the Tauri shim's
+// spies: a plain mock (the spies themselves), and the Tauri shim's
 // members over a mocked Tauri IPC, whose commands hand the spies their
 // arguments in the members' order and answer what the spies answer. The
 // typing test text list is there for the catalog tab, which lists the
@@ -47,8 +47,8 @@ function installVialAPI(members: object): void {
   Object.defineProperty(window, 'vialAPI', { value: members, writable: true, configurable: true })
 }
 
-export const preloadLikeMock: DatasetBackend = {
-  name: 'preload-like mock',
+export const plainMock: DatasetBackend = {
+  name: 'plain mock',
   install: (spies) => installVialAPI({ ...spies }),
 }
 
