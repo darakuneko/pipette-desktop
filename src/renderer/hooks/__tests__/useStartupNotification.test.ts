@@ -46,9 +46,11 @@ describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNo
     setupMocks({}, { success: true, notifications })
 
     const { result } = renderHookWithConfig(() => useStartupNotification())
+    expect(result.current.settled).toBe(false)
     await act(async () => {})
 
     expect(result.current.visible).toBe(true)
+    expect(result.current.settled).toBe(true)
     expect(result.current.notifications).toHaveLength(2)
   })
 
@@ -83,6 +85,7 @@ describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNo
     await act(async () => {})
 
     expect(result.current.visible).toBe(false)
+    expect(result.current.settled).toBe(true)
   })
 
   it('shows all notifications when lastNotificationSeen is malformed', async () => {
@@ -109,6 +112,7 @@ describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNo
     await act(async () => {})
 
     expect(result.current.visible).toBe(false)
+    expect(result.current.settled).toBe(true)
   })
 
   it('hides modal when fetch fails', async () => {
@@ -118,6 +122,7 @@ describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNo
     await act(async () => {})
 
     expect(result.current.visible).toBe(false)
+    expect(result.current.settled).toBe(true)
   })
 
   it('hides modal when no notifications', async () => {
@@ -127,6 +132,7 @@ describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNo
     await act(async () => {})
 
     expect(result.current.visible).toBe(false)
+    expect(result.current.settled).toBe(true)
   })
 
   it('dismiss hides modal and saves lastNotificationSeen', async () => {

@@ -11,7 +11,7 @@ import { useTheme } from './hooks/useTheme'
 import { useDevicePrefs } from './hooks/useDevicePrefs'
 import { useSync } from './hooks/useSync'
 import { useSyncFormatStatus } from './hooks/use-sync-format-status'
-import { useStartupNotification } from './hooks/useStartupNotification'
+import { useStartupPrompts } from './hooks/use-startup-prompts'
 import { useDeviceAutoSync } from './hooks/useDeviceAutoSync'
 import { useEditorUIState } from './hooks/useEditorUIState'
 import { useFileHandlers } from './hooks/useFileHandlers'
@@ -55,7 +55,7 @@ export function App() {
   const keyboard = useKeyboard()
   const sync = useSync()
   const syncUpdate = useSyncFormatStatus()
-  const startupNotification = useStartupNotification()
+  const { startupNotification, updateCheck } = useStartupPrompts()
 
   const effectiveIsDummy = device.isDummy && !device.isPipetteFile
 
@@ -392,6 +392,7 @@ export function App() {
         appConfig={appConfig}
         hub={hub}
         startupNotification={startupNotification}
+        updateCheck={updateCheck}
         syncUpdate={syncUpdate}
       />
     )
@@ -488,6 +489,7 @@ export function App() {
           devicePrefs={devicePrefs}
           hub={hub}
           startupNotification={startupNotification}
+          updateCheck={updateCheck}
           missingKeyLabel={missingKeyLabel}
           decodedLayoutOptions={decodedLayoutOptions}
           deserializedMacros={deserializedMacros}

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.120",
+  "version": "0.1.121",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -2049,6 +2049,37 @@
       "Info": "情報",
       "Warning": "警告",
       "Update": "更新"
+    }
+  },
+  "update": {
+    "title": "新しき版のご用意がございます",
+    "failedTitle": "更新を果たせませんでした",
+    "message": "Pipette {{version}} をご用意いたしました。現在お使いの版は {{currentVersion}} でございます。",
+    "releasePage": "{{version}} の改良点を拝見する",
+    "install": "更新を承る",
+    "retry": "今一度試みる",
+    "later": "また後ほど",
+    "skip": "この版は見送る",
+    "downloading": "お取り寄せ中… {{size}} MB",
+    "downloadingPercent": "お取り寄せ中… {{percent}}%",
+    "restarting": "仕上げております。Pipette を再起動いたします、旦那様。",
+    "errorHint": "リリースのページより新しき版をお取り寄せいただき、お手ずからお入れいただくことも可能でございます。",
+    "error": {
+      "network": "更新をお取り寄せできませんでした。通信をお確かめのうえ、今一度お試しくださいませ。",
+      "signature": "更新の真贋を確かめられませんでしたゆえ、お入れいたしませんでした。",
+      "permission": "Pipette の置き場所へ書き込むことが叶いません。",
+      "cancelled": "Pipette が終了を始めておりましたゆえ、更新はお入れいたしませんでした。",
+      "busy": "ただいま更新を確認しております。しばしお待ちのうえ、今一度お試しくださいませ。",
+      "unknown": "更新の最中に不測の事態が生じました。"
+    },
+    "about": {
+      "check": "更新を確認する",
+      "checking": "更新を確認しております…",
+      "disabled": "この Pipette はご自身で更新いたしません。",
+      "upToDate": "Pipette は最新でございます。",
+      "available": "Pipette {{version}} をご用意いたしました。",
+      "availableSkipped": "Pipette {{version}} をご用意いたしました（見送りとされた版でございます）。",
+      "open": "更新を拝見する"
     }
   },
   "favoriteStore": {

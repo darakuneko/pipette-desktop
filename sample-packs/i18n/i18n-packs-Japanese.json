@@ -1,5 +1,5 @@
 {
-  "version": "0.1.120",
+  "version": "0.1.121",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -2059,6 +2059,37 @@
       "Info": "情報",
       "Warning": "警告",
       "Update": "更新"
+    }
+  },
+  "update": {
+    "title": "アップデートがあります",
+    "failedTitle": "アップデートに失敗しました",
+    "message": "Pipette {{version}} が利用できます。現在のバージョンは {{currentVersion}} です。",
+    "releasePage": "{{version}} の変更内容を見る",
+    "install": "アップデート",
+    "retry": "再試行",
+    "later": "今はしない",
+    "skip": "このバージョンをスキップ",
+    "downloading": "ダウンロード中… {{size}} MB",
+    "downloadingPercent": "ダウンロード中… {{percent}}%",
+    "restarting": "仕上げています。Pipette を再起動します。",
+    "errorHint": "リリースページから新しいバージョンをダウンロードして、手動でインストールすることもできます。",
+    "error": {
+      "network": "アップデートをダウンロードできませんでした。接続を確認してもう一度お試しください。",
+      "signature": "アップデートを検証できなかったため、インストールしませんでした。",
+      "permission": "Pipette のインストール先に書き込めません。",
+      "cancelled": "Pipette が終了し始めたため、アップデートをインストールしませんでした。",
+      "busy": "アップデートの確認を実行中です。少し待ってからもう一度お試しください。",
+      "unknown": "アップデート中に問題が発生しました。"
+    },
+    "about": {
+      "check": "アップデートを確認",
+      "checking": "アップデートを確認しています…",
+      "disabled": "この Pipette は自動でアップデートしません。",
+      "upToDate": "Pipette は最新です。",
+      "available": "Pipette {{version}} が利用できます。",
+      "availableSkipped": "Pipette {{version}} が利用できます（スキップ済み）。",
+      "open": "アップデートを表示"
     }
   },
   "favoriteStore": {

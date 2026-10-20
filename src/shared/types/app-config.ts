@@ -115,6 +115,11 @@ export interface AppConfig {
    * Pack Manager modal and clicking pull. Stays false on failure so the
    * next launch retries. */
   packsPulledOnce: boolean
+  /** The version the user chose to skip in the update modal ("Skip this
+   * version"), as the manifest names it. The startup check does not offer
+   * exactly that version again; a newer one is offered. Per machine, not
+   * synced. The Tauri build only: the Electron build has no updater. */
+  updateSkippedVersion?: string | null
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -143,6 +148,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'restoreLastSession',
   'lastDevice',
   'packsPulledOnce',
+  'updateSkippedVersion',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {

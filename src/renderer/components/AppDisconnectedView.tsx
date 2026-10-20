@@ -7,6 +7,7 @@ import { DeviceSelector } from './DeviceSelector'
 import { SettingsModal } from './SettingsModal'
 import { DataModal } from './DataModal'
 import { NotificationModal } from './NotificationModal'
+import { UpdateAvailableModal } from './UpdateAvailableModal'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
 import { SyncUpdateBanner } from './SyncUpdateBanner'
 import type { SyncUpdateBannerState } from '../hooks/use-sync-format-status'
@@ -18,6 +19,7 @@ import type { UseDevicePrefsReturn } from '../hooks/useDevicePrefs'
 import type { useAppConfig } from '../hooks/useAppConfig'
 import type { useHubState } from '../hooks/useHubState'
 import type { useStartupNotification } from '../hooks/useStartupNotification'
+import type { UpdateCheckState } from '../hooks/useUpdateCheck'
 
 interface Props {
   deviceSyncing: boolean
@@ -29,6 +31,7 @@ interface Props {
   appConfig: ReturnType<typeof useAppConfig>
   hub: ReturnType<typeof useHubState>
   startupNotification: ReturnType<typeof useStartupNotification>
+  updateCheck: UpdateCheckState
   syncUpdate: SyncUpdateBannerState
 }
 
@@ -42,6 +45,7 @@ export function AppDisconnectedView({
   appConfig,
   hub,
   startupNotification,
+  updateCheck,
   syncUpdate,
 }: Props) {
   return (
@@ -135,6 +139,14 @@ export function AppDisconnectedView({
         <NotificationModal
           notifications={startupNotification.notifications}
           onClose={startupNotification.dismiss}
+        />
+      )}
+      {updateCheck.prompt && (
+        <UpdateAvailableModal
+          key={`${updateCheck.prompt.kind}-${updateCheck.prompt.version}`}
+          prompt={updateCheck.prompt}
+          onClose={updateCheck.close}
+          onSkip={updateCheck.prompt.kind === 'available' ? updateCheck.skip : undefined}
         />
       )}
       <JaRemovedBanner />

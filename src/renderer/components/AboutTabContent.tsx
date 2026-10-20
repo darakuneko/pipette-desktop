@@ -3,6 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import appIcon from '../assets/app-icon.png'
 import { LEGAL_SECTIONS } from './legal-content'
+import { AboutUpdateCheck } from './AboutUpdateCheck'
 
 export function AboutTabContent() {
   const { t } = useTranslation()
@@ -35,6 +36,7 @@ export function AboutTabContent() {
         >
           {t('settings.about.license', { license: t('settings.about.licenseValue') })}
         </span>
+        <AboutUpdateCheck />
       </div>
 
       <div

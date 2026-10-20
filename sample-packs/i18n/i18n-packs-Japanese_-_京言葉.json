@@ -1,5 +1,5 @@
 {
-  "version": "0.1.120",
+  "version": "0.1.121",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -2049,6 +2049,37 @@
       "Info": "情報どすえ",
       "Warning": "気ぃつけておくれやす",
       "Update": "更新どすえ"
+    }
+  },
+  "update": {
+    "title": "新しい版が出てますえ",
+    "failedTitle": "更新がうまいこといきまへんでした",
+    "message": "Pipette {{version}} が出てますえ。今のんは {{currentVersion}} どす。",
+    "releasePage": "{{version}} の変わったとこを見ますえ",
+    "install": "更新しますえ",
+    "retry": "もういっぺんやりますえ",
+    "later": "今はよろしおす",
+    "skip": "この版は見送りますえ",
+    "downloading": "取り寄せてますえ… {{size}} MB",
+    "downloadingPercent": "取り寄せてますえ… {{percent}}%",
+    "restarting": "仕上げてますえ。Pipette を立ち上げ直しますえ。",
+    "errorHint": "リリースのページから新しい版を落として、ご自分で入れてもろてもよろしおす。",
+    "error": {
+      "network": "更新を取り寄せられまへんでした。つながりを確かめて、もういっぺんお試しやす。",
+      "signature": "更新がほんまもんか確かめられまへんでしたさかい、入れてまへん。",
+      "permission": "Pipette の入ってるとこに書き込めしまへん。",
+      "cancelled": "Pipette が終わりかけてましたさかい、更新は入れてまへん。",
+      "busy": "更新の確かめを今してますえ。ちょっと待ってから、もういっぺんお試しやす。",
+      "unknown": "更新の途中でなんやおかしなことになりましたえ。"
+    },
+    "about": {
+      "check": "新しい版を確かめますえ",
+      "checking": "新しい版を確かめてますえ…",
+      "disabled": "この Pipette はご自分では更新しまへん。",
+      "upToDate": "Pipette は新しいままどす。",
+      "available": "Pipette {{version}} が出てますえ。",
+      "availableSkipped": "Pipette {{version}} が出てますえ（見送らはった版どす）。",
+      "open": "更新を見ますえ"
     }
   },
   "favoriteStore": {
