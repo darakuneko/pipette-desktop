@@ -54,7 +54,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "UPDATER-PUBLIC-KEY-PLACEHOLDER",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVGNDVEOTNGN0ZFRDYzOTEKUldTUlkrMS9QOWxGNzM4WElhcmRjRFByUXFHdzJhTjlpdHNXQ0FFdDVtN3V4YlFPUWliUzdpSjEK",
       "requireSignedVersion": true,
       "windows": {
         "installMode": "passive"
