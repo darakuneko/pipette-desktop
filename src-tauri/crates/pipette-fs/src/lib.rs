@@ -15,7 +15,7 @@ pub use atomic::{write_file_atomic, write_file_atomic_keeping_owner, write_file_
 // The temp file naming, for tests/ts_temp_names.rs.
 #[doc(hidden)]
 pub use atomic::{MAX_NAME_BYTES, temp_file_name};
-pub use distribution::{Platform, is_distributed_build};
+pub use distribution::{Platform, is_appimage_run, is_distributed_build};
 #[cfg(windows)]
 pub use electron_lock::hold_lockfile;
 pub use electron_lock::{

@@ -99,6 +99,29 @@ pub fn is_distributed_build(release_without_dev_tools: bool) -> bool {
     is_distributed_executable(Platform::current(), &exe, &context)
 }
 
+/// Whether this process is an AppImage the AppImage runtime started:
+/// `APPIMAGE` is set and the executable lies inside `APPDIR`, the image's
+/// mount (the Linux rule of the module documentation). False on other
+/// systems, and when the executable's path cannot be read.
+pub fn is_appimage_run() -> bool {
+    if Platform::current() != Platform::Linux {
+        return false;
+    }
+    let Ok(exe) = std::env::current_exe() else {
+        return false;
+    };
+    let appimage = std::env::var_os("APPIMAGE");
+    let appdir = std::env::var_os("APPDIR").and_then(|dir| std::fs::canonicalize(dir).ok());
+    runs_from_appimage(&exe, appimage.as_deref(), appdir.as_deref())
+}
+
+/// Whether `exe` runs from the mounted AppImage: `appimage` is set and not
+/// empty, and `exe` lies inside the absolute `appdir`.
+fn runs_from_appimage(exe: &Path, appimage: Option<&OsStr>, appdir: Option<&Path>) -> bool {
+    appimage.is_some_and(|value| !value.is_empty())
+        && appdir.is_some_and(|dir| dir.is_absolute() && exe.is_absolute() && exe.starts_with(dir))
+}
+
 /// The first KiB of `path` as text.
 fn read_start(path: &Path) -> Option<String> {
     let mut text = String::new();
@@ -114,7 +137,7 @@ pub(crate) fn is_distributed_executable(platform: Platform, exe: &Path, context:
     }
     match platform {
         Platform::Linux => match context.appimage.filter(|value| !value.is_empty()) {
-            Some(_) => context.appdir.is_some_and(|dir| dir.is_absolute() && exe.starts_with(dir)),
+            Some(_) => runs_from_appimage(exe, context.appimage, context.appdir),
             None => true,
         },
         Platform::Windows => {
@@ -238,6 +261,27 @@ mod tests {
                 "{exe} {appimage:?} {appdir:?}"
             );
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_appimage_run_is_an_executable_inside_the_mount_of_a_set_appimage() {
+        let mount = Path::new("/tmp/.mount_PipetXyz");
+        let image = Some(OsStr::new("/home/u/Pipette.AppImage"));
+        let inside = Path::new("/tmp/.mount_PipetXyz/usr/bin/pipette");
+        assert!(runs_from_appimage(inside, image, Some(mount)));
+        // Unset or empty APPIMAGE, no mount, a relative mount.
+        assert!(!runs_from_appimage(inside, None, Some(mount)));
+        assert!(!runs_from_appimage(inside, Some(OsStr::new("")), Some(mount)));
+        assert!(!runs_from_appimage(inside, image, None));
+        assert!(!runs_from_appimage(
+            Path::new("tmp/.mount_PipetXyz/usr/bin/pipette"),
+            image,
+            Some(Path::new("tmp"))
+        ));
+        // APPIMAGE inherited by a program outside the mount.
+        assert!(!runs_from_appimage(Path::new("/opt/pipette/pipette"), image, Some(mount)));
+        assert!(!runs_from_appimage(Path::new("/tmp/.mount_PipetXyzOther/pipette"), image, Some(mount)));
     }
 
     #[cfg(windows)]
