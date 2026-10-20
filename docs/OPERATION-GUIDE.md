@@ -2390,11 +2390,11 @@ Pipette checks for a new version once per launch, about 3 seconds after its wind
 ![Update available](screenshots/update-modal.png)
 
 - **See what's new in {version}** opens that version's release page in your browser
-- **Update** downloads the update and verifies its signature, showing **Downloading… N%** while it runs. Pipette then quits the same way as when you quit it yourself (a running sync is finished first), installs the update, and starts again as the new version — **Finishing up. Pipette will restart.** is shown at that point
+- **Update** downloads the update and verifies its signature, showing **Downloading… N%** while it runs (**Downloading… N MB** when the server does not give the size). Pipette then quits the same way as when you quit it yourself — it waits for a running sync, but for no more than 30 seconds in all — and **Finishing up. Pipette will restart.** is shown at that point. On macOS and Linux Pipette installs the update and starts again as the new version; on Windows it starts the installer and exits at once, and the installer starts the new version when it is done
 - **Not now** closes the modal. The update is offered again at the next launch
 - **Skip this version** closes the modal and stops the startup check from offering exactly this version. A newer version is offered again, and the skipped one can still be installed from the About tab (below)
 
-If the download or the verification fails, the modal shows what went wrong (for example **The update could not be verified, so it was not installed.**), nothing is installed and Pipette keeps running; **Update** becomes **Try again**. If the install itself fails, Pipette has already quit: at the next launch the **The update failed** modal shows the reason instead of checking again. Either way you can download the new version from the release page and install it yourself. A failed startup check shows nothing.
+If the download or the verification fails, the modal shows what went wrong (for example **The update could not be verified, so it was not installed.**), nothing is installed and Pipette keeps running; **Update** becomes **Try again**. If the install itself fails, Pipette has already quit: at the next launch the **The update failed** modal shows the reason instead of checking again. On Windows this covers only a failure before the installer starts; once it is running, Pipette has exited and does not learn whether the installer succeeded. Either way you can download the new version from the release page and install it yourself. A failed startup check shows nothing.
 
 **Check for updates** in the **About** tab of the Settings modal (gear icon on the device selection screen) checks at any time and shows the result below the button:
 
