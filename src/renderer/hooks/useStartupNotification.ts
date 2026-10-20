@@ -24,6 +24,7 @@ export function useStartupNotification(): StartupNotificationState {
     fetchedRef.current = true
 
     let cancelled = false
+    let finished = false
     window.vialAPI.notificationFetch().then((result) => {
       if (cancelled) return
       if (!result.success || !result.notifications || result.notifications.length === 0) return
@@ -42,9 +43,16 @@ export function useStartupNotification(): StartupNotificationState {
     }).catch(() => {
       // Network errors are non-critical
     }).finally(() => {
+      finished = true
       if (!cancelled) setSettled(true)
     })
-    return () => { cancelled = true }
+    // A fetch cut off before it finished (StrictMode's mount, unmount and
+    // mount again in development) is made again by the next run; a
+    // finished one is not repeated.
+    return () => {
+      cancelled = true
+      if (!finished) fetchedRef.current = false
+    }
   }, [appConfig.loading, appConfig.config.lastNotificationSeen])
 
   const dismiss = useCallback(() => {

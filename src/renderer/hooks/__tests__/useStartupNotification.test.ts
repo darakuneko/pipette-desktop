@@ -5,9 +5,11 @@
 // mocked Tauri IPC. Both answer with the same spy.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { act } from '@testing-library/react'
+import { createElement } from 'react'
+import { act, render } from '@testing-library/react'
 import { clearMocks } from '@tauri-apps/api/mocks'
 import { useStartupNotification } from '../useStartupNotification'
+import { AppConfigProvider, useAppConfig } from '../useAppConfig'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 import { notificationBackends, type NotificationBackend } from './notification-backends'
 import type { NotificationFetchResult } from '../../../shared/types/notification'
@@ -169,5 +171,41 @@ describe.each(notificationBackends(() => mockNotificationFetch()))('useStartupNo
     expect(result.current.notifications[0].title).toBe('Latest')
     expect(result.current.notifications[1].title).toBe('Middle')
     expect(result.current.notifications[2].title).toBe('Oldest')
+  })
+
+  it('settles and shows the notices under StrictMode, which runs the effect twice on mount', async () => {
+    const notifications = [{ title: 'A', body: 'Body', type: 'Info', publishedAt: '2025-01-02T00:00:00Z' }]
+    setupMocks({}, { success: true, notifications })
+    let seen: ReturnType<typeof useStartupNotification> | null = null
+    function Probe() {
+      seen = useStartupNotification()
+      return null
+    }
+    // Mounted once the config has loaded, so the first effect run starts
+    // the fetch and StrictMode cuts it off.
+    function Gate() {
+      return useAppConfig().loading ? null : createElement(Probe)
+    }
+    render(createElement(AppConfigProvider, null, createElement(Gate)), { reactStrictMode: true })
+    await act(async () => {})
+    await act(async () => {})
+
+    expect(seen).not.toBeNull()
+    expect(seen!.settled).toBe(true)
+    expect(seen!.visible).toBe(true)
+  })
+
+  it('does not fetch again once the fetch has finished', async () => {
+    const notifications = [{ title: 'A', body: 'Body', type: 'Info', publishedAt: '2025-01-02T00:00:00Z' }]
+    setupMocks({}, { success: true, notifications })
+
+    const { result } = renderHookWithConfig(() => useStartupNotification())
+    await act(async () => {})
+    act(() => result.current.dismiss())
+    await act(async () => {})
+
+    expect(mockNotificationFetch).toHaveBeenCalledTimes(1)
+    expect(result.current.visible).toBe(false)
+    expect(result.current.settled).toBe(true)
   })
 })
