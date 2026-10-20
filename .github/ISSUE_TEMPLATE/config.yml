@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Operation guide
+    url: https://github.com/darakuneko/pipette-desktop/blob/main/docs/OPERATION-GUIDE.md
+    about: How to use Pipette. Check here first for usage questions.

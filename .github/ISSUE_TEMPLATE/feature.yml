@@ -1,0 +1,16 @@
+name: Feature request
+description: Something Pipette should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do
+      description: The task or workflow you have in mind, and where Pipette gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How you imagine it working
+      description: Optional. Describe the behaviour in your own words.
