@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the handlers of the language and theme packs
-//! (src/main/{i18n,theme}-pack-ipc.ts) do the same way: reading their
+//! What the handlers of the language and theme packs do the same way:
+//! reading their
 //! arguments, and writing a pack where an export's save dialog answers.
 
 use std::path::PathBuf;
@@ -58,7 +58,7 @@ pub(crate) fn entries(metas: Vec<Entry>) -> Value {
 }
 
 /// What an export of a pack is called: the default file name's prefix
-/// (`{prefix}-{safe name}.json`) and the name `safeFilename` falls back to.
+/// (`{prefix}-{safe name}.json`) and the name [`safe_filename`] falls back to.
 pub(crate) struct ExportName {
     pub prefix: &'static str,
     pub fallback: &'static str,

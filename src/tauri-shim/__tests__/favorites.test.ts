@@ -3,8 +3,7 @@
 // The favorite members over the mocked Tauri IPC, with the transfer worker
 // answering in this module (its requests run as the worker runs them): the
 // writes of a type reach the backend one at a time in the renderer's order,
-// and the export and the import check, convert and answer as the Electron
-// handlers of src/main/favorite-store.ts do.
+// and the export and the import check, convert and answer.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'

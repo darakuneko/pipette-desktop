@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The bundles of a pack store's sync units (`bundlePackIndex` and
-//! `bundlePackBody` of src/main/sync/pack-sync.ts), as the objects whose
+//! The bundles of a pack store's sync units, as the objects whose
 //! `JSON.stringify` text is uploaded.
 
 use std::fs;

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The favorite reads, checks and posts, after
-//! src/main/__tests__/hub-ipc-favorite.test.ts and
-//! hub-client-feature.test.ts, on the in-memory Hub.
+//! The favorite reads, checks and posts, on the in-memory Hub.
 
 #![allow(clippy::unwrap_used)]
 
@@ -67,7 +65,7 @@ fn reads_the_first_live_entry_as_the_index_has_it() {
 }
 
 #[test]
-fn an_entry_that_cannot_be_posted_has_the_ts_message() {
+fn an_entry_that_cannot_be_posted_has_the_recorded_message() {
     let dir = store(
         r#"[{"id":"del","filename":"a.json","deletedAt":"x"},
             {"id":"up","filename":"../a.json"},
@@ -114,7 +112,7 @@ fn an_entry_that_cannot_be_posted_has_the_ts_message() {
 }
 
 #[test]
-fn an_index_of_another_shape_fails_as_the_ts_reads_it() {
+fn an_index_of_another_shape_fails_as_recorded() {
     for (index, error) in [
         ("null", "Cannot read properties of null (reading 'entries')"),
         ("5", "Cannot read properties of undefined (reading 'find')"),
@@ -256,7 +254,7 @@ async fn updates_at_the_encoded_post_id_and_uploads_privately_with_the_expiry() 
 }
 
 #[tokio::test]
-async fn the_hub_failures_are_the_ts_messages() {
+async fn the_hub_failures_are_the_recorded_messages() {
     let (token, hub) = on_fake_hub();
     let error =
         |answer: Value| answer.as_object().unwrap().get("error").unwrap().as_str().unwrap().to_owned();
@@ -286,7 +284,7 @@ async fn the_hub_failures_are_the_ts_messages() {
 }
 
 #[test]
-fn an_answer_without_data_fails_as_the_ts_reads_it() {
+fn an_answer_without_data_fails_as_recorded() {
     let failed = |data: Option<Value>| stringify(&post_id_answer(Ok(data)));
     assert_eq!(
         failed(None),

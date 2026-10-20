@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The SQLite cache on a thread of its own. Every database call is a job
 //! sent to that thread, which runs them one at a time in the order they
-//! were sent, as every call of the Electron build runs one at a time on
-//! better-sqlite3's synchronous API.
+//! were sent.
 //!
 //! The thread owns the only connection and ends, closing it, when the last
 //! [`DbActor`] handle is dropped. A job that panics loses its answer but

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the function tables recorded from the TypeScript helpers by
-//! scripts/entry-store-fixtures/record-entry-store-fixtures.test.ts and
+//! Replays the recorded golden function tables and
 //! compares every result byte for byte.
 
 #![allow(clippy::unwrap_used)]
@@ -246,7 +245,7 @@ fn canonical_json_and_body_hash_match() {
         );
     }
     for case in list(get(&fixture, "bodyHash")) {
-        // The body text as the Electron build hashes it: UTF-8, U+FFFD for
+        // The body text as it is hashed: UTF-8, U+FFFD for
         // a lone surrogate.
         let body = js(get(case, "text")).to_string_lossy();
         expect_eq(&mut failures, format!("bodyHash {body:?}"), body_hash(&body), text(get(case, "hash")));

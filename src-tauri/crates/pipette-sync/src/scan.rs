@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What is on Drive, read without merging it (src/main/sync/sync-scan.ts):
-//! the data files behind the guard and the password-check, the ones the
-//! stored password cannot open (`listUndecryptableFiles`), the Data
-//! modal's scan of what Drive holds (`scanRemoteData`) and one unit's
-//! bundle (`fetchRemoteBundle`).
+//! What is on Drive, read without merging it: the data files behind the guard
+//! and the password-check, the ones the stored password cannot open
+//! (`list_undecryptable_files`), the Data modal's scan of what Drive holds
+//! (`scan_remote_data`) and one unit's bundle (`fetch_remote_bundle`).
 
 use std::sync::Arc;
 
@@ -38,10 +37,9 @@ pub struct UndecryptableFile {
     pub sync_unit: Option<String>,
 }
 
-/// `fetchValidatedDataFiles`: the stored password and the data files of
-/// one listing, once the guard passed and the password opens the
-/// password-check (created when Drive has none). `None` without
-/// credentials.
+/// The stored password and the data files of one listing, once the guard passed
+/// and the password opens the password-check (created when Drive has none).
+/// `None` without credentials.
 pub async fn fetch_validated_data_files(
     preflight: &Arc<Preflight>,
 ) -> Result<Option<(Zeroizing<String>, Vec<DriveFile>)>, PreflightError> {
@@ -55,10 +53,8 @@ pub async fn fetch_validated_data_files(
     Ok(Some((password, data_files)))
 }
 
-/// `findUndecryptableFiles`: those of `data_files` `password` does not
-/// open, in listed order (the Electron build answers them in the order
-/// their checks end). Trash files are not checked: the sync never reads
-/// them.
+/// Those of `data_files` `password` does not open, in listed order. Trash files
+/// are not checked: the sync never reads them.
 async fn find_undecryptable_files(
     preflight: &Preflight,
     codec: &dyn EnvelopeCodec,
@@ -99,8 +95,7 @@ async fn find_undecryptable_files(
     found.into_iter().map(|(_, file)| file).collect()
 }
 
-/// `listUndecryptableFiles`: the data files the stored password does not
-/// open; empty without credentials.
+/// The data files the stored password does not open; empty without credentials.
 pub async fn list_undecryptable_files(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,
@@ -137,8 +132,7 @@ fn strings(list: &[String]) -> Value {
 }
 
 impl SyncDataScanResult {
-    /// The answer as the renderer gets it, in the key order of the Electron
-    /// build.
+    /// The answer as the renderer gets it, in a fixed key order.
     pub fn to_json(&self) -> String {
         let mut names = Object::new();
         for (uid, name) in &self.keyboard_names {
@@ -218,8 +212,8 @@ async fn local_keyboard_names(ctx: &StoreContext, uids: Vec<String>) -> Vec<(Str
     read.await.ok().flatten().unwrap_or_default()
 }
 
-/// `scanRemoteData`: what Drive holds and which of its files the stored
-/// password does not open; empty without credentials.
+/// What Drive holds and which of its files the stored password does not open;
+/// empty without credentials.
 pub async fn scan_remote_data(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,
@@ -234,9 +228,9 @@ pub async fn scan_remote_data(
     Ok(result)
 }
 
-/// `fetchRemoteBundle`: the plaintext of the chosen Drive copy of `unit`,
-/// JSON the renderer parses; `None` without credentials, without a copy,
-/// or when it cannot be downloaded, opened or parsed.
+/// The plaintext of the chosen Drive copy of `unit`, JSON the renderer parses;
+/// `None` without credentials, without a copy, or when it cannot be downloaded,
+/// opened or parsed.
 pub async fn fetch_remote_bundle(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,
@@ -302,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn answers_in_the_shape_of_the_electron_build() {
+    fn answers_in_the_renderer_shape() {
         let result = SyncDataScanResult {
             keyboards: vec!["a".into()],
             keyboard_names: vec![("a".into(), "Board".into())],

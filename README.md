@@ -4,31 +4,32 @@
 </p>
 Refining the way you interact with your Vial-powered keyboards.
 
-Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).  \
+Pipette is an independent keymap editor compatible with [Vial](https://get.vial.today/), built with [Tauri](https://tauri.app/).  \
 Communicates with Vial keyboards via USB HID to configure keymaps, macros, lighting, and more.
 
-[![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Tauri](https://img.shields.io/badge/Tauri_2-24C8D8?style=flat&logo=tauri&logoColor=white)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React_19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![WebdriverIO](https://img.shields.io/badge/WebdriverIO-EA5906?style=flat&logo=webdriverio&logoColor=white)](https://webdriver.io/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 ## Table of Contents
 
 - [Installation](#installation)
+- [Migrating from 0.4](#migrating-from-04)
 - [System Requirements](#system-requirements)
 - [Usage](#usage)
+- [Updating](#updating)
 - [Operation Guide](#operation-guide)
 - [Platform Setup](#platform-setup)
   - [Linux](#linux)
   - [macOS](#macos)
 - [Features](#features)
-- [Setup](#setup)
 - [Development](#development)
-- [Build & Distribution](#build--distribution)
 - [Architecture](#architecture)
 - [Data & Privacy](#data--privacy)
 - [Donate](#donate)
@@ -48,6 +49,57 @@ Download the latest release for your platform:
 
 - **Linux (x86_64 AppImage)**  
   https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-linux-x86_64.AppImage
+
+### Windows installer
+
+Run `Pipette-win-x64.exe`. Pipette is installed for your user only (no administrator rights needed), into `%LOCALAPPDATA%\Pipette` by default; the installer lets you choose another folder.
+
+- The installer is **not code-signed**, so SmartScreen may warn about it: choose **More info › Run anyway**.
+- Pipette uses the Microsoft Edge WebView2 runtime, which comes with Windows 11 and almost every Windows 10. If it is missing, the installer downloads it, so it needs a network connection.
+- Uninstalling Pipette does not delete your data folder (`%APPDATA%\pipette-desktop`), even with the uninstaller's option to delete app data: that option removes only the data stored under `app.pipette.desktop`.
+
+### macOS disk image
+
+Open `Pipette-mac-arm64.dmg` and drag **Pipette** into **Applications** (replace the old app if there is one). The app is signed with a Developer ID and notarized by Apple. It needs macOS 12 or later on Apple Silicon. Run it from Applications, not from the disk image: an app run from the disk image does not update itself (see [Updating](#updating)).
+
+### Linux AppImage
+
+Make the AppImage executable and run it; see [Platform Setup › Linux](#linux) for the udev rules keyboards need.
+
+## Migrating from 0.4
+
+Pipette 0.5 is the same app rebuilt on Tauri. It takes the 0.4 data over in place: it opens the same data folder that 0.4 used, without copying or converting it. The sync format is unchanged, so PCs still running 0.4 keep syncing with it.
+
+### Before you install
+
+1. Quit Pipette 0.4 from the tray menu (**Quit**), not just the window. If a sync password change is unfinished in 0.4, finish it first.
+2. Back up the data folder and the autostart entry:
+
+| OS | Data folder | Autostart entry |
+|---|---|---|
+| Windows | `%APPDATA%\pipette-desktop` | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (export with `reg export`) |
+| macOS | `~/Library/Application Support/pipette-desktop` | Login item (note whether **Launch at Login** is on) |
+| Linux | `~/.config/pipette-desktop` | `~/.config/autostart/pipette.desktop` |
+
+There is no supported way back to 0.4; the backup is the safety net.
+
+### After the first launch
+
+- Sign in to Google again (Settings › Connect › Google Account › **Connect**) and enter your sync encryption password again. Sign-in data is now protected by the OS key store, and the files 0.4 saved are not read. Changes 0.4 had not uploaded are sent once you sign in with the same Google account.
+- **Launch at Login** is taken over: when on, the autostart entry starts 0.5; when off, it is removed.
+- Do not run 0.4 and 0.5 at the same time. 0.5 refuses to start while 0.4 is running; on Linux and macOS it cannot stop 0.4 from starting afterwards.
+
+#### Windows: from 0.4
+
+The installer uninstalls 0.4 for your user (the data folder is kept) and installs per user into `%LOCALAPPDATA%\Pipette` (`pipette.exe`). If 0.4 was installed for all users, uninstall it from **Settings › Apps** first. Taskbar pins are lost; the desktop shortcut is created only if you tick it at the end of the installer. Uninstalling 0.5 does not delete `%APPDATA%\pipette-desktop`.
+
+#### macOS: from 0.4
+
+Replace `Pipette.app` in Applications. On macOS 12, a login item registered by 0.4 keeps working, but turning **Launch at Login** off cannot remove it; remove it in the system settings. macOS 13 and later are not affected.
+
+#### Linux: from 0.4
+
+Existing udev rules keep working. If 0.4 saved its window size under GNOME Wayland, the first launch opens the window slightly taller. Proxy settings come from the `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` environment variables; the GNOME proxy settings are not used.
 
 ## System Requirements
 
@@ -101,30 +153,6 @@ The AppImage uses the static AppImage runtime, so `libfuse2` does not need to be
 
 Pipette updates the AppImage itself (see [Updating](#updating)). The AppImage also embeds update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place, downloading only the changed parts.
 
-#### AppImage Sandbox (Ubuntu 24.04+ / Debian 13+)
-
-On distributions that restrict unprivileged user namespaces (e.g. Ubuntu 24.04+, Debian 13+ via AppArmor's `unprivileged_userns_restricted` flag), the AppImage may fail to launch with a sandbox / user namespace error.
-
-Create an AppArmor profile that permits the namespace:
-
-```bash
-# Adjust the profile path to match where you placed the AppImage
-sudo tee /etc/apparmor.d/pipette >/dev/null <<'EOF'
-abi <abi/4.0>,
-include <tunables/global>
-
-profile pipette /home/YOUR_USER/Applications/Pipette-linux-x86_64.AppImage flags=(unconfined) {
-  userns,
-
-  include if exists <local/pipette>
-}
-EOF
-
-sudo systemctl reload apparmor.service
-```
-
-Replace `YOUR_USER` and adjust the filename/path to match your setup.
-
 #### udev Rules
 
 udev rules are required to access keyboards:
@@ -133,6 +161,8 @@ udev rules are required to access keyboards:
 sudo cp scripts/99-vial.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
+
+`scripts/99-vial.rules` is in this repository; the AppImage also carries a copy at `usr/lib/Pipette/udev/99-vial.rules`. Rules installed for 0.4 keep working.
 
 #### Monitor App on Wayland (GNOME Shell extension)
 
@@ -154,11 +184,13 @@ Community-maintained packages may exist, but they are not officially supported.
 
 ### macOS
 
-#### Accessibility permission for Monitor App
+#### Monitor App
 
-The typing-view Monitor App toggle requires the **Accessibility** permission on macOS to resolve the foreground application name. Grant access in **System Settings → Privacy & Security → Accessibility** and add Pipette Desktop to the allowed list.
+The typing-view Monitor App toggle reads the name of the frontmost application, which normally works without any permission on macOS. If the application name does not appear (macOS behaviour can change between versions), allowing Pipette in **System Settings → Privacy & Security → Accessibility** may help.
 
-Without this permission, Monitor App silently records `null` for every minute on macOS — keystroke counts still flow to the analytics, but per-app breakdowns are unavailable.
+#### Launch at Login on macOS 12
+
+On macOS 13 and later, **Launch at Login** registers Pipette as a login item and removes it again when turned off. On macOS 12 Pipette does not register a login item itself: a login item that Pipette 0.4 registered keeps starting Pipette, but turning **Launch at Login** off cannot remove it. Remove it in the system settings yourself.
 
 ## Features
 
@@ -229,43 +261,68 @@ See [Data Guide](https://darakuneko.github.io/pipette-desktop/guide.html#data) f
 - **Configurable panel side** (left / right)
 - **Auto-lock timer**
 
-## Setup
-
-```bash
-pnpm install
-```
-
 ## Development
 
+### Prerequisites
+
+- Node.js 24 and pnpm (the version in `package.json`'s `packageManager`)
+- Rust (the toolchain in `src-tauri/rust-toolchain.toml`, installed by rustup)
+- On Linux, the libraries Tauri and hidapi build against, e.g. on Ubuntu:
+
+  ```bash
+  sudo apt-get install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libudev-dev libdbus-1-dev
+  ```
+
+### Commands
+
 ```bash
-pnpm dev          # Start Electron dev server
-pnpm build        # Production build
-pnpm test         # Run tests
-pnpm test:watch   # Tests (watch mode)
-pnpm lint         # ESLint
-pnpm format       # Prettier
+pnpm install        # Install dependencies
+pnpm dev            # Run the app with the development tools (Vite dev server + Tauri)
+pnpm build          # Release build and installer for this OS (src-tauri/target/release/bundle/)
+pnpm build:debug    # Debug build with the development tools, no installer (for the e2e tests)
+pnpm test           # Vitest
+pnpm test:watch     # Vitest (watch mode)
+pnpm lint           # ESLint
+pnpm typecheck      # TypeScript
+pnpm format         # Prettier
+pnpm test:e2e       # End-to-end tests (Linux; see below)
+pnpm doc:guide      # Rebuild docs/guide.html from the Markdown docs
 ```
 
-## Build & Distribution
+The Rust backend is a Cargo workspace in `src-tauri/`:
 
 ```bash
-pnpm dist         # Package for all platforms
-pnpm dist:linux   # Linux (AppImage)
-pnpm dist:win     # Windows (NSIS installer)
-pnpm dist:mac     # macOS (dmg)
+cd src-tauri
+cargo test --workspace --features pipette-app/dev-tools
+cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+cargo fmt --all
 ```
+
+The end-to-end tests (`e2e-tauri/`) drive the `pnpm build:debug` app through [tauri-driver](https://crates.io/crates/tauri-driver) and WebKitWebDriver, so they run on Linux only. They use a virtual keyboard and a temporary data folder, never your own; run them under Xvfb with a session bus of their own:
+
+```bash
+pnpm build:debug
+xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e
+```
+
+The release builds (signed macOS app, AppImage repacked with `scripts/repack-appimage.sh`) are made by the release workflow in `.github/workflows/`.
 
 ## Architecture
 
-Raw HID I/O runs in the **main process** via `node-hid`. Protocol logic runs in the **preload** layer and delegates HID I/O through IPC.
+Pipette is a [Tauri 2](https://tauri.app/) app: a Rust backend and a React UI in the OS WebView (WebView2 on Windows, WebKit on macOS, WebKitGTK on Linux).
 
 ```
-Main Process        — node-hid transport, CSP, file I/O, window management,
-                      cloud sync, Hub API, snapshot/favorite stores
-Preload (sandbox)   — IPC bridge, VIA/Vial protocol, Keyboard state
-Renderer            — React UI (Tailwind CSS)
-Shared              — Types, constants, IPC channels
+src-tauri/          Rust backend: the app crate (src/: Tauri commands, windows, tray,
+                    quit sequence, updater) and the library crates (crates/: HID,
+                    VIA/Vial virtual keyboard, stores, cloud sync, Google auth,
+                    Drive, Hub, typing analytics, OS key store, autostart, ...)
+src/tauri-shim/     The `window.vialAPI` the UI calls, on top of the Tauri commands;
+                    the VIA/Vial protocol (protocol.ts) over the HID transport
+src/renderer/       React 19 UI (Tailwind CSS v4, i18next)
+src/shared/         Types, constants, keycodes, KLE parser shared by the UI and shim
 ```
+
+USB HID I/O runs in the backend (hidapi). The UI calls `window.vialAPI`; the shim turns each call into a Tauri command, and the commands the window may use are listed in `src-tauri/capabilities/` and `src-tauri/permissions/`.
 
 ## Data & Privacy
 

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language pack handlers of src/main/i18n-pack-ipc.ts: each checks its
-//! arguments as the handler does, then runs the store operation and answers
+//! The language pack handlers: each checks its arguments, then runs the store operation and answers
 //! its `data`. An argument is a JSON value, `None` for `undefined`.
 
 use std::path::PathBuf;
@@ -14,31 +13,31 @@ use crate::i18n::{self, Cached, CoverageValues, SavePackInput};
 use crate::pack_store::Field;
 use crate::result::{ErrorCode, PackError};
 
-/// `I18N_PACK_STORE_LIST`: the live metas.
+/// The `i18n_pack_store_list` command: the live metas.
 pub fn list(ctx: &StoreContext) -> Answer {
     Ok(Some(entries(i18n::list_metas(ctx).map_err(caught)?)))
 }
 
-/// `I18N_PACK_STORE_HAS_NAME`.
+/// The `i18n_pack_store_has_name` command.
 pub fn has_name(ctx: &StoreContext, name: Arg<'_>, exclude_id: Arg<'_>) -> Answer {
     let name = name_arg(name)?;
     let exists = i18n::has_active_name(ctx, name, string(exclude_id)).map_err(caught)?;
     Ok(Some(exists.into()))
 }
 
-/// `I18N_PACK_STORE_GET`: `{meta, pack}`.
+/// The `i18n_pack_store_get` command: `{meta, pack}`.
 pub fn get(ctx: &StoreContext, id: Arg<'_>) -> Answer {
     Ok(Some(i18n::get_pack(ctx, id_arg(id)?)?.into()))
 }
 
-/// `I18N_PACK_STORE_RENAME`.
+/// The `i18n_pack_store_rename` command.
 pub fn rename(ctx: &StoreContext, id: Arg<'_>, new_name: Arg<'_>) -> Answer {
     let id = id_arg(id)?;
     let new_name = name_arg(new_name)?;
     Ok(Some(i18n::rename_pack(ctx, id, new_name)?.into()))
 }
 
-/// `I18N_PACK_STORE_SET_ENABLED`.
+/// The `i18n_pack_store_set_enabled` command.
 pub fn set_enabled(ctx: &StoreContext, id: Arg<'_>, enabled: Arg<'_>) -> Answer {
     let id = id_arg(id)?;
     let Some(&Value::Bool(enabled)) = enabled else {
@@ -54,7 +53,7 @@ fn object(arg: Arg<'_>) -> Option<&Object> {
     }
 }
 
-/// `I18N_PACK_STORE_REFRESH_COVERAGE`.
+/// The `i18n_pack_store_refresh_coverage` command.
 pub fn refresh_coverage(ctx: &StoreContext, id: Arg<'_>, values: Arg<'_>) -> Answer {
     let id = id_arg(id)?;
     let field = |object: Option<&Object>, key: &str| object.and_then(|object| object.get(key)).cloned();
@@ -83,19 +82,19 @@ pub fn refresh_coverage(ctx: &StoreContext, id: Arg<'_>, values: Arg<'_>) -> Ans
     Ok(Some(i18n::refresh_coverage(ctx, id, checked)?.into()))
 }
 
-/// `I18N_PACK_STORE_REORDER`.
+/// The `i18n_pack_store_reorder` command.
 pub fn reorder(ctx: &StoreContext, ordered_ids: Arg<'_>) -> Answer {
     i18n::reorder_active(ctx, &ordered_ids_arg(ordered_ids)?)?;
     Ok(None)
 }
 
-/// `I18N_PACK_STORE_DELETE`.
+/// The `i18n_pack_store_delete` command.
 pub fn delete(ctx: &StoreContext, id: Arg<'_>) -> Answer {
     i18n::delete_pack(ctx, id_arg(id)?)?;
     Ok(None)
 }
 
-/// `I18N_PACK_STORE_SET_HUB_POST_ID`: a post id that is not a string
+/// The `i18n_pack_store_set_hub_post_id` command: a post id that is not a string
 /// unlinks; an uploader name or Hub time that is not a string is left alone.
 pub fn set_hub_post_id(
     ctx: &StoreContext,
@@ -111,7 +110,7 @@ pub fn set_hub_post_id(
     Ok(Some(meta.into()))
 }
 
-/// The options of `I18N_PACK_IMPORT_APPLY` as the handler reads them.
+/// The options of the `i18n_pack_import_apply` command as the handler reads them.
 fn save_input(raw: Arg<'_>, options: Arg<'_>) -> SavePackInput {
     let opts = options_arg(options);
     let text = |key: &str| string(opts.get(key)).cloned();
@@ -154,12 +153,12 @@ fn save_input(raw: Arg<'_>, options: Arg<'_>) -> SavePackInput {
     }
 }
 
-/// `I18N_PACK_IMPORT_APPLY`: saves the pack `raw` the page checked.
+/// The `i18n_pack_import_apply` command: saves the pack `raw` the page checked.
 pub fn import_apply(ctx: &StoreContext, raw: Arg<'_>, options: Arg<'_>) -> Answer {
     Ok(Some(i18n::save_pack(ctx, save_input(raw, options))?.into()))
 }
 
-/// `I18N_PACK_EXPORT`: writes the live pack `id` where `choose` answers,
+/// The `i18n_pack_export` command: writes the live pack `id` where `choose` answers,
 /// given the default file name (`i18n-packs-{safe name}.json`); `None`
 /// cancels. `Err` is the error the handler throws (see
 /// [`crate::handlers`]).

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// The file members parse sideloadJson's text as the Electron handler does,
+// The file members parse sideloadJson's text,
 // pass the other results through, and send text without lone surrogates.
 
 import { afterEach, describe, expect, it } from 'vitest'

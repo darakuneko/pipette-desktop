@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Google sign-in of the sync (src/main/sync/google-auth.ts): the
-//! loopback OAuth flow with PKCE ([`pkce`], [`loopback`]), the tokens and
-//! their refresh ([`GoogleAuth`]). The tokens are kept by the secret store
-//! (pipette-secret-store), never in the WebView.
+//! The Google sign-in of the sync: the loopback OAuth flow with PKCE
+//! ([`pkce`], [`loopback`]), the tokens and their refresh ([`GoogleAuth`]).
+//! The tokens are kept by the secret store (pipette-secret-store), never in
+//! the WebView.
 //!
-//! As in Electron, a sign-out does not revoke the tokens and the granted
-//! scopes are not checked.
+//! A sign-out does not revoke the tokens, and the granted scopes are not
+//! checked.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -20,19 +20,18 @@ mod tokens;
 pub use auth::{AuthConfig, AuthTiming, GoogleAuth};
 pub use tokens::StoredTokens;
 
-/// `CLIENT_ID` of src/main/sync/google-auth.ts: the desktop app client.
+/// The OAuth client id: the desktop app client.
 pub const CLIENT_ID: &str = "456971912849-ktrhpfv849jli5qph50i2rlflv1aadqq.apps.googleusercontent.com";
-/// `CLIENT_SECRET` of src/main/sync/google-auth.ts. A desktop app client's
+/// The OAuth client secret. A desktop app client's
 /// secret is not confidential; PKCE protects the code.
 pub const CLIENT_SECRET: &str = "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";
-/// `SCOPE` of src/main/sync/google-auth.ts.
+/// The OAuth scopes the sign-in asks for.
 pub const SCOPE: &str = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 
-/// The variable of the Hub test account (`getHubTestAccount`).
+/// The variable of the Hub test account.
 pub const HUB_TEST_ACCOUNT_ENV: &str = "PIPETTE_HUB_TEST_ACCOUNT";
 
-/// Why a sign-in, a refresh or a token write failed. The messages are those
-/// of the Electron main process.
+/// Why a sign-in, a refresh or a token write failed.
 #[derive(Debug, thiserror::Error)]
 pub enum AuthError {
     /// A sign-out or a later sign-in replaced the sign-in, or a write found
@@ -94,7 +93,7 @@ pub trait TokenSwitch: Send + Sync {
     fn switch<'a>(&'a self, store: StoreTokens<'a>, new_account_sub: Option<String>) -> SwitchFuture<'a>;
 }
 
-/// Stores the tokens and nothing else (`switchDirectly`).
+/// Stores the tokens and nothing else.
 pub struct SwitchDirectly;
 
 impl TokenSwitch for SwitchDirectly {
@@ -103,9 +102,9 @@ impl TokenSwitch for SwitchDirectly {
     }
 }
 
-/// The Hub test account (`getHubTestAccount` of src/main/hub/hub-base.ts):
-/// `account` (the value of [`HUB_TEST_ACCOUNT_ENV`]) when it is not empty
-/// and the Hub API base `hub_api_base` is on localhost or 127.0.0.1.
+/// The Hub test account: `account` (the value of [`HUB_TEST_ACCOUNT_ENV`])
+/// when it is not empty and the Hub API base `hub_api_base` is on localhost
+/// or 127.0.0.1.
 pub fn hub_test_account(account: Option<String>, hub_api_base: &str) -> Option<String> {
     let account = account.filter(|account| !account.is_empty())?;
     let host = url::Url::parse(hub_api_base).ok()?.host_str()?.to_owned();
@@ -128,9 +127,8 @@ mod tests {
     }
 }
 
-/// The requests and the stored token JSON of the Electron main process
-/// (tests/fixtures/ts_auth.json, recorded by
-/// scripts/sync-fixtures/record-secrets-auth.test.ts).
+/// The requests and the stored token JSON against the recorded golden
+/// (tests/fixtures/ts_auth.json).
 #[cfg(test)]
 mod golden {
     use serde_json::Value;
@@ -148,7 +146,7 @@ mod golden {
     }
 
     #[test]
-    fn builds_the_authorization_urls_of_electron() {
+    fn builds_the_recorded_authorization_urls() {
         let fixture = fixture();
         for recorded in fixture["authUrls"].as_array().unwrap() {
             let port = u16::try_from(recorded["port"].as_u64().unwrap()).unwrap();
@@ -161,7 +159,7 @@ mod golden {
     }
 
     #[test]
-    fn sends_the_token_requests_of_electron() {
+    fn sends_the_recorded_token_requests() {
         let fixture = fixture();
         let exchange = &fixture["exchange"];
         let port = u16::try_from(exchange["port"].as_u64().unwrap()).unwrap();
@@ -179,11 +177,10 @@ mod golden {
         }
     }
 
-    /// The recorder runs with `Date` faked to a fixed time
-    /// (scripts/sync-fixtures/setup.ts sets `FIXED_NOW` of harness.ts) and
-    /// records it as `now`, so `expiresAt` is `now` plus `expires_in`.
+    /// The golden was recorded with the clock fixed at the time it holds as
+    /// `now`, so `expiresAt` is `now` plus `expires_in`.
     #[test]
-    fn stores_the_token_json_of_electron() {
+    fn stores_the_recorded_token_json() {
         let fixture = fixture();
         for name in ["storedAfterExchange", "storedWithoutRefreshToken"] {
             let stored = text(&fixture[name]);

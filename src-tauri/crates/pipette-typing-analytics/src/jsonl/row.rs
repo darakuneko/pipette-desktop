@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! One line of a per-day JSONL master (jsonl-row.ts): the composite row ids,
-//! the line `serializeRow` writes, and the validation of `parseRow`.
+//! One line of a per-day JSONL master: the composite row ids,
+//! the line [`serialize_row`] writes, and the validation of [`JsonlRow::parse`].
 //!
 //! A row is held as the object `JSON.parse` made of the line, so a row read
 //! from a file is written back (a delete mark, an import) with its keys in
 //! their order, its number forms, its lone surrogates and the fields this
-//! build does not know, as the TypeScript code writes the object it read.
+//! build does not know.
 
 use std::fmt::Write;
 
 use pipette_js_json::{JsString, Object, Value};
 
-/// `BIGRAM_HIST_BUCKETS`: the buckets of an n-gram's IKI histogram (`h`)
+/// The buckets of an n-gram's IKI histogram (`h`)
 /// and of a matrix cell's keypress-duration histogram (`dh`).
 pub const HIST_BUCKETS: usize = 8;
 
@@ -54,7 +54,7 @@ impl RowKind {
     }
 }
 
-/// A row `parseRow` accepts: the parsed object (always a
+/// A row [`JsonlRow::parse`] accepts: the parsed object (always a
 /// [`Value::Object`]), its kind and its id.
 #[derive(Debug, Clone, PartialEq)]
 pub struct JsonlRow {
@@ -64,7 +64,7 @@ pub struct JsonlRow {
 }
 
 impl JsonlRow {
-    /// `parseRow(line)`: `None` for text that is not JSON, a row without its
+    /// The row of `line`: `None` for text that is not JSON, a row without its
     /// required fields, a malformed optional group or an unknown kind.
     pub fn parse(line: &str) -> Option<Self> {
         if line.is_empty() {
@@ -73,7 +73,7 @@ impl JsonlRow {
         Self::from_value(pipette_js_json::parse(line).ok()?)
     }
 
-    /// The checks of `parseRow` on a parsed value.
+    /// The checks of [`Self::parse`] on a parsed value.
     pub fn from_value(value: Value) -> Option<Self> {
         let Value::Object(obj) = &value else { return None };
         let Some(Value::String(id)) = obj.get("id") else { return None };
@@ -120,13 +120,13 @@ impl JsonlRow {
         self.value
     }
 
-    /// `serializeRow(row)`.
+    /// The row's line ([`serialize_row`]).
     pub fn serialize(&self) -> String {
         serialize_row(&self.value)
     }
 }
 
-/// `serializeRow(row)`: `JSON.stringify(row)` and a newline.
+/// The line of `row`: `JSON.stringify(row)` and a newline.
 pub fn serialize_row(row: &Value) -> String {
     let mut line = pipette_js_json::stringify(row);
     line.push('\n');
@@ -223,7 +223,7 @@ fn is_number_or_null(p: &Object, key: &str) -> bool {
     matches!(p.get(key), Some(Value::Null)) || is_number(p, key)
 }
 
-/// `allOrNone` and the check of the group: true when none of `keys` is
+/// True when none of `keys` is
 /// present, or when all are and `check` holds; false for a partial group (a
 /// malformed row).
 fn group_is_valid(p: &Object, keys: &[&str], check: impl FnOnce() -> bool) -> bool {
@@ -247,7 +247,7 @@ fn has_valid_tags(p: &Object) -> bool {
         && matches!(p.get("runId"), None | Some(Value::String(_)))
 }
 
-/// `isHistBuckets`: exactly [`HIST_BUCKETS`] finite numbers.
+/// Exactly [`HIST_BUCKETS`] finite numbers.
 fn is_hist(value: Option<&Value>) -> bool {
     matches!(value, Some(Value::Array(items))
         if items.len() == HIST_BUCKETS && items.iter().all(|item| is_finite_number(Some(item))))

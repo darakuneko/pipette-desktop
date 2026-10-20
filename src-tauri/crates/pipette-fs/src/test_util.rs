@@ -3,9 +3,8 @@
 //! on Linux. Windows refuses some names (its reserved device names, a name
 //! that ends in `.` or a space, the characters `<>:"|?*` and control
 //! characters), Windows and macOS compare names without regard to case by
-//! default, and only Unix makes symbolic links without privileges. The
-//! TypeScript build meets the same limits on those systems, so a scenario
-//! that needs one of these is left out there rather than compared.
+//! default, and only Unix makes symbolic links without privileges, so a
+//! scenario that needs one of these is left out there rather than compared.
 
 use std::collections::HashMap;
 use std::path::Path;

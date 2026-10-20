@@ -5,11 +5,10 @@
 //! sync's requests with a method, headers and a body go through an
 //! [`HttpRequester`]. The Google endpoints of the sync ([`google_endpoints`],
 //! replaceable by loopback servers in development builds only) and the Hub
-//! API base URL (src/main/hub/hub-base.ts) are here too.
+//! API base URL are here too.
 //!
-//! Unlike Electron's `net.fetch`, a request has timeouts and a body size
-//! limit ([`Limits`]), so a stalled server ends in an error rather than a
-//! request that never settles.
+//! A request has timeouts and a body size limit ([`Limits`]), so a stalled
+//! server ends in an error rather than a request that never settles.
 
 // The endpoint variables let a process send the sync's Google requests
 // (tokens included) elsewhere, so only a debug build may read them. Every

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Helpers of the typing-analytics merge tests: the fixture values, the
-//! userData trees, the cache tables in the canonical text of
-//! scripts/analytics-db-fixtures/canonical.ts, and a Drive that logs the
-//! requests it answers.
+//! userData trees, the cache tables in the canonical text of the recorded
+//! goldens, and a Drive that logs the requests it answers.
 
 #![allow(clippy::unwrap_used, clippy::panic, dead_code)]
 

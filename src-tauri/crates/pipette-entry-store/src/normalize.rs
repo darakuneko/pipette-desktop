@@ -39,8 +39,9 @@ pub fn normalize_entries(store: EntryStore, entries: Option<&Value>) -> Vec<Entr
 ///   `deletedAt` was written by an app that only knows v1 (v2 writes
 ///   `updatedAt` only through [`derived_updated_at`]). Its name / hub /
 ///   enabled clocks are raised to that `updatedAt`, and so is `body` for
-///   stores whose v1 rule is `updatedAtOrSavedAt`. `created` is never
-///   raised: a v1 write cannot say whether it re-created the entry.
+///   stores whose v1 rule is [`V1BodyClockRule::UpdatedAtOrSavedAt`].
+///   `created` is never raised: a v1 write cannot say whether it re-created
+///   the entry.
 /// - An entry alive under the merge rule (created > deletedAt) carries no
 ///   `deletedAt`, so "has deletedAt" means deleted on read too.
 pub fn normalize_entry(store: EntryStore, raw: &Object) -> Entry {

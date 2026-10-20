@@ -2,17 +2,14 @@
 //! The file commands of the shim (src/tauri-shim/api/files.ts): save and
 //! export through a save dialog, open a layout or a JSON file through an
 //! open dialog, and write a set of CSV files into a chosen directory. Each
-//! command fixes its own dialog (title, default file name, filters) with the
-//! values of the Electron main process (src/main/file-io.ts); the page only
-//! passes the content and a name to clean, and for the open dialogs of
+//! command fixes its own dialog (title, default file name, filters); the
+//! page only passes the content and a name to clean, and for the open dialogs of
 //! `loadLayout` and `sideloadJson` a title and the extensions, which are
-//! checked here. The results and their error strings are those of
-//! file-io.ts: a dialog the user closes answers `{ success: false, error:
+//! checked here. A dialog the user closes answers `{ success: false, error:
 //! 'cancelled' }`, and a failed read or write answers the error's message.
 //!
-//! Files are written in place, as Electron's `writeFile` does, and read as
-//! UTF-8 with each invalid sequence replaced by U+FFFD, as its
-//! `readFile(path, 'utf-8')` does.
+//! Files are written in place, and read as UTF-8 with each invalid sequence
+//! replaced by U+FFFD.
 
 use std::path::Path;
 
@@ -99,7 +96,7 @@ fn path_text(path: &Path) -> String {
 }
 
 /// `<sanitized name><suffix>` for a name that is not empty, `fallback`
-/// otherwise (an empty name is falsy in the Electron handlers).
+/// otherwise.
 fn default_name(name: Option<&str>, suffix: &str, fallback: &str) -> String {
     match name {
         Some(name) if !name.is_empty() => format!("{}{suffix}", sanitize_filename(name)),
@@ -107,8 +104,7 @@ fn default_name(name: Option<&str>, suffix: &str, fallback: &str) -> String {
     }
 }
 
-/// The save dialog of a save or an export, with the values of its Electron
-/// handler.
+/// The save dialog of a save or an export.
 struct SaveDialog {
     title: &'static str,
     /// Appended to the cleaned name the page passes.
@@ -187,7 +183,7 @@ fn open_with_dialog(dialogs: &Dialogs, request: DialogRequest) -> FileOpenResult
 }
 
 /// The entries of a CSV bundle, `[{ name, content }, ...]` with string
-/// fields, checked as the Electron handler checks them.
+/// fields.
 fn csv_bundle_entries(files: Option<&Value>) -> Result<Vec<(&str, &str)>, &'static str> {
     let list = files.and_then(Value::as_array).filter(|list| !list.is_empty()).ok_or("no files")?;
     list.iter()
@@ -207,9 +203,8 @@ fn csv_file_name(name: &str) -> String {
     if safe.to_lowercase().ends_with(".csv") { safe } else { format!("{safe}.csv") }
 }
 
-/// Asks for a directory once and writes every file of `files` into it. As
-/// with the Electron handler, which starts every write at once, a failed
-/// write does not stop the others; the result is then the first error and
+/// Asks for a directory once and writes every file of `files` into it. A
+/// failed write does not stop the others; the result is then the first error and
 /// the files that were written.
 fn export_csv_bundle(dialogs: &Dialogs, files: Option<&Value>) -> CsvBundleResult {
     let entries = match csv_bundle_entries(files) {
@@ -251,8 +246,7 @@ const MAX_TITLE_CHARS: usize = 200;
 
 /// The page's title for an open dialog if it is a plausible one: not too
 /// long, without control characters (GTK refuses a title with NUL).
-/// Anything else falls back to `fallback`, as a title that is not a string
-/// does in the Electron handlers.
+/// Anything else falls back to `fallback`.
 fn page_title(title: Option<&str>, fallback: &str) -> String {
     match title {
         Some(title) if title.chars().count() <= MAX_TITLE_CHARS && !title.chars().any(char::is_control) => {
@@ -394,7 +388,7 @@ pub async fn file_export_json(
 }
 
 /// `files` is checked here rather than typed, so a malformed list answers
-/// the Electron handler's error instead of failing the call.
+/// an error result instead of failing the call.
 #[tauri::command]
 pub async fn file_export_csv_bundle(
     dialogs: State<'_, Dialogs>,

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync unit names and what they say: which store a unit belongs to,
-//! the store lock that guards its files, and the shapes the passes treat
-//! apart (src/main/sync/sync-bundle.ts, src/main/typing-analytics/sync.ts,
-//! src/main/sync/pack-bundle-merge.ts).
+//! The sync unit names and what they say: which store a unit belongs to, the
+//! store lock that guards its files, and the shapes the passes treat apart.
 
 use pipette_entry_store::EntryStore;
 use pipette_keyboard_stores::{KEY_LABEL_SYNC_UNIT, KEYBOARD_META_SYNC_UNIT, TYPING_TEXT_SYNC_UNIT};
@@ -121,10 +119,9 @@ pub fn parse_pack_body_unit(unit: &str) -> Option<(&'static PackStore, &str)> {
     (!id.is_empty()).then_some((&I18N_PACKS, id))
 }
 
-/// Puts the pack roster units of `items` before the others
-/// (`settlePackIndexUnitsFirst`): a pass runs the first group to the end
-/// before it starts the second, so a body unit is applied against a roster
-/// already merged in the same pass.
+/// Puts the pack roster units of `items` before the others: a pass runs the
+/// first group to the end before it starts the second, so a body unit is
+/// applied against a roster already merged in the same pass.
 pub fn pack_index_units_first<T>(items: Vec<T>, unit_of: impl Fn(&T) -> &str) -> (Vec<T>, Vec<T>) {
     items.into_iter().partition(|item| pack_index_store(unit_of(item)).is_some())
 }

@@ -297,8 +297,8 @@ describe('Tauri build packs and labels', () => {
     expect(readAppConfig().language).toBe(`pack:${japanese.id}`)
     // The device selector registers no pack bundle of its own: the pack
     // store the settings' Tools tab (or the editor's status bar) mounts
-    // registers it, and what renders after that is in Japanese, as in the
-    // Electron build (i18next is not bound to its store's changes).
+    // registers it, and what renders after that is in Japanese (i18next is
+    // not bound to its store's changes).
     // Opened again until a render after the registration shows it.
     await browser.waitUntil(
       async () => {

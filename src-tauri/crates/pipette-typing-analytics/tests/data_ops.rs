@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The data operations' behaviors the TypeScript tests pin and the
-//! recorded scenarios (ts_data_ops.rs) do not reach: the cache rebuild
+//! The data operations' behaviors the recorded scenarios (ts_data_ops.rs)
+//! do not reach: the cache rebuild
 //! from scratch and of an old schema, the apply of this device's own
 //! deleted ranges while a reset holds the keyboard or a day file cannot be
 //! read, and the startup hook.

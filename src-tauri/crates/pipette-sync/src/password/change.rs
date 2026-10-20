@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The entry points of the resumable sync password change
-//! (src/main/sync/sync-password-change.ts): start, resume, revert, abandon,
-//! the deletion of files neither password opens, the recovery at startup
-//! and the status for the renderer. The re-encryption is in
-//! [`super::switch`], the local state and keys in [`super::state`], the
-//! Drive lock in [`super::lock`].
+//! The entry points of the resumable sync password change: start, resume,
+//! revert, abandon, the deletion of files neither password opens, the recovery
+//! at startup and the status for the renderer. The re-encryption is in
+//! [`super::switch`], the local state and keys in [`super::state`], the Drive
+//! lock in [`super::lock`].
 //!
 //! Every operation holds the password-change run of the sync runtime (the
 //! sync lock, not waitable) until all of its work has ended, so no other
@@ -35,10 +34,9 @@ use crate::codec::EnvelopeCodec;
 use crate::execute::SYNC_CONCURRENCY;
 use crate::preflight::{Preflight, PreflightError};
 
-/// `passwordChangeTuning`: files per batch (the lock is checked again
-/// before each), passes over Drive before giving up while files keep
-/// needing conversion (another machine writing with a stale key), and
-/// files converted at a time.
+/// Files per batch (the lock is checked again before each), passes over Drive
+/// before giving up while files keep needing conversion (another machine
+/// writing with a stale key), and files converted at a time.
 #[derive(Clone, Copy, Debug)]
 pub struct PasswordChangeTuning {
     pub chunk_size: usize,
@@ -52,7 +50,7 @@ impl Default for PasswordChangeTuning {
     }
 }
 
-/// This machine's hash (`getMachineHash`); the error is its message.
+/// This machine's hash; the error is its message.
 pub type MachineHash = Arc<dyn Fn() -> Result<String, String> + Send + Sync>;
 
 /// A new random lock id (`randomUUID`).
@@ -82,8 +80,7 @@ pub struct PasswordChangeFile {
     pub name: String,
 }
 
-/// What this process remembers of the change
-/// (`passwordChangeUndecryptable`, `passwordChangeLockLost`).
+/// What this process remembers of the change.
 #[derive(Default)]
 pub(crate) struct ChangeMemory {
     pub undecryptable: Option<Vec<PasswordChangeFile>>,
@@ -190,8 +187,8 @@ impl PasswordChange {
         DriveLocks { drive: &self.preflight.drive, timing: &self.lock_timing }
     }
 
-    /// `withSyncLock`: runs `work` as the password-change run. Refused at
-    /// once while sync work runs or tokens are being switched.
+    /// Runs `work` as the password-change run. Refused at once while sync work
+    /// runs or tokens are being switched.
     async fn with_sync_lock<T>(
         &self,
         work: impl Future<Output = Result<T, PasswordChangeError>>,
@@ -280,10 +277,9 @@ impl PasswordChange {
         Ok(state)
     }
 
-    /// `startPasswordChange`: saves the progress and both passwords
-    /// locally, takes the Drive lock, then runs the switch. A failure after
-    /// the lock is taken leaves the change at `reencrypting` for a resume
-    /// or a revert.
+    /// Saves the progress and both passwords locally, takes the Drive lock,
+    /// then runs the switch. A failure after the lock is taken leaves the
+    /// change at `reencrypting` for a resume or a revert.
     pub async fn start(&self, new_password: &str) -> Result<(), PasswordChangeError> {
         self.with_sync_lock(async {
             if self.preflight.change_state.read().await != ChangeStateRead::None {
@@ -355,8 +351,8 @@ impl PasswordChange {
         }
     }
 
-    /// `resumePasswordChange`: continues an interrupted change (or
-    /// rollback) in its direction. `locking` and `cleanup` need no keys.
+    /// Continues an interrupted change (or rollback) in its direction.
+    /// `locking` and `cleanup` need no keys.
     pub async fn resume(&self) -> Result<(), PasswordChangeError> {
         self.with_sync_lock(async {
             let state = self.load_state().await?;
@@ -376,9 +372,9 @@ impl PasswordChange {
         .await
     }
 
-    /// `revertPasswordChange`: turns an interrupted change around and runs
-    /// it. Only while re-encrypting: from `committing` on the change
-    /// finishes, and a new change is the way back.
+    /// Turns an interrupted change around and runs it. Only while
+    /// re-encrypting: from `committing` on the change finishes, and a new
+    /// change is the way back.
     pub async fn revert(&self) -> Result<(), PasswordChangeError> {
         self.with_sync_lock(async {
             let state = self.load_state().await?;
@@ -395,11 +391,10 @@ impl PasswordChange {
         .await
     }
 
-    /// `abandonPasswordChange`: gives a change up without the keys,
-    /// releasing our lock (best effort) and removing the local keys and
-    /// state. Drive files stay on whichever key they are on, so they may
-    /// stay mixed. For when the keys cannot be read or the password-check
-    /// opens with neither key.
+    /// Gives a change up without the keys, releasing our lock (best effort) and
+    /// removing the local keys and state. Drive files stay on whichever key
+    /// they are on, so they may stay mixed. For when the keys cannot be read or
+    /// the password-check opens with neither key.
     pub async fn abandon(&self) -> Result<(), PasswordChangeError> {
         self.with_sync_lock(async {
             match self.preflight.change_state.read().await {
@@ -421,9 +416,9 @@ impl PasswordChange {
         .await
     }
 
-    /// `deletePasswordChangeUndecryptableFiles`: deletes the given Drive
-    /// files, each only after checking again that it is a data file neither
-    /// password opens. Only while re-encrypting and holding the lock.
+    /// Deletes the given Drive files, each only after checking again that it is
+    /// a data file neither password opens. Only while re-encrypting and holding
+    /// the lock.
     pub async fn delete_undecryptable(
         &self,
         file_ids: &[String],
@@ -466,13 +461,13 @@ impl PasswordChange {
         .await
     }
 
-    /// `recoverPasswordChangeOnStartup`, run once at startup. No state:
-    /// keys left by a start that never wrote its state are removed.
-    /// `locking`: the change never started, so our lock is removed and the
-    /// change forgotten. `reencrypting`: waits for the user's resume or
-    /// revert, and reports `lockLost` when our lock is gone. `committing`
-    /// and `cleanup`: finished here. Failures are logged, never returned;
-    /// the state stays for the next try.
+    /// Recovers an interrupted change; run once at startup. No state: keys
+    /// left by a start that never wrote its state are removed. `locking`: the
+    /// change never started, so our lock is removed and the change forgotten.
+    /// `reencrypting`: waits for the user's resume or revert, and reports
+    /// `lockLost` when our lock is gone. `committing` and `cleanup`: finished
+    /// here. Failures are logged, never returned; the state stays for the
+    /// next try.
     pub async fn recover_on_startup(&self) -> PasswordChangeRecovery {
         // Whatever an earlier check cached is not taken for the file.
         self.preflight.forget_change_state_cache();
@@ -555,7 +550,7 @@ impl PasswordChange {
         .await
     }
 
-    /// `getPasswordChangeStatus`: the progress for the renderer.
+    /// The progress for the renderer.
     pub async fn status(&self) -> PasswordChangeStatus {
         let state = match self.preflight.change_state.read().await {
             ChangeStateRead::None => return PasswordChangeStatus::None,

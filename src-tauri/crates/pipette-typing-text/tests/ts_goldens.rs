@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Checks the crate against the TypeScript functions and Electron's
-//! Shift_JIS decoder as recorded by scripts/typing-text-fixtures/.
+//! Checks the crate against the recorded goldens of the text functions and
+//! Chromium's Shift_JIS decoder.
 
 // Test helpers outside #[test] functions panic on a broken fixture.
 #![allow(clippy::unwrap_used)]
@@ -56,7 +56,7 @@ fn hex_units(text: &str) -> Vec<u16> {
 }
 
 #[test]
-fn normalize_file_import_text_matches_typescript() {
+fn normalize_file_import_text_matches_the_golden() {
     let fixture = fixture("text_functions.json");
     let mut failures = Vec::new();
     for case in array(field(fixture.as_object().unwrap(), "normalize")) {
@@ -83,7 +83,7 @@ fn normalize_file_import_text_matches_typescript() {
 }
 
 #[test]
-fn is_kana_only_text_matches_typescript() {
+fn is_kana_only_text_matches_the_golden() {
     let fixture = fixture("text_functions.json");
     let mut failures = Vec::new();
     for case in array(field(fixture.as_object().unwrap(), "kanaOnly")) {
@@ -98,7 +98,7 @@ fn is_kana_only_text_matches_typescript() {
 }
 
 #[test]
-fn clean_aozora_text_matches_typescript() {
+fn clean_aozora_text_matches_the_golden() {
     let fixture = fixture("text_functions.json");
     let mut failures = Vec::new();
     for case in array(field(fixture.as_object().unwrap(), "clean")) {
@@ -118,7 +118,7 @@ fn clean_aozora_text_matches_typescript() {
 }
 
 #[test]
-fn shift_jis_matches_electron() {
+fn shift_jis_matches_the_recorded_decoder() {
     let fixture = fixture("shift_jis.json");
     let fixture = fixture.as_object().unwrap();
     let mut failures = Vec::new();
@@ -152,7 +152,7 @@ fn shift_jis_matches_electron() {
 }
 
 #[test]
-fn aozora_zips_match_typescript() {
+fn aozora_zips_match_the_golden() {
     let fixture = fixture("aozora_zips.json");
     let mut failures = Vec::new();
     for case in array(&fixture) {

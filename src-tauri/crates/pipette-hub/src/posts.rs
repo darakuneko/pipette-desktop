@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keymap post handlers of `src/main/hub/hub-ipc-posts.ts`: upload,
-//! update, rename and delete a keymap post, and the account's own posts
-//! (all of them by page, or those of one keyboard). The answers are the
-//! TS's `{ success, postId? | posts?, pagination?, error? }`, with what the
-//! Hub sent as it sent it; a value the Hub left out is left out of the
-//! answer.
+//! The keymap post handlers: upload, update, rename and delete a keymap
+//! post, and the account's own posts (all of them by page, or those of one
+//! keyboard). The answers are
+//! `{ success, postId? | posts?, pagination?, error? }`, with what the Hub
+//! sent as it sent it; a value the Hub left out is left out of the answer.
 //!
-//! The checks run before any request and in the TS's order: the post id
-//! (update, rename, delete), the title, then the files (`buildFiles`: the
-//! names from the keyboard name with each unsafe UTF-16 unit as `_`, the
-//! size limits thumbnail → vil → pipette → keymap C → PDF). The keyboard
-//! name itself goes into the `keyboard_name` field as the page sent it,
-//! untrimmed and unchecked.
+//! The checks run before any request and in this order: the post id
+//! (update, rename, delete), the title, then the files ([`build_files`]: the
+//! names from the keyboard name with each unsafe UTF-16 unit as `_`, the size
+//! limits thumbnail → vil → pipette → keymap C → PDF). The keyboard name
+//! itself goes into the `keyboard_name` field as the page sent it, untrimmed
+//! and unchecked.
 //!
-//! The page always sends strings and numbers. Where it does not, Electron
-//! fails on JavaScript's coercions with messages of the engine; here a text
+//! The page always sends strings and numbers. Where it does not, a text
 //! input that is not a string fails with the handler's own message
 //! (`Upload failed` …) once the checks before it pass, and a post id that
 //! is not a string is an invalid post id.
@@ -43,8 +41,8 @@ pub struct KeymapPostParams<'a> {
     pub thumbnail_base64: Option<&'a str>,
 }
 
-/// The checked title and files of a keymap post (`validateTitle`, then
-/// `buildFiles`), with the keyboard name as the page sent it. Building the
+/// The checked title and files of a keymap post ([`validate_title`], then
+/// [`build_files`]), with the keyboard name as the page sent it. Building the
 /// files decodes the PDF and the thumbnail and copies every file, so the
 /// app prepares it off the async runtime ([`prepare_upload`],
 /// [`prepare_update`]) and hands it to the request.
@@ -55,7 +53,7 @@ pub struct CheckedKeymapPost {
 }
 
 impl KeymapPostParams<'_> {
-    /// `validateTitle(params.title)` then `buildFiles(params)`; `fallback`
+    /// [`validate_title`] of the title, then [`build_files`]; `fallback`
     /// is the handler's message for a file input that is not a string.
     pub(crate) fn check(&self, fallback: &str) -> Result<CheckedKeymapPost, HubFailure> {
         let title = validate_title(self.title)?;
@@ -90,7 +88,7 @@ impl KeymapPostParams<'_> {
 }
 
 /// The multipart body of a keymap post, with the boundary of this moment:
-/// the TS builds the body anew for each send, the retry after a 401 too.
+/// the body is built anew for each send, the retry after a 401 too.
 pub(crate) fn keymap_body(
     token: &HubToken,
     post: &CheckedKeymapPost,
@@ -153,12 +151,12 @@ pub(crate) fn answer(result: Result<Vec<(&str, Option<Value>)>, HubFailure>) -> 
 const UPLOAD_FAILED: &str = "Upload failed";
 const UPDATE_FAILED: &str = "Update failed";
 
-/// The checks of `HUB_UPLOAD_POST` and its files.
+/// The checks of the `hub_upload_post` command and its files.
 pub fn prepare_upload(params: KeymapPostParams<'_>) -> Result<CheckedKeymapPost, HubFailure> {
     params.check(UPLOAD_FAILED)
 }
 
-/// The checks of `HUB_UPDATE_POST` and its files: the post id first. `None`
+/// The checks of the `hub_update_post` command and its files: the post id first. `None`
 /// stands for a post id that is not a string.
 pub fn prepare_update(
     post_id: Option<&str>,
@@ -169,23 +167,23 @@ pub fn prepare_update(
     Ok((post_id.to_owned(), params.check(UPDATE_FAILED)?))
 }
 
-/// `HUB_UPLOAD_POST`: `{ success, postId }`.
+/// The `hub_upload_post` command: `{ success, postId }`.
 pub async fn upload_post(token: &HubToken, params: KeymapPostParams<'_>) -> Value {
     upload_prepared(token, prepare_upload(params)).await
 }
 
-/// `HUB_UPLOAD_POST` of a post [`prepare_upload`] prepared.
+/// The `hub_upload_post` command of a post [`prepare_upload`] prepared.
 pub async fn upload_prepared(token: &HubToken, post: Result<CheckedKeymapPost, HubFailure>) -> Value {
     let result = async { submit(token, &post?, &Endpoint::UploadPost).await }.await;
     answer(result)
 }
 
-/// `HUB_UPDATE_POST`. `None` stands for a post id that is not a string.
+/// The `hub_update_post` command. `None` stands for a post id that is not a string.
 pub async fn update_post(token: &HubToken, post_id: Option<&str>, params: KeymapPostParams<'_>) -> Value {
     update_prepared(token, prepare_update(post_id, params)).await
 }
 
-/// `HUB_UPDATE_POST` of a post [`prepare_update`] prepared.
+/// The `hub_update_post` command of a post [`prepare_update`] prepared.
 pub async fn update_prepared(
     token: &HubToken,
     prepared: Result<(String, CheckedKeymapPost), HubFailure>,
@@ -199,7 +197,7 @@ pub async fn update_prepared(
 }
 
 /// Sends a checked keymap post to `endpoint`. The body is assembled anew
-/// for each send, as the TS does (a copy of the files, no decoding).
+/// for each send (a copy of the files, no decoding).
 async fn submit(
     token: &HubToken,
     post: &CheckedKeymapPost,
@@ -214,7 +212,7 @@ async fn submit(
     Ok(vec![("postId", property(data.as_ref(), "id")?)])
 }
 
-/// `HUB_PATCH_POST`: renames a post (`{ title }`). `None` stands for a
+/// The `hub_patch_post` command: renames a post (`{ title }`). `None` stands for a
 /// value that is not a string.
 pub async fn patch_post(token: &HubToken, post_id: Option<&str>, title: Option<&str>) -> Value {
     let result = async {
@@ -232,7 +230,7 @@ pub async fn patch_post(token: &HubToken, post_id: Option<&str>, title: Option<&
     answer(result)
 }
 
-/// `HUB_DELETE_POST`. `None` stands for a post id that is not a string.
+/// The `hub_delete_post` command. `None` stands for a post id that is not a string.
 pub async fn delete_post(token: &HubToken, post_id: Option<&str>) -> Value {
     let result = async {
         let post_id = post_id.unwrap_or_default();
@@ -253,7 +251,7 @@ pub struct MyPostsParams {
     pub per_page: Option<f64>,
 }
 
-/// `HUB_FETCH_MY_POSTS`: the page within `1..`, the page size within
+/// The `hub_fetch_my_posts` command: the page within `1..`, the page size within
 /// `1..=100`, and `total_pages` counted from what the Hub answered.
 pub async fn fetch_my_posts(token: &HubToken, params: MyPostsParams) -> Value {
     let page = clamp_int(params.page, 1.0, MAX_SAFE_INTEGER);
@@ -262,7 +260,7 @@ pub async fn fetch_my_posts(token: &HubToken, params: MyPostsParams) -> Value {
         let endpoint = Endpoint::MyPosts { page, per_page };
         let data = token.with_token_retry(|jwt| send(token, &endpoint, jwt, RequestBody::None)).await?;
         let data = data.as_ref();
-        // The TS reads `result.total` first.
+        // `total` is read first.
         let total = property(data, "total")?;
         let per_page = property(data, "per_page")?;
         let total_pages =
@@ -291,7 +289,7 @@ fn number_or_nan(value: Option<&Value>) -> f64 {
     }
 }
 
-/// `HUB_FETCH_MY_KEYBOARD_POSTS`: the posts of the trimmed keyboard name.
+/// The `hub_fetch_my_keyboard_posts` command: the posts of the trimmed keyboard name.
 /// `None` stands for a value that is not a string.
 pub async fn fetch_my_keyboard_posts(token: &HubToken, keyboard_name: Option<&str>) -> Value {
     let result = async {

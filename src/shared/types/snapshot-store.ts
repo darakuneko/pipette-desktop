@@ -14,7 +14,7 @@ export interface SnapshotMeta {
   vilVersion?: number // VilFile format version (1 = legacy, 2 = current)
 }
 
-/** `SNAPSHOT_STORE_UPDATE` option for the mechanical v1 → v2 file
+/** `snapshot_store_update` option for the mechanical v1 → v2 file
  *  migration (`useSnapshotMigration.ts`): `migrateFrom` is the body the
  *  migration was computed from. The write happens only when the stored
  *  body is still exactly that, and moves the body clock 1 ms past its

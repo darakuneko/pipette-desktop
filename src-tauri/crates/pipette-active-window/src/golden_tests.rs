@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Checks `ActiveWindow::app_name` against getCurrentAppName of the Electron
-//! build, recorded by scripts/active-window-fixtures/ with stubs for the
-//! native binding and gdbus: the normalization, the gdbus output parsing and
+//! Checks `ActiveWindow::app_name` against the recorded golden, taken with
+//! stubs for the native binding and gdbus: the normalization, the gdbus output parsing and
 //! the fallback order, with the number of gdbus runs and the warning.
 
 // Test helpers outside #[test] functions panic on a broken fixture.

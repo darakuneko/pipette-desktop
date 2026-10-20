@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // A fake Google Drive v3 and OAuth server for the sync's tests: the part of
 // the Drive API the sync uses on appDataFolder (the requests of
-// src/main/sync/google-drive.ts), the authorization and token endpoints
-// (src/main/sync/google-auth.ts) and control endpoints that inject
+// src-tauri/crates/pipette-drive), the authorization and token endpoints
+// (src-tauri/crates/pipette-google-auth) and control endpoints that inject
 // failures, switch the account and show the state. It keeps its state in
 // memory and listens on 127.0.0.1 only. The files follow drive-state.ts.
 //

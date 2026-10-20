@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The pending sync units kept on disk (`local/sync-pending.json` in the
 //! userData directory), so changes not yet uploaded when the app exits,
-//! crashes or is killed are sent after the next launch. The same state and
-//! file as the Electron build's src/main/sync/sync-pending-store.ts and the
-//! pending part of src/main/sync/sync-runtime-state.ts: the active units
-//! with the account they were changed under, and the units held for other
-//! accounts.
+//! crashes or is killed are sent after the next launch. The same file as
+//! the 0.4 build's: the active units with the account they were changed
+//! under, and the units held for other accounts.
 //!
 //! A change to the set ([`PendingStore::notify_change`]) gives the unit a
 //! new generation and writes the whole state [`PENDING_WRITE_DELAY`] after
@@ -33,8 +31,7 @@ use crate::file::PendingFile;
 pub use upload::{PendingStateCopy, PendingWriteError};
 
 /// How long a change waits before the pending state is written. Changes in
-/// that window share one write. `PENDING_WRITE_DELAY_MS` of
-/// src/main/sync/sync-pending-store.ts.
+/// that window share one write.
 pub const PENDING_WRITE_DELAY: Duration = Duration::from_millis(100);
 
 /// Where the file is, under the userData directory.
@@ -103,8 +100,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 impl PendingStore {
     /// Loads the pending state an earlier run left in `user_data` and starts
-    /// keeping it on disk; `restorePendingFromDisk` of
-    /// src/main/sync/sync-pending-store.ts. The restored units get new
+    /// keeping it on disk. The restored units get new
     /// generations in file order. Units that are not safe paths, and units of
     /// a keyboard whose directory is gone, are dropped, and a write is
     /// scheduled so they leave the file too. A file that exists but cannot be
@@ -138,27 +134,24 @@ impl PendingStore {
     }
 
     /// Records a change to `unit`: a new generation, a write unless one is
-    /// due or the unit is already on disk, and the status to the listener;
-    /// what `notifyChange` of src/main/sync/sync-flush.ts does before it arms
-    /// the upload.
+    /// due or the unit is already on disk, and the status to the listener.
     pub fn notify_change(&self, unit: &str) {
         let ticket = self.mark_pending(&mut lock(&self.shared.state), JsString::from(unit));
         self.schedule_write(ticket);
         self.broadcast_status();
     }
 
-    /// `markPending`: adds `unit` with a new generation; the ticket of the
-    /// write it needs, if any.
+    /// Adds `unit` with a new generation; the ticket of the write it needs,
+    /// if any.
     fn mark_pending(&self, state: &mut State, unit: JsString) -> Option<u64> {
         let added = state.mark(unit);
         // A unit already pending is on disk unless the last write failed.
         if self.shared.persist && (added || state.dirty) { state.reserve_write() } else { None }
     }
 
-    /// Tells the listener whether anything is pending now
-    /// (`broadcastPendingStatus`). A change, a cancel, putting units back
-    /// and a change of owner call it themselves; a settle does not, so a
-    /// pass calls it once after its settles.
+    /// Tells the listener whether anything is pending now. A change, a
+    /// cancel, putting units back and a change of owner call it themselves;
+    /// a settle does not, so a pass calls it once after its settles.
     pub fn broadcast_status(&self) {
         let _telling = lock(&self.shared.status);
         (self.shared.listener)(self.has_pending_changes());
@@ -175,8 +168,7 @@ impl PendingStore {
     }
 
     /// Writes the pending state now, in place of any write that is due; a
-    /// failure is logged and left to the next write. `persistPendingNow` of
-    /// src/main/sync/sync-runtime-state.ts, for the quit sequence.
+    /// failure is logged and left to the next write. For the quit sequence.
     pub fn persist_now(&self) {
         if let Some(Err(err)) = self.write(None) {
             log::warn!("[sync-pending] failed to write the pending changes: {err}");
@@ -213,8 +205,7 @@ impl PendingStore {
 
     /// The file's content for a write starting now, which takes the place of
     /// the write that is due; `None` when `ticket` is no longer that write.
-    /// The state counts as not on disk until the write succeeds, as
-    /// `writePendingNow` of src/main/sync/sync-pending-store.ts marks it.
+    /// The state counts as not on disk until the write succeeds.
     fn take_content(&self, ticket: Option<u64>) -> Option<String> {
         let mut state = lock(&self.shared.state);
         if ticket.is_some() && state.due_write != ticket {
@@ -234,9 +225,9 @@ impl PendingStore {
         change(&mut lock(&self.shared.state))
     }
 
-    /// Writes `content` now, in place of a write that is due
-    /// (`writePendingNow`); nothing when the file could not be read at
-    /// startup. Called by [`Self::with_write_lock`]'s `change`.
+    /// Writes `content` now, in place of a write that is due; nothing when the
+    /// file could not be read at startup. Called by [`Self::with_write_lock`]'s
+    /// `change`.
     fn write_locked(&self, state: &mut State, content: &str) -> std::io::Result<()> {
         if !self.shared.persist {
             return Ok(());
@@ -248,8 +239,8 @@ impl PendingStore {
         Ok(())
     }
 
-    /// `commitPendingState`: writes the state now (a failure is logged and
-    /// left to the next write) and tells the listener.
+    /// Writes the state now (a failure is logged and left to the next write)
+    /// and tells the listener.
     fn commit_state(&self) {
         self.persist_now();
         self.broadcast_status();

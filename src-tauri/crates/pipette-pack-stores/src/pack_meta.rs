@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The operations on a pack's meta that the language and theme packs do
-//! the same way (src/main/i18n-pack-store-crud.ts and
-//! src/main/theme-pack-store.ts): reading a live pack, choosing the id and
+//! the same way: reading a live pack, choosing the id and
 //! the name a save takes, renaming, linking to the Hub and deleting. Each
 //! write runs under the store's write lock and reports its sync units.
 
@@ -37,10 +36,10 @@ pub(crate) struct SaveHub<'a> {
     pub drop_empty_post: bool,
 }
 
-/// Adds the fields every save ends its meta with, in `savePack`'s order:
-/// the Hub fields that have a value over `existing` (the Hub time and
-/// uploader trimmed, a blank one clearing it) and `savedAt`, kept from
-/// `existing` or `now`.
+/// Adds the fields every save ends its meta with, in this order: the Hub
+/// fields that have a value over `existing` (the Hub time and uploader
+/// trimmed, a blank one clearing it) and `savedAt`, kept from `existing` or
+/// `now`.
 pub(crate) fn insert_save_tail(fields: &mut Object, hub: SaveHub<'_>, existing: Option<&Entry>, now: i64) {
     let old = |key: &str| existing.and_then(|meta| meta.get(key));
     let truthy = |value: Option<Value>| value.filter(Value::is_truthy);
@@ -126,9 +125,9 @@ impl PackStore {
         Ok((id, name))
     }
 
-    /// The meta of a save of the pack `id`: `fields` over the meta `index`
-    /// has for `id` (`overwriteEntry`, the body clock moved; `explicit`
-    /// when the user asked for it), and that meta's position.
+    /// The meta of a save of the pack `id`: `fields` over the meta `index` has
+    /// for `id` ([`overwrite_entry`], the body clock moved; `explicit` when the
+    /// user asked for it), and that meta's position.
     pub(crate) fn saved_meta(
         &self,
         index: &PackIndex,
@@ -182,7 +181,7 @@ impl PackStore {
         })
     }
 
-    /// Gives the live pack `id` the name `new_name`, trimmed (`renamePack`).
+    /// Gives the live pack `id` the name `new_name`, trimmed.
     /// Only the meta changes: the body and its sync unit stay as they are,
     /// and a read of the pack shows the meta's name.
     pub fn rename_pack(&self, ctx: &StoreContext, id: &JsString, new_name: &JsString) -> PackResult<Entry> {
@@ -207,8 +206,8 @@ impl PackStore {
 
     /// Links the pack `id` (live or not) to the Hub post `hub_post_id`, or
     /// unlinks it when that is `None` or blank once trimmed, which also
-    /// drops the cached Hub time (`setHubPostId`). The uploader name and
-    /// Hub time are left alone, set, or cleared by a blank value.
+    /// drops the cached Hub time. The uploader name and Hub time are left
+    /// alone, set, or cleared by a blank value.
     pub fn set_hub_post_id(
         &self,
         ctx: &StoreContext,

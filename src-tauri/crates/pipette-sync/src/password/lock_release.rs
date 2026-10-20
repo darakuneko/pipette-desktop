@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading and force-removing the password-change lock from a machine that
-//! has no password change of its own (src/main/sync/
-//! sync-password-lock-release.ts). When the machine holding the lock broke
-//! or never comes back, every other machine stays blocked by the sync
-//! guard; removing the lock is the only way out, so neither operation here
-//! runs the guard's Drive lock check. The release still refuses while this
-//! machine has a change of its own, and while Drive needs a newer sync
-//! format: an app too old for Drive's data leaves the lock to an updated
-//! one.
+//! Reading and force-removing the password-change lock from a machine that has
+//! no password change of its own. When the machine holding the lock broke or
+//! never comes back, every other machine stays blocked by the sync guard;
+//! removing the lock is the only way out, so neither operation here runs the
+//! guard's Drive lock check. The release still refuses while this machine has a
+//! change of its own, and while Drive needs a newer sync format: an app too old
+//! for Drive's data leaves the lock to an updated one.
 
 use serde::Serialize;
 
@@ -28,8 +26,8 @@ pub struct PasswordChangeLockStatus {
 }
 
 impl PasswordChange {
-    /// `getPasswordChangeLockStatus`: the earliest lock on Drive (the one
-    /// that blocks syncing), `None` when there is none. Reads only.
+    /// The earliest lock on Drive (the one that blocks syncing), `None` when
+    /// there is none. Reads only.
     pub async fn lock_status(&self) -> Result<Option<PasswordChangeLockStatus>, PasswordChangeError> {
         let locks = self.locks();
         let Some(holder) = locks.list_locks().await?.into_iter().next() else { return Ok(None) };
@@ -43,11 +41,10 @@ impl PasswordChange {
         }))
     }
 
-    /// `releasePasswordChangeLocks`: deletes every password-change lock on
-    /// Drive. Refused while this machine has a change of its own (its lock
-    /// is still needed to finish or revert it), while Drive needs a newer
-    /// sync format, and while sync work runs here; holds the sync lock so
-    /// no password change starts meanwhile.
+    /// Deletes every password-change lock on Drive. Refused while this machine
+    /// has a change of its own (its lock is still needed to finish or revert
+    /// it), while Drive needs a newer sync format, and while sync work runs
+    /// here; holds the sync lock so no password change starts meanwhile.
     pub async fn release_locks(&self) -> Result<(), PasswordChangeError> {
         self.preflight.assert_no_local_password_change().await?;
         let runtime = self.preflight.runtime();

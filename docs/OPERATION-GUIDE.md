@@ -57,6 +57,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [6.4 Theme Packs Manage](#64-theme-packs-manage)
   - [6.5 Zoom (UI Scale)](#65-zoom-ui-scale)
   - [6.6 Launch at Login / Stay in System Tray](#66-launch-at-login--stay-in-system-tray)
+  - [6.7 Updating Pipette](#67-updating-pipette)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
@@ -1624,7 +1625,7 @@ When the Monitor App toggle is on (and recording is in the Stop / recording stat
 - The button is greyed out while recording is in the **Start** (not recording) state — turning it on without recording active has no effect, so the UI funnels you through Start first
 - The on/off state is global (AppConfig), not per-keyboard, and is **not** synced to other machines
 - **Linux / Wayland**: requires the FocusedWindow GNOME Shell extension (see README). Without it, every minute is recorded as `null`
-- **macOS**: requires the Accessibility permission (see README). Without it, every minute is recorded as `null`
+- **macOS**: normally works without any permission. If the application name does not appear (macOS behaviour can change between versions), allowing Pipette in **System Settings → Privacy & Security → Accessibility** may help
 - Turning Monitor App off keeps existing tags in the database; only newly recorded minutes go untagged
 
 **Tray toggles**
@@ -1792,11 +1793,11 @@ The editor settings panel now provides a single **Save** panel with the followin
 
 Pipette can sync your saved snapshots, favorites, and per-keyboard settings across multiple devices via Google Drive.
 
-Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Data** tab:
+Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Connect** tab:
 
-![Data Tab](screenshots/hub-settings-data-sync.png)
+![Connect Tab](screenshots/hub-settings-data-sync.png)
 
-The Data tab contains the following sections: Google Account, Data Sync, and Pipette Hub. Additional troubleshooting and data management options are available in the Data panel (§1.3).
+The Connect tab contains the following sections: Google Account, Data Sync, and Pipette Hub. Additional troubleshooting and data management options are available in the Data panel (§1.3).
 
 #### Google Account
 
@@ -1895,13 +1896,13 @@ Operational errors (shown as the message directly, no reason code):
 
 #### Password Troubleshooting
 
-Start from what you see in the **Data** tab and follow the branch to an action. The messages in the charts are shortened with "…"; the sections above give each one in full.
+Start from what you see in the **Connect** tab and follow the branch to an action. The messages in the charts are shortened with "…"; the sections above give each one in full.
 
 **When sync doesn't work**
 
 ```mermaid
 flowchart LR
-  start["Cloud Sync isn't working, or a password message is shown"] --> what{"What does the Data tab show?"}
+  start["Cloud Sync isn't working, or a password message is shown"] --> what{"What does the Connect tab show?"}
   what -->|"Set a sync password to enable sync"| first{"Do your other PCs already sync?"}
   first -->|Yes| samepw["Enter the password they use, then Set Password"]
   first -->|"No, this is the first PC"| newpw["Choose a new password, then Set Password"]
@@ -1966,11 +1967,11 @@ A: **Change Password** asks only for the new password; it uses the password save
   1. Close Pipette on every PC. While Google Drive has no password check, a running Pipette that syncs creates a new one with the password it has saved. If a PC other than the one you set the new password on does that, the new password won't match it
   2. In Google Drive on the web, open **Settings** (gear icon) › **Settings** › **Manage apps**, find Pipette, open its **Options** menu and choose **Delete hidden app data**
   3. Open Pipette on ONE PC and set the new password there. If it shows **Password is set**, use **Change Password**. It works whether or not this PC's own sync has already created a new password check: such a check uses this PC's saved password, which is the one **Change Password** starts from. Otherwise enter the new password and click **Set Password**
-  4. Only after that, open Pipette on the other PCs. On each one, click **Sync** in the **Data** tab of **Settings**: it fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears. Use it with the new password. A PC without a saved password just enters the new password and clicks **Set Password**
+  4. Only after that, open Pipette on the other PCs. On each one, click **Sync** in the **Connect** tab of **Settings**: it fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears. Use it with the new password. A PC without a saved password just enters the new password and clicks **Set Password**
 
 **Q: I changed the password on one PC. What do I do on the others?**
 
-A: Their saved password no longer matches, but the periodic background check doesn't report that, so their sync can stop without a message. On each of them, click **Sync** in the **Data** tab of **Settings**. It fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears; use it and enter the new password. See **Re-entering the password after a change on another PC** above.
+A: Their saved password no longer matches, but the periodic background check doesn't report that, so their sync can stop without a message. On each of them, click **Sync** in the **Connect** tab of **Settings**. It fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears; use it and enter the new password. See **Re-entering the password after a change on another PC** above.
 
 **Q: Can I use Pipette on my other PCs while the password is being changed?**
 
@@ -2023,7 +2024,7 @@ Before syncing, each Pipette puts a small marker on Google Drive that names the 
 - **What keeps working**: keyboard editing and every other feature that does not use Cloud Sync
 - **Sync Status** shows **"Sync data on this Google Drive was made by a newer version of Pipette. Update Pipette to keep syncing."**
 - **Banner**: a banner at the top of the screen (on the device selection screen too) shows **"Cloud Sync needs a newer version of Pipette. Update the app to keep syncing."** **Open Download Page** opens the Pipette releases page on GitHub. Close the banner with its **×** button; it stays closed until Pipette is restarted
-- While the banner applies, the password change lock banner in the Data tab is hidden
+- While the banner applies, the password change lock banner in the Connect tab is hidden
 - **When it is checked**: at startup when signed in to Google, after signing in with **Connect**, and whenever a sync stops for this reason. Signing out clears it
 
 #### Sync Unavailable Alert
@@ -2375,12 +2376,37 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 
 The Tools tab shows four toggles below the Theme Packs and Zoom rows:
 
-- **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works in installed (packaged) builds only — the toggle has no effect when running from source.
+- **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works only in a build that counts as installed (see the [Data Guide](Data.md#local-data)) — in a debug build, a build with the development tools, or a build started from inside its Cargo target directory, the toggle has no effect.
 - **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon, or choose **Show** from its menu, to bring the window back. Hovering the tray icon shows a live tooltip: just `Pipette` when idle, `Pipette — {keyboard name}` once a keyboard is connected, and `Pipette — {keyboard name} — Cnt: X · KPM: Y` while Typing Record (§4.3) is recording. The tray menu itself is **Show**, a separator, the connected keyboard's name (when one is connected) — with **Recording** / **Cnt: N** / **KPM: N** rows added while recording — another separator, then **Quit**. Menu and tooltip labels are fixed English text for now, not translated.
 - **Restore Last Session** (default ON): While ON, Pipette remembers the last keyboard you connected and automatically reconnects it the next time the app starts. Toggling this in Settings only affects the *next* launch — it never triggers a reconnect during the current session. Because the screen you were on is already remembered per keyboard, reconnecting also brings back the last screen you used with that keyboard. If the keyboard is not found within about 10 seconds of launch, Pipette gives up silently — no warning is shown, and the device selection screen stays as usual. Disconnecting a keyboard manually clears the remembered device.
 - **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog — including because Typing Record (§4.3) is on for a keyboard that reconnects locked — the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
 
 All four are machine-local settings — they are not synced to other devices via Cloud Sync.
+
+### 6.7 Updating Pipette
+
+Pipette checks for a new version once per launch, about 3 seconds after its window is on screen. When the startup notice is shown, the check waits until you close it, so the two never appear together; when Pipette starts hidden in the tray, the check waits until you first show the window. When a new version is available, the **Update available** modal opens:
+
+![Update available](screenshots/update-modal.png)
+
+- **See what's new in {version}** opens that version's release page in your browser
+- **Update** downloads the update and verifies its signature, showing **Downloading… N%** while it runs (**Downloading… N MB** when the server does not give the size). Pipette then quits the same way as when you quit it yourself — it waits for a running sync, but for no more than 30 seconds in all — and **Finishing up. Pipette will restart.** is shown at that point. On macOS and Linux Pipette installs the update and starts again as the new version; on Windows it starts the installer and exits at once, and the installer starts the new version when it is done
+- **Not now** closes the modal. The update is offered again at the next launch
+- **Skip this version** closes the modal and stops the startup check from offering exactly this version. A newer version is offered again, and the skipped one can still be installed from the About tab (below)
+
+If the download or the verification fails, the modal shows what went wrong (for example **The update could not be verified, so it was not installed.**), nothing is installed and Pipette keeps running; **Update** becomes **Try again**. If the install itself fails, Pipette has already quit: at the next launch the **The update failed** modal shows the reason instead of checking again. On Windows this covers only a failure before the installer starts; once it is running, Pipette has exited and does not learn whether the installer succeeded. Either way you can download the new version from the release page and install it yourself. A failed startup check shows nothing.
+
+**Check for updates** in the **About** tab of the Settings modal (gear icon on the device selection screen) checks at any time and shows the result below the button:
+
+![About — Check for updates](screenshots/about-update-check.png)
+
+- **Pipette is up to date.** — there is no newer version
+- **Pipette {version} is available.** — with an **Update to {version}…** link that opens the same modal (without **Skip this version**)
+- **Pipette {version} is available. You skipped it at startup, but you can still update here.** — the version you skipped, with the same link
+- **This copy of Pipette does not update itself.** — Pipette is run from somewhere it cannot replace itself: on macOS from the disk image instead of the Applications folder, on Linux anything other than the AppImage, or a build that does not count as installed: a debug build, a build with the development tools, or a release build started from inside its Cargo target directory (see the [Data Guide](Data.md#local-data))
+- An error message when the check fails (for example, no network)
+
+A pre-release (beta) of Pipette is offered both betas and releases; a release is offered releases only. The skipped version is a machine-local setting — it is not synced to other devices via Cloud Sync.
 
 ---
 
@@ -2392,8 +2418,8 @@ All four are machine-local settings — they are not synced to other devices via
 
 Hub features require Google account authentication. Please complete Google account authentication first. Configure Hub in the **Settings** modal (gear icon on the device selection screen):
 
-1. In the **Data** tab, click **Connect** under the Google Account section to sign in with your Google account
-2. Scroll down to the **Pipette Hub** section in the same Data tab — it should show **Connected**
+1. In the **Connect** tab, click **Connect** under the Google Account section to sign in with your Google account
+2. Scroll down to the **Pipette Hub** section in the same Connect tab — it should show **Connected**
 3. Set your **Display Name** — this name is shown on your Hub posts
 4. Your uploaded keymaps appear in the **My Posts** list
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The line format of src/main/logger.ts: the timestamp is JavaScript's
+//! The line format of the log: the timestamp is JavaScript's
 //! `Date.prototype.toISOString()` and the level is upper case.
 
 use log::Level;
 
-/// The level as src/main/logger.ts writes it. The Electron build has no
-/// TRACE level, so TRACE is written as DEBUG.
+/// The level as the line shows it. The log has no TRACE level, so TRACE is
+/// written as DEBUG.
 fn level_name(level: Level) -> &'static str {
     match level {
         Level::Error => "ERROR",

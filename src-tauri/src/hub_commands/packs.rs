@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language and theme packs on the Hub (the handlers of
-//! src/main/hub/hub-ipc-packs.ts, on `pipette_hub::packs`): the search, the
-//! download, the upload, update and delete with the local pack's Hub link,
+//! The language and theme packs on the Hub (on `pipette_hub::packs`): the
+//! search, the download, the upload, update and delete with the local pack's Hub link,
 //! and the freshness timestamps.
 //!
 //! The arguments arrive as the renderer sent them, except the pack of an
 //! upload or update: the shim sends it as the text of `JSON.stringify`, so
-//! its key order reaches the Hub as Electron sends it. The answers are JSON
+//! its key order reaches the Hub as the page wrote it. The answers are JSON
 //! text written by `pipette_js_json`, so the packs and the Hub's objects
 //! reach the page in the order the Hub sent them. The local pack's link is
 //! written through the pack store on a blocking-task thread, as every
-//! store write; the store reports its sync unit. Like
-//! Electron's handlers, these send no `i18n-pack:changed` /
-//! `theme-pack:changed`.
+//! store write; the store reports its sync unit. These send no
+//! `i18n-pack:changed` / `theme-pack:changed`.
 
 use std::sync::Arc;
 

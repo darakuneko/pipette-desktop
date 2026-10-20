@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The parts every sync entry point runs before it reads or writes data,
-//! in the order of SYNC-PROCESS §3: the local guard, the credentials, the
+//! The parts every sync entry point runs before it reads or writes data, in
+//! the order of SYNC-PROCESS §3: the local guard, the credentials, the
 //! listing, the remote guard, the sync-format marker and the
-//! password-check. They stay separate parts, not one function, because
-//! the entry points list Drive differently: a full pass (flush, polling,
-//! `executeSync`) takes one unfiltered listing, while the Analyze sync and
-//! the fetch of another device's day take narrow, name-filtered ones.
+//! password-check. They stay separate parts, not one function, because the
+//! entry points list Drive differently: a full pass (flush, polling, the
+//! passes of [`crate::execute`]) takes one unfiltered listing, while the
+//! Analyze sync and the fetch of another device's day take narrow,
+//! name-filtered ones.
 //!
 //! [`Preflight`] holds what the parts share: the Drive client, the sync's
 //! memory ([`SyncRuntime`]), the stored password, the sign-in, this
@@ -29,9 +30,8 @@ use crate::password::guard::SyncBlockReason;
 use crate::password::state::ChangeStateFile;
 use crate::single_flight::SingleFlight;
 
-/// How long a marker or password-check this process created and no
-/// listing shows yet still counts as present (Drive's listing lag), as
-/// `syncFormatTiming` and `passwordCheckTiming` of the TypeScript set it.
+/// How long a marker or password-check this process created and no listing
+/// shows yet still counts as present (Drive's listing lag).
 pub const CREATED_MEMORY_MS: u64 = 5 * 60 * 1000;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -40,13 +40,13 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 /// shows (an i18n key, or the text of a Drive or storage failure).
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum PreflightError {
-    /// `SyncBlockedError`.
+    /// The guard blocks sync.
     #[error("{}", .0.i18n_key())]
     Blocked(SyncBlockReason),
-    /// `SyncCredentialError` with its default namespace.
+    /// A credential failure, in the default namespace.
     #[error("sync.changePasswordError.{}", .0.as_str())]
     Credential(SyncCredentialFailureReason),
-    /// `PasswordMismatchError`.
+    /// The stored password does not open the password-check.
     #[error("sync.passwordMismatch")]
     PasswordMismatch,
     #[error("sync.passwordAlreadySet")]
@@ -71,8 +71,7 @@ impl From<DriveFailure> for PreflightError {
     }
 }
 
-/// The stored sync password (`retrievePasswordResult`, `storePassword` and
-/// `clearPassword` of sync-crypto.ts).
+/// The stored sync password.
 pub trait PasswordStore: Send + Sync {
     /// The password, or the local reason it cannot be had
     /// (`NoPasswordFile`, `DecryptFailed` or `KeystoreUnavailable`).
@@ -83,7 +82,7 @@ pub trait PasswordStore: Send + Sync {
     fn clear(&self) -> BoxFuture<'_, ()>;
 }
 
-/// Whether the sync is signed in (`getAuthStatus().authenticated`).
+/// Whether the sync is signed in.
 pub trait SignIn: Send + Sync {
     fn is_signed_in(&self) -> BoxFuture<'_, bool>;
 }
@@ -121,7 +120,7 @@ pub struct Preflight {
     pub(crate) change_state: ChangeStateFile,
     /// The creation of our sync-format marker in flight.
     pub(crate) marker_creating: SingleFlight<()>,
-    /// The password-check this process created (`passwordCheckCreated`).
+    /// The password-check this process created.
     pub(crate) password_check_created: Mutex<Option<CreatedPasswordCheck>>,
     /// The creation of the password-check in flight.
     pub(crate) password_check_creating: SingleFlight<UploadedFile>,
@@ -166,14 +165,13 @@ impl Preflight {
         (self.now_ms)()
     }
 
-    /// What this process learned about the signed-in account and forgets
-    /// when the sign-in changes (`forgetAccountCaches` without the Hub
-    /// token): the validated and created password-check, the sync-format
-    /// status and the marker this process created. The sign-out
+    /// What this process learned about the signed-in account and forgets when
+    /// the sign-in changes: the validated and created password-check, the
+    /// sync-format status and the marker this process created. The sign-out
     /// generation is bumped first, so work that started for the previous
-    /// account and finishes meanwhile either records nothing or records
-    /// before the caches below are emptied. A password-check creation in
-    /// flight is forgotten: the next account's callers do not join it.
+    /// account and finishes meanwhile either records nothing or records before
+    /// the caches below are emptied. A password-check creation in flight is
+    /// forgotten: the next account's callers do not join it.
     pub fn forget_account(&self) {
         self.clear_sync_format_status();
         self.password_check_creating.forget();

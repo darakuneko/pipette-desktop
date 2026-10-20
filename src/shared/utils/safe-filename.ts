@@ -13,11 +13,11 @@ export function safeFilename(name: string, fallback: string): string {
   return name.replace(SAFE_FILENAME_REGEX, '_').replace(/^_+|_+$/g, '') || fallback
 }
 
-// Path-safety helpers shared across the index-based main-process stores
-// (favorites, snapshots, analyze-filter, key-label, typing-test-text, run
-// logs). `isSafePathSegment` is the separator-denylist form used for uids,
+// Path-safety helpers for the index-based stores (favorites, snapshots,
+// analyze-filter, key-label, typing-test-text, run logs). `isSafePathSegment` is the separator-denylist form used for uids,
 // runIds, and stored filenames; `isSafePackId` is a stricter allowlist for
-// i18n/theme pack ids. `hub-ipc.ts`'s own `isSafeExportFilename` is
+// i18n/theme pack ids. The Hub's own export-filename check
+// (src-tauri/crates/pipette-hub/src/favorite.rs) is
 // deliberately kept separate rather than folded into `isSafePathSegment`:
 // it's an ASCII allowlist enforced at the Hub-upload boundary, a stricter
 // contract than the general path-safety check below. `isSafeKey` and

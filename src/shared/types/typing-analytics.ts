@@ -375,7 +375,7 @@ export interface TypingTombstoneResult {
   sessions: number
 }
 
-/** TYPING_ANALYTICS_IMPORT's IPC result. `result` and `cancelled` are set
+/** `typing_analytics_import`'s result. `result` and `cancelled` are set
  * when `success` is true; `cancelled` means the user closed the file
  * picker. On failure `error` is the message or an i18n key. */
 export interface TypingAnalyticsImportResult {
@@ -425,7 +425,7 @@ export interface TypingBigramTopEntry {
   avgIki: number | null
   sd: number | null
   /** This pair's own contribution to the observed rollover rate — see
-   * {@link BigramPairTotal} (bigram-aggregate.ts) for the accumulators
+   * src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs for the accumulators
    * and `rankBigramsByCount`/`rankBigramsBySlow` for the projection.
    * ALWAYS null-paired: `overlapN === 0` (no determined-overlap sample
    * for this pair in the selection) projects both fields as null;
@@ -454,8 +454,8 @@ export interface TypingBigramSlowEntry extends TypingBigramTopEntry {
  * so a period with exactly `limit` distinct pairs isn't misreported.
  *
  * `observedRolloverRatio` is Σoverlap / Σcount across every pair in the
- * selection — see aggregatePairTotals / observedRolloverRatio in
- * bigram-aggregate.ts. A row with no overlap data (older than schema
+ * selection — see
+ * src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs. A row with no overlap data (older than schema
  * v8, or a trigram row where the columns don't exist) simply
  * contributes 0 to both sums rather than poisoning the whole pair —
  * unlike the sum/sumSq columns used for standard deviation, a row's
@@ -485,8 +485,8 @@ export type TypingBigramAggregateResult =
  * observed that minute — the per-minute granularity the Analyze
  * rollover trend chart needs (the bigram-aggregate IPC only returns a
  * single ratio for the whole range, not a time series). Backed by
- * `TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES`; see
- * listRolloverMinutesInRange in typing-analytics-db.ts. A minute
+ * `typing_analytics_list_rollover_minutes`; see
+ * src-tauri/crates/pipette-typing-analytics-db/src/range.rs. A minute
  * with no determined-overlap sample (pre-v8 data, or every row that
  * minute failed to observe overlap) is simply absent from the result
  * array rather than emitted with `on: 0` — callers bucket by summing
@@ -500,8 +500,8 @@ export interface TypingRolloverMinuteRow {
 
 /** Per-(row,col,layer) keypress-duration totals for the Analyze
  * duration distribution (Interval tab) and the Heatmap duration mode.
- * Already folded across every contributing minute on the main side
- * (see `aggregateMatrixDurationTotals` in bigram-aggregate.ts) — one
+ * Already folded across every contributing minute in the backend
+ * (see src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs) — one
  * row per physical cell that had at least one `matrix-release` sample
  * in range, not one row per minute. `durationSamples` is the duration
  * SAMPLE count, explicitly NOT the press count: a keystroke that spans
@@ -547,8 +547,8 @@ export interface LayoutComparisonInputLayout {
 
 export interface LayoutComparisonOptions {
   source: LayoutComparisonInputLayout
-  /** Target layouts to compare against `source`. Main's parser
-   *  (`parseLayoutComparisonOptions`, typing-analytics-ipc-range.ts)
+  /** Target layouts to compare against `source`. The backend's parser
+   *  (src-tauri/crates/pipette-typing-analytics/src/layout_comparison.rs)
    *  imposes no length limit; every renderer call site
    *  (`LayoutComparisonView`, the CSV export builder) sends exactly
    *  `[source, target]`, the source first so the table gets a baseline

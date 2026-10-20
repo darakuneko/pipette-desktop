@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Layout Comparison metrics (src/main/typing-analytics/
-//! compute-layout-comparison.ts) and the check of their options
-//! (`parseLayoutComparisonOptions`, typing-analytics-ipc-range.ts): each
+//! The Layout Comparison metrics and the check of their options: each
 //! recorded cell's count placed on every target layout, then summed per
 //! finger, hand and row and divided by the placed events.
 //!
 //! The sums run in the order of the matrix counts and the shares keep the
-//! keys in the order they first got a count, as the TypeScript objects do.
+//! keys in the order they first got a count, as JavaScript objects do.
 
 use std::collections::HashMap;
 
@@ -30,7 +28,8 @@ pub struct Options {
     pub finger_overrides: Option<HashMap<String, String>>,
 }
 
-/// `isLayoutInputLayout`.
+/// Whether `value` is a layout of the options: an object with a non-empty
+/// string `id` and a `map` object or array.
 fn is_input_layout(value: &Value) -> bool {
     let Some(object) = value.as_object() else { return false };
     let id_ok = matches!(object.get("id"), Some(Value::String(id)) if !id.is_empty());
@@ -43,7 +42,7 @@ pub fn is_pos_key(key: &str) -> bool {
     key.split_once(',').is_some_and(|(row, col)| digits(row) && digits(col))
 }
 
-/// `isValidFingerOverrides`: a plain object of position keys to finger
+/// A plain object of position keys to finger
 /// names, all or nothing.
 fn finger_overrides(value: &Value) -> Option<HashMap<String, String>> {
     let Value::Object(object) = value else { return None };
@@ -57,7 +56,7 @@ fn finger_overrides(value: &Value) -> Option<HashMap<String, String>> {
         .collect()
 }
 
-/// `parseLayoutComparisonOptions`: `None` when the source, any target, the
+/// `None` when the source, any target, the
 /// metrics list or the finger overrides are malformed; unknown metrics are
 /// dropped.
 pub fn parse_options(value: &Value) -> Option<Options> {
@@ -94,7 +93,7 @@ fn layout_id(layout: &Value) -> Option<Value> {
     layout.as_object().and_then(|o| o.get("id")).cloned()
 }
 
-/// `extractKleKeysFromSnapshot`: the KLE keys of the snapshot's
+/// The KLE keys of the snapshot's
 /// `layout.keys`, none when it has no such list. An element that is not an
 /// object is left out: the app's snapshots hold the KLE parser's key
 /// objects.
@@ -132,7 +131,7 @@ impl Counts {
     }
 }
 
-/// `TargetAccumulator`.
+/// The counts of one target, summed cell by cell.
 #[derive(Default)]
 struct Accumulator {
     total_events: f64,
@@ -171,7 +170,7 @@ impl Accumulator {
         }
     }
 
-    /// `finalizeTarget`.
+    /// The result of one target with the requested `metrics`.
     fn finish(self, layout_id: Option<Value>, metrics: &[&str]) -> Value {
         let mut out = Object::new();
         if let Some(id) = layout_id {
@@ -214,9 +213,9 @@ fn ratio(numerator: f64, denominator: f64) -> f64 {
     if denominator > 0.0 { numerator / denominator } else { 0.0 }
 }
 
-/// `computeLayoutComparison` on layer 0 of `snapshot`, with the counts of
-/// one heatmap aggregate. Fails where the TypeScript resolver throws: on a
-/// layout map entry that is neither a string nor falsy.
+/// [`compute_with_keys`] on layer 0 of `snapshot` and its KLE keys, with the
+/// counts of one heatmap aggregate. Fails on a layout map entry that is neither a
+/// string nor falsy.
 pub fn compute(
     counts: &[MatrixCounts],
     snapshot: &Value,
@@ -225,7 +224,7 @@ pub fn compute(
     compute_with_keys(counts, snapshot, Some(0), &snapshot_kle_keys(snapshot), options)
 }
 
-/// `computeLayoutComparison` with the keycodes of `snapshot.keymap[layer]`
+/// The layout comparison with the keycodes of `snapshot.keymap[layer]`
 /// (none when `layer` is `None` or past the last layer, as for an index
 /// JavaScript finds nothing at) and the KLE keys `keys`. A layout without
 /// an `id` gives a result without the id's key, as JSON leaves out an

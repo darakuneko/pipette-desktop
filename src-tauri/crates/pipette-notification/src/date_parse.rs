@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `isValidIsoDate` of src/main/notification-store.ts: a non-empty string
-//! that `Date.parse` reads. `Date.parse` reads the ECMAScript Date Time
+//! Whether a publication date is valid: a non-empty string that
+//! `Date.parse` reads. `Date.parse` reads the ECMAScript Date Time
 //! String Format, the RFC 2822 form `Date.prototype.toUTCString` writes,
 //! and whatever else the engine's fallback parser makes of a string. Only
 //! the first two are read here:

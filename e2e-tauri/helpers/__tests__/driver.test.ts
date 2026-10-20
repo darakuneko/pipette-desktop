@@ -12,6 +12,8 @@ import {
   AUTOSTART_DIR_VARIABLE,
   E2E_HUB_URL,
   E2E_NOTIFICATION_URL,
+  LOOPBACK_NO_PROXY,
+  PROXY_VARIABLES,
   appEnv,
   assertAutostartDir,
   isLocalHttpUrl,
@@ -20,6 +22,10 @@ import {
 } from '../driver'
 
 describe('appEnv', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('points the Hub at the loopback interface and marks the run', () => {
     const env = appEnv('/tmp/user-data', {})
     expect(env.PIPETTE_HUB_URL).toBe(E2E_HUB_URL)
@@ -27,6 +33,16 @@ describe('appEnv', () => {
     expect(env.PIPETTE_HUB_TEST).toBe('1')
     expect(env.PIPETTE_DEV_SUPPRESS_BROWSER).toBe('1')
     expect(env.PIPETTE_USER_DATA_DIR).toBe('/tmp/user-data')
+  })
+
+  it('sends no request through a proxy', () => {
+    const proxies = Object.fromEntries(PROXY_VARIABLES.map((name) => [name, 'http://proxy.example:3128']))
+    vi.stubEnv('HTTPS_PROXY', 'http://proxy.example:3128')
+    vi.stubEnv('NO_PROXY', 'example.com')
+    const env = appEnv('/tmp/u', proxies)
+    for (const name of PROXY_VARIABLES) expect(env, name).not.toHaveProperty(name)
+    expect(env.NO_PROXY).toBe(LOOPBACK_NO_PROXY)
+    expect(env.no_proxy).toBe(LOOPBACK_NO_PROXY)
   })
 
   it('takes a session Hub on the loopback interface', () => {

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Starting the app at sign-in, which the Electron build sets up in
-//! `applyAutoLaunch` of src/main/app-behavior.ts: on Linux the desktop entry
+//! Starting the app at sign-in: on Linux the desktop entry
 //! `$HOME/.config/autostart/pipette.desktop` (src/linux.rs), on Windows the
 //! current user's Run key (src/windows_run.rs), on macOS the login item
-//! (src/macos.rs). The entry is the one the Electron build writes, taken
+//! (src/macos.rs). The entry is the one the 0.4 build wrote, taken
 //! over on purpose: a distributed build points it at itself, or removes it.
 //!
 //! Only a distributed build reaches the real entry (`packaged`, from
@@ -35,7 +34,7 @@ mod tests;
 pub use dev_dir::VARIABLE as DEV_DIR_VARIABLE;
 
 /// The operating system, which decides how the app is registered
-/// (`Other`: a system the Electron build registers nothing on).
+/// (`Other`: a system nothing is registered on).
 pub use pipette_fs::Platform as Os;
 
 /// The product name: the login item's name on Windows and macOS.
@@ -46,8 +45,8 @@ const PRODUCT_NAME: &str = "Pipette";
 pub struct Environment {
     pub os: Os,
     /// Whether this is a distributed build (`is_distributed_build` of
-    /// pipette-fs). The Electron build skips unpackaged builds, whose
-    /// executable is not the app.
+    /// pipette-fs). An unpackaged build is skipped: its executable is not
+    /// the app.
     pub packaged: bool,
     /// Whether `PIPETTE_USER_DATA_DIR` is set to a value: the app runs on a
     /// userData directory of its own and leaves the real entry alone.
@@ -114,7 +113,7 @@ impl Environment {
     }
 
     /// The program the entry starts: `APPIMAGE` when it is set, even to
-    /// the empty string (the Electron build's `??`), else the executable.
+    /// the empty string, else the executable.
     fn exec(&self) -> Result<OsString, String> {
         match &self.appimage {
             Some(appimage) => Ok(appimage.clone()),
@@ -162,7 +161,7 @@ impl Environment {
 #[derive(Debug, PartialEq, Eq)]
 enum Target {
     /// The desktop entry in the real `$HOME/.config/autostart`, written as
-    /// the Electron build writes it.
+    /// the 0.4 build wrote it.
     Directory(PathBuf),
     /// The desktop entry in the development directory, resolved: written
     /// through a temporary file and a rename, and only over (or removing)
@@ -174,13 +173,13 @@ enum Target {
     Skip(String),
     /// Nowhere, with this error.
     Refused(String),
-    /// Nowhere, silently: a system the Electron build registers nothing on.
+    /// Nowhere, silently: a system nothing is registered on.
     Nothing,
 }
 
 /// Registers the app to start at sign-in when `enabled`, else unregisters
-/// it, as `applyAutoLaunch` does: at every launch and on every change of
-/// `autoLaunch`. Failures are logged, never returned.
+/// it: at every launch and on every change of `autoLaunch`. Failures are
+/// logged, never returned.
 pub fn apply(enabled: bool, env: &Environment) {
     run(target(env), enabled, env);
 }

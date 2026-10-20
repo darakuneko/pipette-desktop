@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Who recorded the typing data: the installation id
-//! (`local/installation-id`, src/main/typing-analytics/installation-id.ts),
-//! the machine hash built from it (machine-hash.ts), and the OS part of the
-//! fingerprint (fingerprint.ts), with the strings Node's `os.platform()`,
+//! (`local/installation-id`), the machine hash built from it, and the OS
+//! part of the fingerprint, with the strings Node's `os.platform()`,
 //! `os.release()` and `os.arch()` give.
 //!
 //! The machine hash names this device's data directories and the scope of
 //! every record, and the OS strings go into the scope key as they are, so
-//! each must be the value the Electron build computes on the same machine:
+//! each must be the value the 0.4 build computes on the same machine:
 //! anything else shows the same PC as another device.
 
 use std::io::ErrorKind;
@@ -30,7 +29,7 @@ pub fn installation_id_path(user_data: &Path) -> PathBuf {
     user_data.join("local").join("installation-id")
 }
 
-/// `INSTALLATION_ID_PATTERN`: a lowercase hyphenated UUID.
+/// Whether `text` is a lowercase hyphenated UUID.
 fn is_installation_id(text: &str) -> bool {
     let bytes = text.as_bytes();
     bytes.len() == 36
@@ -43,14 +42,13 @@ fn is_installation_id(text: &str) -> bool {
 /// The installation id in `user_data`, written as `{id}\n` with a new id
 /// from `ids` when the file is missing or does not hold an id (after
 /// JavaScript's `trim`). Any other read error is returned and the file is
-/// left alone: the Electron build replaces the id after any read error,
-/// which turns a passing I/O failure into a new device.
+/// left alone: replacing the id after any read error would turn a passing
+/// I/O failure into a new device.
 pub fn load_or_create_installation_id(user_data: &Path, ids: &dyn IdGen) -> std::io::Result<String> {
     let path = installation_id_path(user_data);
     match std::fs::read(&path) {
         Ok(bytes) => {
-            // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD,
-            // which no id has.
+            // Each invalid sequence reads as U+FFFD, which no id has.
             let text = String::from_utf8_lossy(&bytes);
             let trimmed =
                 text.trim_matches(|c: char| u16::try_from(u32::from(c)).is_ok_and(is_js_whitespace));
@@ -74,8 +72,8 @@ pub type MachineIdSource = Box<dyn Fn() -> Result<String, MachineIdError> + Send
 
 /// The machine hash of this device, worked out once: the first success is
 /// kept for the life of the process, and a failure is tried again on the
-/// next call. The installation id is kept on its own the same way, as
-/// installation-id.ts does, so a failing machine id does not read or
+/// next call. The installation id is kept on its own the same way, so a
+/// failing machine id does not read or
 /// create the file again.
 pub struct MachineIdentity {
     user_data: PathBuf,
@@ -100,7 +98,7 @@ impl MachineIdentity {
         Self { user_data: user_data.to_path_buf(), ids, machine_id, cached: Mutex::new(Cached::default()) }
     }
 
-    /// `getMachineHash`: the SHA-256 of the machine id followed by the
+    /// The SHA-256 of the machine id followed by the
     /// installation id. Blocks on file I/O and, on Windows and macOS, on
     /// the command that reads the machine id. Concurrent callers wait for
     /// one another, so the file is read or created once.

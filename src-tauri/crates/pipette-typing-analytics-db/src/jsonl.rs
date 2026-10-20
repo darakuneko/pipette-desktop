@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading a per-day JSONL master (jsonl-reader.ts) and validating each line
-//! (`parseRow`, jsonl-row.ts). A line that fails validation is dropped, not
-//! an error, so rows of a newer build's kinds never stop a replay.
+//! Reading a per-day JSONL master and validating each line. A line that fails
+//! validation is dropped, not an error, so rows of a newer build's kinds never
+//! stop a replay.
 //!
 //! Lines are read with `pipette_js_json`, as `JSON.parse` reads them: a
 //! repeated key takes its last value, and a string may hold a lone
@@ -9,15 +9,13 @@
 //! in place of the surrogate, as better-sqlite3 writes a JavaScript string
 //! as UTF-8.
 //!
-//! Numbers stay `f64` all the way to SQLite: the TypeScript side holds them
-//! as JavaScript numbers and better-sqlite3 binds every number as a double,
-//! so an INTEGER column stores a whole value as INTEGER (column affinity)
-//! and a fractional one as REAL. Binding the same doubles keeps both sides
-//! storing the same storage class.
+//! Numbers stay `f64` all the way to SQLite and are bound as doubles, so an
+//! INTEGER column stores a whole value as INTEGER (column affinity) and a
+//! fractional one as REAL, the storage classes the recorded goldens hold.
 
 use pipette_js_json::{JsString, Object, Value};
 
-/// `BIGRAM_HIST_BUCKETS` (jsonl-row.ts).
+/// The number of buckets of a row's histograms.
 pub const HIST_BUCKETS: usize = 8;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -138,8 +136,8 @@ pub struct JsonlRow {
     pub payload: RowPayload,
 }
 
-/// The rows of a whole file, the way `readRows` reads it: lines end at
-/// `\n`, `\r\n` or a lone `\r` (Node's readline), blank and invalid lines
+/// The rows of a whole file: lines end at `\n`, `\r\n` or a lone `\r`
+/// (Node's readline), blank and invalid lines
 /// are dropped, and when the text does not end with `\n` its last line is
 /// a crash-truncated write and is dropped too.
 pub(crate) fn read_rows(text: &str) -> Vec<JsonlRow> {
@@ -178,7 +176,7 @@ fn split_lines(text: &str) -> Vec<&str> {
     lines
 }
 
-/// One line, or `None` where `parseRow` returns null.
+/// One line, or `None` when it is not a valid row.
 fn parse_row(line: &str) -> Option<JsonlRow> {
     if line.is_empty() {
         return None;
@@ -239,7 +237,7 @@ fn number(p: &Obj, key: &str) -> Option<f64> {
     num(p.get(key)?)
 }
 
-/// Present and null, or a number (`isNumericOrNull`). Absent fails.
+/// Present and null, or a number. Absent fails.
 fn number_or_null(p: &Obj, key: &str) -> Option<Option<f64>> {
     match p.get(key)? {
         Value::Null => Some(None),
@@ -247,8 +245,7 @@ fn number_or_null(p: &Obj, key: &str) -> Option<Option<f64>> {
     }
 }
 
-/// Absent or null reads as null; a string is kept; anything else fails
-/// (`isOptionalAppName` / `isOptionalTypingTest`).
+/// Absent or null reads as null; a string is kept; anything else fails.
 fn optional_string(p: &Obj, key: &str) -> Option<Option<String>> {
     match p.get(key) {
         None | Some(Value::Null) => Some(None),
@@ -269,8 +266,8 @@ fn tags(p: &Obj) -> Option<MinuteTags> {
     })
 }
 
-/// The all-or-nothing gate of `allOrNone`: `Some(false)` when none of
-/// `keys` is present, `Some(true)` when all are, `None` (reject) otherwise.
+/// The all-or-nothing gate: `Some(false)` when none of `keys` is present,
+/// `Some(true)` when all are, `None` (reject) otherwise.
 fn all_or_none(p: &Obj, keys: &[&str]) -> Option<bool> {
     let present = keys.iter().filter(|k| p.contains_key(k)).count();
     match present {

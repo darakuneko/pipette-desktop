@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The bundle of a sync unit (`bundleSyncUnit` of
-//! src/main/sync/sync-bundle.ts): the object whose `JSON.stringify` text is
-//! encrypted and uploaded, `{type, key, index, files}` (and `body` for a
-//! pack body). The text is [`bundle_plaintext`].
+//! The bundle of a sync unit: the object whose `JSON.stringify` text is
+//! encrypted and uploaded, `{type, key, index, files}` (and `body` for a pack
+//! body). The text is [`bundle_plaintext`].
 
 mod collect;
 

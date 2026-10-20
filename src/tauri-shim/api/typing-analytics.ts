@@ -4,9 +4,8 @@
 // the keyboards with data, the reads for every device, this device
 // (`…Local`) or one device (`…ForHash`), the typing-view heatmap, the
 // devices of a keyboard and the local day files. Each passes its arguments
-// as they are; the backend checks them as the Electron handlers do. A
-// filter list the renderer leaves out is sent as the empty list, as the
-// preload's defaults send it.
+// as they are; the backend checks them. A filter list the renderer leaves
+// out is sent as the empty list.
 
 import type {
   PeakRecords,

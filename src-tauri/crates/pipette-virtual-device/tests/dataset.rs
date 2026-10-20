@@ -86,8 +86,8 @@ fn compressed_definition_round_trips_through_lzma_decompression() {
 
 #[test]
 fn compressed_definition_is_a_single_embedded_buffer() {
-    // The TypeScript device caches its compressed bytes; here they are a
-    // compile-time constant, so every access sees the same buffer.
+    // The compressed bytes are a compile-time constant, so every access
+    // sees the same buffer.
     assert!(std::ptr::eq(COMPRESSED_DEFINITION, COMPRESSED_DEFINITION));
     assert!(!COMPRESSED_DEFINITION.is_empty());
 }

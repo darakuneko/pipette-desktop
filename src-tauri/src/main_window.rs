@@ -3,24 +3,23 @@
 //! configured: the app opens it through `open_main_window`, and the IPC
 //! contract tests (ipc_contract.rs) build their windows with it too.
 //!
-//! It opens as the Electron build's `createWindow` (src/main/index.ts) opens
-//! it: hidden, at the saved size and position fitted into a display's work
+//! It opens hidden, at the saved size and position fitted into a display's work
 //! area, with the minimum size that display allows, zoomed, then shown,
 //! unless the launch starts in the tray. Its bounds are saved as
 //! `windowState` when it closes and when the app exits.
 //!
 //! Sizes and positions are kept in device-independent pixels (DIP), as the
-//! Electron build keeps them: a monitor or window rectangle is converted
+//! 0.4 build keeps them in the same config: a monitor or window rectangle is converted
 //! from physical pixels with its own scale factor. That is the logical
 //! coordinate space of Tauri itself, so the builder takes the stored values
 //! as they are.
 //!
-//! Positions are in Electron's DIP space on Linux (X11, one scale for every
-//! monitor) and macOS. On Windows with monitors of different scales, a
-//! monitor's origin can differ from Chromium's, so a position saved by one
+//! Positions are in the 0.4 build's DIP space on Linux (X11, one scale for
+//! every monitor) and macOS. On Windows with monitors of different scales, a
+//! monitor's origin can differ from the one Chromium gave the 0.4 build, so a position saved by one
 //! build can open elsewhere, or centered, in the other.
 //!
-//! The saved size is the size Electron's bounds have: the size inside the
+//! The saved size is the size the 0.4 build saves too: the size inside the
 //! window frame on Linux, the outer size, frame included, on Windows and
 //! macOS. The builder sets the content size, so there the window takes its
 //! outer size once it exists and its frame is known
@@ -51,8 +50,7 @@ pub const MAIN_WINDOW: &str = "main";
 pub const VISIBILITY_CHANGED: &str = "window:visibility-changed";
 
 /// What the handlers keep about the main window. A window opened again
-/// after the last one closed (macOS) replaces both, as `createWindow` of the
-/// Electron build sets them for every window it creates.
+/// after the last one closed (macOS) replaces both.
 struct MainWindowState {
     /// Whether the window was opened hidden. Set when it opens; it does not
     /// follow the window's visibility.
@@ -115,7 +113,7 @@ pub fn main_window_builder<R: Runtime, M: Manager<R>>(
 
 /// Opens the main window, and keeps what the handlers need about it. The window starts
 /// hidden when the config's `startInTray` and `trayResident` are both on
-/// (`Boolean()` of each, as the Electron build reads them) and the tray icon,
+/// (`Boolean()` of each) and the tray icon,
 /// set up before this from the same `trayResident`, exists to show it
 /// ([`crate::tray::window_starts_hidden`]).
 pub fn open_main_window<R: Runtime>(
@@ -198,9 +196,8 @@ fn dip_rect(position: PhysicalPosition<i32>, size: PhysicalSize<u32>, scale: f64
     window_state::to_dip(position.x.into(), position.y.into(), size.width.into(), size.height.into(), scale)
 }
 
-/// The bounds of `window` in DIP, as Electron's `getBounds` reads them: its
-/// outer position, and its content size on Linux, where Electron's bounds
-/// have no frame, or its outer size on Windows and macOS.
+/// The bounds of `window` in DIP: its outer position, and its content size
+/// on Linux or its outer size on Windows and macOS.
 pub fn window_bounds<R: Runtime>(window: &Window<R>) -> tauri::Result<Rect> {
     let scale = window.scale_factor()?;
     let size = if window_ops::native::is_native::<R>() {
@@ -240,11 +237,10 @@ fn logical_size(size: PhysicalSize<u32>, scale: f64) -> Size {
     Size { width: size.width, height: size.height }
 }
 
-/// Saves the bounds of `window` as `windowState`, as `saveWindowState` does:
-/// directly, without telling the config listeners, and a failure is only
-/// logged. While compact mode is on, the size saved is the one it goes back
-/// to. A hidden or minimized window keeps the state saved before
-/// ([`window_state::state_to_save`]).
+/// Saves the bounds of `window` as `windowState` directly, without telling
+/// the config listeners, and a failure is only logged. While compact mode
+/// is on, the size saved is the one it goes back to. A hidden or minimized
+/// window keeps the state saved before ([`window_state::state_to_save`]).
 pub fn save_window_state<R: Runtime>(window: &Window<R>, config: &AppConfigStore) {
     let bounds = match window_bounds(window) {
         Ok(bounds) => bounds_to_save(bounds, window_ops::compact_normal_size(window)),
@@ -344,8 +340,7 @@ pub fn update_min_size<R: Runtime>(window: &Window<R>) {
     }
 }
 
-/// Restores, shows and focuses `window`, as `showWindow` of
-/// src/main/app-behavior.ts does. Whether it was hidden before.
+/// Restores, shows and focuses `window`. Whether it was hidden before.
 pub fn reveal<R: Runtime>(window: &Window<R>) -> bool {
     let was_visible = is_visible(window);
     let result = window.unminimize().and_then(|()| window.show()).and_then(|()| window.set_focus());
@@ -379,7 +374,7 @@ pub fn is_visible<R: Runtime>(window: &Window<R>) -> bool {
     })
 }
 
-/// The Electron window's `show` / `hide` events, pushed to the renderer:
+/// The window's shown / hidden changes, pushed to the renderer:
 /// `document.visibilityState` does not follow a window that starts hidden.
 fn notify_visibility<R: Runtime>(window: &Window<R>, visible: bool) {
     if let Err(err) = window.emit(VISIBILITY_CHANGED, visible) {

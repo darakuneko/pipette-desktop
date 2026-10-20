@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript run log store by
-//! scripts/keyboard-store-fixtures/record-run-log-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the run log store:
 //! the same userData files, clock and recording consent, the same calls
 //! with each log read from the JSON text the shim sends, then each
 //! response, the notified units and every file left behind compared byte
@@ -82,7 +81,7 @@ fn run_step(h: &Harness, consent: &Cell<bool>, step: &Object) -> Option<String> 
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_store() {
+fn the_scenarios_match_the_golden() {
     let consent = Cell::new(true);
     replay_scenarios(
         FIXTURE,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The automatic sync triggers (`pipette_sync::triggers`) in the app, wired
-//! as src/main/sync/sync-ipc.ts wires them: every store change goes through
+//! The automatic sync triggers (`pipette_sync::triggers`) in the app: every
+//! store change goes through
 //! [`notify_change`], the launch starts them ([`start`]), the app config's
 //! `autoSync` turns them on and off ([`on_auto_sync_changed`]), and the
 //! sign-in, the sign-out, a stored password, the passes and the quit
@@ -69,7 +69,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// `notifyChange`: records a change of `unit` and pushes the flush out.
+/// Records a change of `unit` and pushes the flush out.
 /// Before the triggers exist the change is only recorded; the launch
 /// schedules the flush of what is pending.
 pub fn notify_change<R: Runtime>(app: &AppHandle<R>, unit: &str) {

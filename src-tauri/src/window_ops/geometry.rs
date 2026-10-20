@@ -10,9 +10,8 @@
 //! together as one set ([`Hints`]). The app sets no maximum size, so the set
 //! has none, as tao's has none then.
 //!
-//! The aspect ratio is Electron's `setAspectRatio(ratio, extraSize)`: the
-//! ratio of the window's size less `extraSize`, the frame (outer minus
-//! content size). GTK applies the hints to the size of the GTK window, which
+//! The aspect ratio is the ratio of the window's size less the frame (outer
+//! minus content size). GTK applies the hints to the size of the GTK window, which
 //! is its content size: the window manager draws its frame outside it, and
 //! the webview fills it. So the ratio applies as it is, with nothing to take
 //! off; GTK ignores the `geometry_widget` argument (since 3.20), so that is
@@ -60,9 +59,8 @@ impl Hints {
     }
 }
 
-/// The hints for `geometry`. A minimum size becomes whole pixels as
-/// Electron's `setMinimumSize` takes it (an integer conversion that drops
-/// the fraction); every minimum size the app applies is at least 1.
+/// The hints for `geometry`. A minimum size becomes whole pixels (an integer
+/// conversion that drops the fraction); every minimum size the app applies is at least 1.
 pub fn hints(geometry: &Geometry) -> Hints {
     Hints {
         min_size: geometry.min_size.map(|size| (size.width as i32, size.height as i32)),
@@ -85,8 +83,7 @@ pub trait ApplyHints {
 }
 
 impl Geometry {
-    /// Applies `min_size` unless it is the one applied last
-    /// (`applyMinSizeIfChanged` of src/main/index.ts). Kept as the last one
+    /// Applies `min_size` unless it is the one applied last. Kept as the last one
     /// only when it applied, so a failure is tried again.
     pub fn apply_min_size_if_changed(
         &mut self,

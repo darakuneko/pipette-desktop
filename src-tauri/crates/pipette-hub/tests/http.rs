@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Hub's HTTP layer against scripted replies: the request each
 //! endpoint sends, the three ways of reading a response, the error each
-//! failure becomes, and the one retry after a short 429 (the cases of
-//! src/main/__tests__/hub-client.test.ts "429 rate limiting").
+//! failure becomes, and the one retry after a short 429.
 
 #![allow(clippy::unwrap_used)]
 
@@ -84,7 +83,7 @@ fn send(
 }
 
 #[test]
-fn sends_the_ts_requests_headers_and_body() {
+fn sends_the_recorded_requests_headers_and_body() {
     let h = harness(vec![reply(200, None, r#"{"ok":true,"data":{"token":"t"}}"#)]);
     let data =
         send(&h, Endpoint::AuthToken, None, RequestBody::Json(r#"{"id_token":"x"}"#.to_owned())).unwrap();
@@ -161,7 +160,7 @@ fn a_long_or_missing_retry_after_and_a_second_429_are_rate_limited() {
 }
 
 #[test]
-fn failed_statuses_get_the_ts_classes_and_messages() {
+fn failed_statuses_get_the_recorded_classes_and_messages() {
     let cases = [
         (Endpoint::AuthMe, 401, Some(StatusKind::Unauthorized)),
         (Endpoint::AuthMe, 403, Some(StatusKind::Forbidden)),

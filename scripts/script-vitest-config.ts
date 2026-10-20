@@ -11,7 +11,7 @@ export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Config that runs only the `*.test.ts` files under `scripts/<dir>`, with
  *  the `test` options in `extraTest` merged over the defaults. */
-export function fixtureConfig(dir: string, extraTest: TestUserConfig = {}): ViteUserConfig {
+export function scriptVitestConfig(dir: string, extraTest: TestUserConfig = {}): ViteUserConfig {
   return defineConfig({
     root: REPO_ROOT,
     test: {

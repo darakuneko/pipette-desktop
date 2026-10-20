@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sign-in and the tokens of the sync (src/main/sync/google-auth.ts).
+//! The sign-in and the tokens of the sync.
 //!
 //! A sign-in takes an attempt generation when it starts. A sign-out, or a
 //! sign-in started after it, advances the generation, and the earlier
 //! attempt then drops what it has (the wait for the browser, the code
 //! exchange, its tokens when their turn to be written comes) and fails. A
 //! write already under way finishes; a sign-out still removes what it
-//! wrote, and a later sign-in replaces it. Electron advances its session
-//! only when it stores the tokens, so a sign-out during the exchange can be
-//! followed by the sign-in it meant to cancel; here it cannot.
+//! wrote, and a later sign-in replaces it. A sign-out during the exchange
+//! is therefore never followed by the sign-in it meant to cancel.
 
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -31,8 +30,7 @@ const REFRESH_MARGIN_MS: i64 = 5 * 60 * 1000;
 /// The time limits of the sign-in.
 #[derive(Debug, Clone, Copy)]
 pub struct AuthTiming {
-    /// A token request (the exchange of a sign-in, or a refresh)
-    /// (`tokenExchangeTiming`).
+    /// A token request (the exchange of a sign-in, or a refresh).
     pub token_request: Duration,
     /// From the start of a sign-in until the browser comes back; stopped
     /// once it does.
@@ -61,8 +59,8 @@ pub struct AuthConfig {
     pub timing: AuthTiming,
     /// `Date.now()`.
     pub now_ms: Arc<dyn Fn() -> i64 + Send + Sync>,
-    /// The Hub test account (`getHubTestAccount` of src/main/hub/hub-base.ts),
-    /// read on every call; see [`crate::hub_test_account`].
+    /// The Hub test account, read on every call; see
+    /// [`crate::hub_test_account`].
     pub hub_test_account: Arc<dyn Fn() -> Option<String> + Send + Sync>,
 }
 
@@ -127,9 +125,9 @@ impl GoogleAuth {
         let _ = changes.wait_for(|current| *current != attempt).await;
     }
 
-    /// Signs in through the browser (`startOAuthFlow`): opens the
-    /// authorization URL with `browser`, waits for the loopback redirect,
-    /// exchanges the code and stores the tokens through `switch`.
+    /// Signs in through the browser: opens the authorization URL with
+    /// `browser`, waits for the loopback redirect, exchanges the code and
+    /// stores the tokens through `switch`.
     /// Fails at once, opening nothing, when the build has no usable
     /// endpoints (empty or not http(s) URLs): the browser would otherwise
     /// get a URL that is not one.
@@ -163,8 +161,8 @@ impl GoogleAuth {
         self.exchange(&code, &request.code_verifier, port, attempt, switch).await
     }
 
-    /// Exchanges `code` for tokens and stores them through `switch`
-    /// (`exchangeCodeForTokens`), as an attempt of its own.
+    /// Exchanges `code` for tokens and stores them through `switch`, as an
+    /// attempt of its own.
     pub async fn exchange_code_for_tokens(
         &self,
         code: &str,
@@ -222,23 +220,22 @@ impl GoogleAuth {
         .await
     }
 
-    /// Signs out (`signOut`): cancels a sign-in under way, forgets the
-    /// tokens and removes their file. The tokens are not revoked, as in
-    /// Electron.
+    /// Signs out: cancels a sign-in under way, forgets the
+    /// tokens and removes their file. The tokens are not revoked.
     pub async fn sign_out(&self) {
         self.attempts.send_modify(|current| *current += 1);
         self.tokens.clear().await;
         self.account_changed();
     }
 
-    /// Whether the sync is signed in (`getAuthStatus`): tokens are stored,
+    /// Whether the sync is signed in: tokens are stored,
     /// or the Hub test account is set.
     pub async fn is_authenticated(&self) -> bool {
         (self.config.hub_test_account)().is_some() || self.tokens.load().await.is_some()
     }
 
-    /// The access token, refreshed first when it expires within 5 minutes
-    /// (`getAccessToken`); `None` when signed out or when the refresh fails.
+    /// The access token, refreshed first when it expires within 5 minutes;
+    /// `None` when signed out or when the refresh fails.
     pub async fn access_token(&self) -> Option<Zeroizing<String>> {
         let loaded = self.tokens.load().await?;
         if self.now() >= loaded.tokens.expires_at.saturating_sub(REFRESH_MARGIN_MS) {
@@ -248,11 +245,10 @@ impl GoogleAuth {
     }
 
     /// Refreshes the access token of `loaded` and stores the new tokens,
-    /// keeping the stored id_token when the response has none
-    /// (`refreshAccessToken`). The new tokens are stored only while the
-    /// stamp of `loaded` is the current one. Tokens without a refresh
-    /// token (none, or an empty one) are not refreshed: Electron sends the
-    /// request anyway, which the token endpoint cannot accept.
+    /// keeping the stored id_token when the response has none. The new
+    /// tokens are stored only while the stamp of `loaded` is the current
+    /// one. Tokens without a refresh token (none, or an empty one) are not
+    /// refreshed: the token endpoint cannot accept such a request.
     async fn refresh(&self, loaded: &Loaded) -> Result<Zeroizing<String>, AuthError> {
         let Some(refresh_token) = loaded.tokens.refresh_token.as_deref().filter(|token| !token.is_empty())
         else {
@@ -274,8 +270,8 @@ impl GoogleAuth {
         Ok(Zeroizing::new(response.access_token.clone()))
     }
 
-    /// The id_token for the Hub (`getIdToken`): `test:<account>` for the Hub
-    /// test account; else the stored one, refreshed when it is missing,
+    /// The id_token for the Hub: `test:<account>` for the Hub test
+    /// account; else the stored one, refreshed when it is missing,
     /// expired or older than 5 minutes; `None` when there is none fresh.
     pub async fn id_token(&self) -> Option<Zeroizing<String>> {
         if let Some(account) = (self.config.hub_test_account)() {
@@ -302,9 +298,9 @@ impl GoogleAuth {
             && !jwt::is_stale(id_token, ID_TOKEN_MAX_AGE_SECS, now)
     }
 
-    /// The `sub` of the signed-in account's id_token (`getAccountSub`);
-    /// `None` when signed out or without one. The Hub test account is not
-    /// a Drive sign-in and has none.
+    /// The `sub` of the signed-in account's id_token; `None` when signed
+    /// out or without one. The Hub test account is not a Drive sign-in and
+    /// has none.
     pub async fn account_sub(&self) -> Option<String> {
         jwt::account_sub(self.tokens.load().await?.tokens.id_token.as_deref())
     }

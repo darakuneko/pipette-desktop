@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript pending store by
-//! scripts/sync-pending-fixtures/record-sync-pending-fixtures.test.ts: the
+//! Replays the recorded golden scenarios of the pending store: the
 //! same userData files, the restore, the same changes and writes, then
 //! every file left behind compared byte for byte, after the restore and
 //! after the steps, with the generations of the units.
@@ -105,7 +104,7 @@ fn recorded(dir: &Path) -> Tree {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_store() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_pending_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

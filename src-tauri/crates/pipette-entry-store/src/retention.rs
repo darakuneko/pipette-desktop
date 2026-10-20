@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The trim of a keyboard's run logs (`applyRunLogRetention` of
-//! src/main/sync/entry-merge.ts), shared by the save of a run and the sync
-//! merge of the runs unit.
+//! The trim of a keyboard's run logs, shared by the save of a run and the
+//! sync merge of the runs unit.
 //!
 //! The live entries are ranked by `startedAt`, which never changes for a
 //! run, rather than by a local clock, so every device that merges the same

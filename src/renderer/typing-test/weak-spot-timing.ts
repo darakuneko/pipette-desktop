@@ -53,12 +53,12 @@ import type { WeakSpotInputMethod } from './word-generator/weak-spot-weighting'
 
 /** The longest gap between two keystrokes that still counts as a valid
  *  pre-token interval — mirrors the analytics n-gram pipeline's own
- *  `NGRAM_MAX_IKI_MS` (minute-buffer.ts, main process): a genuine pause
+ *  `NGRAM_MAX_IKI_MS` (src-tauri/crates/pipette-typing-analytics/src/minute_buffer/mod.rs): a genuine pause
  *  (getting up, thinking about something else) is not "this token is
  *  slow," it's "the user stopped typing," so it must not pollute the
  *  per-token/scope statistics either. Kept as this module's own constant
- *  (not imported from the main-process file, which the renderer cannot
- *  reach) — same VALUE, same rationale, independent declaration. */
+ *  (the backend's constant is Rust, which the renderer cannot import) —
+ *  same VALUE, same rationale, independent declaration. */
 export const MAX_VALID_INTERVAL_MS = 5000
 
 /** Floor below which an interval is treated as a measurement artifact

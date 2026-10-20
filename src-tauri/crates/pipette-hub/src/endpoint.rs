@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Every Hub API endpoint the app calls, one to one with the request
-//! functions of src/main/hub/*.ts: its method, path and query, the label of
-//! its error messages and which of the three ways of reading a response
-//! that function uses ([`ReadMode`]).
+//! Every Hub API endpoint the app calls: its method, path and query, the
+//! label of its error messages and which of the three ways of reading a
+//! response it uses ([`ReadMode`]).
 
 use pipette_net::{Method, encode_uri_component};
 
@@ -11,24 +10,24 @@ use crate::js::{js_number_string, js_trim};
 /// How a response is read, after the shared handling of the status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadMode {
-    /// `hubFetch` of hub-client.ts and hub-key-labels.ts: the body must be
-    /// the `{ ok, data, error? }` envelope, and `ok: false` fails with
-    /// `<label>: <error ?? 'unknown error'>`. A 429 is retried once. Only
-    /// hub-client.ts has a class of its own for a 404 (`Hub404Error`);
-    /// hub-key-labels.ts reports it as any other failed status.
+    /// The body must be the `{ ok, data, error? }` envelope, and `ok: false`
+    /// fails with `<label>: <error ?? 'unknown error'>`. A 429 is retried
+    /// once. With `typed_not_found` a 404 has a class of its own
+    /// (`Hub404Error`); without it a 404 is reported as any other failed
+    /// status.
     Strict { typed_not_found: bool },
-    /// `hubFetchJson` of hub-i18n.ts and hub-theme.ts: an object with an
-    /// `ok` property is unwrapped as the envelope, any other body is the
-    /// result as it is. A 429 is retried once.
+    /// The language and theme pack endpoints but the language pack download:
+    /// an object with an `ok` property is unwrapped as the envelope, any
+    /// other body is the result as it is. A 429 is retried once.
     Lenient,
-    /// The i18n and key label downloads, which call `fetch` themselves: a
-    /// 429 is not retried, and a 2xx body is the result as it is.
+    /// The i18n and key label downloads: a 429 is not retried, and a 2xx body
+    /// is the result as it is.
     RawDownload,
 }
 
-/// The query of a Hub list (`URLSearchParams` in the order the TS sets
-/// it): `q` and `name` when non-empty after `trim()`, trimmed; `page` and
-/// `per_page` when given.
+/// The query of a Hub list (`URLSearchParams`, in this order): `q` and
+/// `name` when non-empty after `trim()`, trimmed; `page` and `per_page`
+/// when given.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct ListQuery<'a> {
     pub q: Option<&'a str>,
@@ -58,7 +57,7 @@ impl ListQuery<'_> {
     }
 }
 
-/// `?<search>` for a non-empty search, as the TS writes
+/// `?<search>` for a non-empty search:
 /// `` `${base}${route}${search ? `?${search}` : ''}` ``.
 fn with_search(route: &str, search: String) -> String {
     if search.is_empty() { route.to_owned() } else { format!("{route}?{search}") }
@@ -67,7 +66,7 @@ fn with_search(route: &str, search: String) -> String {
 /// A Hub API endpoint and what its path carries.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Endpoint<'a> {
-    // hub-client.ts
+    // The account and the posts
     AuthToken,
     AuthMe,
     PatchAuthMe,
@@ -89,8 +88,7 @@ pub enum Endpoint<'a> {
         post_id: &'a str,
     },
     UploadPrivatePost,
-    /// `kind` goes into the path as it is, not encoded (the TS does not
-    /// encode it).
+    /// `kind` goes into the path as it is, not encoded.
     DeletePrivatePost {
         kind: &'a str,
         id: &'a str,
@@ -105,7 +103,7 @@ pub enum Endpoint<'a> {
         post_id: &'a str,
     },
     UploadPrivateAnalyticsPost,
-    // hub-i18n.ts
+    // Language packs
     I18nList(ListQuery<'a>),
     I18nDownload {
         post_id: &'a str,
@@ -118,7 +116,7 @@ pub enum Endpoint<'a> {
     I18nDelete {
         post_id: &'a str,
     },
-    // hub-theme.ts
+    // Theme packs
     ThemeList(ListQuery<'a>),
     ThemeDownload {
         post_id: &'a str,
@@ -131,7 +129,7 @@ pub enum Endpoint<'a> {
     ThemeDelete {
         post_id: &'a str,
     },
-    // hub-key-labels.ts
+    // Key labels
     KeyLabelList(ListQuery<'a>),
     KeyLabelDetail {
         post_id: &'a str,
@@ -252,7 +250,7 @@ impl Endpoint<'_> {
         }
     }
 
-    /// The label the TS gives the endpoint's errors (`<label>: …`).
+    /// The label of the endpoint's errors (`<label>: …`).
     pub fn label(&self) -> &'static str {
         use Endpoint::*;
         match self {

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The multipart bodies of the Hub uploads, byte for byte as
-//! src/main/hub/hub-client.ts (`MultipartBuilder` and its
-//! `build…MultipartBody` functions), hub-i18n.ts and hub-theme.ts write
-//! them: the boundary from the clock, the parts in the TS's order with the
-//! same header lines, field values with their line breaks as spaces, file
-//! names as they are, and the closing boundary followed by CRLF.
+//! The multipart bodies of the Hub uploads, byte for byte as the recorded
+//! goldens hold them: the boundary from the clock, the parts in a fixed
+//! order with fixed header lines, field values with their line breaks as
+//! spaces, file names as they are, and the closing boundary followed by
+//! CRLF.
 
 /// A finished body and its boundary.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,12 +28,12 @@ pub fn theme_boundary(now_ms: i64) -> String {
     format!("----PipetteThemeBoundary{now_ms}")
 }
 
-/// `sanitizeFieldValue`: each CRLF, CR or LF as one space.
+/// `value` with each CRLF, CR or LF as one space.
 pub fn sanitize_field_value(value: &str) -> String {
     value.replace("\r\n", " ").replace(['\r', '\n'], " ")
 }
 
-/// `MultipartBuilder`.
+/// A `multipart/form-data` body, built one part at a time.
 pub struct MultipartBuilder {
     boundary: String,
     body: Vec<u8>,
@@ -45,7 +44,7 @@ impl MultipartBuilder {
         Self { boundary, body: Vec::new() }
     }
 
-    /// `appendField`.
+    /// Adds the text field `name`, its line breaks as spaces.
     pub fn field(&mut self, name: &str, value: &str) {
         let part = format!(
             "--{}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{}\r\n",
@@ -55,7 +54,7 @@ impl MultipartBuilder {
         self.body.extend_from_slice(part.as_bytes());
     }
 
-    /// `appendFile`.
+    /// Adds `data` as the file `filename` of the field `field`.
     pub fn file(&mut self, field: &str, filename: &str, data: &[u8], content_type: &str) {
         let head = format!(
             "--{}\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n",
@@ -66,7 +65,7 @@ impl MultipartBuilder {
         self.body.extend_from_slice(b"\r\n");
     }
 
-    /// `build`.
+    /// The body, closed with the final boundary.
     pub fn build(mut self) -> MultipartBody {
         self.body.extend_from_slice(format!("--{}--\r\n", self.boundary).as_bytes());
         MultipartBody { body: self.body, boundary: self.boundary }
@@ -80,7 +79,7 @@ pub struct UploadFile {
     pub data: Vec<u8>,
 }
 
-/// `HubUploadFiles`: the files of a keymap post.
+/// The files of a keymap post.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeymapFiles {
     pub vil: UploadFile,
@@ -97,7 +96,7 @@ fn expires_field(builder: &mut MultipartBuilder, expires_in_days: Option<f64>) {
     }
 }
 
-/// `buildMultipartBody` of a keymap post: `expires_in_days` for a private
+/// The body of a keymap post: `expires_in_days` for a private
 /// upload with an expiry only.
 pub fn keymap_post_body(
     boundary: String,
@@ -118,7 +117,7 @@ pub fn keymap_post_body(
     builder.build()
 }
 
-/// `buildFeatureMultipartBody`: a favorite post.
+/// The body of a favorite post.
 pub fn feature_post_body(
     boundary: String,
     title: &str,
@@ -134,7 +133,7 @@ pub fn feature_post_body(
     builder.build()
 }
 
-/// `buildAnalyticsMultipartBody`: an analytics post.
+/// The body of an analytics post.
 pub fn analytics_post_body(
     boundary: String,
     title: &str,
@@ -151,8 +150,7 @@ pub fn analytics_post_body(
     builder.build()
 }
 
-/// `buildI18nMultipartBody` and `buildThemeMultipartBody`: one `json` file.
-/// Their inline head and tail give the same bytes as `MultipartBuilder`.
+/// The body of a language or theme pack upload: one `json` file.
 pub fn pack_body(boundary: String, json: &UploadFile) -> MultipartBody {
     let mut builder = MultipartBuilder::new(boundary);
     builder.file("json", &json.name, &json.data, "application/json");

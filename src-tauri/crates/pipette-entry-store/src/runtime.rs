@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The time and the new ids the stores take, injected so the tests (and
-//! the golden fixtures recorded with the Electron build's fake timers and
-//! UUID sequences) can fix them.
+//! the golden fixtures recorded with fake timers and UUID sequences) can
+//! fix them.
 
 /// The current time in milliseconds since the epoch (`Date.now()`).
 pub trait Clock: Send + Sync {

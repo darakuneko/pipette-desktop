@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The secret files of `local/auth/` (src/main/sync/sync-secret-file.ts):
-//! each secret encrypted with the master key ([`crate::MasterKey`]) and
-//! written atomically.
+//! The secret files of `local/auth/`: each secret encrypted with the master
+//! key ([`crate::MasterKey`]) and written atomically.
 //!
 //! A file is [`FILE_MAGIC`], a 12-byte nonce drawn from the OS for every
 //! write, and the AES-256-GCM ciphertext with its 16-byte tag. The
@@ -9,12 +8,12 @@
 //! name, each followed by a NUL byte, so a file opens only as the kind it was
 //! written as and only with the key of its own userData directory.
 //!
-//! The failure reasons of a read come in the order `retrieveSecretFile`
-//! gives them: a file that cannot be read is `keystoreUnavailable` when the
-//! key store does not answer and `noPasswordFile` when it does; a file that
-//! does not open is `keystoreUnavailable` when the key store does not answer
-//! and `decryptFailed` when it does (no key, another key, a damaged file).
-//! A write fails while the key store does not answer: a secret is never
+//! The failure reason of a read: a file that cannot be read is
+//! `keystoreUnavailable` when the key store does not answer and
+//! `noPasswordFile` when it does; a file that does not open is
+//! `keystoreUnavailable` when the key store does not answer and
+//! `decryptFailed` when it does (no key, another key, a damaged file). A
+//! write fails while the key store does not answer: a secret is never
 //! written in plain text.
 
 use std::path::{Path, PathBuf};
@@ -37,11 +36,11 @@ const TAG_LEN: usize = 16;
 /// The secrets the sync keeps, one file each.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SecretKind {
-    /// The Google tokens (Electron's `oauth-tokens.enc`).
+    /// The Google tokens (the 0.4 build's `oauth-tokens.enc`).
     OauthTokens,
-    /// The sync password (Electron's `sync-password.enc`).
+    /// The sync password (the 0.4 build's `sync-password.enc`).
     SyncPassword,
-    /// The keys of a password change in progress (Electron's
+    /// The keys of a password change in progress (the 0.4 build's
     /// `sync-password-change-keys.enc`).
     SyncPasswordChangeKeys,
 }
@@ -84,7 +83,7 @@ pub enum SecretFailure {
 /// Why a secret was not stored.
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
-    /// The message of `storeSecretFile`.
+    /// The key store could not read or create the master key.
     #[error("OS keychain encryption is not available")]
     KeystoreUnavailable,
     #[error("{0}")]
@@ -170,7 +169,7 @@ impl SecretStore {
         }
     }
 
-    /// `local/auth/` (`getAuthDir`).
+    /// `local/auth/`.
     pub fn auth_dir(&self) -> &Path {
         &self.auth_dir
     }
@@ -186,7 +185,7 @@ impl SecretStore {
     }
 
     /// Encrypts `secret` and writes it as the `kind` file, creating
-    /// `local/auth/` and the master key when missing (`storeSecretFile`).
+    /// `local/auth/` and the master key when missing.
     pub async fn store(&self, kind: SecretKind, secret: &[u8]) -> Result<(), StoreError> {
         let key = self.key.read_or_create().await.map_err(|_| StoreError::KeystoreUnavailable)?;
         let sealed = seal_secret(&key, kind, self.key.account(), secret)?;
@@ -201,8 +200,7 @@ impl SecretStore {
         Ok(())
     }
 
-    /// The secret of the `kind` file, or why it cannot be returned
-    /// (`retrieveSecretFile`).
+    /// The secret of the `kind` file, or why it cannot be returned.
     pub async fn retrieve(&self, kind: SecretKind) -> Result<Zeroizing<Vec<u8>>, SecretFailure> {
         let Ok(file) = read_file(self.path(kind)).await else {
             return Err(if self.key.available().await {
@@ -228,8 +226,7 @@ impl SecretStore {
     }
 
     /// The secret of the `kind` file, `None` when there is no file, without
-    /// asking the key store about a missing one (the token read of
-    /// src/main/sync/google-auth.ts reads the file directly).
+    /// asking the key store about a missing one.
     pub async fn read_if_present(&self, kind: SecretKind) -> Result<Option<Zeroizing<Vec<u8>>>, ReadError> {
         let file = match read_file(self.path(kind)).await {
             Ok(file) => file,
@@ -245,7 +242,7 @@ impl SecretStore {
         }
     }
 
-    /// Removes the `kind` file; a missing one is no error (`clearSecretFile`).
+    /// Removes the `kind` file; a missing one is no error.
     pub async fn clear(&self, kind: SecretKind) -> std::io::Result<()> {
         let path = self.path(kind);
         blocking(move || match std::fs::remove_file(&path) {
@@ -329,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn the_kinds_are_tauri_files_not_the_electron_ones() {
+    fn the_kinds_are_tauri_files_not_the_0_4_ones() {
         for kind in SecretKind::ALL {
             assert!(kind.file_name().starts_with("tauri-"), "{kind:?}");
             assert!(kind.file_name().ends_with(".bin"), "{kind:?}");

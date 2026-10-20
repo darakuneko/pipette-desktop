@@ -1,6 +1,11 @@
 // Fetches the monkeytype language list from GitHub and generates a manifest.
 // Usage: pnpm run generate:language-manifest [commit-hash]
-// When updating, set the same hash in src/main/language-store.ts LANG_SOURCE_COMMIT.
+// Writes src/shared/data/language-manifest.json. When updating, set the same
+// hash in `MONKEYTYPE_COMMIT` (src/shared/data/typing-test-providers.ts).
+// src-tauri/crates/pipette-typing-datasets/data/provider-defaults.json is a
+// copy of those defaults (src/shared/__tests__/rust-data-copies.test.ts
+// compares them) and embeds the manifest as the monkeytype `languages`, so
+// update its `version`, `downloadUrlBase` and `languages` as well.
 
 import { writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'

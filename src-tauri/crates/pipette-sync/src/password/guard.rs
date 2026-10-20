@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The check every sync entry point runs before it downloads, uploads or
-//! deletes anything on Drive (src/main/sync/sync-password-guard.ts): no
-//! sync while a sync password change is in progress, on this machine or on
-//! another one, and none while Drive needs a newer sync format.
+//! deletes anything on Drive: no sync while a sync password change is in
+//! progress, on this machine or on another one, and none while Drive needs a
+//! newer sync format.
 //!
 //! - This machine: a local password-change state file (any step, even an
 //!   unreadable one) blocks every entry point. Only the password-change
@@ -46,7 +46,8 @@ impl SyncBlockReason {
         }
     }
 
-    /// `syncBlockI18nKey`.
+    /// The i18n key of the reason, as `syncBlockI18nKey` (src/shared/types/sync.ts)
+    /// gives it.
     pub fn i18n_key(self) -> String {
         match self {
             Self::UpdateRequired => "sync.updateRequired".to_owned(),
@@ -55,9 +56,8 @@ impl SyncBlockReason {
     }
 }
 
-/// A listing the caller already has, with the sign-out generation taken
-/// before it was requested (`PrefetchedListing`). `None`: the guard lists
-/// Drive itself.
+/// A listing the caller already has, with the sign-out generation taken before
+/// it was requested. `None`: the guard lists Drive itself.
 pub type Prefetched<'a> = Option<(&'a [DriveFile], u64)>;
 
 impl Preflight {
@@ -76,8 +76,8 @@ impl Preflight {
         }
     }
 
-    /// `hasChangeState` for the password-change operations, which then
-    /// read the state themselves.
+    /// Forgets the cached answer of `ChangeStateFile::has`, for the
+    /// password-change operations, which then read the state themselves.
     pub fn forget_change_state_cache(&self) {
         self.change_state.forget_cache();
     }

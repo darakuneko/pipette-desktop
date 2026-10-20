@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The run log store, as specified by the TypeScript tests of
-//! src/main/__tests__/typing-run-log-store.test.ts, with the size limits
-//! at their bounds and the write serialization on top.
+//! The run log store, with the size limits at their bounds and the write
+//! serialization on top.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

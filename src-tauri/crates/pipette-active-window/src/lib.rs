@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The name of the active application that typing analytics tags each
-//! minute with, read the way the Electron build reads it (the
-//! `@paymoapp/active-window` binding, then the GNOME Shell query), so the
-//! two builds on one machine record the same application under the same
-//! name.
+//! minute with, read the way the 0.4 build read it (the
+//! `@paymoapp/active-window` binding, then the GNOME Shell query), so data
+//! the 0.4 build recorded names the same application the same way.
 //!
 //! The order of [`ActiveWindow::app_name`]: the normalized application name
 //! of the native lookup; if it is empty, the normalized window title; if that
 //! is empty too, or the lookup is missing, fails or finds no window, the
 //! GNOME Shell query ([`GnomeFocusedWindow`], Linux only); otherwise `None`.
 //!
-//! The native lookup is opened at the first [`ActiveWindow::app_name`], as
-//! app-monitor.ts loads the binding, and only once: when it cannot be opened
+//! The native lookup is opened at the first [`ActiveWindow::app_name`], and
+//! only once: when it cannot be opened
 //! there is no native lookup for the app's lifetime.
 //!
 //! Linux has the X11 lookup ([`X11Backend`]), checked against the binding on

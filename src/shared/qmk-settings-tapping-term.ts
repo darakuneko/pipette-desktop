@@ -100,12 +100,13 @@ export function resolveConnectedTappingTerm(
  * this cap, a genuine tap held past the cap is misclassified as a hold.
  * That only breaks the n-gram chain at that one key — a hold is dropped
  * from bigram/trigram pairing but never fabricates a pair that wasn't
- * actually typed (see `MinuteBuffer.recordNgramChain`). The alternative
+ * actually typed (see `record_ngram` in
+ * src-tauri/crates/pipette-typing-analytics/src/minute_buffer/mod.rs). The alternative
  * — sizing the defer window to the live TAPPING_TERM instead of capping
  * it — would let a single slow config defer a press long enough to land
  * after its minute was already flushed, silently overwriting that
  * minute's recorded totals instead of losing one keystroke's chain
- * position (see `DRAIN_CLOSE_GRACE_MS` in `minute-buffer.ts`). A
+ * position (see `DRAIN_CLOSE_GRACE_MS` in the same file). A
  * TAPPING_TERM this large is already well past the point where tap-hold
  * behaves like ordinary typing, so the misclassification this trades
  * for is the cheaper failure mode. */

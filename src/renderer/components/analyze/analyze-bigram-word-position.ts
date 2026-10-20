@@ -41,8 +41,8 @@ export type WordPosition = 'initiation' | 'inWord' | 'excluded'
  *
  * KNOWN APPROXIMATION — a hold is counted as a tap. The recorded event
  * carries an `action: 'tap' | 'hold'` for masked keys, but the ngram
- * chain stores only `event.keycode` and drops it (see
- * `minute-buffer.ts`'s `recordNgramChain` call), so by the time a pair
+ * chain stores only the keycode and drops it (see the `record_ngram`
+ * call in src-tauri/crates/pipette-typing-analytics/src/minute_buffer/mod.rs), so by the time a pair
  * reaches this function there is no way to tell the two apart. Holding
  * `LT(1, KC_SPACE)` to reach a layer therefore lands in `initiation`
  * exactly like tapping it for a space would, biasing the initiation

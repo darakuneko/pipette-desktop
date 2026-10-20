@@ -2,12 +2,12 @@
 //
 // Shared multi-line failure summary for the three pack-management
 // modals' (Language Packs, Theme Packs, Key Labels) multi-file import
-// batches. Mirrors the typing-analytics import precedent
-// (`src/main/typing-analytics/import-export.ts`'s `ImportRejection[]`)
-// but surfaces through the modals' existing single-string `actionError`
-// banner instead of a dedicated list component — `PackManagerModal`'s
-// error banner renders `white-space: pre-wrap` so the newline-joined
-// lines below actually break visually.
+// batches. Mirrors the typing-analytics import's per-file rejections
+// (`TypingAnalyticsImportResult`'s `rejections`) but surfaces through the
+// modals' existing single-string `actionError` banner instead of a
+// dedicated list component — `PackManagerModal`'s error banner renders
+// `white-space: pre-wrap` so the newline-joined lines below actually break
+// visually.
 
 import type { TFunction } from 'i18next'
 

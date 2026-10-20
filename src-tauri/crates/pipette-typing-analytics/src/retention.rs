@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Deleting everything a keyboard recorded (`deleteAllTypingForKeyboard`,
-//! src/main/typing-analytics/typing-analytics-retention.ts): the Local
-//! tab's Delete All (this device's data) and Reset Keyboard Data (every
-//! device's rows in the cache).
+//! Deleting everything a keyboard recorded: the Local tab's Delete All (this
+//! device's data) and Reset Keyboard Data (every device's rows in the cache).
 //!
 //! The order, and what each failure leaves:
 //! 1. The keyboard's sessions are closed and what it buffered up to the
@@ -49,7 +47,7 @@ fn touched(result: &TombstoneResult) -> u64 {
 }
 
 impl DataOps {
-    /// `deleteAllTypingForKeyboard`: see the module documentation.
+    /// See the module documentation.
     /// `cutoff_ms` is when the user asked for the delete; what was typed in
     /// later minutes stays buffered and is written afterwards.
     pub async fn delete_all_for_keyboard(

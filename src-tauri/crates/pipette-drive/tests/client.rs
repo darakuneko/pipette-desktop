@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The retries and answers of the Drive client against scripted HTTP
-//! answers: the cases of src/main/__tests__/google-drive.test.ts that the
-//! request log (tests/request_log.rs) does not hold, mostly requests
-//! without an answer, which the Node fake Drive cannot give.
+//! answers: the cases the request log (tests/request_log.rs) does not
+//! hold, mostly requests without an answer, which the Node fake Drive
+//! cannot give.
 
 #![allow(clippy::unwrap_used)]
 
@@ -22,7 +22,7 @@ type Answer = Box<dyn Fn() -> Result<HttpReply, HttpError> + Send + Sync>;
 type Hook = Box<dyn Fn() + Send>;
 
 /// Answers each request with the next scripted answer, the last one again
-/// once they run out (`stubSequence` of google-drive.test.ts).
+/// once they run out.
 #[derive(Clone, Default)]
 struct Script {
     answers: Arc<Mutex<VecDeque<Answer>>>,

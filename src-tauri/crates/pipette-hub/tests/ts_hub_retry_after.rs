@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The 429 retry against the Electron Hub client (tests/fixtures/
-//! ts_hub_retry_after.json, recorded by scripts/hub-fixtures/): a 429 with
-//! each `Retry-After`, then a 200, through each way a response is read.
-//! The requests sent, the waits, the error and its `retryAfterSeconds`
-//! match for every header both clients read.
+//! The 429 retry against the recorded golden
+//! (tests/fixtures/ts_hub_retry_after.json): a 429 with each `Retry-After`,
+//! then a 200, through each way a response is read. The requests sent, the
+//! waits, the error and its `retryAfterSeconds` match for every header the
+//! Rust client reads.
 //!
 //! The `jsOnly` headers are ones only `Date.parse` was expected to read.
 //! The Rust client reads an HTTP date in the RFC 7231 forms (any weekday,
-//! names in any case, GMT or UTC); for such a header it must match the TS
-//! exactly, and for any other it behaves as with no `Retry-After` at all.
+//! names in any case, GMT or UTC); for such a header it must match the
+//! golden exactly, and for any other it behaves as with no `Retry-After` at
+//! all.
 
 #![allow(clippy::unwrap_used)]
 
@@ -63,7 +64,7 @@ fn run(via: &str, header: Option<&str>, now: f64) -> Run {
 }
 
 #[test]
-fn the_retry_matches_the_ts() {
+fn the_retry_matches_the_golden() {
     let golden = fixture("ts_hub_retry_after.json");
     let now = number(field(&golden, "nowMs")).unwrap();
     let mut failures = Vec::new();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Where each recorded key would have been pressed on another keyboard
-//! layout (src/main/typing-analytics/layout-resolver.ts, with the layout
-//! maps of src/shared/keymap/layout-parse.ts): a position's keycode on the
+//! layout (with the layout maps of src/shared/keymap/layout-parse.ts): a
+//! position's keycode on the
 //! snapshot's layer gives the character the source layout types there,
 //! the target layout gives the keycode that types that character, and the
 //! snapshot gives where that keycode sits, with its finger, hand and row.
@@ -26,7 +26,7 @@ pub enum Skip {
     NoTargetPosition,
 }
 
-/// Where an event lands on the target layout (`ResolveResult`).
+/// Where an event lands on the target layout.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resolved {
     Skipped(Skip),
@@ -43,7 +43,7 @@ pub enum Resolved {
 }
 
 /// A layout map entry that `parseLayoutEntry` cannot split (a truthy value
-/// that is not a string), where the TypeScript handler throws.
+/// that is not a string).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("layout map entry {0} is not a string")]
 pub struct BadLayoutEntry(pub String);
@@ -139,8 +139,7 @@ pub struct SnapshotKeys {
 impl SnapshotKeys {
     /// `keymap` is the snapshot's `keymap` (layers of rows of serialized
     /// keycodes); `keys` its layout's KLE keys. A cell that is not a
-    /// non-empty string has no keycode: the app's snapshots hold strings,
-    /// where the TypeScript resolver would throw on another truthy value.
+    /// non-empty string has no keycode: the app's snapshots hold strings.
     pub fn new(keymap: &Value, layer: usize, keys: &[KleKey]) -> Self {
         let rows: &[Value] = match keymap {
             Value::Array(layers) => match layers.get(layer) {
@@ -166,8 +165,8 @@ impl SnapshotKeys {
     }
 }
 
-/// Every position's result from `source` to `target` (`buildLayoutResolver`),
-/// by `posKey`; a position without one is `UnmappedKeycode`.
+/// Every position's result from `source` to `target`, by `posKey`; a
+/// position without one is `UnmappedKeycode`.
 pub struct Resolver {
     results: HashMap<String, Resolved>,
 }

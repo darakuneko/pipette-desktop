@@ -3,8 +3,8 @@
 // The theme pack members over the mocked Tauri IPC: the writes reach the
 // backend one at a time in the order the renderer made them, the list, the
 // reads and the dialogs do not wait for them, a pack that fails
-// validateThemePack never reaches the backend and answers as the Electron
-// store does, the pack and the options cross as JSON text, and
+// validateThemePack never reaches the backend and answers INVALID_FILE with
+// the check's errors, the pack and the options cross as JSON text, and
 // theme-pack:changed reaches the callback until unsubscribed.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -92,7 +92,7 @@ describe('themePacksApi', () => {
     await Promise.allSettled(calls)
   })
 
-  it('answers a pack that fails the check as the Electron store does, without the backend', async () => {
+  it('answers a pack that fails the check with INVALID_FILE, without the backend', async () => {
     const { log } = heldBackend()
     const packs: unknown[] = [undefined, 'text', [theme('Array')], theme('Bad', { version: '1', colorScheme: 'blue' })]
     for (const raw of packs) {
@@ -113,7 +113,7 @@ describe('themePacksApi', () => {
     const raw = { '2': 'index key', ...theme('A') }
     const options = { hubPostId: 'post', id: 'x' }
     const calls = [themePacksApi.themePackImportApply(raw, options), themePacksApi.themePackImportApply(theme('B'), undefined)]
-    // A change after the call does not reach the backend, as with Electron's IPC.
+    // A change after the call does not reach the backend.
     options.id = 'changed'
     await settle()
     releaseAll()

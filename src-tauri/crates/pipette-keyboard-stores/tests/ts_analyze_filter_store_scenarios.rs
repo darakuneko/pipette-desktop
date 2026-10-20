@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript Analyze filter
-//! handlers by
-//! scripts/keyboard-store-fixtures/record-analyze-filter-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the Analyze filter handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the notified units and every file left behind compared byte
 //! for byte. A file-system error is recorded as `<os error>`, as its text
@@ -64,7 +62,7 @@ fn run_step(h: &Harness, step: &Object) -> Option<String> {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     replay_scenarios(
         "ts_analyze_filter_store_scenarios.json",
         &[],

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The range aggregates of the Analyze Bigrams view and the keypress
-//! duration chart (src/main/typing-analytics/bigram-aggregate.ts): the
+//! duration chart: the
 //! per-minute n-gram rows summed per n-gram id, ranked by count or by
 //! average interval, and the per-minute duration rows summed per cell.
 //!
@@ -17,12 +17,11 @@ use std::collections::HashMap;
 use pipette_js_json::{Object, Value};
 use pipette_typing_analytics_db::{HIST_BUCKETS, MatrixDurationCellRow, NgramMinuteCellRow};
 
-/// Exclusive upper bound of each interval bucket in ms
-/// (`BIGRAM_BUCKET_UPPER_BOUNDS_MS`, bigram-bucket.ts).
+/// Exclusive upper bound of each interval bucket in ms.
 const BUCKET_UPPER_BOUNDS_MS: [f64; HIST_BUCKETS] =
     [60.0, 100.0, 150.0, 200.0, 300.0, 500.0, 1000.0, f64::INFINITY];
 
-/// The center of each interval bucket in ms (`BIGRAM_BUCKET_CENTERS_MS`);
+/// The center of each interval bucket in ms;
 /// the open last bucket takes 1500, so its percentile span is 1000..2000.
 const BUCKET_CENTERS_MS: [f64; HIST_BUCKETS] = [30.0, 80.0, 125.0, 175.0, 250.0, 400.0, 750.0, 1500.0];
 
@@ -46,7 +45,7 @@ pub fn collate(a: &str, b: &str) -> Ordering {
     if recorded(a) && recorded(b) { a.chars().map(rank).cmp(b.chars().map(rank)) } else { a.cmp(b) }
 }
 
-/// `BigramPairTotal`: one n-gram id summed over the rows.
+/// One n-gram id summed over the rows.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PairTotal {
     pub ngram_id: String,
@@ -58,7 +57,7 @@ pub struct PairTotal {
     pub overlap_n: f64,
 }
 
-/// `aggregatePairTotals`: one total per n-gram id, in the order the ids
+/// One total per n-gram id, in the order the ids
 /// first appear. Counts and histograms add up; the interval sums are lost
 /// for good at the first row without them; a row without overlap sums (an
 /// older row, or any trigram row) adds nothing to them.
@@ -96,7 +95,7 @@ pub fn aggregate_pair_totals(rows: &[NgramMinuteCellRow]) -> Vec<PairTotal> {
     totals
 }
 
-/// `observedRolloverRatio`: Σ overlap count / Σ overlap samples over every
+/// Σ overlap count / Σ overlap samples over every
 /// id, null without a sample.
 pub fn observed_rollover_ratio(totals: &[PairTotal]) -> Option<f64> {
     let (mut oc, mut on) = (0.0, 0.0);
@@ -219,7 +218,7 @@ fn take(limit: f64) -> usize {
     limit.max(0.0) as usize
 }
 
-/// `rankBigramsByCount`: the `limit` ids with the most occurrences, ties
+/// The `limit` ids with the most occurrences, ties
 /// by id.
 pub fn rank_by_count(totals: &[PairTotal], limit: f64) -> Vec<Value> {
     let mut ranked: Vec<&PairTotal> = totals.iter().collect();
@@ -236,7 +235,7 @@ pub fn rank_by_count(totals: &[PairTotal], limit: f64) -> Vec<Value> {
         .collect()
 }
 
-/// `rankBigramsBySlow`: the `limit` ids with the longest average interval
+/// The `limit` ids with the longest average interval
 /// among those with at least `min_sample` occurrences, ties by id.
 pub fn rank_by_slow(totals: &[PairTotal], min_sample: f64, limit: f64) -> Vec<Value> {
     let mut eligible: Vec<(&PairTotal, f64)> = totals
@@ -262,7 +261,7 @@ pub fn rank_by_slow(totals: &[PairTotal], min_sample: f64, limit: f64) -> Vec<Va
         .collect()
 }
 
-/// `MatrixCellDurationTotal`: one cell's keypress durations over a range.
+/// One cell's keypress durations over a range.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DurationTotal {
     pub row: f64,
@@ -275,9 +274,8 @@ pub struct DurationTotal {
     pub sum_sq: f64,
 }
 
-/// `aggregateMatrixDurationTotals`: one total per (row, col, layer), in the
-/// order the cells first appear. A missing sum of squares adds 0, as
-/// JavaScript adds null.
+/// One total per (row, col, layer), in the order the cells first appear.
+/// A missing sum of squares adds 0.
 pub fn aggregate_duration_totals(rows: &[MatrixDurationCellRow]) -> Vec<DurationTotal> {
     let mut totals: Vec<DurationTotal> = Vec::new();
     let mut index: HashMap<String, usize> = HashMap::new();

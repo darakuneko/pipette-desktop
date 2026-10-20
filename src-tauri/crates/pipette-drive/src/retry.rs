@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The retries around each Drive attempt (src/main/sync/drive-retry.ts):
-//! up to 5 attempts; between them 1 s doubled each time plus up to 1 s of
-//! jitter, or the `Retry-After` of the answer (at most 30 s). Rate limits
-//! (429, and a 403 whose reason is a rate limit) are retried always, since
-//! Drive refuses those before doing any work; 5xx answers and requests
-//! that got no answer only when the operation is safe to send again
-//! (`retry_transient`), which a create is not. No attempt starts, and no
-//! wait goes on, once the app is quitting.
+//! The retries around each Drive attempt: up to 5 attempts; between them
+//! 1 s doubled each time plus up to 1 s of jitter, or the `Retry-After` of
+//! the answer (at most 30 s). Rate limits (429, and a 403 whose reason is a
+//! rate limit) are retried always, since Drive refuses those before doing
+//! any work; 5xx answers and requests that got no answer only when the
+//! operation is safe to send again (`retry_transient`), which a create is
+//! not. No attempt starts, and no wait goes on, once the app is quitting.
 //!
 //! The clock, the jitter, the waits and the quit come from a [`RetryEnv`]
 //! so the tests can fix them.
@@ -36,7 +35,7 @@ pub type SleepFuture<'a> = Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
 
 /// What the retries read from the world.
 pub trait RetryEnv: Send + Sync {
-    /// Whether the app is quitting (`syncRuntime.isQuitting`).
+    /// Whether the app is quitting.
     fn is_quitting(&self) -> bool;
     /// `Date.now()`, for a `Retry-After` date.
     fn now_ms(&self) -> i64;
@@ -116,8 +115,7 @@ impl DriveFailure {
     }
 
     /// `Drive <label> failed: <status> <body>` for an answer that was not a
-    /// success; the error itself for anything else, as drive-retry.ts
-    /// rethrows it.
+    /// success; the error itself for anything else.
     fn message(&self) -> String {
         match &self.error {
             DriveError::Status { status, body, .. } => {
@@ -142,8 +140,8 @@ where
     run(env, policy, None, attempt).await
 }
 
-/// [`drive_request`] for an operation whose 404 the caller handles
-/// (`acceptStatus`): `Ok(None)` for a 404, which is never retried.
+/// [`drive_request`] for an operation whose 404 the caller handles:
+/// `Ok(None)` for a 404, which is never retried.
 pub async fn drive_request_or_not_found<T, F, Fut>(
     env: &dyn RetryEnv,
     policy: RetryPolicy,

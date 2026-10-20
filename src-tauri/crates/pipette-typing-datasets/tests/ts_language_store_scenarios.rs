@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript language store by
-//! scripts/typing-dataset-fixtures/record-language-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the language store:
 //! the same userData files and HTTP replies, the same calls, then each
 //! response, the URLs asked and every file left behind compared byte for
 //! byte. Error texts that are the OS's or the JSON parser's are compared as
@@ -104,7 +103,7 @@ fn run_step(h: &mut Harness, step: &Object) -> Option<String> {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_language_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

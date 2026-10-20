@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `fetchVerifiedBytes` of src/main/download-util.ts: a file from a
-//! Hub-provided URL, checked against the byte size its manifest entry
+//! A file from a Hub-provided URL, checked against the byte size its manifest entry
 //! declares. Used by the word list downloads and the Aozora Bunko import.
 
 use std::fmt;
@@ -58,7 +57,7 @@ pub(crate) fn number_text(value: f64) -> String {
 
 /// Fetches `url` and checks the status and that the body is
 /// `expected_size` bytes. A body past the client's size limit is a size
-/// mismatch, as the byte count would be in Electron, which reads it whole.
+/// mismatch.
 pub async fn fetch_verified_bytes(
     http: &dyn HttpClient,
     url: &str,

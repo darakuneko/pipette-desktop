@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Body filenames that carry the entry id, so no two ids ever share a body
-//! file. The rules work on UTF-16 code units, as the Electron build's do,
-//! so both builds give a legacy name the same new name.
+//! file. The rules work on UTF-16 code units, as the 0.4 build's did, so a
+//! legacy name gets the same new name on every device.
 
 use std::fmt::Write;
 

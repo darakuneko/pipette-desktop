@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the Data > Sync > Trash screen does with Drive trash files
-//! (src/main/sync/sync-trash-manual.ts and the trash handlers of
-//! sync-reset-ipc.ts): list them, rename one back to its original name, or
-//! delete some.
+//! What the Data > Sync > Trash screen does with Drive trash files: list them,
+//! rename one back to its original name, or delete some.
 //!
 //! Restore and delete hold the sync lock as a reset of the keyboards their
 //! files belong to ([`restore_trash`], [`delete_trash`]); those keyboards
@@ -44,7 +42,7 @@ pub struct SyncTrashFile {
 }
 
 /// What a trash action needs besides the Drive and the sync's memory: this
-/// machine's hash (`getMachineHash`) and the time.
+/// machine's hash and the time.
 pub struct TrashEnv<'a> {
     pub preflight: &'a Preflight,
     pub own_hash: &'a (dyn Fn() -> Result<String, String> + Sync),
@@ -88,8 +86,8 @@ fn trash_of(file: &DriveFile) -> Option<TrashInfo> {
     parse_trash_file(&file.id, &file.name)
 }
 
-/// `listTrashFiles`: every trash file on Drive, the most recently moved
-/// first. Names only: nothing is downloaded.
+/// Every trash file on Drive, the most recently moved first. Names only:
+/// nothing is downloaded.
 pub async fn list_trash_files(env: &TrashEnv<'_>) -> Result<Vec<SyncTrashFile>, DataError> {
     let listing = env.list_allowed_files().await?;
     let own_hash = env.own_hash()?;
@@ -111,9 +109,9 @@ pub async fn list_trash_files(env: &TrashEnv<'_>) -> Result<Vec<SyncTrashFile>, 
     Ok(rows)
 }
 
-/// `trashFileKeyboards`: the keyboards whose data the trash files of
-/// `file_ids` hold, in listed order. Ids that are not trash files add
-/// nothing; the action itself lists again and skips them.
+/// The keyboards whose data the trash files of `file_ids` hold, in listed
+/// order. Ids that are not trash files add nothing; the action itself lists
+/// again and skips them.
 pub async fn trash_file_keyboards(env: &TrashEnv<'_>, file_ids: &[String]) -> Result<Vec<String>, DataError> {
     let mut uids: Vec<String> = Vec::new();
     for file in env.list_allowed_files().await? {
@@ -128,8 +126,8 @@ pub async fn trash_file_keyboards(env: &TrashEnv<'_>, file_ids: &[String]) -> Re
     Ok(uids)
 }
 
-/// The reset-lock target for acting on `file_ids` (`trashLockTarget`):
-/// their keyboards, or none when none of them holds keyboard data.
+/// The reset-lock target for acting on `file_ids`: their keyboards, or none
+/// when none of them holds keyboard data.
 async fn trash_lock_target(env: &TrashEnv<'_>, file_ids: &[String]) -> Result<ResetKeyboards, DataError> {
     let uids = trash_file_keyboards(env, file_ids).await?;
     Ok(if uids.is_empty() { ResetKeyboards::None } else { ResetKeyboards::Uids(uids) })
@@ -156,14 +154,13 @@ fn bulk_failure(verb: &str, outcome: &BulkOutcome) -> DataError {
     ))
 }
 
-/// `restoreTrashFile`: swaps `file_id` in for the current copies of its
-/// original name: every current copy is moved to trash first, then
-/// `file_id` is renamed back. Refused with [`TRASH_NOT_FOUND_MESSAGE`] when
-/// `file_id` is not a trash file any more, with
-/// [`TRASH_NOT_RESTORABLE_MESSAGE`] for one of this machine's own typing
-/// days, and as busy for a keyboard the held lock does not cover. When the
-/// rename back fails, the moved copies are renamed back to the name; what
-/// that cannot undo is left to the poll, which renames the trash file with
+/// Swaps `file_id` in for the current copies of its original name: every
+/// current copy is moved to trash first, then `file_id` is renamed back.
+/// Refused with [`TRASH_NOT_FOUND_MESSAGE`] when `file_id` is not a trash file
+/// any more, with [`TRASH_NOT_RESTORABLE_MESSAGE`] for one of this machine's
+/// own typing days, and as busy for a keyboard the held lock does not cover.
+/// When the rename back fails, the moved copies are renamed back to the name;
+/// what that cannot undo is left to the poll, which renames the trash file with
 /// the newest content back when a name has no copy.
 pub async fn restore_trash_file(env: &TrashEnv<'_>, file_id: &str) -> Result<(), DataError> {
     let listing = Listing::new(env.list_allowed_files().await?);
@@ -208,8 +205,8 @@ pub struct TrashDeleteResult {
     pub skipped: Vec<String>,
 }
 
-/// `deleteTrashFiles`: deletes those of `file_ids` that are still trash
-/// files of data the caller's lock covers; the others are skipped.
+/// Deletes those of `file_ids` that are still trash files of data the caller's
+/// lock covers; the others are skipped.
 pub async fn delete_trash_files(
     env: &TrashEnv<'_>,
     file_ids: &[String],
@@ -229,7 +226,7 @@ pub async fn delete_trash_files(
     Ok(TrashDeleteResult { deleted, skipped })
 }
 
-/// The `SYNC_RESTORE_TRASH` handler: [`restore_trash_file`] holding the
+/// The `sync_restore_trash` command: [`restore_trash_file`] holding the
 /// sync lock as a reset of the file's keyboard, or busy
 /// (`sync.trashBusy`) at once.
 pub async fn restore_trash(env: &TrashEnv<'_>, file_id: &str) -> Result<(), DataError> {
@@ -238,7 +235,7 @@ pub async fn restore_trash(env: &TrashEnv<'_>, file_id: &str) -> Result<(), Data
     runtime.with_reset_lock(&target, TRASH_BUSY_MESSAGE, restore_trash_file(env, file_id)).await?
 }
 
-/// The `SYNC_DELETE_TRASH` handler: [`delete_trash_files`] holding the
+/// The `sync_delete_trash` command: [`delete_trash_files`] holding the
 /// sync lock as a reset of the files' keyboards, or busy at once.
 pub async fn delete_trash(env: &TrashEnv<'_>, file_ids: &[String]) -> Result<TrashDeleteResult, DataError> {
     let target = trash_lock_target(env, file_ids).await?;
@@ -261,7 +258,7 @@ mod tests {
     }
 
     #[test]
-    fn bulk_failures_read_as_the_electron_build_writes_them() {
+    fn bulk_failures_read_as_a_count_and_the_first_error() {
         let outcome =
             BulkOutcome { attempted: 3, failed: 1, first_error: Some("Drive API error 403".into()) };
         assert_eq!(

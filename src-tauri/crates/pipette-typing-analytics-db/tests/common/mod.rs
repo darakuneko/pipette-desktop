@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The canonical text of SQLite values shared with the TypeScript fixture
-//! generator (scripts/analytics-db-fixtures/canonical.ts): `n`, `i:<dec>`,
+//! The canonical text of SQLite values in the recorded fixtures: `n`, `i:<dec>`,
 //! `r:<16 hex of the IEEE-754 bits>`, `t:<hex of UTF-8>`, `b:<hex>`; cells
 //! joined by `|`, rows by `\n`.
 
@@ -21,21 +20,6 @@ use sha2::{Digest, Sha256};
 
 pub fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
-}
-
-/// Never committed: the benchmark input and the TypeScript timings, in
-/// `<target>/tmp/pipette-typing-analytics-db`. The generator writes them to
-/// the directory `BENCH_DIR` names (scripts/analytics-db-fixtures/paths.ts,
-/// via `cargoTargetTmpDir` in scripts/fixture-files.ts) and both resolve
-/// `<target>` the same way: `CARGO_TARGET_DIR` taken from the current
-/// directory when set, otherwise the workspace's `target`. Read at run time
-/// because the example that uses it gets no `CARGO_TARGET_TMPDIR`.
-pub fn bench_dir() -> PathBuf {
-    let target = match std::env::var_os("CARGO_TARGET_DIR") {
-        Some(dir) => std::env::current_dir().unwrap().join(dir),
-        None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target"),
-    };
-    target.join("tmp/pipette-typing-analytics-db")
 }
 
 /// A second, read-only connection to a database file, for dumping its
@@ -147,7 +131,7 @@ pub fn object(value: &Value) -> &Map<String, Value> {
 }
 
 /// A returned JavaScript value in the canonical form of the method
-/// fixtures (scripts/analytics-db-fixtures/db-methods.ts): a number as
+/// fixtures: a number as
 /// `r:<bits>`, a string as `s:<text>`.
 pub fn canonical(value: &JsValue) -> Value {
     match value {
@@ -162,7 +146,7 @@ pub fn canonical(value: &JsValue) -> Value {
     }
 }
 
-/// A heatmap aggregate as the TypeScript side returns it: a Map keyed
+/// A heatmap aggregate as the goldens record it: a Map keyed
 /// `${row},${col}`, in canonical form the array of its entries.
 fn matrix_counts(cells: &[MatrixCounts]) -> Value {
     Value::Array(
@@ -233,7 +217,7 @@ impl<T: ToJs + ?Sized> CheckedJs for T {
     }
 }
 
-/// Runs a call recorded by the method fixtures on `db`, by its TypeScript
+/// Runs a call recorded by the method fixtures on `db`, by its recorded
 /// method name and arguments, and returns its answer in canonical form.
 pub fn run_call(db: &mut TypingAnalyticsDb, method: &str, args: &[Value]) -> Value {
     let a = Args(args);

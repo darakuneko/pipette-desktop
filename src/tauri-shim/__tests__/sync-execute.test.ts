@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 // The sync of a scope runs in the backend (src-tauri/src/sync_commands/execute.rs);
 // its progress and the units a merge rewrote come back as events on the
-// channels of the Electron main process.
+// channels of src/shared/ipc/channels.ts.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The pack stores under the userData directory, writing the same files as
-//! the Electron build:
+//! the 0.4 build:
 //!
 //! - the layer the language and theme packs share ([`PackStore`]): the
 //!   index and the body files of a store, its write lock and sync units,
@@ -11,15 +11,13 @@
 //! - the operations on a meta both stores share (`pack_meta`: the save's
 //!   id and name, rename, Hub link, delete) and what their handlers share
 //!   (`handlers`: the arguments and the export);
-//! - the language packs (`sync/i18n`, [`i18n`]) of
-//!   src/main/i18n-pack-store*.ts, and their handlers
-//!   ([`i18n_handlers`]) of src/main/i18n-pack-ipc.ts;
+//! - the language packs (`sync/i18n`, [`i18n`]) and their handlers
+//!   ([`i18n_handlers`]);
 //! - the sync of both stores ([`sync`]): the bundles of the roster and of
 //!   a body, the merge of a remote roster, applying a remote body and the
 //!   GC after a pass;
-//! - the theme packs (`sync/themes`, [`theme`]) of
-//!   src/main/theme-pack-store.ts, and their handlers ([`theme_handlers`])
-//!   of src/main/theme-pack-ipc.ts.
+//! - the theme packs (`sync/themes`, [`theme`]) and their handlers
+//!   ([`theme_handlers`]).
 //!
 //! The stores work through the [`StoreContext`] every store of the app
 //! shares: the userData directory, the clock, the ids of new packs, the

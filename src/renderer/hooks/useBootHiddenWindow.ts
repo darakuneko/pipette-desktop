@@ -25,12 +25,10 @@ interface BootHiddenWindowOptions {
  * require unlocking (e.g. the plain keymap editor) never forces a
  * prompt.
  *
- * Window visibility truth comes from the main process (windowIsVisible /
- * onWindowVisibilityChanged), not from document.visibilityState: a
- * BrowserWindow created with show: false can still report
- * document.visibilityState === 'visible' on some platforms (observed on
- * Linux Electron), which would silently prevent the boot-hidden phase
- * from ever arming.
+ * Window visibility truth comes from the backend (windowIsVisible /
+ * onWindowVisibilityChanged), not from document.visibilityState, which
+ * does not follow a window that starts hidden; reading it would silently
+ * prevent the boot-hidden phase from ever arming.
  */
 export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
   const { unlockDialogVisible } = opts
@@ -116,14 +114,15 @@ export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
       // Rising edge on a genuinely hidden window: show it for the dialog
       // and remember that we did so, so the falling edge only hides what
       // we showed. weShowedRef must be set synchronously (not after the
-      // invoke resolves): Electron emits win 'show' from within win.show(),
-      // so the WINDOW_VISIBILITY_CHANGED push reaches the visibility
+      // invoke resolves): the backend sends the WINDOW_VISIBILITY_CHANGED
+      // push before it answers windowShow() (`reveal` in
+      // src-tauri/src/main_window.rs), so the push can reach the visibility
       // subscription above BEFORE this invoke's promise resolves. If
       // weShowedRef were still false at that point, that push would read as
       // a foreign reveal and disarm the phase, breaking this very show.
       //
       // That leaves a window-ownership race: the user may have shown the
-      // window via the tray in the gap between the WINDOW_IS_VISIBLE
+      // window via the tray in the gap between the `window_is_visible`
       // snapshot (arming effect) and this call. windowShow() resolves with
       // whether main actually transitioned the window from hidden to
       // shown — false means the user beat us to it. Roll back ownership in

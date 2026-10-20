@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Sync-format markers (src/main/sync/sync-format.ts): unencrypted
-//! `sync-format-v{n}.json` files in appDataFolder that say which sync
-//! format the data on Drive needs.
+//! Sync-format markers: unencrypted `sync-format-v{n}.json` files in
+//! appDataFolder that say which sync format the data on Drive needs.
 //!
 //! - The required version is the largest `n` listed. An app whose
 //!   [`SYNC_FORMAT_VERSION`] is smaller stops syncing (`updateRequired`).

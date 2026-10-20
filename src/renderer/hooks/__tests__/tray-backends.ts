@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the tray hooks' tests run against, both
-// handing the same spy the status a hook reports: a preload-like mock (the
+// handing the same spy the status a hook reports: a plain mock (the
 // spy itself), and the Tauri shim's tray member over a mocked Tauri IPC,
 // whose `tray_status_update` command passes the spy its `status` argument.
 // `extra` holds the other members a test needs, the same in both. The test
@@ -21,7 +21,7 @@ function installVialAPI(members: object): void {
 
 export function trayBackends(trayStatusUpdate: (status: TrayStatus) => unknown, extra: object = {}): TrayBackend[] {
   return [
-    { name: 'preload-like mock', install: () => installVialAPI({ ...extra, trayStatusUpdate }) },
+    { name: 'plain mock', install: () => installVialAPI({ ...extra, trayStatusUpdate }) },
     {
       name: 'Tauri shim over mockIPC',
       install: () => {

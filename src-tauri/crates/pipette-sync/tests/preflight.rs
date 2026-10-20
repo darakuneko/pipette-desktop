@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The timing cases of the preflight parts that the recorded scenarios
 //! (ts_preflight.rs) cannot reach: work that finishes after a sign-out,
-//! refreshes that overlap a block or a clear, sets and creations that run
-//! at once, a sign-in change during a set, a replace or a password-check
-//! creation, and a password that cannot be stored (src/main/sync/__tests__/sync-format.test.ts,
-//! sync-format-status.test.ts and sync-password-guard.test.ts).
+//! refreshes that overlap a block or a clear, sets and creations that run at
+//! once, a sign-in change during a set, a replace or a password-check creation,
+//! and a password that cannot be stored.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

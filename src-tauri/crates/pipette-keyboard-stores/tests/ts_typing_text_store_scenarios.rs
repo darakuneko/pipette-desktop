@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript typing test text
-//! handlers by
-//! scripts/keyboard-store-fixtures/record-typing-text-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the typing test text handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the dialogs shown, the notified units and every file left
 //! behind compared byte for byte. The texts of a file-system error and of a
@@ -61,7 +59,7 @@ fn entries(list: Vec<pipette_entry_store::Entry>) -> Value {
     Value::Array(list.into_iter().map(Value::from).collect())
 }
 
-/// The save of a `save` step (`SaveTextInput`).
+/// The save of a `save` step.
 fn save_input(input: &Object) -> TypingTextSave {
     let source = input.get("source").map(|source| {
         let source = source.as_object().unwrap();
@@ -148,7 +146,7 @@ fn recorded_dialogs(dialogs: &Value) -> Vec<String> {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_typing_text_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();

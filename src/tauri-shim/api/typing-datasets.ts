@@ -2,8 +2,8 @@
 // The VialAPI members of the Typing Test word lists, their datasets and the
 // Aozora Bunko catalog import for the Tauri build
 // (src-tauri/src/typing_dataset_commands.rs). None of them waits for
-// another: the Electron handlers take no lock either, and the Aozora import
-// stays out of the `typing-test-texts` queue as the text file import does —
+// another, and the Aozora import stays out of the `typing-test-texts` queue
+// as the text file import does —
 // its download runs outside the text store's lock, and the backend takes the
 // lock for the save. The word list entries, a word list and the imported
 // text's meta cross as JSON text the backend writes, so their fields keep

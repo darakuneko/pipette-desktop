@@ -7,7 +7,8 @@
 // literally rewrite the keymap so the physical keys emit the labelled
 // characters directly?
 //
-// `keymapApplicable` on the stored file (see key-label-store.ts) is only
+// `keymapApplicable` on the stored file (see
+// src-tauri/crates/pipette-keyboard-stores/src/key_labels/label_file.rs) is only
 // an author-supplied hint — this builder is the actual authority: it
 // re-derives the same conclusion from the map data and refuses to build
 // a table for anything that isn't a clean 1:1 character permutation

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 // Runs against both vialAPI implementations for the tray member
-// (tray-backends.ts): a preload-like mock, and the Tauri shim's tray member
+// (tray-backends.ts): a plain mock, and the Tauri shim's tray member
 // over a mocked Tauri IPC.
 
 import { StrictMode } from 'react'

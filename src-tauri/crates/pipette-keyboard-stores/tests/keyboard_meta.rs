@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keyboard names and the stored-keyboard list, as specified by the
-//! TypeScript tests of src/main/__tests__/keyboard-meta.test.ts, with the
-//! write serialization and the files this build cannot read on top.
+//! The keyboard names and the stored-keyboard list, with the write
+//! serialization and the files this build cannot read on top.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

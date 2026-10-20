@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The size a window takes while the user drags one of its edges with an
-//! aspect ratio set: Chromium's `SizeRectToAspectRatioWithExcludedMargin`,
-//! which Electron's `setAspectRatio(ratio, extraSize)` runs on Windows for
-//! every `WM_SIZING`. The ratio is the one of the window less the excluded
+//! aspect ratio set, computed as Chromium's
+//! `SizeRectToAspectRatioWithExcludedMargin` computes it, for every
+//! `WM_SIZING` on Windows. The ratio is the one of the window less the excluded
 //! margin; the dragged edge leads and the opposite edges stay where they
 //! are.
 

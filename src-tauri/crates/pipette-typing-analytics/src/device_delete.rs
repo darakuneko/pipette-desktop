@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Sync tab's delete of another device's typing data
-//! (src/main/sync/typing-device-delete.ts). Nothing is removed from Drive
-//! or from that device's day files: the deleted time ranges are added to
-//! that device's deleted-ranges file, the rows in them are hidden in this
-//! cache at once, and the file syncs like any other unit. The owner removes
-//! the rows from its own files when it next merges the file
+//! The Sync tab's delete of another device's typing data. Nothing is removed
+//! from Drive or from that device's day files: the deleted time ranges are
+//! added to that device's deleted-ranges file, the rows in them are hidden in
+//! this cache at once, and the file syncs like any other unit. The owner
+//! removes the rows from its own files when it next merges the file
 //! (deleted_ranges/apply.rs), and every device keeps them hidden when it
 //! replays the day files (cache_rebuild.rs).
 
@@ -27,7 +26,7 @@ pub enum DeviceDays {
 }
 
 impl DataOps {
-    /// `deleteDeviceTypingData`: deletes `machine_hash`'s typing of `uid` on
+    /// Deletes `machine_hash`'s typing of `uid` on
     /// `days`, limited to what was recorded at or before `cutoff_ms`. Works
     /// offline. Refuses this device's own hash ([`Error::OwnDeviceDelete`]):
     /// its days are deleted from the Local tab.

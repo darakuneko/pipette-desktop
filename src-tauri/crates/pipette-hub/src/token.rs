@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Hub JWT of `src/main/hub/hub-ipc-token.ts`: its cache in memory only,
-//! the one request concurrent callers share, `withTokenRetry` and the
-//! sentinels its failures become.
+//! The Hub JWT: its cache in memory only, the one request concurrent
+//! callers share, the retry after a 401 and the sentinels its failures
+//! become.
 //!
 //! The JWT is kept for its own 24 hours (`HUB_JWT_TTL_MS`), never by the
 //! JWT's `exp`; a 401 within that time takes a new one. It is never written
 //! to disk or to the key store, and neither it nor the Google id_token is
 //! logged or handed to the page.
 //!
-//! The cache keeps the TS's behavior to the letter:
+//! The cache:
 //! - a token request is cached only when the generation has not changed
 //!   while it ran; [`HubToken::clear`] (a sign-in or sign-out) bumps the
 //!   generation, so a request it overtook returns its token to its callers
@@ -17,8 +17,8 @@
 //!   shared request but keeps the generation, so a request already running
 //!   still caches its token when it ends;
 //! - the end of a token request forgets the shared request whichever one is
-//!   shared by then (the TS's `finally`), so a request started after a
-//!   display name was set is no longer shared once the earlier one ends.
+//!   shared by then, so a request started after a display name was set is
+//!   no longer shared once the earlier one ends.
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -43,7 +43,7 @@ pub const HUB_ERROR_RATE_LIMITED: &str = "RATE_LIMITED";
 /// `HUB_ERROR_NOT_AUTHENTICATED`.
 pub const HUB_ERROR_NOT_AUTHENTICATED: &str = "Not authenticated with Google. Please sign in again.";
 
-/// What a Hub handler failed with: the message the TS's error carries, and
+/// What a Hub handler failed with: the error's message, and
 /// the class of the Hub error it is (`instanceof Hub409Error` …), `None` for
 /// a plain `Error` (the sentinels, the input checks, the failures without
 /// a status).
@@ -78,8 +78,8 @@ impl From<InvalidInput> for HubFailure {
     }
 }
 
-/// `rethrowAsHubSentinel`: a 403 is the deactivated account and a 429 the
-/// rate limit; any other failure stays as it is.
+/// `err` as the Hub's sentinel: a 403 is the deactivated account and a 429
+/// the rate limit; any other failure stays as it is.
 pub fn as_hub_sentinel(err: HubError) -> HubFailure {
     match err.status_kind() {
         Some(StatusKind::Forbidden) => HubFailure::plain(HUB_ERROR_ACCOUNT_DEACTIVATED),
@@ -126,8 +126,10 @@ pub struct TokenSnapshot {
     pub display_name_pending: bool,
 }
 
-/// The Hub JWT of this process: `getHubToken`, `clearHubTokenCache`,
-/// `setPendingAuthDisplayName` and `withTokenRetry`.
+/// The Hub JWT of this process: [`get`](HubToken::get),
+/// [`clear`](HubToken::clear),
+/// [`set_pending_display_name`](HubToken::set_pending_display_name) and
+/// [`with_token_retry`](HubToken::with_token_retry).
 pub struct HubToken {
     http: HubHttp,
     id_tokens: Arc<dyn IdTokenSource>,
@@ -174,8 +176,8 @@ impl HubToken {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// `getHubToken`: the cached JWT while it is within its 24 hours, else
-    /// the token request under way, else a new one.
+    /// The cached JWT while it is within its 24 hours, else the token request
+    /// under way, else a new one.
     pub async fn get(&self) -> Outcome {
         loop {
             let next = {
@@ -240,7 +242,7 @@ impl HubToken {
         Ok(Arc::new(token_of(data)?))
     }
 
-    /// `clearHubTokenCache`: on a sign-in or sign-out (and the reset that
+    /// On a sign-in or sign-out (and the reset that
     /// signs out), forgets the JWT, the shared request and the display name,
     /// and bumps the generation so a request under way is not cached.
     pub fn clear(&self) {
@@ -251,10 +253,9 @@ impl HubToken {
         state.pending_display_name = None;
     }
 
-    /// `setPendingAuthDisplayName`: the display name of the next token
-    /// request (`None` for any value that is not a string). Drops the JWT
-    /// and the shared request so the next call takes a token with it; the
-    /// generation stays.
+    /// Sets the display name of the next token request (`None` for any value
+    /// that is not a string). Drops the JWT and the shared request so the
+    /// next call takes a token with it; the generation stays.
     pub fn set_pending_display_name(&self, display_name: Option<String>) {
         let mut state = self.lock();
         state.pending_display_name = display_name;
@@ -262,9 +263,9 @@ impl HubToken {
         state.inflight = None;
     }
 
-    /// `withTokenRetry`: runs `operation` with the JWT; on a 401, once
-    /// more with a new JWT. A 403 or a 429 of either run becomes its
-    /// sentinel. A second 401 is the error, and the new JWT stays cached.
+    /// Runs `operation` with the JWT; on a 401, once more with a new JWT. A
+    /// 403 or a 429 of either run becomes its sentinel. A second 401 is the
+    /// error, and the new JWT stays cached.
     pub async fn with_token_retry<T, F, Fut>(&self, operation: F) -> Result<T, HubFailure>
     where
         F: Fn(Jwt) -> Fut,

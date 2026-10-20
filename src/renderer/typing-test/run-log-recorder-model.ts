@@ -94,7 +94,7 @@ export interface RunLogFinishMeta {
    *  `lineBreaks: meta.lineBreaks` as an explicit key on the
    *  `RunKeystrokeLog` object it builds, so the key is present at that
    *  layer even when the value is `undefined`. It disappears only once
-   *  the log is JSON-serialized for storage (`typing-run-log-store.ts`)
+   *  the log is JSON-serialized for storage (src/tauri-shim/api/run-logs.ts)
    *  — `JSON.stringify` drops any object key whose value is `undefined`,
    *  so the persisted log ends up with no `lineBreaks` key at all. An
    *  explicit `[]` never carries an `undefined` value at any layer, so

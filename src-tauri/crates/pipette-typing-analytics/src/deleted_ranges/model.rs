@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The deleted-ranges file of one (keyboard uid, machine hash)
-//! (deleted-ranges.ts): time ranges deleted from that device's typing data,
-//! written by another device (the Sync tab's delete) or by the owner itself
-//! (the Local tab's Delete All). Each entry removes the rows whose time
-//! (minute start, session start) is in `[startMs, endMs)` and at or before
-//! `cutoffMs`, the moment the delete was asked for, so typing recorded
-//! after the delete stays. Entries never change once written; devices
-//! combine their copies by taking the union of the ids.
+//! The deleted-ranges file of one (keyboard uid, machine hash): time ranges
+//! deleted from that device's typing data, written by another device (the Sync
+//! tab's delete) or by the owner itself (the Local tab's Delete All). Each
+//! entry removes the rows whose time (minute start, session start) is in
+//! `[startMs, endMs)` and at or before `cutoffMs`, the moment the delete was
+//! asked for, so typing recorded after the delete stays. Entries never change
+//! once written; devices combine their copies by taking the union of the ids.
 //!
 //! File: `{ "version": 1, "entries": [{ id, startMs, endMs, cutoffMs }] }`,
 //! two-space indented, the entries sorted by (`cutoffMs`, id) so every
@@ -52,7 +51,7 @@ fn time(value: Option<&Value>) -> Option<i64> {
     }
 }
 
-/// `isDeletedRangeEntry`: an object with an id of 1 to 128 UTF-16 code
+/// An object with an id of 1 to 128 UTF-16 code
 /// units and three safe non-negative integer times, `endMs > startMs`.
 pub fn parse_entry(value: &Value) -> Option<DeletedRangeEntry> {
     let Value::Object(e) = value else { return None };
@@ -75,7 +74,7 @@ fn sort_entries(entries: &mut [DeletedRangeEntry]) {
     entries.sort_by_cached_key(|e| (e.range.cutoff_ms, e.id.utf16_units()));
 }
 
-/// `parseDeletedRangesFile`: the valid entries of a parsed file, the first
+/// The valid entries of a parsed file, the first
 /// copy of each id kept, sorted; `None` when the file itself has the wrong
 /// shape. Only the four known fields are kept.
 pub fn parse_deleted_ranges_file(value: &Value) -> Option<Vec<DeletedRangeEntry>> {
@@ -101,7 +100,7 @@ fn entry_value(entry: &DeletedRangeEntry) -> Value {
     Value::Object(object)
 }
 
-/// `serializeDeletedRanges`: the file text, two-space indented.
+/// The file text, two-space indented.
 pub fn serialize_deleted_ranges(entries: &[DeletedRangeEntry]) -> String {
     let mut file = Object::new();
     file.insert("version", Value::Number(FILE_VERSION));
@@ -109,7 +108,7 @@ pub fn serialize_deleted_ranges(entries: &[DeletedRangeEntry]) -> String {
     pipette_js_json::stringify_with_gap(&Value::Object(file), "  ")
 }
 
-/// `unionDeletedRanges`: the union by id, sorted; for an id both sides
+/// The union by id, sorted; for an id both sides
 /// hold, the local copy is kept.
 pub fn union_deleted_ranges(local: &[DeletedRangeEntry], other: &[DeletedRangeEntry]) -> DeletedRangesUnion {
     let local_ids: HashSet<&JsString> = local.iter().map(|e| &e.id).collect();
@@ -122,13 +121,12 @@ pub fn union_deleted_ranges(local: &[DeletedRangeEntry], other: &[DeletedRangeEn
     DeletedRangesUnion { entries, local_changed, remote_needs_update }
 }
 
-/// A local day that is not a `YYYY-MM-DD` day a `Date` can hold
-/// (`deletedRangesForLocalDays` throws a RangeError).
+/// A local day that is not a `YYYY-MM-DD` day a `Date` can hold.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("Invalid local day: {0}")]
 pub struct InvalidLocalDay(pub String);
 
-/// `deletedRangesForLocalDays`: one entry per run of consecutive local
+/// One entry per run of consecutive local
 /// calendar days of `dates` (any order, duplicates allowed), each from the
 /// first day's local midnight to the midnight after the last day, all with
 /// `cutoff_ms`. A run joins days whose ranges touch or overlap, so a 23 or
@@ -160,12 +158,12 @@ pub fn deleted_ranges_for_local_days(
         .collect())
 }
 
-/// `deletedRangeForAll`: every time at or before `cutoff_ms`.
+/// Every time at or before `cutoff_ms`.
 pub fn deleted_range_for_all(cutoff_ms: i64, id: &str) -> DeletedRangeEntry {
     DeletedRangeEntry { id: id.into(), range: DeleteRange { start_ms: 0, end_ms: cutoff_ms + 1, cutoff_ms } }
 }
 
-/// `clipToUtcDay`: the parts of `ranges` inside `utc_day`. A day file only
+/// The parts of `ranges` inside `utc_day`. A day file only
 /// holds rows whose time is in its UTC day, so applying the result to that
 /// file touches nothing outside it.
 pub fn clip_to_utc_day(ranges: &[DeleteRange], utc_day: &str) -> Result<Vec<DeleteRange>, InvalidUtcDay> {

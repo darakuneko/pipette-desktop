@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keymap post and private post scenarios recorded from the Electron
-//! Hub handlers (ts_hub_handlers_posts.json, ts_hub_handlers_private.json):
+//! The recorded golden keymap post and private post scenarios of the Hub
+//! handlers (ts_hub_handlers_posts.json, ts_hub_handlers_private.json):
 //! each scenario's scripted Hub answers the Rust handlers, which must give
 //! the same answers, send the same requests (a multipart body byte for
 //! byte, with its boundary from the fixed clock) and wait the same 429
@@ -22,7 +22,7 @@ use pipette_js_json::{Value, js_string, stringify};
 use pipette_net::{HttpError, HttpReply, HttpRequest};
 use zeroize::Zeroizing;
 
-/// A rule of the scripted Hub (hub-harness.ts `HubRule`).
+/// A rule of the scripted Hub.
 struct Rule {
     method: String,
     path: String,
@@ -343,11 +343,11 @@ fn run_fixture(name: &str, scenario_count: usize) {
 }
 
 #[test]
-fn the_keymap_post_scenarios_match_the_ts() {
+fn the_keymap_post_scenarios_match_the_golden() {
     run_fixture("ts_hub_handlers_posts.json", 6);
 }
 
 #[test]
-fn the_private_post_scenarios_match_the_ts() {
+fn the_private_post_scenarios_match_the_golden() {
     run_fixture("ts_hub_handlers_private.json", 2);
 }

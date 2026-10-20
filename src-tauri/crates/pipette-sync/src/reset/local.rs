@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The resets of this machine's data: Reset Keyboard Data of one keyboard
-//! and Reset Local Data of chosen targets (`RESET_KEYBOARD_DATA` and
-//! `RESET_LOCAL_TARGETS` of src/main/sync/sync-reset-ipc.ts).
+//! The resets of this machine's data: Reset Keyboard Data of one keyboard and
+//! Reset Local Data of chosen targets.
 //!
 //! Each cancels the pending units of what it removes, then clears the
 //! typing analytics of the removed keyboards, then cancels again (the
@@ -9,13 +8,12 @@
 //! files. The first cancel always writes, so a pending file that cannot be
 //! written stops the reset before anything is removed.
 //!
-//! Removing App Settings removes `local/auth/`, which holds the sign-in,
-//! the sync password and a password change's state (and the Electron
-//! build's `*.enc` files): it is refused while this machine has a password
-//! change, and it signs out right after the first cancel, before anything
-//! is removed. A failed sign-out ends the reset with nothing removed, the
-//! sign-in and settings kept, polling still running, and the cancelled
-//! units put back pending.
+//! Removing App Settings removes `local/auth/`, which holds the sign-in, the
+//! sync password and a password change's state (and the 0.4 build's `*.enc`
+//! files): it is refused while this machine has a password change, and it signs
+//! out right after the first cancel, before anything is removed. A failed
+//! sign-out ends the reset with nothing removed, the sign-in and settings kept,
+//! polling still running, and the cancelled units put back pending.
 
 use pipette_keyboard_stores::{KEYBOARD_META_SYNC_UNIT, TombstoneOutcome};
 use pipette_sync_runtime::ResetKeyboards;
@@ -30,10 +28,10 @@ use crate::scope::list_local_keyboard_uids;
 use pipette_keyboard_stores::{KEY_LABEL_SYNC_UNIT, TYPING_TEXT_SYNC_UNIT};
 
 impl Resets {
-    /// `deleteTypingForAllKeyboards`: the typing-analytics cleanup of every
-    /// keyboard with a local directory or cache rows. Removing
-    /// `sync/keyboards` alone leaves the cache, so Analyze would keep
-    /// showing the removed keyboards. Failures are logged and skipped.
+    /// The typing-analytics cleanup of every keyboard with a local directory or
+    /// cache rows. Removing `sync/keyboards` alone leaves the cache, so Analyze
+    /// would keep showing the removed keyboards. Failures are logged and
+    /// skipped.
     async fn delete_typing_for_all_keyboards(&self) {
         let user_data = self.ctx.user_data().to_path_buf();
         let local = tokio::task::spawn_blocking(move || list_local_keyboard_uids(&user_data)).await;
@@ -56,7 +54,7 @@ impl Resets {
         }
     }
 
-    /// The `RESET_KEYBOARD_DATA` handler: removes `uid`'s local data and
+    /// The `reset_keyboard_data` command: removes `uid`'s local data and
     /// typing analytics, its Drive files when Drive allows it, and its
     /// keyboard name, so the other devices see the removal. Refused while
     /// a sync password change is in progress. When Drive cannot be checked
@@ -92,7 +90,7 @@ impl Resets {
         .await
     }
 
-    /// The `RESET_LOCAL_TARGETS` handler: removes the chosen targets of
+    /// The `reset_local_targets` command: removes the chosen targets of
     /// this machine's data. Favorites take the other global user content
     /// with them: the typing-test texts and the key labels.
     pub async fn reset_local_targets(&self, targets: &LocalResetTargets) -> Result<(), DataError> {

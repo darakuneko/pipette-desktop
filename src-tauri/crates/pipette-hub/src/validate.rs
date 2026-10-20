@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The input checks and small helpers of src/main/hub/hub-ipc-shared.ts,
-//! with JavaScript's meaning: lengths in UTF-16 code units, `trim()` of the
+//! The input checks and small helpers of the Hub handlers, with
+//! JavaScript's meaning: lengths in UTF-16 code units, `trim()` of the
 //! ECMAScript whitespace, `Math.floor` and the non-finite numbers, and the
 //! character replacement of file names per UTF-16 code unit (a character
-//! outside the BMP becomes two `_`). The messages are the TS's, which
+//! outside the BMP becomes two `_`). The messages are the ones
 //! src/renderer/utils/hub-error-i18n.ts maps.
 
 use crate::base64::node_base64_decode;
 use crate::js::{js_length, js_trim};
 use crate::multipart::{KeymapFiles, UploadFile};
 
-/// A rejected input, with the TS's message.
+/// A rejected input, with its message.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{0}")]
 pub struct InvalidInput(pub String);
@@ -51,7 +51,9 @@ fn trimmed_within(
     Ok(trimmed)
 }
 
-/// `validateDisplayName`; `None` stands for any value that is not a string.
+/// The display name, trimmed, not empty and at most
+/// `DISPLAY_NAME_MAX_LENGTH` UTF-16 units; `None` stands for any value
+/// that is not a string.
 pub fn validate_display_name(display_name: Option<&str>) -> Result<String, InvalidInput> {
     trimmed_within(
         display_name,
@@ -61,18 +63,21 @@ pub fn validate_display_name(display_name: Option<&str>) -> Result<String, Inval
     )
 }
 
-/// `validateKeyboardName`; `None` stands for any value that is not a string.
+/// The keyboard name, trimmed, not empty and at most
+/// `KEYBOARD_NAME_MAX_LENGTH` UTF-16 units; `None` stands for any value
+/// that is not a string.
 pub fn validate_keyboard_name(name: Option<&str>) -> Result<String, InvalidInput> {
     trimmed_within(name, KEYBOARD_NAME_MAX_LENGTH, "Missing keyboard name", "Keyboard name too long")
 }
 
-/// `validateTitle`; `None` stands for any value that is not a string.
+/// The title, trimmed, not empty and at most `TITLE_MAX_LENGTH` UTF-16
+/// units; `None` stands for any value that is not a string.
 pub fn validate_title(title: Option<&str>) -> Result<String, InvalidInput> {
     trimmed_within(title, TITLE_MAX_LENGTH, "Title must not be empty", "Title too long")
 }
 
-/// `clampInt`: `None` for `undefined` / `null` and for a value whose floor
-/// is not finite, else the floor within `min..=max`.
+/// `None` for `undefined` / `null` and for a value whose floor is not
+/// finite, else the floor within `min..=max`.
 pub fn clamp_int(value: Option<f64>, min: f64, max: f64) -> Option<f64> {
     let floored = value?.floor();
     if !floored.is_finite() {
@@ -82,7 +87,9 @@ pub fn clamp_int(value: Option<f64>, min: f64, max: f64) -> Option<f64> {
     Some(min.max(max.min(floored)))
 }
 
-/// `computeTotalPages`.
+/// The number of pages of `total` items at `per_page` a page, at least
+/// one; a total that is negative or not finite counts as none, and a page
+/// size that is not a positive finite number as one.
 pub fn compute_total_pages(total: f64, per_page: f64) -> f64 {
     let total = if total.is_finite() { total.max(0.0) } else { 0.0 };
     let per_page = if per_page.is_finite() && per_page > 0.0 { per_page } else { 1.0 };
@@ -99,8 +106,8 @@ pub fn replace_unsafe_filename_units(text: &str) -> String {
         .collect()
 }
 
-/// `sanitizeFilenameBase`: the first non-empty of `product_name`,
-/// `fallback` and `analytics`, with the unsafe characters replaced.
+/// The first non-empty of `product_name`, `fallback` and `analytics`, with
+/// the unsafe characters replaced.
 pub fn sanitize_filename_base(product_name: &str, fallback: &str) -> String {
     let source = [product_name, fallback].into_iter().find(|text| !text.is_empty()).unwrap_or("analytics");
     let source = replace_unsafe_filename_units(source);
@@ -118,7 +125,7 @@ const FILE_SIZE_LIMITS: [(&str, usize, &str); 5] = [
     ("pdf", 10 * MB, "PDF"),
 ];
 
-/// `validateFileSize`: the first file over its limit, in the order of
+/// Fails on the first file over its limit, in the order of
 /// `FILE_SIZE_LIMITS`.
 pub fn validate_file_sizes(files: &KeymapFiles) -> Result<(), InvalidInput> {
     for (key, max, label) in FILE_SIZE_LIMITS {
@@ -148,8 +155,8 @@ pub struct KeymapPostInput<'a> {
     pub thumbnail_base64: &'a str,
 }
 
-/// `buildFiles`: the five files named after the keyboard, the PDF and the
-/// thumbnail decoded as Node decodes base64, then the size check.
+/// The five files named after the keyboard, the PDF and the thumbnail decoded
+/// as Node decodes base64, then the size check.
 pub fn build_files(input: KeymapPostInput<'_>) -> Result<KeymapFiles, InvalidInput> {
     let base = replace_unsafe_filename_units(input.keyboard_name);
     let file = |extension: &str, data: Vec<u8>| UploadFile { name: format!("{base}.{extension}"), data };
@@ -181,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn clamps_and_counts_pages_as_the_ts_does() {
+    fn clamps_and_counts_pages_as_recorded() {
         assert_eq!(clamp_int(Some(5.9), 1.0, 100.0), Some(5.0));
         assert_eq!(clamp_int(Some(f64::NAN), 1.0, 100.0), None);
         assert_eq!(clamp_int(None, 1.0, 100.0), None);

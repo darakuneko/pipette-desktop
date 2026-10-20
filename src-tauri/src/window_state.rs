@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The saved `windowState` of the main window and where the window opens,
-//! as `loadWindowState` / `saveWindowState` of src/main/app-config.ts and
-//! `createWindow` of src/main/index.ts decide them. Pure functions over
+//! The saved `windowState` of the main window and where the window opens.
+//! Pure functions over
 //! device-independent pixels (DIP); main_window.rs converts the monitors and
 //! the window from Tauri's physical pixels.
 //!
@@ -12,8 +11,7 @@ use pipette_app_config::{Object, Value};
 
 use crate::window_bounds::{MIN_SIZE, Rect, Size, clamp_bounds_to_work_area, effective_min_size, js_max};
 
-/// The state of a window that never saved one (`DEFAULT_STATE` of
-/// src/main/app-config.ts): no position, and wider than the minimum, as the
+/// The state of a window that never saved one: no position, and wider than the minimum, as the
 /// keymap editor of a full-size keyboard needs.
 pub const DEFAULT_STATE: Rect = Rect { x: -1.0, y: -1.0, width: 1440.0, height: MIN_SIZE.height };
 
@@ -44,7 +42,7 @@ fn stored_rect(stored: Option<&Value>) -> Option<Rect> {
     Some(Rect { x: number("x")?, y: number("y")?, width: number("width")?, height: number("height")? })
 }
 
-/// `loadWindowState()`: the stored state grown to the minimum size, or
+/// The stored state grown to the minimum size, or
 /// [`DEFAULT_STATE`] when there is none, it is malformed, or its center is on
 /// none of `displays` (the displays' full bounds).
 pub fn load_window_state(stored: Option<&Value>, displays: &[Rect]) -> Rect {
@@ -77,7 +75,7 @@ pub struct Placement {
     pub min_size: Size,
 }
 
-/// `createWindow`'s placement of `saved` (a [`load_window_state`] result):
+/// The placement of `saved` (a [`load_window_state`] result):
 /// a saved position picks the display it overlaps most, otherwise the
 /// primary one (`primary`, an index into `displays`, or the first display);
 /// the minimum size shrinks to that display's work area and the window is
@@ -136,12 +134,12 @@ pub struct WindowReadout {
     pub position_known: bool,
 }
 
-/// The state to save for `window`, rounded to whole pixels as Electron's
-/// bounds are, or none to keep the stored one: for a hidden window (closed
-/// into the tray; an unmapped window can report a stale position) and a
-/// minimized one (which reports an off-screen position on Windows). Without
-/// a known position, the position of `previous`, the stored state, is kept,
-/// or the no-position marker when there is none.
+/// The state to save for `window`, rounded to whole pixels, or none to keep the
+/// stored one: for a hidden window (closed into the tray; an unmapped window
+/// can report a stale position) and a minimized one (which reports an
+/// off-screen position on Windows). Without a known position, the position of
+/// `previous`, the stored state, is kept, or the no-position marker when there
+/// is none.
 pub fn state_to_save(window: WindowReadout, previous: Option<&Value>) -> Option<Rect> {
     if !window.visible || window.minimized {
         return None;
@@ -179,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn load_window_state_matches_the_typescript_table() {
+    fn load_window_state_matches_the_recorded_table() {
         let fixture = fixture();
         let cases = fixture["loadWindowState"].as_array().unwrap();
         assert!(!cases.is_empty());
@@ -326,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn the_stored_form_is_the_electron_one() {
+    fn the_default_state_is_stored_in_its_key_order() {
         assert_eq!(
             pipette_js_json::stringify(&to_value(DEFAULT_STATE)),
             r#"{"x":-1,"y":-1,"width":1440,"height":1024}"#

@@ -5,8 +5,7 @@
 //! commands of each area ([`data`], [`keymaps`], [`queries`], [`range`],
 //! [`record`]).
 //!
-//! The initialization starts at launch ([`start`]), as
-//! `setupTypingAnalytics` does in the Electron main process: the schema
+//! The initialization starts at launch ([`start`]): the schema
 //! migration, the cache rebuild when `sync_state.json` asks for it (a
 //! migration that dropped tables commits only with a rebuild that
 //! succeeded) and, once it is done, the apply of this device's own deleted

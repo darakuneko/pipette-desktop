@@ -62,8 +62,8 @@ pub async fn snapshot_store_load(
     .await
 }
 
-/// `options` is the renderer's `SnapshotUpdateOptions`: like the handler,
-/// only a string `migrateFrom` in it counts.
+/// `options` is the renderer's `SnapshotUpdateOptions`; only a string
+/// `migrateFrom` in it counts.
 #[tauri::command]
 pub async fn snapshot_store_update(
     stores: State<'_, StoreContext>,

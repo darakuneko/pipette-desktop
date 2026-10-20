@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Replays the golden transcript recorded from the TypeScript virtual device
-// (scripts/virtual-device-fixtures/record-virtual-device-fixtures.test.ts):
+// Replays the recorded golden transcript of the virtual device:
 // every request is fed with its recorded clock, and every response must be
 // byte-identical. Controller operations and recorded controller states are
 // replayed and checked in the same order.
@@ -43,7 +42,7 @@ enum Event {
 }
 
 #[test]
-fn replays_the_typescript_transcript_byte_for_byte() {
+fn replays_the_recorded_transcript_byte_for_byte() {
     let transcript: Transcript = serde_json::from_str(TRANSCRIPT).unwrap();
     let device = Arc::new(Mutex::new(VirtualDevice::new()));
     let controller = VirtualDeviceController::new(device.clone());

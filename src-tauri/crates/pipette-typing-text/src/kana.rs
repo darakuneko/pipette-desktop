@@ -18,8 +18,7 @@ const ROMAJI_PUNCTUATION: [u16; 4] = bmp("。、？！");
 /// True when every character of `text` other than whitespace is hiragana,
 /// katakana in ァ..ヶ, ー or one of 。、？！, and at least one is kana.
 ///
-/// The TypeScript walks code points; walking code units gives the same
-/// answer, because every accepted character is a single BMP unit and both
+/// Walking code units gives the same answer as walking code points, because every accepted character is a single BMP unit and both
 /// halves of a surrogate pair (or a lone surrogate) are rejected either way.
 pub fn is_kana_only_text(text: &[u16]) -> bool {
     let mut saw_kana = false;

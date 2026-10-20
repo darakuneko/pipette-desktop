@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! A private Xvfb for the X11 tests, started the way the fixture generator
-//! starts its own (scripts/resident-fixtures/x11/x-server.ts): on a display
+//! A private Xvfb for the X11 tests: on a display
 //! number from 90 up that this test reserves through the lock file first,
 //! without TCP, with a cookie in an authority file of its own, under
 //! `setpriv --pdeathsig TERM` so it stops with the test thread, and always

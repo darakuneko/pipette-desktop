@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The favorite transfer worker against the Electron main process: the
-// scenarios recorded from the main process handlers
-// (scripts/keyboard-store-fixtures/record-favorite-store-fixtures.test.ts)
-// replayed through the worker's requests, on a copy of the keycode modules
-// of its own, while this module's copy (the renderer's) holds the tables of
-// a connected keyboard with custom keycodes. The worker must answer what
-// the main process built, read or answered at each step, and the
-// renderer's copy must not: converting there would follow the keyboard.
+// The favorite transfer worker against the recorded golden scenarios
+// (ts_favorite_store_scenarios.json of pipette-keyboard-stores) replayed
+// through the worker's requests, on a copy of the keycode modules of its
+// own, while this module's copy (the renderer's) holds the tables of a
+// connected keyboard with custom keycodes. The worker must answer what the
+// scenarios recorded at each step, and the renderer's copy must not:
+// converting there would follow the keyboard.
 //
 // Also the client (favorite-transfer-client.ts), over a fake Worker.
 
@@ -40,7 +39,7 @@ interface Check {
   want: unknown
 }
 
-/** The error or the field the main process answered. */
+/** The error or the field the scenario recorded. */
 function answered(outcome: string | null): { error?: string; data?: unknown; success: boolean } {
   return JSON.parse(outcome ?? 'null') as { error?: string; data?: unknown; success: boolean }
 }
@@ -136,7 +135,7 @@ describe('the favorite transfer worker', () => {
     expect([...ops].sort()).toEqual(['export', 'exportCurrent', 'import', 'importToCurrent'])
   })
 
-  it.each(CHECKS.map((check) => [check.label, check] as const))('answers as the main process: %s', (_label, check) => {
+  it.each(CHECKS.map((check) => [check.label, check] as const))('answers as recorded: %s', (_label, check) => {
     expect(at(check.time, () => runInWorker(check.request))).toEqual(check.want)
   })
 

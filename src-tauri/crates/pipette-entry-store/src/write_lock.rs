@@ -3,7 +3,7 @@
 //! read-modify-write of its files from independent callers; running the
 //! tasks of one key one at a time, in the order they asked, makes every
 //! read-merge-write atomic against the others, while different keys still
-//! run in parallel. The keys are those of the Electron build: the keyboard
+//! run in parallel. The keys are the keyboard
 //! uid (snapshots and settings), `favorites/{type}`, the sync unit of the
 //! cross-keyboard stores, and [`META_LOCK_KEY`].
 //!

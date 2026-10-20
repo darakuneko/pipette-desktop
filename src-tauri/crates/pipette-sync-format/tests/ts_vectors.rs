@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! TypeScript → Rust: the deterministic vectors of
-//! `tests/fixtures/ts_vectors.json`, produced by the real TypeScript
-//! functions. Each envelope case is its own test so the 600,000-iteration
-//! key derivations run in parallel, and each password and salt pair is
-//! derived once (`common::key`).
+//! The recorded golden deterministic vectors of
+//! `tests/fixtures/ts_vectors.json`. Each envelope case is its own test so the
+//! 600,000-iteration key derivations run in parallel, and each password and
+//! salt pair is derived once (`common::key`).
 
 // Test helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]
@@ -31,8 +30,8 @@ fn envelope_case(name: &str) -> Value {
     vectors()["envelopes"].as_array().unwrap().iter().find(|c| c["name"] == name).unwrap().clone()
 }
 
-/// Rust encrypts the same inputs to the identical JSON text, and decrypts
-/// the TypeScript envelope.
+/// The same inputs encrypt to the identical JSON text, and the recorded
+/// envelope decrypts.
 fn check_envelope_case(name: &str) {
     let case = envelope_case(name);
     let password = str_of(&case, "password");
@@ -96,9 +95,9 @@ fn password_check_rejects_another_password() {
     assert!(!password_check_matches(&password_check_envelope(), "not the password"));
 }
 
-/// Same inputs, same failure, same message as the TypeScript `decrypt`.
-/// The rejected envelopes share one salt and mostly one password, so the
-/// key comes from `common::key`; `decrypt_with_key` runs the same checks.
+/// Same inputs, same failure, same message as recorded. The rejected envelopes
+/// share one salt and mostly one password, so the key comes from `common::key`;
+/// `decrypt_with_key` runs the same checks.
 fn check_rejection(name: &str) {
     let all = vectors();
     let case = all["rejections"].as_array().unwrap().iter().find(|c| c["name"] == name).unwrap();

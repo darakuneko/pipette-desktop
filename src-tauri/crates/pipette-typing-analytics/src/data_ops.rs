@@ -6,9 +6,9 @@
 //! device's own deleted ranges (deleted_ranges/apply.rs), the export and
 //! the import (import_export.rs), and the cache rebuild.
 //!
-//! None of them takes the sync lock: the commands hold it, as the Electron
-//! IPC handlers do. What writes this device's own day files runs on the
-//! recorder's flush chain, the one writer of those files.
+//! None of them takes the sync lock: the commands hold it. What writes this
+//! device's own day files runs on the recorder's flush chain, the one writer of
+//! those files.
 
 use std::future::Future;
 use std::io;
@@ -77,7 +77,7 @@ impl DataOps {
         blocking(move || analytics.machine_hash()).await
     }
 
-    /// `runOnFlushChain` for a task with an answer: runs `task` behind
+    /// [`Recorder::run_on_flush_chain`] for a task with an answer: runs `task` behind
     /// everything already on the chain and returns what it returned.
     pub(crate) async fn on_chain<T: Send + 'static>(
         &self,

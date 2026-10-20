@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The world of the preflight tests: the in-memory Drive of pipette-drive
-//! behind a wrapper that logs each request as the TypeScript recorder does
-//! (scripts/sync-fixtures/record-preflight-fixtures.test.ts), hides the
-//! files created while listings lag and holds requests at a gate; a stored
-//! password and a sign-in the test sets; a clock the test moves; and a
+//! behind a wrapper that logs each request in the form of the recorded goldens,
+//! hides the files created while listings lag and holds requests at a gate; a
+//! stored password and a sign-in the test sets; a clock the test moves; and a
 //! userData whose `local/auth/` holds the password-change state.
 
 #![allow(clippy::unwrap_used, clippy::panic, dead_code)]
@@ -217,7 +216,7 @@ impl DriveApi for TestDrive {
     }
 }
 
-/// The stored password as the TypeScript recorder's mock keeps it.
+/// The stored password as the recorded goldens hold it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Stored {
     None,

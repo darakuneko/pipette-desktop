@@ -8,14 +8,12 @@ import type { DeviceInfo } from './generated/DeviceInfo'
 import type * as ThisModule from './hid-transport'
 import { call, type CommandName } from './ipc'
 
-// Skips the round trip to the backend while no device is open, as the
-// Electron transport does.
+// Skips the round trip to the backend while no device is open.
 let deviceOpen = false
 
 // Async commands start in no fixed order on the backend, so reports are
 // queued here: each send/sendReceive is invoked after the previous one has
-// settled, preserving the call order the Electron main process keeps with
-// its mutex.
+// settled, preserving the call order.
 let queue: Promise<unknown> = Promise.resolve()
 
 function enqueue<T>(command: CommandName, args: { data: number[] }): Promise<T> {

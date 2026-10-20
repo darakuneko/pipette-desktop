@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Record-start keymap snapshots (keymap-snapshots.ts) and the three IPC
-//! handlers that save, pick and list them (typing-analytics-ipc-analyze.ts).
+//! Record-start keymap snapshots and the three handlers that save, pick and
+//! list them.
 //!
 //! Each (keyboard uid, machine hash) has a directory of `{savedAt}.json`
 //! files under `userData/typing-analytics/keymaps/`, written unindented. A
@@ -9,14 +9,12 @@
 //! record sessions. They are this device's own and never synced.
 //!
 //! The files are read as the JSON values they hold, whatever their shape,
-//! and handed back as such, as the TypeScript code does with what
-//! `JSON.parse` gives.
+//! and handed back as such.
 //!
-//! Where it differs from the Electron build: a uid that is not a single
-//! path segment (empty, `.`, `..`, or with `/` or `\`) has no snapshot
-//! directory, so nothing is saved, picked or listed for it; Node's
-//! `path.join` would resolve it to a directory elsewhere. A uid with a lone
-//! surrogate counts as no uid.
+//! A uid that is not a single path segment (empty, `.`, `..`, or with `/` or
+//! `\`) has no snapshot directory, so nothing is saved, picked or listed for
+//! it; joined to a path it would resolve to a directory elsewhere. A uid with a
+//! lone surrogate counts as no uid.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -44,8 +42,7 @@ pub enum KeymapSnapshotError {
     Io(#[from] io::Error),
     #[error(transparent)]
     Identity(#[from] IdentityError),
-    /// The newest snapshot has the same `layers` but no `matrix` object to
-    /// compare (`isSameContent` throws a TypeError).
+    /// The newest snapshot has the same `layers` but no `matrix` object to compare.
     #[error("TypeError: Cannot read properties of the newest snapshot's matrix")]
     NoMatrix,
 }
@@ -112,7 +109,7 @@ fn same_json(a: Option<&Value>, b: Option<&Value>) -> bool {
     a.map(pipette_js_json::stringify) == b.map(pipette_js_json::stringify)
 }
 
-/// `isSameContent(latest, snapshot)`: the parts a key heatmap depends on
+/// Whether `latest` and `snapshot` agree on the parts a key heatmap depends on
 /// (`layers`, the matrix size, `keymap`, `layout`); `productName` and
 /// `savedAt` do not count, so a cosmetic refresh does not cut a snapshot.
 fn is_same_content(latest: &Value, snapshot: &Object) -> Result<bool, KeymapSnapshotError> {
@@ -147,7 +144,7 @@ impl SaveSnapshotResult {
     }
 }
 
-/// `saveKeymapSnapshotIfChanged`: writes `snapshot` (as the handler builds
+/// Writes `snapshot` (as the handler builds
 /// it, with a string `uid` and `machineHash` and a number `savedAt`) as
 /// `{savedAt}.json` unless the newest snapshot of its directory has the
 /// same content; then it answers that snapshot's `savedAt`.
@@ -177,7 +174,7 @@ pub fn save_keymap_snapshot_if_changed(
     Ok(SaveSnapshotResult { saved: true, saved_at: Some(saved_at) })
 }
 
-/// `getKeymapSnapshotForRange`: the newest snapshot saved inside
+/// The newest snapshot saved inside
 /// `[from_ms, to_ms)`, else the newest saved at or before `from_ms`, as
 /// the JSON value its file holds; null when there is none or the picked
 /// file cannot be read.
@@ -200,7 +197,7 @@ pub fn get_keymap_snapshot_for_range(
 
 const SUMMARY_KEYS: [&str; 6] = ["uid", "machineHash", "productName", "savedAt", "layers", "matrix"];
 
-/// `listKeymapSnapshotSummaries`: each readable snapshot without its
+/// Each readable snapshot without its
 /// `keymap` and `layout`, ascending by `savedAt`. A file that cannot be
 /// read, is not JSON or holds a falsy value is skipped; a field the file
 /// lacks is left out.

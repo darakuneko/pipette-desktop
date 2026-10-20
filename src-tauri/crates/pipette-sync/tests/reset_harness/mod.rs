@@ -29,7 +29,7 @@ use pipette_sync_runtime::SyncRuntime;
 use crate::preflight_harness::{FakePasswords, FakeSignIn, NoWaits, START_MS, Stored, TestDrive};
 
 pub const PASSWORD: &str = "pw";
-/// The installation id the TypeScript recordings seed.
+/// The installation id the recorded goldens seed.
 pub const INSTALLATION_ID: &str = "00000000-0000-4000-8000-00000000f1f0";
 /// 2026-10-16T00:00:00.000Z, the clock of the recordings.
 pub const NOW: i64 = 1_792_108_800_000;
@@ -347,7 +347,7 @@ impl World {
 }
 
 /// Every file (as UTF-8 text) and empty directory (`path/`, `None`) under
-/// `root`, as the TypeScript harness's `readTree` lists them.
+/// `root`, as the recorded goldens list them.
 pub fn read_tree(root: &Path) -> std::collections::BTreeMap<String, Option<String>> {
     fn walk(root: &Path, dir: &Path, tree: &mut std::collections::BTreeMap<String, Option<String>>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir).unwrap().flatten().collect();

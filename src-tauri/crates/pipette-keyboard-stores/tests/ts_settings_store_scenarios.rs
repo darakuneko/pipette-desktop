@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded by
-//! scripts/keyboard-store-fixtures/record-settings-store-fixtures.test.ts.
-//! There the TypeScript settings handlers and the Tauri shim's settings
-//! members ran on the same userData files and left the same files; here the
-//! commands the shim made run on the same files, and each answer, the
-//! notified units and every file left behind are compared byte for byte
-//! with the handlers' run.
+//! Replays the recorded golden scenarios of the settings handlers: the
+//! commands the shim makes run on the recorded userData files, and each
+//! answer, the notified units and every file left behind are compared byte
+//! for byte with the recorded run.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -59,7 +56,7 @@ fn run_command(h: &Harness, command: &str, args: &Object) -> Result<Value, Strin
 }
 
 #[test]
-fn the_shim_commands_leave_the_files_of_the_typescript_handlers() {
+fn the_shim_commands_leave_the_recorded_files() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_settings_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

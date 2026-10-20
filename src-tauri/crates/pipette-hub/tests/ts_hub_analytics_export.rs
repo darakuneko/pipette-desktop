@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze post export against the Electron preparation
-//! (tests/fixtures/ts_hub_analytics_export.json and its seed, written by
-//! `pnpm run generate:hub-fixtures`): on the same cache and userData, with
-//! the same machine hash and time, each case must give the export as the
-//! same JSON text with the same preview values, the same failure, or the
-//! same thrown message. The cache groups days by local time, so the cases
-//! run in a process of their own in the time zone they were recorded in.
+//! The Analyze post export against the recorded golden
+//! (tests/fixtures/ts_hub_analytics_export.json and its seed): on the same
+//! cache and userData, with the same machine hash and time, each case must
+//! give the export as the same JSON text with the same preview values, the
+//! same failure, or the same thrown message. The cache groups days by local
+//! time, so the cases run in a process of their own in the time zone they
+//! were recorded in.
 
 #![allow(clippy::unwrap_used)]
 
@@ -81,10 +81,10 @@ fn check(case: &Value, got: Result<Prepared, PrepareError>) {
 }
 
 #[test]
-fn the_export_matches_typescript() {
+fn the_export_matches_the_golden() {
     let golden = fixture(FIXTURE);
     let zone = text(field(&golden, "timeZone"));
-    let Some(_) = in_each_time_zone("the_export_matches_typescript", &[zone]) else { return };
+    let Some(_) = in_each_time_zone("the_export_matches_the_golden", &[zone]) else { return };
 
     let dir = tempfile::tempdir().unwrap();
     build_tree(dir.path(), field(&golden, "tree"));
@@ -121,8 +121,7 @@ impl AnalyticsSource for NotReady {
     }
 }
 
-/// The machine hash is read once the saved filter has a range, as
-/// `getMachineHash()` is in the TS: the checks before it answer without
+/// The machine hash is read once the saved filter has a range: the checks before it answer without
 /// the analytics, and a saved filter that passes them throws their error.
 #[test]
 fn the_machine_hash_is_read_after_the_saved_filter() {

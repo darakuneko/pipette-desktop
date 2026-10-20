@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Envelope encryption, byte-compatible with `src/main/sync/sync-crypto.ts`.
+//! Envelope encryption, byte-compatible with the envelopes other devices write.
 //!
 //! - Key: PBKDF2-HMAC-SHA256 over the password's UTF-8 bytes as given (no
 //!   Unicode normalization, no trimming), 16-byte random salt, 600,000
@@ -41,16 +41,15 @@ const BASE64: GeneralPurpose = GeneralPurpose::new(
 pub enum CryptoError {
     /// A binary field is not standard Base64. Node's decoder is more lenient
     /// (it skips characters outside the alphabet and also takes `-` and `_`),
-    /// so such text may still open on the TypeScript side; envelopes written
-    /// by either implementation never contain it.
+    /// so such text may still open in the 0.4 build; envelopes written by
+    /// either build never contain it.
     #[error("invalid Base64 in the {0} field")]
     InvalidBase64(&'static str),
-    /// Same message and check as the TypeScript `decrypt`: the decoded
-    /// ciphertext cannot even hold the tag.
+    /// The decoded ciphertext cannot even hold the tag.
     #[error("Ciphertext too short")]
     CiphertextTooShort,
-    /// Every envelope the TypeScript side writes has a 12-byte IV; other
-    /// lengths are not accepted here.
+    /// Every envelope Pipette writes has a 12-byte IV; other lengths are not
+    /// accepted here.
     #[error("unsupported IV length {0}")]
     UnsupportedIvLength(usize),
     /// Wrong password, a different sync unit or version than the one
@@ -111,8 +110,8 @@ pub fn encrypt(plaintext: &str, password: &str, sync_unit: &str) -> Result<Envel
     seal(plaintext, &key, sync_unit, &salt, &iv, iso_8601_millis(SystemTime::now()))
 }
 
-/// The binary fields of an envelope, checked in the order the TypeScript
-/// `decrypt` checks them, before any key is derived.
+/// The binary fields of an envelope, checked in a fixed order before any key is
+/// derived.
 struct Sealed {
     salt: Vec<u8>,
     iv: Vec<u8>,

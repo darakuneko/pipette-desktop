@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sign-in and sign-out specs of
-//! src/main/sync/__tests__/sync-pending-store.test.ts ("switching to a new
-//! sign-in", "signing out"): the waits for running sync work on Tokio's
-//! paused clock, the pending units on a temporary userData directory, and
-//! the stored sign-in a fake that records what happened in which order.
+//! The sign-in and sign-out specs ("switching to a new sign-in", "signing
+//! out"): the waits for running sync work on Tokio's paused clock, the pending
+//! units on a temporary userData directory, and the stored sign-in a fake that
+//! records what happened in which order.
 
 #![allow(clippy::unwrap_used)]
 

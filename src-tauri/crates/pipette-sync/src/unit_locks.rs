@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The locks a sync of one unit holds across its awaits (`withWriteLock`
-//! of src/main/per-uid-write-lock.ts, as src/main/sync/sync-merge-dispatch.ts
-//! takes it with the `sync:` key, and with the `upload:` key around an
-//! upload). The store locks
-//! (`pipette_entry_store::WriteLocks`) are held only around a read or a
-//! write of the files; these are held while a task downloads, merges and
-//! uploads. Tasks of one key run one at a time in the order they asked;
-//! different keys run in parallel. A key is not reentrant: a task that
-//! takes the key it already holds waits forever.
+//! The locks a sync of one unit holds across its awaits (the `sync:` key, and
+//! the `upload:` key around an upload). The store locks
+//! (`pipette_entry_store::WriteLocks`) are held only around a read or a write
+//! of the files; these are held while a task downloads, merges and uploads.
+//! Tasks of one key run one at a time in the order they asked; different keys
+//! run in parallel. A key is not reentrant: a task that takes the key it
+//! already holds waits forever.
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -17,11 +15,11 @@ use tokio::sync::{Mutex as AsyncMutex, OwnedMutexGuard};
 
 use crate::units::is_typing_deleted_ranges_sync_unit;
 
-/// The key a whole sync of `unit` holds (`withUnitSyncLock`): only a
-/// device's deleted-ranges unit has one. Without it, a sync that bundled
-/// the file before its upload could overwrite Drive after another sync of
-/// the same unit merged newer entries from Drive into the file and found
-/// nothing to upload, leaving Drive without entries this device holds.
+/// The key a whole sync of `unit` holds: only a device's deleted-ranges unit
+/// has one. Without it, a sync that bundled the file before its upload could
+/// overwrite Drive after another sync of the same unit merged newer entries
+/// from Drive into the file and found nothing to upload, leaving Drive without
+/// entries this device holds.
 pub fn unit_sync_lock_key(unit: &str) -> Option<String> {
     is_typing_deleted_ranges_sync_unit(unit).then(|| format!("sync:{unit}"))
 }

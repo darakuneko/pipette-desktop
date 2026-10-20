@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The unencrypted "password change in progress" lock file in
-//! appDataFolder (src/main/sync/sync-password-lock.ts),
-//! `password-change-lock.json`. A machine re-encrypting every file under a
-//! new sync password holds it so the other machines stop syncing until the
-//! change is finished or rolled back. It carries no secret and is never a
-//! sync unit.
+//! The unencrypted "password change in progress" lock file in appDataFolder,
+//! `password-change-lock.json`. A machine re-encrypting every file under a new
+//! sync password holds it so the other machines stop syncing until the change
+//! is finished or rolled back. It carries no secret and is never a sync unit.
 //!
 //! Which lock wins is decided by Drive's `createdTime` (then the smallest
 //! id), never by a machine's clock; a lock is recognised as this machine's
@@ -29,11 +27,10 @@ const LOCK_TYPE: &str = "password-change-lock";
 /// A wait of the lock's re-lists.
 pub type Sleep = Arc<dyn Fn(Duration) -> BoxFuture<'static, ()> + Send + Sync>;
 
-/// `lockTiming`: Drive's listings can miss a file created a moment ago.
-/// `relist_delays` are the waits before each extra re-list while our own
-/// lock is not yet visible; `settle` is the wait before the final re-list
-/// once we appear to win, so a peer lock that becomes visible slightly
-/// later is still seen.
+/// Drive's listings can miss a file created a moment ago. `relist_delays` are
+/// the waits before each extra re-list while our own lock is not yet visible;
+/// `settle` is the wait before the final re-list once we appear to win, so a
+/// peer lock that becomes visible slightly later is still seen.
 #[derive(Clone)]
 pub struct LockTiming {
     pub sleep: Sleep,
@@ -79,14 +76,14 @@ impl PasswordChangeLock {
     }
 }
 
-/// `PasswordChangeLockInfo`: what is shown of another machine's lock.
+/// What is shown of another machine's lock.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LockInfo {
     pub machine_hash: String,
     pub started_at: String,
 }
 
-/// `AcquirePasswordChangeLockResult`.
+/// What an attempt to take the password-change lock found.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AcquireOutcome {
     Acquired(String),
@@ -101,9 +98,8 @@ fn non_empty_string(object: &serde_json::Map<String, Value>, key: &str) -> Optio
     object.get(key).and_then(Value::as_str).filter(|s| !s.is_empty()).map(str::to_owned)
 }
 
-/// `parsePasswordChangeLock`: `None` when the text is not a valid
-/// version-1 lock. Callers take `None` as a lock whose content cannot be
-/// read, not as no lock.
+/// Parses a lock's text: `None` when it is not a valid version-1 lock. Callers
+/// take `None` as a lock whose content cannot be read, not as no lock.
 pub fn parse_password_change_lock(text: &str) -> Option<PasswordChangeLock> {
     let value: Value = serde_json::from_str(text).ok()?;
     let object = value.as_object()?;
@@ -155,16 +151,15 @@ impl DriveLocks<'_> {
         Ok(files.into_iter().filter(|file| is_password_change_lock_file(&file.name)).collect())
     }
 
-    /// `listPasswordChangeLocks`: every listed lock, the earliest (the
-    /// holder) first.
+    /// Every listed lock, the earliest (the holder) first.
     pub async fn list_locks(&self) -> Result<Vec<DriveFile>, PasswordChangeError> {
         let mut locks = self.list_lock_files().await?;
         locks.sort_by(compare_lock_files);
         Ok(locks)
     }
 
-    /// `readPasswordChangeLockInfo`: the holder of `file`, for display;
-    /// `None` when it cannot be downloaded or its content is not a lock.
+    /// The holder of `file`, for display; `None` when it cannot be downloaded
+    /// or its content is not a lock.
     pub async fn read_info(&self, file: &DriveFile) -> Option<LockInfo> {
         let bytes = self.drive.download(&file.id).await.ok()?;
         let lock = parse_password_change_lock(&String::from_utf8_lossy(&bytes))?;
@@ -212,12 +207,11 @@ impl DriveLocks<'_> {
         Ok(is_winner(&self.list_lock_files().await?, file_id))
     }
 
-    /// `acquirePasswordChangeLock`: creates our lock unless one exists,
-    /// then re-lists to settle a race with a machine that created its lock
-    /// at about the same time. `on_created` gets the new file id before the
-    /// re-list, so the caller can save it; when it fails, our lock is
-    /// deleted and its error returned. Only our own file is ever deleted
-    /// here.
+    /// Creates our lock unless one exists, then re-lists to settle a race with
+    /// a machine that created its lock at about the same time. `on_created`
+    /// gets the new file id before the re-list, so the caller can save it; when
+    /// it fails, our lock is deleted and its error returned. Only our own file
+    /// is ever deleted here.
     pub async fn acquire<F, Fut>(
         &self,
         lock: &PasswordChangeLock,
@@ -255,9 +249,8 @@ impl DriveLocks<'_> {
         }
     }
 
-    /// `findOwnPasswordChangeLock`: the id of the lock whose content
-    /// carries `lock_id`. A failed download fails: "could not check" must
-    /// not be taken for "no lock".
+    /// The id of the lock whose content carries `lock_id`. A failed download
+    /// fails: "could not check" must not be taken for "no lock".
     pub async fn find_own(&self, lock_id: &str) -> Result<Option<String>, PasswordChangeError> {
         for file in self.list_lock_files().await? {
             let bytes = self.drive.download(&file.id).await?;
@@ -269,14 +262,14 @@ impl DriveLocks<'_> {
         Ok(None)
     }
 
-    /// `isPasswordChangeLockHeld`: whether `file_id` is listed and is the
-    /// earliest lock. Our own file missing from a listing may be listing
-    /// lag, so that case re-lists first; an earlier lock is final at once.
+    /// Whether `file_id` is listed and is the earliest lock. Our own file
+    /// missing from a listing may be listing lag, so that case re-lists first;
+    /// an earlier lock is final at once.
     pub async fn is_held(&self, file_id: &str) -> Result<bool, PasswordChangeError> {
         Ok(is_winner(&self.locks_showing(file_id).await?, file_id))
     }
 
-    /// `releasePasswordChangeLock`: an already deleted lock is not an error.
+    /// Deletes the lock `file_id`; an already deleted lock is not an error.
     pub async fn release(&self, file_id: &str) -> Result<(), PasswordChangeError> {
         Ok(self.drive.delete_file(file_id).await?)
     }
@@ -296,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_and_reads_the_lock_of_the_electron_build() {
+    fn writes_and_reads_the_lock_file_json() {
         let lock = PasswordChangeLock {
             lock_id: "id".into(),
             machine_hash: "hash".into(),

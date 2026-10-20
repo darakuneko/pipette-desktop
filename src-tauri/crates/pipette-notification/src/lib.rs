@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The startup notices of src/main/notification-store.ts
-//! (`fetchNotifications`): where they come from (destination.rs), the
-//! request (request.rs), and the response read into the renderer's result
+//! The startup notices: where they come from (destination.rs), the request
+//! (request.rs), and the response read into the renderer's result
 //! (normalize.rs, with the publication dates of date_parse.rs).
 //!
-//! Where it differs from Electron:
 //! - a string date is kept only in the forms date_parse.rs reads, a subset
 //!   of what `Date.parse` reads;
-//! - the error text of a failed request or of a body that is not JSON is
-//!   this build's own (the renderer reads only `success`);
-//! - the proxy comes from the environment (reqwest), not Chromium's
-//!   settings;
-//! - a body over 1 MiB fails the fetch ([`NOTICE_LIMITS`]); Electron reads
-//!   any size. Ten notices are a few kilobytes.
+//! - the renderer reads only `success` of a failed request or of a body
+//!   that is not JSON, not its error text;
+//! - the proxy comes from the environment (reqwest);
+//! - a body over 1 MiB fails the fetch ([`NOTICE_LIMITS`]). Ten notices
+//!   are a few kilobytes.
 
 mod date_parse;
 mod destination;
@@ -31,15 +28,14 @@ pub use request::{FETCH_TIMEOUT, NOTICE_LIMITS, notice_request, request_body};
 /// The error of a fetch that took longer than [`FETCH_TIMEOUT`].
 pub const TIMED_OUT: &str = "the request timed out";
 
-/// `fetchNotifications`: posts the notice query to `url` through
-/// `requester` with `now_ms` as `Date.now()`, and reads the response. A
-/// status outside 2xx settles once the headers are in, without its body
-/// (Electron stops at `!response.ok` too). The whole fetch ends after
-/// [`FETCH_TIMEOUT`] whatever the requester's own bounds. The body is at
-/// most [`NOTICE_LIMITS`]'s 1 MiB, which parses in milliseconds, so the
-/// parse and the checks run in place. Logs a failure with its error and a success with the number of
-/// notices only: the notices themselves are never logged. Run on the Tokio
-/// runtime.
+/// Fetches the notices: posts the notice query to `url` through `requester`
+/// with `now_ms` as `Date.now()`, and reads the response. A status outside
+/// 2xx settles once the headers are in, without its body. The whole fetch
+/// ends after [`FETCH_TIMEOUT`] whatever the requester's own bounds. The
+/// body is at most [`NOTICE_LIMITS`]'s 1 MiB, which parses in milliseconds,
+/// so the parse and the checks run in place. Logs a failure with its error
+/// and a success with the number of notices only: the notices themselves
+/// are never logged. Run on the Tokio runtime.
 pub async fn fetch_notifications(
     requester: &dyn HttpRequester,
     url: &str,

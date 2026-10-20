@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync of one unit (`UnitSync`), the cases of the `syncOrUpload` /
-//! `mergeWithRemote` parts of src/main/__tests__/sync-service.test.ts on the
-//! in-memory Drive: what is uploaded where, what is recorded as handled
-//! (only what a merge or upload finished, SYNC-PROCESS §4), the files this
-//! run created, this device's own days, and one upload of a unit at a time.
+//! The sync of one unit (`UnitSync`) on the in-memory Drive: what is uploaded
+//! where, what is recorded as handled (only what a merge or upload finished,
+//! SYNC-PROCESS §4), the files this run created, this device's own days, and
+//! one upload of a unit at a time.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The virtual keyboard reached through HidService (open / send_receive /
 // close on the backend seam) answers exactly like the device itself: the
-// golden transcript recorded from the TypeScript virtual device replays
-// byte for byte, with no retry delay along the way.
+// recorded golden transcript replays byte for byte, with no retry delay along the way.
 
 mod common;
 
@@ -46,7 +45,7 @@ enum Event {
 }
 
 #[test]
-fn replays_the_typescript_transcript_through_the_service_byte_for_byte() {
+fn replays_the_recorded_transcript_through_the_service_byte_for_byte() {
     let transcript: Transcript = serde_json::from_str(TRANSCRIPT).unwrap();
     let clock = Arc::new(AtomicU64::new(0));
     let sleeps = Arc::new(AtomicUsize::new(0));

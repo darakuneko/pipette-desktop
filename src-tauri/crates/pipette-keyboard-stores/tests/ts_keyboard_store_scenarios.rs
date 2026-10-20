@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript handlers by
-//! scripts/keyboard-store-fixtures/record-keyboard-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the keyboard store handlers:
 //! the same userData files and clock, the same calls, then each response,
 //! the notified units and every file left behind compared byte for byte.
 
@@ -72,7 +71,7 @@ fn expected_outcome(value: &Value) -> Outcome {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_keyboard_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

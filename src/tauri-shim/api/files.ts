@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI file members for the Tauri build
 // (src-tauri/src/file_commands.rs). The backend shows each member's native
-// dialog with the titles, default file names and filters of the Electron
-// main process (src/main/file-io.ts) and reads or writes the file the user
-// chose, so the page never names a path. The results and their error
-// strings are file-io.ts's; a closed dialog answers `error: 'cancelled'`.
+// dialog and reads or writes the file the user chose, so the page never
+// names a path; a closed dialog answers `error: 'cancelled'`.
 //
 // Text crosses as well-formed Unicode: a lone surrogate, which the IPC
-// cannot carry, becomes U+FFFD, the character Electron writes for it as
-// UTF-8. sideloadJson gets the file's text and parses it here.
+// cannot carry, becomes U+FFFD. sideloadJson gets the file's text and
+// parses it here.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { CsvBundleResult } from '../generated/CsvBundleResult'
@@ -32,7 +30,7 @@ function wellFormedEntries(files: unknown): unknown {
   })
 }
 
-/** sideloadJson's result; the Electron handler also answers the path. */
+/** sideloadJson's result with the path the backend also answers. */
 type SideloadResult = Awaited<ReturnType<VialAPI['sideloadJson']>> & { filePath?: string }
 
 export const filesApi = {

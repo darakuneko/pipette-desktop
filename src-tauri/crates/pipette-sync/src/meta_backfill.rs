@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keyboard-name backfill of a full download (`backfillKeyboardMeta` of
-//! src/main/sync/keyboard-meta.ts, called by `executeSync` after a
-//! download of scope `'all'`): each keyboard that Drive has a snapshots file
-//! of and the names index has no entry for (a tombstone counts as an entry)
-//! is named after its first live snapshot, read from the local snapshots
-//! or else from the snapshots bundle on Drive.
+//! The keyboard-name backfill of a full download (run after a download of scope
+//! `'all'`): each keyboard that Drive has a snapshots file of and the names
+//! index has no entry for (a tombstone counts as an entry) is named after its
+//! first live snapshot, read from the local snapshots or else from the
+//! snapshots bundle on Drive.
 
 use std::sync::Arc;
 
@@ -39,9 +38,8 @@ pub struct BackfillResult {
     pub failed: Vec<String>,
 }
 
-/// The device name in the snapshots bundle `file` on Drive
-/// (`resolveDeviceNameFromRemoteSnapshots`); `None` when it cannot be
-/// downloaded, opened with `password` or read, or names none.
+/// The device name in the snapshots bundle `file` on Drive; `None` when it
+/// cannot be downloaded, opened with `password` or read, or names none.
 async fn remote_device_name(
     drive: &DriveClient,
     file: &DriveFile,
@@ -81,13 +79,12 @@ async fn resolve(
     }
 }
 
-/// Names the keyboards Drive's `listing` has snapshots of and the names
-/// index lacks, at most [`BACKFILL_CONCURRENCY`] at a time, and records the
-/// names in one write. A keyboard that gains an entry while its name is
-/// looked up (a delete leaves a tombstone) keeps that entry; the TypeScript
-/// backfill writes the name over it. Reports `sync:unit-applied` for the names unit when
-/// any name was recorded; the caller marks the unit pending for upload.
-/// Fails only when the names index cannot be read or written.
+/// Names the keyboards Drive's `listing` has snapshots of and the names index
+/// lacks, at most [`BACKFILL_CONCURRENCY`] at a time, and records the names in
+/// one write. A keyboard that gains an entry while its name is looked up (a
+/// delete leaves a tombstone) keeps that entry. Reports `sync:unit-applied` for
+/// the names unit when any name was recorded; the caller marks the unit pending
+/// for upload. Fails only when the names index cannot be read or written.
 pub async fn backfill_keyboard_meta(
     ctx: &StoreContext,
     drive: &DriveClient,

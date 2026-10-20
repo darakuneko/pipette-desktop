@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The garbage collection a sync pass runs on the pack stores it touched
-//! (src/main/sync/pack-gc.ts and the stores' `runGcUnderLock`): drop the
+//! The garbage collection a sync pass runs on the pack stores it touched:
+//! drop the
 //! tombstones past their 30 days, then remove the body files no meta names.
 //!
 //! It runs once per whole download pass, never from the merge of one unit:
@@ -30,8 +30,8 @@ pub struct GcCounts {
 }
 
 /// Runs the GC of every pack store a download pass attempted to merge a
-/// unit of (`runPackGcAfterPass`). A store whose unit failed in the pass
-/// skips the sweep. Never fails: a failure is logged by store name only.
+/// unit of. A store whose unit failed in the pass skips the sweep. Never
+/// fails: a failure is logged by store name only.
 pub fn run_pack_gc_after_pass(ctx: &StoreContext, attempted: &[String], failed: &[String]) {
     let touches = |units: &[String], prefix: &str| units.iter().any(|u| u.starts_with(prefix));
     for (store, label) in [(&I18N_PACKS, "i18n"), (&THEME_PACKS, "theme")] {
@@ -84,8 +84,8 @@ impl PackStore {
     }
 
     /// Purges the expired tombstones and sweeps the orphan body files under
-    /// one hold of the store's lock (`runGcUnderLock`). A purge writes the
-    /// index (as read, without the purged metas) and reports the roster.
+    /// one hold of the store's lock. A purge writes the index (as read,
+    /// without the purged metas) and reports the roster.
     pub fn run_gc_under_lock(&self, ctx: &StoreContext, skip_sweep: bool) -> Result<GcCounts, PackSyncError> {
         self.with_lock(ctx, || {
             let Some(mut index) = self.read_index_for_gc(ctx) else {
@@ -171,7 +171,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn temp_files_match_the_pattern_of_the_electron_build() {
+    fn temp_files_match_the_temp_name_pattern() {
         for name in ["a.json.tmp", "a.json.123.abc0.tmp", ".json.1.f.tmp", "x.json.json.9.0.tmp"] {
             assert!(is_temp_file(name), "{name}");
         }

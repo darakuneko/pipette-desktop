@@ -11,9 +11,8 @@ use zeroize::Zeroizing;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-/// `getIdToken` of src/main/sync/google-auth.ts: the Google id_token the
-/// Hub token is exchanged for (`test:<email>` for the Hub test account),
-/// `None` when no one is signed in.
+/// The Google id_token the Hub token is exchanged for (`test:<email>` for
+/// the Hub test account), `None` when no one is signed in.
 pub trait IdTokenSource: Send + Sync {
     fn id_token(&self) -> BoxFuture<'_, Option<Zeroizing<String>>>;
 }
@@ -28,13 +27,12 @@ impl<F: Fn() -> Option<String> + Send + Sync> IdTokenSource for F {
 /// A read of the typing analytics cache, run where the cache lives.
 pub type AnalyticsJob = Box<dyn FnOnce(&TypingAnalyticsDb) + Send>;
 
-/// The typing analytics the Analyze post's export reads
-/// (src/main/hub/hub-analytics.ts): this device's machine hash and the
-/// cache. [`crate::analytics::TypingAnalyticsSource`] connects it to the
+/// The typing analytics the Analyze post's export reads: this device's
+/// machine hash and the cache. [`crate::analytics::TypingAnalyticsSource`] connects it to the
 /// app's analytics; the tests connect it to a seeded cache.
 pub trait AnalyticsSource: Send + Sync {
-    /// `getMachineHash()`: this device's hash, once the analytics are
-    /// ready. The error is the text of what kept them from it.
+    /// This device's machine hash, once the analytics are ready. The error is
+    /// the text of what kept them from it.
     fn machine_hash(&self) -> BoxFuture<'_, Result<String, String>>;
 
     /// Runs `job` on the cache, after the writes sent before it, and

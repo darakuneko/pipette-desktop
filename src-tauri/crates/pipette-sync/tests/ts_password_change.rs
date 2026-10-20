@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript password change by
-//! scripts/sync-fixtures/record-password-change-fixtures.test.ts and
-//! compares every step with the recording: its result or error message,
-//! the Drive requests it sent (with the bytes of each lock and marker it
-//! created) and the waits of the lock's re-lists, the bytes of the state
-//! file after it, whether the change keys read, and the stored password;
-//! then the files left on Drive and the password that opens each one.
+//! Replays the recorded golden password-change scenarios and compares every
+//! step with the recording: its result or error message, the Drive requests it
+//! sent (with the bytes of each lock and marker it created) and the waits of
+//! the lock's re-lists, the bytes of the state file after it, whether the
+//! change keys read, and the stored password; then the files left on Drive and
+//! the password that opens each one.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -212,7 +211,7 @@ async fn replay(scenario: &Value) {
 }
 
 #[tokio::test]
-async fn the_password_change_matches_the_typescript_recording() {
+async fn the_password_change_matches_the_recorded_golden() {
     let fixture = fixture();
     assert_eq!(fixture["now"].as_u64(), Some(NOW));
     assert_eq!(fixture["machineHash"], "golden-hash");

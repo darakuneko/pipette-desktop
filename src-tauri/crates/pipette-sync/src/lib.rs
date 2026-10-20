@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync engine (src/main/sync/): the bundles, the merges, the passes
-//! and their entry points, the password and its change, the trash and the
-//! resets. It runs on `pipette_drive::DriveApi` and keeps its memory in
+//! The sync engine: the bundles, the merges, the passes and their entry points,
+//! the password and its change, the trash and the resets. It runs on
+//! `pipette_drive::DriveApi` and keeps its memory in
 //! `pipette_sync_runtime::SyncRuntime`.
 //!
 //! - [`units`]: what a unit name says (its store, its lock, its shape);
@@ -18,7 +18,7 @@
 //! - [`dispatch`]: the sync of one unit (its merge or upload) and the
 //!   Drive revisions it records, with the envelope of [`codec`];
 //! - [`scope`] and [`execute`]: the units a scope covers, and the full
-//!   pass of `executeSync`;
+//!   sync pass;
 //! - [`preflight`]: what every entry point runs before it touches data,
 //!   with its parts in [`format`] and [`format_status`] (the sync-format
 //!   marker and the status of the update banner) and [`password`] (the

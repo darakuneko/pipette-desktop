@@ -8,8 +8,8 @@ use pipette_time::date_value_ms;
 
 use super::{MergeEnv, MergeError, prop};
 
-/// `safeTimestamp`: the time of `value` in ms, 0 for a missing, falsy or
-/// invalid one, so a corrupt time always loses.
+/// The time of `value` in ms, 0 for a missing, falsy or invalid one, so a
+/// corrupt time always loses.
 fn safe_timestamp(value: Option<&Value>) -> f64 {
     value.filter(|v| v.is_truthy()).and_then(date_value_ms).unwrap_or(0.0)
 }

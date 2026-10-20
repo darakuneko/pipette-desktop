@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The import of a text file, as `importFromDialog` /
-//! `confirmImportOverwrite` of src/main/typing-test-text-store.ts do it once
-//! the dialog has answered: a file named like a live text is held until the
-//! user confirms the overwrite.
+//! The import of a text file once the dialog has answered: a file named like a
+//! live text is held until the user confirms the overwrite.
 
 use std::fs;
 use std::path::Path;
@@ -48,7 +46,7 @@ fn decode(bytes: &[u8]) -> Option<&str> {
 }
 
 impl TypingTextStore {
-    /// Imports the file the user picked (`TYPING_TEST_TEXT_IMPORT` once its
+    /// Imports the file the user picked (the `typing_test_text_store_import` command once its
     /// dialog answered). A file over [`TYPING_TEXT_MAX_FILE_BYTES`] is not
     /// read. A name a live text has (ignoring case) is held for
     /// [`Self::confirm_import`] and answered as `DUPLICATE_NAME` with the
@@ -83,7 +81,7 @@ impl TypingTextStore {
 
     /// Saves the import held by [`Self::import_file`] over the text it
     /// collided with, keeping that text's current name
-    /// (`TYPING_TEST_TEXT_IMPORT_CONFIRM`).
+    /// (the `typing_test_text_store_import_confirm` command).
     pub fn confirm_import(&self, ctx: &StoreContext) -> Result<Entry, TypingTextError> {
         let held = self.state.take_pending().ok_or_else(|| {
             TypingTextError::refused(TypingTextErrorCode::NotFound, "No pending import to confirm")

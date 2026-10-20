@@ -35,13 +35,15 @@ This document describes what data Pipette stores, where it lives, and how extern
 
 ## Local Data
 
-All local data is stored under the OS user data directory:
+All local data is stored under the OS user data directory — the same directory Pipette 0.4 used, so an update from 0.4 keeps your data where it is:
 
 | OS | Path |
 |----|------|
-| Linux | `~/.config/pipette-desktop/` |
+| Linux | `~/.config/pipette-desktop/` (`$XDG_CONFIG_HOME/pipette-desktop/` when that is set) |
 | macOS | `~/Library/Application Support/pipette-desktop/` |
 | Windows | `%APPDATA%/pipette-desktop/` |
+
+A debug build, a build with the development tools, and a release build started from inside its Cargo target directory (`pnpm dev`, `pnpm build:debug`, or a `.app` bundle or `pipette.exe` still under `src-tauri/target`) use `app.pipette.desktop/` in the same place instead, so they never open the data of the installed Pipette, and they do not take updates from the releases. A release build started from anywhere else counts as an installed Pipette, even when you built it from source: on Linux any executable outside the target directory and every AppImage, on macOS an app bundle (`.app`), on Windows the `pipette.exe` the installer put next to its `uninstall.exe`. Such a build uses `pipette-desktop/`. Uninstalling Pipette does not delete this directory (on Windows, the uninstaller's option to delete app data removes only the `app.pipette.desktop` data, not `pipette-desktop`).
 
 ### App Settings
 
@@ -203,11 +205,11 @@ Rotating log files for debugging. No keyboard data or personal information is lo
 
 ### Authentication Credentials
 
-OAuth tokens and sync password are encrypted using the OS keychain (Electron `safeStorage`). These are never stored in plain text.
+OAuth tokens and the sync password are stored encrypted (AES-256-GCM) in `local/auth/`, with a key kept in the OS key store (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux). They are never stored in plain text. On Linux the key store needs a running, unlocked keyring service (for example GNOME Keyring or KWallet). The sign-in files Pipette 0.4 saved (`local/auth/*.enc`) are not read, so after an update from 0.4 you sign in to Google and enter the sync password again. They stay in `local/auth/` until Reset Local Data with App Settings selected removes that whole folder, them included.
 
 Changes not yet sent to Cloud Sync are listed by sync unit name in `local/sync-pending.json`, together with the opaque ID of the Google account they were made under (the `sub` claim of Google's sign-in token — not your email address), so they are never sent to a different account. Only this list of unsent changes is kept per account: your local data itself is shared, so a manual sync or background sync sends it to whichever account is signed in. This file is not synced.
 
-While a sync password change is in progress, the old and new sync passwords are also kept on this machine (encrypted the same way, in `local/auth/sync-password-change-keys.enc`) together with a non-secret progress file (`local/auth/sync-password-change.json`: direction, step, and the identity of its Google Drive lock). Both are deleted when the change finishes, is reverted, or is abandoned. They are never synced.
+While a sync password change is in progress, the old and new sync passwords are also kept on this machine (encrypted the same way, in `local/auth/tauri-sync-password-change-keys.bin`) together with a non-secret progress file (`local/auth/sync-password-change.json`: direction, step, and the identity of its Google Drive lock). Both are deleted when the change finishes, is reverted, or is abandoned. They are never synced.
 
 ---
 

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The startup update of the Hub-linked language packs
-//! (`src/main/hub/i18n-startup-sync.ts`).
+//! The startup update of the Hub-linked language packs.
 //!
 //! Every live pack with a Hub post id is checked against the Hub's
 //! timestamps (in batches of 100, sent at once); a pack whose Hub time
@@ -33,9 +32,9 @@ use crate::sources::BoxFuture;
 /// off the async runtime, as every store write; a [`StoreContext`] runs it
 /// in place, for the tests.
 pub trait StartupPacks: Send + Sync {
-    /// The live metas (`listMetas`); the error is the text of the failure.
+    /// The live metas; the error is the text of the failure.
     fn list_metas(&self) -> BoxFuture<'_, Result<Vec<Entry>, String>>;
-    /// `savePack`; the error is the store's message.
+    /// Saves the pack of `input`; the error is the store's message.
     fn save_pack(&self, input: SavePackInput) -> BoxFuture<'_, Result<(), String>>;
 }
 
@@ -59,7 +58,7 @@ pub struct SyncError {
     pub reason: String,
 }
 
-/// `I18nStartupSyncResult`.
+/// What a startup update of the Hub-linked language packs found.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StartupSyncResult {
     /// The Hub-linked packs checked.
@@ -71,7 +70,7 @@ pub struct StartupSyncResult {
     pub errors: Vec<SyncError>,
 }
 
-/// One line of the pass's log, as Electron's `log(level, message)`.
+/// One line of the pass's log: its level and message.
 pub type LogLine = (Level, String);
 
 /// What a pass did.
@@ -85,8 +84,8 @@ pub struct StartupSyncOutcome {
 }
 
 impl StartupSyncOutcome {
-    /// The log lines of the pass and of its summary (`reportSyncResult`):
-    /// the summary only when packs were checked, one line per error.
+    /// The log lines of the pass and of its summary: the summary only when
+    /// packs were checked, one line per error.
     pub fn report(&self) -> Vec<LogLine> {
         let mut lines = self.logs.clone();
         let result = &self.result;
@@ -122,7 +121,7 @@ impl StartupSyncOutcome {
     }
 }
 
-/// The first line of the stack of the error the TS throws:
+/// The first line of the stack of the error:
 /// `<class name>: <message>`. A request that got no response is the
 /// `TypeError` of `fetch`, a body that is not JSON the `SyntaxError` of
 /// `response.json()`; their messages are this build's own.
@@ -143,8 +142,8 @@ fn error_line(err: &HubError) -> String {
     format!("{class}: {err}")
 }
 
-/// A live pack linked to a Hub post (`pickHubLinked`): its id and the post
-/// id, trimmed and not empty.
+/// A live pack linked to a Hub post: its id and the post id, trimmed and
+/// not empty.
 struct Linked {
     meta: Entry,
     id: JsString,
@@ -166,7 +165,7 @@ fn pick_hub_linked(metas: Vec<Entry>) -> Vec<Linked> {
         .collect()
 }
 
-/// `fetchTimestampsByPostId`: the Hub time of each distinct post id, by id.
+/// The Hub time of each distinct post id, by id.
 /// The batches go out at once and the first to fail ends the lookup.
 async fn fetch_timestamps(http: &HubHttp, post_ids: &[JsString]) -> Result<HashMap<JsString, Value>, String> {
     let mut seen = HashSet::new();
@@ -245,8 +244,8 @@ async fn update_pack(
     }
 }
 
-/// `syncHubI18nPacksOnStartup`: one pass over the Hub-linked packs. The
-/// downloads run at once; the errors are listed in the order of the packs.
+/// One pass over the Hub-linked packs. The downloads run at once; the errors
+/// are listed in the order of the packs.
 pub async fn run(
     http: &HubHttp,
     packs: &dyn StartupPacks,

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The defaults, the keys the renderer may set and the zoom factor range,
-//! as src/shared/types/app-config.ts defines them. data/defaults.json is
-//! written from that file by scripts/app-config-fixtures/ and checked for
-//! freshness in CI.
+//! as src/shared/types/app-config.ts defines them. data/defaults.json is a
+//! recorded copy of those values; src/shared/__tests__/rust-data-copies.test.ts
+//! fails when the two differ.
 
 use std::sync::LazyLock;
 
@@ -25,7 +25,7 @@ pub struct Defaults {
 /// data/defaults.json is part of the build, and a test reads it, so a
 /// broken one fails the tests rather than a user's start.
 pub static DEFAULTS: LazyLock<Defaults> =
-    LazyLock::new(|| load(DEFAULTS_JSON).expect("data/defaults.json is the generator's output"));
+    LazyLock::new(|| load(DEFAULTS_JSON).expect("data/defaults.json is a recorded defaults object"));
 
 fn load(text: &str) -> Option<Defaults> {
     let Value::Object(root) = pipette_js_json::parse(text).ok()? else {

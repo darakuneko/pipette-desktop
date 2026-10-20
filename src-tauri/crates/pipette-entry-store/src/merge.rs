@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The entry merge of sync format v2 (src/main/sync/entry-merge.ts): every
+//! The entry merge of sync format v2: every
 //! field group (created / body / name / hub / enabled) merges on its own
 //! clock, and an entry is alive only while its newest `created` is later
 //! than its newest `deletedAt`.

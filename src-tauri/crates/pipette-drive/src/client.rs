@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! [`DriveClient`]: the Drive operations the sync calls
-//! (src/main/sync/google-drive.ts and `moveFilesToTrash` of
-//! drive-trash.ts), each attempt through a [`DriveApi`] with the retries of
-//! [`crate::retry`].
+//! [`DriveClient`]: the Drive operations the sync calls, each attempt
+//! through a [`DriveApi`] with the retries of [`crate::retry`].
 
 use std::sync::Arc;
 
@@ -34,11 +32,10 @@ const UPDATE: RetryPolicy = policy("update", true);
 const RENAME: RetryPolicy = policy("rename", true);
 const DELETE: RetryPolicy = policy("delete", true);
 
-/// The outcome of a bulk delete or rename (`DeleteMatchingFilesResult`):
+/// The outcome of a bulk delete or rename:
 /// `attempted` files, of which `failed` failed. `first_error` is the error
 /// of the first failed file in the order the files were given, not the
-/// first to fail in time (`moveFilesToTrash` of drive-trash.ts keeps the
-/// one that completes first); it is only shown as a message.
+/// first to fail in time; it is only shown as a message.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BulkOutcome {
     pub attempted: usize,
@@ -83,7 +80,7 @@ impl DriveClient {
         }
     }
 
-    /// The content of a file, unparsed (`downloadRawFile`).
+    /// The content of a file, unparsed.
     pub async fn download(&self, id: &str) -> Result<Vec<u8>, DriveFailure> {
         drive_request(&*self.env, DOWNLOAD, || self.drive.download(id.to_owned())).await
     }
@@ -112,7 +109,7 @@ impl DriveClient {
     }
 
     /// Creates `name` with `content` as it is (no envelope) and answers its
-    /// id (`createRawFile`).
+    /// id.
     pub async fn create_raw_file(&self, name: &str, content: &str) -> Result<String, DriveFailure> {
         drive_request(&*self.env, UPLOAD, || self.drive.create_raw(name.to_owned(), content.to_owned())).await
     }
@@ -160,9 +157,9 @@ impl DriveClient {
     /// A file whose id a trash name cannot carry is left alone and not
     /// counted; one already gone counts as moved. `forget_created` gets the
     /// id of each file before its rename, so the caller drops it from the
-    /// ids it created (`createdFileIds`) and a later upload of the name does
-    /// not write into the trash file. A failed rename does not stop the
-    /// others; each is logged.
+    /// ids it created and a later upload of the name does not write into
+    /// the trash file. A failed rename does not stop the others; each is
+    /// logged.
     pub async fn move_files_to_trash(
         &self,
         files: &[DriveFile],

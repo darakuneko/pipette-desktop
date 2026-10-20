@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trigger B (polling.rs), the polling cases of
-//! src/main/__tests__/sync-service.test.ts on the in-memory Drive. Time is
-//! paused once the world is built.
+//! Trigger B (polling.rs) on the in-memory Drive. Time is paused once the world
+//! is built.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

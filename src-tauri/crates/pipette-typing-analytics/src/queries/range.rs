@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The range aggregates (typing-analytics-ipc-range.ts): the Monitor App
+//! The range aggregates: the Monitor App
 //! lists, the key heatmap, the bigram ranking, the rollover trend, the
 //! keypress durations and the Layout Comparison, each over a window and a
 //! [`DeviceScope`] the handler resolves itself.
@@ -40,8 +40,8 @@ pub(super) fn app_range_args(args: Args<'_>) -> Result<Range<'_>, Value> {
 
 /// `ListAppsForRange` / `ListTypingTestsForRange` / `GetAppUsageForRange` /
 /// `GetWpmByAppForRange` `(uid, sinceMs, untilMs, scope)` and
-/// `ListTypingTestRunsForRange` with `typingTestScopes` after them
-/// (`parseAppRangeArgs`): the window widened to whole minutes.
+/// `ListTypingTestRunsForRange` with `typingTestScopes` after them: the
+/// window widened to whole minutes.
 pub(super) fn app_range(query: Query, args: Args<'_>, cx: &Context<'_>) -> Result<String, crate::Error> {
     let r = match app_range_args(args) {
         Ok(r) => r,
@@ -88,8 +88,8 @@ pub(super) fn matrix_heatmap_args(args: Args<'_>) -> Result<(Range<'_>, f64), Va
     checked.ok_or_else(|| Value::Object(Object::new()))
 }
 
-/// The checked arguments of the scoped handlers (`parseScopedRangeArgs`):
-/// the window as sent, the device hash and the filters.
+/// The checked arguments of the scoped handlers: the window as sent, the
+/// device hash and the filters.
 struct Scoped<'a> {
     uid: &'a str,
     hash: Option<String>,
@@ -123,7 +123,7 @@ fn bigram_result(view: &str, entries: Vec<Value>, truncated: bool, ratio: Option
     fields.into_iter().collect::<Object>().into()
 }
 
-/// The ranking options (`parseBigramAggregateOptions`): each a number in
+/// The ranking options: each a number in
 /// range, floored, or its default.
 struct BigramOptions {
     min_sample: f64,

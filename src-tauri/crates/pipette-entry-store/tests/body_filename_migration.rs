@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The specs of src/main/sync/__tests__/body-filename-migration.test.ts,
-//! and of the index-directory read and the unreferenced-body sweep.
+//! The specs of the body filename migration, the index-directory read and
+//! the unreferenced-body sweep.
 
 #![allow(clippy::unwrap_used)]
 

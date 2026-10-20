@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language and theme pack handlers against the Electron ones:
+//! The language and theme pack handlers against the recorded goldens:
 //!
 //! - the `validatePack` and `validateI18nExport` tables of
 //!   ts_hub_pure.json;
@@ -32,7 +32,7 @@ fn strings(list: &[JsString]) -> Value {
 }
 
 #[test]
-fn validate_pack_matches_the_ts() {
+fn validate_pack_matches_the_golden() {
     let golden = fixture("ts_hub_pure.json");
     let cases = array(field(&golden, "validatePack"));
     assert_eq!(cases.len(), 36);
@@ -60,7 +60,7 @@ fn validate_pack_matches_the_ts() {
 }
 
 #[test]
-fn validate_i18n_export_matches_the_ts() {
+fn validate_i18n_export_matches_the_golden() {
     let golden = fixture("ts_hub_pure.json");
     let cases = array(field(&golden, "validateI18nExport"));
     assert_eq!(cases.len(), 18);
@@ -175,11 +175,11 @@ fn check_scenarios(name: &str, scenario_count: usize) {
 }
 
 #[test]
-fn the_language_pack_scenarios_match_the_ts() {
+fn the_language_pack_scenarios_match_the_golden() {
     check_scenarios("ts_hub_handlers_i18n_packs.json", 8);
 }
 
 #[test]
-fn the_theme_pack_scenarios_match_the_ts() {
+fn the_theme_pack_scenarios_match_the_golden() {
     check_scenarios("ts_hub_handlers_theme_packs.json", 3);
 }

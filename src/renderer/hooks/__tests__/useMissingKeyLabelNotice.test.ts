@@ -19,10 +19,10 @@ function installVialAPI(members: object): void {
 }
 
 // Both vialAPI implementations answer the Hub detail from the same spy: a
-// preload-like mock, and the Tauri shim's member over a mocked Tauri IPC,
+// plain mock, and the Tauri shim's member over a mocked Tauri IPC,
 // whose command hands the spy its argument.
 const backends = [
-  { name: 'preload-like mock', install: () => installVialAPI({ keyLabelHubDetail }) },
+  { name: 'plain mock', install: () => installVialAPI({ keyLabelHubDetail }) },
   {
     name: 'Tauri shim over mockIPC',
     install: () => {

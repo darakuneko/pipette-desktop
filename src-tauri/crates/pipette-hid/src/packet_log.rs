@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! DEBUG logs of every report sent and received, when `VIAL_DEBUG_HID` is
-//! set to a non-empty value, in the format of `logHidPacket` in
-//! src/main/logger.ts: `HID TX: fe 00 0a …` (the 32-byte report, without the
-//! report ID).
+//! set to a non-empty value: `HID TX: fe 00 0a …` (the 32-byte report,
+//! without the report ID).
 
 use std::fmt::Write;
 
@@ -63,10 +62,10 @@ mod tests {
         line: String,
     }
 
-    /// The lines src/main/logger.ts wrote for the same packets (the fixture
-    /// of pipette-logger).
+    /// The recorded lines of the 0.4 build's logger for the same packets (the
+    /// fixture of pipette-logger).
     #[test]
-    fn the_packet_lines_are_the_typescript_ones() {
+    fn the_packet_lines_are_the_recorded_ones() {
         let path =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../pipette-logger/tests/fixtures/ts_log_lines.json");
         let fixture: Fixture = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();

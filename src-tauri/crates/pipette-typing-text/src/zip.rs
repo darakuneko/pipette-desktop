@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The `.txt` entry of an Aozora Bunko zip: `unzipSync` of fflate 0.8 (the
-//! Electron main process's unzipper) followed by `pickTextEntry` of
-//! src/main/aozora/aozora-import.ts.
+//! The `.txt` entry of an Aozora Bunko zip: the archive read as
+//! `unzipSync` of fflate 0.8 reads it, then the entry choice.
 //!
 //! The container is read as fflate reads it, so the same archives open and
 //! fail: the end record is searched backwards through up to 65,537 bytes
@@ -173,7 +172,7 @@ fn entry_name(bytes: &[u8], flags: u32) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// `pickTextEntry`'s filter: a path ending in `.txt` (any case) outside
+/// The text entry filter: a path ending in `.txt` (any case) outside
 /// `__MACOSX`.
 fn is_text_entry(name: &str) -> bool {
     let lower_end = name.len() >= 4 && name.as_bytes()[name.len() - 4..].eq_ignore_ascii_case(b".txt");

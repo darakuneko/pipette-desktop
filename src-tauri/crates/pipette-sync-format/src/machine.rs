@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The analytics machine hash (`src/main/typing-analytics/machine-hash.ts`)
-//! and the raw machine id it is built from.
+//! The analytics machine hash and the raw machine id it is built from.
 //!
-//! The TypeScript side takes the raw id from `node-machine-id` 1.1.12,
-//! `machineId(true)`, which runs one shell command per platform and strips
-//! its output. [`machine_id_original`] reproduces both steps. The output
-//! parsers (`expose_*`) are plain functions compiled on every platform so
-//! they are unit tested everywhere; only the command each platform runs is
-//! platform specific.
+//! The raw id is the one the 0.4 build takes from `node-machine-id` 1.1.12,
+//! `machineId(true)`, which runs one shell command per platform and strips its
+//! output. [`machine_id_original`] reproduces both steps. The output parsers
+//! (`expose_*`) are plain functions compiled on every platform so they are unit
+//! tested everywhere; only the command each platform runs is platform specific.
 //!
 //! | Platform | Command (`node-machine-id`) | Kept |
 //! |---|---|---|
@@ -158,11 +156,10 @@ fn platform_machine_id() -> Result<String, MachineIdError> {
 
 /// The value `node-machine-id`'s `machineId(true)` returns on this machine.
 ///
-/// The first successful result is cached for the lifetime of the process,
-/// as `getMachineHash` (`src/main/typing-analytics/machine-hash.ts`) caches
-/// its hash. A failure is not cached, so the next call runs the platform
-/// query again. Callers racing the first call may each run the query; all
-/// of them get the value stored first.
+/// The first successful result is cached for the lifetime of the process. A
+/// failure is not cached, so the next call runs the platform query again.
+/// Callers racing the first call may each run the query; all of them get the
+/// value stored first.
 pub fn machine_id_original() -> Result<String, MachineIdError> {
     static CACHED: OnceLock<String> = OnceLock::new();
     if let Some(id) = CACHED.get() {

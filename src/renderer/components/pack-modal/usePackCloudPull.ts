@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Shared "Pull from Cloud" handler for Language Packs / Theme Packs:
-// an explicit 'packs'-scoped download (i18n + theme packs only),
-// covering the fresh-machine discovery gap the 3-minute poll cannot
-// close on its own — see matchesScope's doc in sync-service.ts. Each
+// an explicit 'packs'-scoped download (i18n + theme packs only), so the
+// packs on Drive arrive without waiting for the next 3-minute poll. Each
 // pack store's own change-broadcast listener refreshes its `metas`
 // automatically once the merge lands, so this hook does not need to
 // trigger a manual refresh itself. Not gated on Cloud Sync being
@@ -48,7 +47,7 @@ export function usePackCloudPull(
       } else if (result.status === 'partial') {
         setActionError(t('sync.pullError.partial'))
       } else if (!result.success) {
-        // Defensive fallback — SYNC_EXECUTE always sets `status` on a
+        // Defensive fallback — `sync_execute` always sets `status` on a
         // non-throwing result, so this only covers an unexpected shape.
         setActionError(result.error ?? t(fallbackErrorKey))
       }

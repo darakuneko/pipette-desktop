@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `local/typing-analytics/sync_state.json`
-//! (src/main/typing-analytics/sync-state.ts): which device the cache was
+//! `local/typing-analytics/sync_state.json`: which device the cache was
 //! built for, and the upload and reconcile bookkeeping of the sync pass.
 //!
-//! Read like the Electron build reads it: revision 3 as it is, revisions 2
+//! Read with revision 3 as it is, revisions 2
 //! and 1 moved to 3 (2 keeps `uploaded` and `reconciled_at`, 1 starts both
 //! empty), anything else or any field of the wrong type is no state, and
 //! only the five known fields are kept. Written as `JSON.stringify(state,
@@ -23,7 +22,7 @@ pub struct TypingSyncState {
     pub my_device_id: JsString,
     /// `{uid}|{ownHash}` → the UTC days this device uploaded. Kept as the
     /// JSON value it was read as (an object, or an array, which the
-    /// Electron build's check lets through too), so it is written back the
+    /// check lets through too), so it is written back the
     /// same.
     pub uploaded: Value,
     /// `{uid}|{ownHash}` → the time of the last reconcile, or null while
@@ -38,7 +37,7 @@ pub fn sync_state_path(user_data: &Path) -> PathBuf {
 }
 
 impl TypingSyncState {
-    /// `emptySyncState`: nothing uploaded or reconciled, never synced.
+    /// Nothing uploaded or reconciled, never synced.
     pub fn empty(my_device_id: &str) -> Self {
         Self {
             my_device_id: my_device_id.into(),
@@ -48,8 +47,8 @@ impl TypingSyncState {
         }
     }
 
-    /// `parseSyncState` of a parsed file; `None` for anything the Electron
-    /// build does not take.
+    /// The state of a parsed file; `None` for anything the rules above do
+    /// not take.
     pub fn from_value(raw: &Value) -> Option<Self> {
         let object = raw.as_object()?;
         let Some(Value::String(my_device_id)) = object.get("my_device_id") else { return None };
@@ -111,16 +110,16 @@ fn is_reconciled_at_record(value: &Value) -> bool {
     })
 }
 
-/// `loadSyncState`: the state in `user_data`, or `None` when the file is
+/// The state in `user_data`, or `None` when the file is
 /// missing, cannot be read, is not JSON or is not a state.
 pub fn load_sync_state(user_data: &Path) -> Option<TypingSyncState> {
     let bytes = std::fs::read(sync_state_path(user_data)).ok()?;
-    // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD.
+    // Each invalid sequence reads as U+FFFD.
     let parsed = pipette_js_json::parse(&String::from_utf8_lossy(&bytes)).ok()?;
     TypingSyncState::from_value(&parsed)
 }
 
-/// `saveSyncState`: writes `state` through a temp file and a rename,
+/// Writes `state` through a temp file and a rename,
 /// creating the directory.
 pub fn save_sync_state(user_data: &Path, state: &TypingSyncState) -> std::io::Result<()> {
     let path = sync_state_path(user_data);
@@ -161,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn refuses_what_the_electron_build_refuses() {
+    fn refuses_unknown_revisions_and_fields_of_the_wrong_type() {
         for text in [
             r#"{"_rev":4,"my_device_id":"d","uploaded":{},"reconciled_at":{},"last_synced_at":0}"#,
             r#"{"_rev":"3","my_device_id":"d","uploaded":{},"reconciled_at":{},"last_synced_at":0}"#,

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The arguments of the resets and deletes as the renderer sends them,
-//! checked as the handlers of src/main/sync/sync-reset-ipc.ts check them,
+//! The arguments of the resets and deletes as the renderer sends them, checked,
 //! with their messages. `None` is an argument the renderer left out
 //! (`undefined`).
 

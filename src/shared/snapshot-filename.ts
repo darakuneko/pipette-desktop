@@ -11,7 +11,8 @@ const SNAPSHOT_FILE_EXTENSION = '.pipette'
 
 /** UTF-8 bytes the device name may take in a snapshot filename. The rest
  *  (`_` + timestamp + `_` + id + `.pipette`, about 70 bytes) keeps the
- *  whole name within `MAX_BODY_FILENAME_BYTES` (`entry-clocks.ts`). */
+ *  whole name within `MAX_BODY_FILENAME_BYTES`
+ *  (src-tauri/crates/pipette-entry-store/src/body_filename.rs). */
 export const MAX_SNAPSHOT_DEVICE_NAME_BYTES = 120
 
 /** `safeDeviceName` cut to `MAX_SNAPSHOT_DEVICE_NAME_BYTES` between code

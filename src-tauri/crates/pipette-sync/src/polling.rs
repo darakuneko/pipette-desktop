@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trigger B (src/main/sync/sync-polling.ts): a poll pass every
-//! [`POLL_INTERVAL`] while auto sync is on, and one [`STARTUP_POLL_DELAY`]
-//! after a launch, keyboard connected or not.
+//! Trigger B: a poll pass every [`POLL_INTERVAL`] while auto sync is on, and
+//! one [`STARTUP_POLL_DELAY`] after a launch, keyboard connected or not.
 //!
 //! A pass takes the sync lock as a waitable holder, or does nothing when
 //! it is held. It merges every Drive file whose revision it has not handled
@@ -104,9 +103,8 @@ impl Poller {
         self.inner.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// `startPolling`: a pass every [`POLL_INTERVAL`], and with
-    /// `first_pass_delay` one more that long after the start. Does nothing
-    /// while polling runs.
+    /// Starts a pass every [`POLL_INTERVAL`], and with `first_pass_delay` one
+    /// more that long after the start. Does nothing while polling runs.
     pub fn start_polling(&self, first_pass_delay: Option<Duration>) {
         let mut state = self.state();
         if state.interval.is_some() {
@@ -136,22 +134,23 @@ impl Poller {
         }
     }
 
-    /// `startPollingIfAutoSync`: after a download, a sign-in or a stored
-    /// password.
+    /// Starts the polling when auto sync is on: after a download, a sign-in
+    /// or a stored password.
     pub fn start_polling_if_auto_sync(&self) {
         if (self.inner.deps.auto_sync)() {
             self.start_polling(None);
         }
     }
 
-    /// `startPollingAtLaunch`: with the delayed first pass.
+    /// Starts the polling at launch when auto sync is on, with the delayed
+    /// first pass.
     pub fn start_polling_at_launch(&self) {
         if (self.inner.deps.auto_sync)() {
             self.start_polling(Some(STARTUP_POLL_DELAY));
         }
     }
 
-    /// `stopPolling`: stops the timers; a pass already running runs on.
+    /// Stops the timers; a pass already running runs on.
     pub fn stop_polling(&self) {
         let mut state = self.state();
         state.epoch += 1;
@@ -182,11 +181,10 @@ impl Poller {
         }
     }
 
-    /// `startTrackedPass`: a pass of the polling started at `epoch`, unless
-    /// polling stopped since, or the lock is held (by the last pass too).
-    /// The lock is claimed here, in the same step as the checks, so no other
-    /// sync takes it between the wait and the pass. `first` marks the
-    /// delayed first pass, which ends here.
+    /// A pass of the polling started at `epoch`, unless polling stopped since,
+    /// or the lock is held (by the last pass too). The lock is claimed here, in
+    /// the same step as the checks, so no other sync takes it between the wait
+    /// and the pass. `first` marks the delayed first pass, which ends here.
     fn try_start_pass(&self, epoch: u64, first: bool) -> Start {
         let (number, lock) = {
             let mut state = self.state();
@@ -222,7 +220,7 @@ impl Poller {
         self.state().in_flight.is_some()
     }
 
-    /// `pollForRemoteChanges`: one poll pass, unless the sync lock is held.
+    /// Runs one poll pass, unless the sync lock is held.
     pub async fn poll_for_remote_changes(&self) {
         if let Some(lock) = self.inner.deps.preflight.runtime().try_claim_sync_lock(true) {
             self.poll_holding(lock).await;

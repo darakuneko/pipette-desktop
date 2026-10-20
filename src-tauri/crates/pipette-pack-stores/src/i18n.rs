@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language packs: `sync/i18n`, the store of
-//! src/main/i18n-pack-store-{internal,crud}.ts, on the shared pack layer
+//! The language packs: the store of `sync/i18n`, on the shared pack layer
 //! ([`crate::PackStore`]).
 //!
 //! A pack body is the pack JSON as the page imported it (`{name, version,
@@ -61,10 +60,9 @@ fn write_english_body_if_missing(ctx: &StoreContext) -> PackResult<()> {
     if exists { Ok(()) } else { I18N_PACKS.write_body(ctx, &id, &english_body()) }
 }
 
-/// Makes sure the index has the built-in English entry
-/// (`ensureBuiltinEnglishEntry`): created first in the index, reported as
-/// an index change; when the entry is there, only its body is recreated if
-/// missing.
+/// Makes sure the index has the built-in English entry: created first in
+/// the index, reported as an index change; when the entry is there, only
+/// its body is recreated if missing.
 fn ensure_builtin_english(ctx: &StoreContext) -> PackResult<()> {
     I18N_PACKS.with_lock(ctx, || {
         let mut index = I18N_PACKS.read_index(ctx)?;
@@ -88,20 +86,20 @@ fn ensure_builtin_english(ctx: &StoreContext) -> PackResult<()> {
     })
 }
 
-/// The live metas, in the index's order (`listMetas`).
+/// The live metas, in the index's order.
 pub fn list_metas(ctx: &StoreContext) -> PackResult<Vec<Entry>> {
     Ok(list_all_metas(ctx)?.into_iter().filter(|meta| !meta.is_deleted()).collect())
 }
 
-/// Every meta, tombstones included (`listAllMetas`). The built-in English
-/// entry is made sure of under the lock; the index is then read without it.
+/// Every meta, tombstones included. The built-in English entry is made sure
+/// of under the lock; the index is then read without it.
 pub fn list_all_metas(ctx: &StoreContext) -> PackResult<Vec<Entry>> {
     ensure_builtin_english(ctx)?;
     Ok(I18N_PACKS.read_index(ctx)?.metas)
 }
 
-/// `{meta, pack}` of the live pack `id` (`getPack`): the body parsed, with
-/// the meta's name over its own when it is a plain object.
+/// `{meta, pack}` of the live pack `id`: the body parsed, with the meta's
+/// name over its own when it is a plain object.
 pub fn get_pack(ctx: &StoreContext, id: &JsString) -> PackResult<Object> {
     let (meta, parsed) = I18N_PACKS.read_live_pack(ctx, id)?;
     let pack = match parsed {
@@ -168,9 +166,9 @@ fn pack_header(pack: Option<&Value>) -> Option<(JsString, JsString)> {
     Some((text("name")?, text("version")?))
 }
 
-/// Saves a pack (`savePack`), over the pack `input.id`, over the live pack
-/// of the same name (never the built-in English one), or as a new pack.
-/// Answers its meta.
+/// Saves a pack, over the pack `input.id`, over the live pack of the same
+/// name (never the built-in English one), or as a new pack. Answers its
+/// meta.
 pub fn save_pack(ctx: &StoreContext, input: SavePackInput) -> PackResult<Entry> {
     let Some((header_name, header_version)) = pack_header(input.pack.as_ref()) else {
         return Err(PackError::new(ErrorCode::InvalidFile, "Pack JSON missing required name/version fields"));
@@ -220,7 +218,7 @@ fn input_hub_post_id(field: &Field<JsString>) -> Option<JsString> {
     }
 }
 
-/// The meta fields of a save over `existing`, in the order `savePack`
+/// The meta fields of a save over `existing`, in the order [`save_pack`]
 /// writes them.
 fn save_fields(
     input: &SavePackInput,
@@ -275,13 +273,13 @@ fn save_fields(
     fields
 }
 
-/// Gives the live pack `id` the name `new_name`, trimmed (`renamePack`).
+/// Gives the live pack `id` the name `new_name`, trimmed.
 pub fn rename_pack(ctx: &StoreContext, id: &JsString, new_name: &JsString) -> PackResult<Entry> {
     I18N_PACKS.rename_pack(ctx, id, new_name)
 }
 
-/// Enables or disables the live pack `id` (`setEnabled`); a pack already so
-/// is answered as it is, nothing written.
+/// Enables or disables the live pack `id`; a pack already so is answered as
+/// it is, nothing written.
 pub fn set_enabled(ctx: &StoreContext, id: &JsString, enabled: bool) -> PackResult<Entry> {
     I18N_PACKS.change_live_meta(ctx, id, |_, meta| {
         if meta.get("enabled") == Some(&Value::Bool(enabled)) {
@@ -303,10 +301,10 @@ pub struct CoverageValues {
     pub measured_body_clock: JsString,
 }
 
-/// Stores a coverage measured again on the live pack `id`
-/// (`refreshCoverage`). Every device computes the same values from the same
-/// body, so no clock moves and nothing is reported for sync. When the body
-/// changed after it was measured, nothing is written.
+/// Stores a coverage measured again on the live pack `id`. Every device
+/// computes the same values from the same body, so no clock moves and
+/// nothing is reported for sync. When the body changed after it was
+/// measured, nothing is written.
 pub fn refresh_coverage(ctx: &StoreContext, id: &JsString, values: CoverageValues) -> PackResult<Entry> {
     I18N_PACKS.with_lock(ctx, || {
         let mut index = I18N_PACKS.read_index(ctx)?;
@@ -327,8 +325,8 @@ pub fn refresh_coverage(ctx: &StoreContext, id: &JsString, values: CoverageValue
     })
 }
 
-/// Deletes the pack `id` (`deletePack`): disabled and tombstoned, its body
-/// kept for sync. The built-in English entry cannot be deleted.
+/// Deletes the pack `id`: disabled and tombstoned, its body kept for sync.
+/// The built-in English entry cannot be deleted.
 pub fn delete_pack(ctx: &StoreContext, id: &JsString) -> PackResult<()> {
     if is_english(id) {
         return Err(PackError::new(ErrorCode::InvalidName, "English cannot be deleted"));
@@ -342,8 +340,8 @@ pub fn delete_pack(ctx: &StoreContext, id: &JsString) -> PackResult<()> {
 
 /// Links the pack `id` (live or not) to the Hub post `hub_post_id`, or
 /// unlinks it when that is `None` or blank once trimmed, which also drops
-/// the cached Hub time (`setHubPostId`). The uploader name and Hub time
-/// are left alone, set, or cleared by a blank value.
+/// the cached Hub time. The uploader name and Hub time are left alone, set,
+/// or cleared by a blank value.
 pub fn set_hub_post_id(
     ctx: &StoreContext,
     id: &JsString,
@@ -354,13 +352,12 @@ pub fn set_hub_post_id(
     I18N_PACKS.set_hub_post_id(ctx, id, hub_post_id, uploader_name, hub_updated_at)
 }
 
-/// Whether a live pack other than `exclude` has the name `name`
-/// (`hasActiveName`).
+/// Whether a live pack other than `exclude` has the name `name`.
 pub fn has_active_name(ctx: &StoreContext, name: &JsString, exclude: Option<&JsString>) -> PackResult<bool> {
     I18N_PACKS.has_active_name(ctx, name, exclude)
 }
 
-/// Puts the live packs of `ordered_ids` first (`reorderActive`).
+/// Puts the live packs of `ordered_ids` first.
 pub fn reorder_active(ctx: &StoreContext, ordered_ids: &[JsString]) -> PackResult<()> {
     I18N_PACKS.reorder_active(ctx, ordered_ids)
 }

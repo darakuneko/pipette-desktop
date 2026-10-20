@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Result shape for importing one Aozora Bunko catalog work into the local
-// Typing Test text store. Kept as a standalone shared type (rather than
-// living next to the main-process importer) so preload/renderer can
-// reference it without importing a main-process module.
+// Typing Test text store. Kept as a standalone shared type so the renderer
+// and the Tauri shim can reference it.
 
 import type { TypingTestTextMeta, TypingTestTextStoreErrorCode } from './typing-test-text-store'
 

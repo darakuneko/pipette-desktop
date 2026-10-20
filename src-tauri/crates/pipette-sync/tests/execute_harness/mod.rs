@@ -48,14 +48,13 @@ use pipette_typing_analytics::{
 use crate::preflight_harness::{FakePasswords, FakeSignIn, NoWaits, START_MS, Stored, TestDrive};
 
 pub const PASSWORD: &str = "pw";
-/// The installation id the TypeScript recordings seed (FIXED_INSTALLATION_ID
-/// of scripts/sync-fixtures/harness.ts).
+/// The installation id the recorded goldens seed.
 pub const INSTALLATION_ID: &str = "00000000-0000-4000-8000-00000000f1f0";
 pub const MACHINE_ID: &str = "golden-machine";
 /// 2026-10-16T00:00:00.000Z, the clock of the recordings.
 pub const NOW: i64 = 1_792_108_800_000;
 
-/// The envelope as the bundle's text, as the TypeScript tests mock it.
+/// The envelope as the bundle's text.
 pub struct PlainCodec;
 
 impl EnvelopeCodec for PlainCodec {
@@ -68,9 +67,9 @@ impl EnvelopeCodec for PlainCodec {
     }
 }
 
-/// The envelope format of the Electron build with each key derived once
-/// per password and salt: a recorded pass opens and seals dozens of
-/// envelopes. It seals with one fixed salt and a new IV each time.
+/// The sync envelope format with each key derived once per password and salt: a
+/// recorded pass opens and seals dozens of envelopes. It seals with one fixed
+/// salt and a new IV each time.
 #[derive(Default)]
 pub struct KeyCachedCodec {
     keys: Mutex<std::collections::HashMap<KeyId, [u8; KEY_LENGTH]>>,
@@ -395,12 +394,11 @@ impl World {
         self.sync(SyncDirection::Upload, scope).await.unwrap()
     }
 
-    /// Waits for the typing analytics' flush chain to drain: a merge of
-    /// this device's own deleted ranges queues the apply (which writes
-    /// `deleted-ranges-applied.json`) without awaiting it. The queued task
-    /// may join the chain a moment later, so the drain is repeated a few
-    /// times with a short wait between, as the TypeScript recordings do
-    /// (scripts/sync-fixtures/flush-chain.ts).
+    /// Waits for the typing analytics' flush chain to drain: a merge of this
+    /// device's own deleted ranges queues the apply (which writes
+    /// `deleted-ranges-applied.json`) without awaiting it. The queued task may
+    /// join the chain a moment later, so the drain is repeated a few times with
+    /// a short wait between, as the recordings were made.
     pub async fn settle_flush_chain(&self) {
         for _ in 0..5 {
             tokio::time::sleep(Duration::from_millis(5)).await;

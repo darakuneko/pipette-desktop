@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `executeAnalyticsSync` (src/main/sync/sync-analytics.ts): the sync the
-//! Analyze panel runs for one keyboard when it opens (trigger F). It pulls
-//! and pushes that keyboard's typing day files and every device's
+//! The sync the Analyze panel runs for one keyboard when it opens (trigger F).
+//! It pulls and pushes that keyboard's typing day files and every device's
 //! deleted-ranges file, and nothing else.
 //!
 //! It does not take the sync lock. The keyboard is marked as syncing
@@ -11,8 +10,8 @@
 //! deleted-ranges units it syncs go through the process's one
 //! [`UnitSync`], whose `sync:` and `upload:` locks serialize them with a
 //! pass that syncs the same unit. It never reconciles this device's days
-//! with Drive: that is the upload pass's (`executeSync`), which runs under
-//! the sync lock.
+//! with Drive: that is the upload pass's (in [`crate::execute`]), which
+//! runs under the sync lock.
 //!
 //! Its listing is name-filtered to the keyboard, so the guard's files (the
 //! password-change lock and the sync-format markers) and the

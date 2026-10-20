@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The choice between copies and the trash names give what
-//! drive-canonical.ts and drive-trash.ts give on the tables of
-//! tests/fixtures/canonical_trash.json
-//! (scripts/sync-fixtures/record-drive-fixtures.test.ts), and the moves to
-//! the trash do what `moveFilesToTrash` does (drive-trash.test.ts).
+//! The choice between copies and the trash names give the recorded golden
+//! results on the tables of tests/fixtures/canonical_trash.json, and the
+//! moves to the trash.
 
 #![allow(clippy::unwrap_used)]
 
@@ -53,7 +51,7 @@ fn trash_json(trash: &TrashInfo) -> Value {
 }
 
 #[test]
-fn chooses_the_copies_drive_canonical_ts_chooses() {
+fn chooses_the_recorded_copies() {
     let tables = tables();
     for case in tables["canonical"].as_array().unwrap() {
         let listing = Listing::new(case["files"].as_array().unwrap().iter().map(drive_file).collect());
@@ -89,7 +87,7 @@ fn ranks_copies_as_is_newer_copy_does() {
 }
 
 #[test]
-fn names_trash_files_as_drive_trash_ts_does() {
+fn names_trash_files_as_recorded() {
     let tables = tables();
     assert_eq!(tables["trashQuarantineMs"].as_i64(), Some(TRASH_QUARANTINE_MS));
     for case in tables["trashFileName"].as_array().unwrap() {

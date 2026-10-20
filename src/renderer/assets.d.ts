@@ -1,5 +1,6 @@
 // Static asset import — mirrors vite/client's built-in `*.png` module shape
-// (see env.d.ts for why this isn't just `/// <reference types="vite/client" />`).
+// (env.d.ts declares `import.meta.env` the same way instead of
+// `/// <reference types="vite/client" />`).
 // Must stay a global script (no top-level import/export): a wildcard
 // `declare module` only takes ambient effect project-wide when it lives in
 // a non-module file — inside a module file it silently applies only to

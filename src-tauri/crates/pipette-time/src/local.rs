@@ -3,8 +3,7 @@
 //! JavaScript in the system time zone ([`local_date_ms`]), the local day
 //! range of a `YYYY-MM-DD` date ([`local_day_range_ms`],
 //! `localDayRangeMs` of src/shared/local-day-range.ts) and the UTC day
-//! check of the typing-analytics files ([`is_utc_day`], `isUtcDay` of
-//! src/main/typing-analytics/jsonl/utc-day.ts).
+//! check of the typing-analytics files ([`is_utc_day`]).
 //!
 //! The time zone is the one JavaScript reads too: `TZ` when set, otherwise
 //! the system's, with the IANA time zone data. A local midnight that does
@@ -99,7 +98,7 @@ fn date_parts(date: &str) -> Option<(i64, i64, i64)> {
     Some((number(0..4)?, number(5..7)?, number(8..10)?))
 }
 
-/// `isUtcDay(text)`: `YYYY-MM-DD` naming a day of the Gregorian calendar
+/// Whether `text` is `YYYY-MM-DD` naming a day of the Gregorian calendar
 /// whose year has four digits as `Date.UTC` reads it, so the years 0000 to
 /// 0099 (read as 1900 to 1999) are not days.
 pub fn is_utc_day(text: &str) -> bool {

@@ -14,8 +14,8 @@ export const SYNC_UNIT_APPLIED_EVENT = 'pipette:sync-unit-applied'
 
 const TYPING_TEST_TEXTS_UNIT = 'typing-test-texts'
 
-// Unit names match KEY_LABEL_SYNC_UNIT (main/key-label-store.ts) and
-// TYPING_TEST_TEXT_SYNC_UNIT (main/typing-test-text-store.ts). Those lists
+// Unit names match KEY_LABEL_SYNC_UNIT and TYPING_TEXT_SYNC_UNIT
+// (src-tauri/crates/pipette-keyboard-stores/src/{key_labels,typing_texts}/mod.rs). Those lists
 // already refresh on their own change events (useKeyLabels.ts,
 // useTypingTestTexts.ts, useKeyLabelLookup.ts), so the bridge re-dispatches them.
 const STORE_CHANGE_EVENTS: Readonly<Record<string, string>> = {

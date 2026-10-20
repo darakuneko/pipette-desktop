@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The request of `fetchNotifications` (src/main/notification-store.ts):
-//! a POST of the notice query, its body byte for byte as `JSON.stringify`
-//! writes it, with the whole fetch bounded by 10 seconds
-//! (`AbortSignal.timeout(FETCH_TIMEOUT_MS)`).
+//! The request of the notice fetch: a POST of the notice query, its body
+//! byte for byte as `JSON.stringify` writes it, with the whole fetch
+//! bounded by 10 seconds.
 
 use std::time::Duration;
 
 use pipette_js_json::{Object, Value};
 use pipette_net::{HttpRequest, Limits, Method};
 
-/// `FETCH_TIMEOUT_MS` of src/main/notification-store.ts: from the start of
-/// the request until the whole body is in.
+/// The time limit of the fetch: from the start of the request until the
+/// whole body is in.
 pub const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The client's bounds: the default ones with the whole request cut at
 /// [`FETCH_TIMEOUT`] and the body at 1 MiB. The query asks for ten
-/// notices, a few kilobytes; Electron takes a body of any size.
+/// notices, a few kilobytes.
 pub const NOTICE_LIMITS: Limits =
     Limits { total_timeout: FETCH_TIMEOUT, max_body_bytes: 1024 * 1024, ..Limits::DEFAULT };
 
 /// How many notices the query asks for.
 const LIMIT: f64 = 10.0;
 
-/// The query `fetchNotifications` posts, with `Date.now()` as `now_ms`:
+/// The query the notice request posts, with `Date.now()` as `now_ms`:
 /// the published notices, newest first, at most ten.
 pub fn request_body(now_ms: i64) -> String {
     let object = |pairs: Vec<(&str, Value)>| Value::Object(pairs.into_iter().collect::<Object>());

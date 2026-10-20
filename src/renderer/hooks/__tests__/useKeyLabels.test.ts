@@ -31,7 +31,7 @@ const storeMembers = {
   keyLabelStoreDelete: mockDelete,
 }
 
-// The preload-like mock's Hub members; the shim's hand their arguments to
+// The plain mock's Hub members; the shim's hand their arguments to
 // the same spies.
 const hubMembers = {
   keyLabelHubList: mockHubList,
@@ -47,12 +47,12 @@ function installVialAPI(members: object): void {
   Object.defineProperty(window, 'vialAPI', { value: { ...hubMembers, ...members }, writable: true, configurable: true })
 }
 
-// Both vialAPI implementations answer from the same spies: a preload-like
+// Both vialAPI implementations answer from the same spies: a plain
 // mock, and the Tauri shim's key label and key label Hub members over a
 // mocked Tauri IPC, whose commands hand their arguments to the spies in the
 // members' order.
 const backends = [
-  { name: 'preload-like mock', install: () => installVialAPI(storeMembers) },
+  { name: 'plain mock', install: () => installVialAPI(storeMembers) },
   {
     name: 'Tauri shim over mockIPC',
     install: () => {

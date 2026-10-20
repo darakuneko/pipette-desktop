@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The file's format: `{"version":1,"owner":…,"units":[…],"held":{…}}`,
-//! `JSON.stringify` with no indent, as `writePendingNow` of
-//! src/main/sync/sync-pending-store.ts writes it, and what `readPending`
-//! there keeps of a file an earlier run left.
+//! `JSON.stringify` with no indent, and what is kept of a file an earlier
+//! run left.
 
 use std::io::ErrorKind;
 use std::path::Path;
@@ -25,8 +24,7 @@ pub(crate) struct PendingFile {
 }
 
 /// The file's text for this state. An account with no held unit is left
-/// out, as `snapshotKeeping` of src/main/sync/sync-runtime-state.ts leaves
-/// it, and so is `__proto__`, which `held[sub] = kept` on a plain object
+/// out, and so is `__proto__`, which `held[sub] = kept` on a plain object
 /// turns into its prototype instead of a property.
 pub(crate) fn content<'a>(
     owner: Option<&JsString>,
@@ -91,9 +89,9 @@ fn from_value(parsed: &Value, keyboards_dir: &Path) -> PendingFile {
     let mut held = Vec::new();
     if let Some(Value::Object(accounts)) = file.get("held") {
         for (sub, list) in accounts.iter() {
+            // The 0.4 build's reader drops an account named `__proto__`:
             // `held[sub] = kept` on a plain object sets its prototype for
-            // `__proto__` instead of adding a property, so the TypeScript
-            // reader drops that account.
+            // that name instead of adding a property.
             if sub.is_empty() || sub.as_str() == Some("__proto__") {
                 continue;
             }

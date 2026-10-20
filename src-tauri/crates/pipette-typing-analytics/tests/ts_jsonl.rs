@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The JSONL rows, files, UTC days and listings against what the TypeScript
-//! code did (tests/fixtures/jsonl_rows.json and jsonl_files.json, written by
-//! `pnpm run generate:analytics-db-fixtures`).
+//! The JSONL rows, files, UTC days and listings against the recorded
+//! goldens tests/fixtures/jsonl_rows.json and jsonl_files.json.
 
 // Helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]
@@ -33,7 +32,7 @@ fn n(value: &Value) -> f64 {
 }
 
 #[test]
-fn row_ids_match_typescript() {
+fn row_ids_match_the_golden() {
     for case in array(&fixture("jsonl_rows.json"), "ids") {
         let a = args(field(case, "args"));
         let id = match text(case, "fn") {
@@ -51,7 +50,7 @@ fn row_ids_match_typescript() {
 }
 
 #[test]
-fn row_lines_match_typescript() {
+fn row_lines_match_the_golden() {
     for case in array(&fixture("jsonl_rows.json"), "rows") {
         let row = untag(field(case, "row")).unwrap();
         assert_eq!(serialize_row(&row), text(case, "line"));
@@ -59,7 +58,7 @@ fn row_lines_match_typescript() {
 }
 
 #[test]
-fn parsed_rows_match_typescript() {
+fn parsed_rows_match_the_golden() {
     let fixture = fixture("jsonl_rows.json");
     let cases = array(&fixture, "parsed");
     let mut accepted = 0;
@@ -78,7 +77,7 @@ fn session_rows(fixture: &Value, ids: &Value) -> Vec<Value> {
 }
 
 #[test]
-fn appends_match_typescript() {
+fn appends_match_the_golden() {
     let fixture = fixture("jsonl_files.json");
     for case in array(&fixture, "appends") {
         let dir = tempfile::tempdir().unwrap();
@@ -107,7 +106,7 @@ fn appends_match_typescript() {
 }
 
 #[test]
-fn reads_match_typescript() {
+fn reads_match_the_golden() {
     let fixture = fixture("jsonl_files.json");
     for case in array(&fixture, "reads") {
         let dir = tempfile::tempdir().unwrap();
@@ -145,7 +144,7 @@ fn reads_match_typescript() {
 }
 
 #[test]
-fn utc_days_match_typescript() {
+fn utc_days_match_the_golden() {
     let fixture = fixture("jsonl_files.json");
     for case in array(&fixture, "utcDaysFromMs") {
         assert_eq!(utc_day_from_ms(number(field(case, "ms"))), text(case, "day"), "{case:?}");
@@ -166,7 +165,7 @@ fn utc_days_match_typescript() {
 }
 
 #[test]
-fn listings_match_typescript() {
+fn listings_match_the_golden() {
     let fixture = fixture("jsonl_files.json");
     let listings = field(&fixture, "listings");
     let dir = tempfile::tempdir().unwrap();

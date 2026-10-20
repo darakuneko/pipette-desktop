@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Node fake Drive against the conformance cases it shares with the
 // in-memory Drive of src-tauri/crates/pipette-drive (conformance-cases.json),
-// each operation sent as src/main/sync/google-drive.ts sends it; then the
+// each operation sent as src-tauri/crates/pipette-drive sends it; then the
 // OAuth endpoints and the checks the Drive routes make.
 //
 // Run: pnpm run test:fake-drive
@@ -58,7 +58,7 @@ afterEach(async () => {
   await drive.close()
 })
 
-/** The multipart body of `createAppDataFile` (google-drive.ts). */
+/** The multipart body of a file create (pipette-drive's src/http.rs). */
 function multipart(name: string, content: string): string {
   return [
     `--${BOUNDARY}`,

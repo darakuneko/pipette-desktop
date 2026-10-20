@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Typing sessions per scope (session-detector.ts): a session runs from
+//! Typing sessions per scope: a session runs from
 //! its first keystroke until the recording stops, an idle gap of
 //! [`SESSION_IDLE_GAP_MS`] or the app quits. The detector hands back the
 //! sessions it closes; the flush writes them.
@@ -53,7 +53,7 @@ impl SessionDetector {
         }
     }
 
-    /// `recordEvent`: counts a keystroke at `ts`. Returns the session an
+    /// Counts a keystroke at `ts`. Returns the session an
     /// idle gap closed, if any; the session it opens is not returned.
     ///
     /// A keystroke older than the session's last one counts but does not
@@ -79,12 +79,12 @@ impl SessionDetector {
         None
     }
 
-    /// `closeAll`: every open session, in the order they were opened.
+    /// Every open session, in the order they were opened.
     pub fn close_all(&mut self) -> Vec<FinalizedSession> {
         self.sessions.drain(..).map(|(_, session)| session).collect()
     }
 
-    /// `closeForUid`: the open sessions of `uid` whose start `closes`
+    /// The open sessions of `uid` whose start `closes`
     /// accepts.
     pub fn close_for_uid(&mut self, uid: &str, closes: impl Fn(f64) -> bool) -> Vec<FinalizedSession> {
         let mut closed = Vec::new();

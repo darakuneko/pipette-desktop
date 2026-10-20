@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-notification"
-description = "The startup notices of src/main/notification-store.ts: where they are fetched from, the request, and the checks and normalization of the response"
+description = "The startup notices: where they are fetched from, the request, and the checks and normalization of the response"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

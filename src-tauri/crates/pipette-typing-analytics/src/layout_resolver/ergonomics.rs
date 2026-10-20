@@ -300,8 +300,7 @@ mod tests {
         vec![(0.0, 1.0); n]
     }
 
-    /// The ANSI 60% layout of the TypeScript tests: 14 + 14 + 13 + 12 + 8
-    /// keys.
+    /// An ANSI 60% layout: 14 + 14 + 13 + 12 + 8 keys.
     fn ansi60() -> Vec<KleKey> {
         let row0 = [units(13), vec![(0.0, 2.0)]].concat();
         let row1 = [vec![(0.0, 1.5)], units(12), vec![(0.0, 1.5)]].concat();

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The resets of the Data modal and the settings (the
-//! `SYNC_RESET_TARGETS`, `RESET_KEYBOARD_DATA` and `RESET_LOCAL_TARGETS`
-//! handlers of src/main/sync/sync-reset-ipc.ts), on crates/pipette-sync's
+//! The resets of the Data modal and the settings, on crates/pipette-sync's
 //! `reset`, with the rest of the app as the resets need it: the sign-out
 //! that keeps the pending units, polling, the app config, the key store
-//! and the typing analytics. Each answers as `wrapIpc` does; an argument
-//! the handler would refuse is refused before the lock is taken.
+//! and the typing analytics. Each answers a `SyncOperationResult`
+//! (result.rs); an argument the handler would refuse is refused before the
+//! lock is taken.
 
 use std::sync::Arc;
 
@@ -182,7 +181,7 @@ mod tests {
     }
 
     /// Reset Local Data of App Settings removes all of `local/auth/` (the
-    /// Electron build's files too) and this userData's key store entry,
+    /// 0.4 build's files too) and this userData's key store entry,
     /// stops polling and leaves auto sync off with the cleared config.
     #[tokio::test]
     async fn app_settings_remove_every_secret_and_turn_auto_sync_off() {
@@ -190,7 +189,7 @@ mod tests {
         let app = app(user_data.path());
         let secrets = Arc::clone(&app.state::<SyncSecrets>().secrets);
         secrets.store(SecretKind::SyncPassword, b"pw").await.unwrap();
-        std::fs::write(user_data.path().join("local/auth/oauth-tokens.enc"), "electron").unwrap();
+        std::fs::write(user_data.path().join("local/auth/oauth-tokens.enc"), "0.4").unwrap();
         app.state::<AppConfig>().set("autoSync", true.into()).unwrap();
         let triggers = Arc::clone(app.state::<Arc<SyncTriggers>>().inner());
         triggers.set_auto_sync(true);

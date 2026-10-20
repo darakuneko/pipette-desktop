@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze post's export (`buildAnalyticsExport`, `collectData` and
-//! `buildAppData` of src/main/hub/hub-analytics.ts): the
-//! `analytics-export-v1.json` the Hub takes, built from the typing
-//! analytics cache as the JavaScript values the Electron build serializes,
-//! so its JSON text is the same byte for byte.
+//! The Analyze post's export: the `analytics-export-v1.json` the Hub
+//! takes, built from the typing analytics cache as JavaScript values, so
+//! its JSON text is the recorded golden's byte for byte.
 //!
 //! The export holds derived data only: minute-level rows at the finest,
 //! and the bigram intervals as bucketed histograms.
@@ -51,8 +49,7 @@ impl DeviceScope {
         }
     }
 
-    /// `resolveMachineHash`: the device the reads are narrowed to, `None`
-    /// for every device.
+    /// The device the reads are narrowed to, `None` for every device.
     fn machine_hash<'a>(&'a self, own_hash: &'a str) -> Option<&'a str> {
         match self {
             Self::All => None,
@@ -62,8 +59,8 @@ impl DeviceScope {
     }
 }
 
-/// `BuildAnalyticsExportInput`. A keyboard field is `None` where the
-/// renderer sent none, which leaves its key out of the export.
+/// The inputs of an analytics export. A keyboard field is `None` where
+/// the renderer sent none, which leaves its key out of the export.
 #[derive(Debug, Clone)]
 pub struct ExportInput {
     pub uid: String,
@@ -76,11 +73,11 @@ pub struct ExportInput {
     pub to_ms: f64,
     pub device_scope: DeviceScope,
     pub app_scopes: Vec<String>,
-    /// The filters for the Hub, already projected
-    /// (`projectFiltersForHub`).
+    /// The filters for the Hub, already projected.
     pub filters: Value,
     pub layout_comparison: Option<LayoutComparisonInputs>,
-    /// `sanitizeFingerOverrides` of the renderer's finger assignments.
+    /// The renderer's finger assignments, sanitized
+    /// (`layout::sanitize_finger_overrides`).
     pub finger_overrides: Option<HashMap<String, String>>,
     /// The categories picked in the upload dialog; `None` or none at all
     /// is every category. A name no category has still counts as a pick.
@@ -91,7 +88,8 @@ pub struct ExportInput {
 }
 
 impl ExportInput {
-    /// `isSectionEnabled`.
+    /// Whether the sections of `category` go into the export: every
+    /// category when none is picked.
     fn enabled(&self, category: &str) -> bool {
         match &self.categories {
             None => true,
@@ -127,9 +125,9 @@ impl AnalyticsExport {
     }
 }
 
-/// Why the export could not be built: what the Electron builder throws
-/// (a database error, a layout map entry the resolver cannot read, Layout
-/// Comparison inputs it cannot iterate). The text is the error's message.
+/// Why the export could not be built (a database error, a layout map entry
+/// the resolver cannot read, Layout Comparison inputs it cannot iterate).
+/// The text is the error's message.
 #[derive(Debug, thiserror::Error)]
 pub enum ExportError {
     #[error(transparent)]
@@ -138,7 +136,7 @@ pub enum ExportError {
     Layout(String),
 }
 
-/// `buildAnalyticsExport` on `db`, with `own_hash` as this device and
+/// The analytics export of `db`, with `own_hash` as this device and
 /// `now_ms` as the export's time.
 pub fn build_analytics_export(
     db: &TypingAnalyticsDb,
@@ -190,9 +188,9 @@ fn strings(items: &[String]) -> Value {
     Value::Array(items.iter().map(|s| Value::from(s.as_str())).collect())
 }
 
-/// `buildAppData`: per app of the window (at least two, the unknown bucket
-/// left out), its own sections without sessions or a longest session, with
-/// its own app usage and WPM rows. `None` when there are no slices.
+/// Per app of the window (at least two, the unknown bucket left out),
+/// its own sections without sessions or a longest session, with its own
+/// app usage and WPM rows. `None` when there are no slices.
 fn build_app_data(
     db: &TypingAnalyticsDb,
     input: &ExportInput,
@@ -245,10 +243,10 @@ fn row_name(row: &Value) -> Option<&str> {
     row.as_object().and_then(|r| r.get("name")).and_then(Value::as_str)
 }
 
-/// `collectData`: the sections of the window for `app_scopes` and the
-/// device `hash`, the ones of categories not picked empty, and the total
-/// keystrokes, summed from every minute row whatever the categories so the
-/// keystroke threshold holds on a narrowed upload.
+/// The sections of the window for `app_scopes` and the device `hash`, the
+/// ones of categories not picked empty, and the total keystrokes, summed
+/// from every minute row whatever the categories so the keystroke
+/// threshold holds on a narrowed upload.
 fn collect_data(
     db: &TypingAnalyticsDb,
     input: &ExportInput,

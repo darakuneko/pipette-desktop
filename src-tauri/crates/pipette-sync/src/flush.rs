@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trigger A (src/main/sync/sync-flush.ts): the pending units are sent
-//! [`DEBOUNCE`] after the last change, by a flush pass.
+//! Trigger A: the pending units are sent [`DEBOUNCE`] after the last change, by
+//! a flush pass.
 //!
 //! One timer at most. A change ([`Flusher::notify_change`]) replaces it
 //! with one firing the full [`DEBOUNCE`] from now. Everything else that
@@ -51,7 +51,7 @@ pub const RETRYABLE_CREDENTIAL_REASONS: [SyncCredentialFailureReason; 3] = [
     SyncCredentialFailureReason::RemoteCheckFailed,
 ];
 
-/// Whether auto sync is on (`loadAppConfig().autoSync`). Called often and
+/// Whether auto sync is on (`autoSync` of the app config). Called often and
 /// from async code, so it must not block.
 pub type AutoSync = Arc<dyn Fn() -> bool + Send + Sync>;
 
@@ -125,14 +125,14 @@ impl Flusher {
         self.inner.timer.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// `notifyChange`: records a change of `unit` and pushes the flush out
-    /// by the full [`DEBOUNCE`].
+    /// Records a change of `unit` and pushes the flush out by the full
+    /// [`DEBOUNCE`].
     ///
-    /// Unlike Electron's `notifyChange`, no timer is armed once the app
-    /// quits: a timer firing then would start a second flush racing the
-    /// quit's own flush and exit. The unit stays pending; the quit's flush
-    /// picks it up, and what is still pending is kept for the next launch.
-    /// The quit is checked holding the timer, as in `schedule_flush`.
+    /// No timer is armed once the app quits: a timer firing then would start a
+    /// second flush racing the quit's own flush and exit. The unit stays
+    /// pending; the quit's flush picks it up, and what is still pending is kept
+    /// for the next launch. The quit is checked holding the timer, as in
+    /// `schedule_flush`.
     pub fn notify_change(&self, unit: &str) {
         self.inner.pending.notify_change(unit);
         let mut timer = self.timer();
@@ -141,17 +141,17 @@ impl Flusher {
         }
     }
 
-    /// `scheduleFlushIfPending`: a flush after `delay` when units are
-    /// pending and the app is not quitting, unless one fires no later.
+    /// A flush after `delay` when units are pending and the app is not
+    /// quitting, unless one fires no later.
     pub fn schedule_flush_if_pending(&self, delay: Duration) {
         if self.inner.pending.has_pending_changes() {
             self.schedule_flush(delay);
         }
     }
 
-    /// `scheduleFlush`: a flush after `delay`, unless the timer fires no
-    /// later or the app quits. The quit is checked holding the timer, so a
-    /// timer the quit clears is never armed again after it.
+    /// A flush after `delay`, unless the timer fires no later or the app
+    /// quits. The quit is checked holding the timer, so a timer the quit
+    /// clears is never armed again after it.
     fn schedule_flush(&self, delay: Duration) {
         let mut timer = self.timer();
         if self.inner.preflight.runtime().is_quitting()
@@ -162,7 +162,7 @@ impl Flusher {
         self.arm(&mut timer, delay);
     }
 
-    /// `armFlushTimer`: replaces the timer with one firing `delay` from now.
+    /// Replaces the timer with one firing `delay` from now.
     fn arm(&self, timer: &mut Timer, delay: Duration) {
         timer.clear();
         timer.armed += 1;
@@ -190,8 +190,7 @@ impl Flusher {
         true
     }
 
-    /// `clearFlushTimer`: drops the timer; a flush it already started runs
-    /// on.
+    /// Drops the timer; a flush it already started runs on.
     pub fn clear_timer(&self) {
         self.timer().clear();
     }
@@ -210,20 +209,20 @@ impl Flusher {
         self.inner.preflight.runtime().progress().emit(&progress);
     }
 
-    /// `reportBlockedFlush`: the guard stopped the flush.
+    /// Reports that the guard stopped the flush.
     fn report_blocked(&self, reason: SyncBlockReason) {
         self.inner.preflight.emit_sync_blocked(SyncDirection::Upload, reason);
         self.schedule_flush_if_pending(POLL_INTERVAL);
     }
 
-    /// `reportFailedFlush`: the flush failed before its units.
+    /// Reports that the flush failed before its units.
     fn report_failed(&self, message: String) {
         self.emit(SyncStatus::Error, message);
         self.schedule_flush_if_pending(POLL_INTERVAL);
     }
 
-    /// `flushPendingChanges`: uploads the pending units of the signed-in
-    /// account in one pass holding the sync lock.
+    /// Uploads the pending units of the signed-in account in one pass
+    /// holding the sync lock.
     pub async fn flush_pending_changes(&self) {
         let (pending, runtime) = (&self.inner.pending, self.inner.preflight.runtime());
         if !pending.has_pending_changes() {

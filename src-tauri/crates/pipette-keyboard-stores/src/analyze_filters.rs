@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The saved Analyze filters of a keyboard:
-//! `sync/keyboards/{uid}/analyze_filters`, the store of
-//! src/main/analyze-filter-store.ts, synced as the unit of the same name.
+//! `sync/keyboards/{uid}/analyze_filters`, synced as the unit of the same
+//! name.
 //!
 //! The index is the snapshots' (`{uid, entries}`, see keyboard_index.rs);
 //! each body (`{ts}_{id}.json`) is the renderer's filter text as it is.
@@ -107,14 +107,14 @@ fn find_entry(entries: &[Entry], id: &str) -> Option<usize> {
     keyboard_index::find_entry(entries, &JsString::from(id))
 }
 
-/// The live filters of `uid` (`ANALYZE_FILTER_STORE_LIST`), newest first.
+/// The live filters of `uid` (the `analyze_filter_store_list` command), newest first.
 pub fn list_analyze_filters(ctx: &StoreContext, uid: &str) -> Result<Vec<Entry>, AnalyzeFilterError> {
     validate_uid(uid)?;
     let index = read_index(&filter_dir(ctx, uid), uid)?;
     Ok(index.entries.into_iter().filter(|entry| !entry.is_deleted()).collect())
 }
 
-/// Saves `json` as a new filter of `uid` (`ANALYZE_FILTER_STORE_SAVE`),
+/// Saves `json` as a new filter of `uid` (the `analyze_filter_store_save` command),
 /// first in the index; an empty `summary` is not stored. Refused when the
 /// keyboard has [`MAX_ANALYZE_FILTERS_PER_KEYBOARD`] live filters. Returns
 /// the new entry.
@@ -159,7 +159,7 @@ pub fn save_analyze_filter(
     })
 }
 
-/// The body of `uid`'s filter `id` (`ANALYZE_FILTER_STORE_LOAD`).
+/// The body of `uid`'s filter `id` (the `analyze_filter_store_load` command).
 pub fn load_analyze_filter(ctx: &StoreContext, uid: &str, id: &str) -> Result<String, AnalyzeFilterError> {
     validate_uid(uid)?;
     let dir = filter_dir(ctx, uid);
@@ -173,7 +173,7 @@ pub fn load_analyze_filter(ctx: &StoreContext, uid: &str, id: &str) -> Result<St
 }
 
 /// Writes `json` over the body of `uid`'s filter `id`
-/// (`ANALYZE_FILTER_STORE_UPDATE`): a user save, which brings a deleted
+/// (the `analyze_filter_store_update` command): a user save, which brings a deleted
 /// entry back.
 pub fn update_analyze_filter(
     ctx: &StoreContext,
@@ -197,8 +197,8 @@ pub fn update_analyze_filter(
     })
 }
 
-/// A meta-only change of `uid`'s filter `id` (`updateEntry`): `mutate`
-/// edits the entry, then `mutation` moves its clock or tombstones it.
+/// A meta-only change of `uid`'s filter `id`: `mutate` edits the entry,
+/// then `mutation` moves its clock or tombstones it.
 fn change_entry(
     ctx: &StoreContext,
     uid: &str,
@@ -223,7 +223,7 @@ fn change_entry(
 }
 
 /// Gives `uid`'s filter `id` the label `label`
-/// (`ANALYZE_FILTER_STORE_RENAME`).
+/// (the `analyze_filter_store_rename` command).
 pub fn rename_analyze_filter(
     ctx: &StoreContext,
     uid: &str,
@@ -233,14 +233,14 @@ pub fn rename_analyze_filter(
     change_entry(ctx, uid, id, EntryMutation::Meta(MetaGroup::Name), |entry| entry.set("label", label))
 }
 
-/// Tombstones `uid`'s filter `id` (`ANALYZE_FILTER_STORE_DELETE`); its
+/// Tombstones `uid`'s filter `id` (the `analyze_filter_store_delete` command); its
 /// body stays for sync.
 pub fn delete_analyze_filter(ctx: &StoreContext, uid: &str, id: &str) -> Result<(), AnalyzeFilterError> {
     change_entry(ctx, uid, id, EntryMutation::Delete, |_| {})
 }
 
 /// Links `uid`'s filter `id` to a public Hub post
-/// (`ANALYZE_FILTER_STORE_SET_HUB_POST_ID`), dropping any private link: the
+/// (the `analyze_filter_store_set_hub_post_id` command), dropping any private link: the
 /// two are exclusive. A post id that is `None` or blank once trimmed clears
 /// the link instead.
 pub fn set_analyze_filter_hub_post_id(
@@ -266,7 +266,7 @@ pub fn set_analyze_filter_hub_post_id(
 }
 
 /// Links `uid`'s filter `id` to a private Hub post
-/// (`ANALYZE_FILTER_STORE_SET_HUB_PRIVATE`), dropping any public post id,
+/// (the `analyze_filter_store_set_hub_private` command), dropping any public post id,
 /// or clears the private link when `link` is `None`.
 pub fn set_analyze_filter_hub_private(
     ctx: &StoreContext,

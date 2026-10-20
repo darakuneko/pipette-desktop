@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the Local Data scenarios recorded from the TypeScript handlers
-//! by scripts/sync-fixtures/record-local-data-fixtures.test.ts: each seeds
-//! a userData tree, then exports (the file's text and the tree left
-//! behind) or imports a file (the outcome, the units changed and the tree
-//! left behind), compared byte for byte. The dialogs are the command's
+//! Replays the recorded golden Local Data scenarios: each seeds a userData
+//! tree, then exports (the file's text and the tree left behind) or imports a
+//! file (the outcome, the units changed and the tree left behind), compared
+//! byte for byte. The dialogs are the command's
 //! (src-tauri/src/sync_commands/data.rs) and are checked there.
 //!
-//! An error is compared by its kind; its text too where it is the Electron
-//! build's own (not the system's, nor `JSON.parse`'s).
+//! An error is compared by its kind; its text too where it is the app's own
+//! (not the system's, nor `JSON.parse`'s).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -54,7 +53,7 @@ fn context(root: &Path, now: i64) -> StoreContext {
 }
 
 #[test]
-fn exports_as_the_typescript_handler_does() {
+fn exports_match_the_recorded_golden() {
     let fixture = fixture();
     let now = now(&fixture);
     for scenario in list(get(&fixture, "exports")) {
@@ -76,8 +75,7 @@ fn exports_as_the_typescript_handler_does() {
     }
 }
 
-/// The kind the generator gives a failure (`errorOf`) and whether its text
-/// is compared.
+/// The kind the generator gives a failure and whether its text is compared.
 fn kind_of(err: &LocalDataImportError) -> (&'static str, bool) {
     match err {
         LocalDataImportError::InvalidFormat => ("format", true),
@@ -114,7 +112,7 @@ fn writes_into(dir: &Path) -> bool {
 }
 
 #[test]
-fn imports_as_the_typescript_handler_does() {
+fn imports_match_the_recorded_golden() {
     let fixture = fixture();
     let now = now(&fixture);
     for scenario in list(get(&fixture, "imports")) {
@@ -140,7 +138,7 @@ fn imports_as_the_typescript_handler_does() {
         if let Some(dir) = read_only.iter().find(|dir| writes_into(&root.path().join(dir))) {
             // Root (or CAP_DAC_OVERRIDE) writes into any directory, so the
             // failure the scenario needs cannot happen.
-            eprintln!("SKIPPED imports_as_the_typescript_handler_does: {name}: {dir} is writable (root)");
+            eprintln!("SKIPPED imports_match_the_recorded_golden: {name}: {dir} is writable (root)");
             for dir in &read_only {
                 set_read_only(&root.path().join(dir), false);
             }

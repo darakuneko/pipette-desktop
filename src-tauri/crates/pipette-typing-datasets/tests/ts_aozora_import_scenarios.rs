@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript Aozora Bunko import
-//! handler by scripts/typing-text-fixtures/record-aozora-import-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the Aozora Bunko import
+//! handler:
 //! the same userData files, HTTP replies, clock and new ids, the same
 //! calls, then each response, the URLs asked, the notified units and every
 //! file left behind compared byte for byte.
@@ -48,7 +48,7 @@ fn queue_replies(h: &Harness, step: &Object) {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handler() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_aozora_import_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The snapshots of a keyboard: `sync/keyboards/{uid}/snapshots`, the store
-//! of src/main/snapshot-store.ts, synced as the unit of the same name.
+//! The snapshots of a keyboard: `sync/keyboards/{uid}/snapshots`, synced
+//! as the unit of the same name.
 //!
 //! `index.json` is `{uid, entries}` written as `JSON.stringify(index, null,
 //! 2)`; each body (`{device}_{ts}_{id}.pipette`) is the renderer's text as
@@ -128,14 +128,14 @@ fn find_entry(entries: &[Entry], id: &str) -> Option<usize> {
     keyboard_index::find_entry(entries, &JsString::from(id))
 }
 
-/// The live snapshots of `uid` (`SNAPSHOT_STORE_LIST`), newest first.
+/// The live snapshots of `uid` (the `snapshot_store_list` command), newest first.
 pub fn list_snapshots(ctx: &StoreContext, uid: &str) -> Result<Vec<Entry>, SnapshotError> {
     validate_uid(uid)?;
     let index = read_index(&snapshot_dir(ctx, uid), uid)?;
     Ok(index.entries.into_iter().filter(|entry| !entry.is_deleted()).collect())
 }
 
-/// Saves `json` as a new snapshot of `uid` (`SNAPSHOT_STORE_SAVE`), first
+/// Saves `json` as a new snapshot of `uid` (the `snapshot_store_save` command), first
 /// in the index, and records `device_name` in the keyboard names. Refused
 /// when the keyboard has [`MAX_SNAPSHOTS_PER_KEYBOARD`] live snapshots.
 /// Returns the new entry.
@@ -186,7 +186,7 @@ pub fn save_snapshot(
     })
 }
 
-/// The body of `uid`'s snapshot `id` (`SNAPSHOT_STORE_LOAD`).
+/// The body of `uid`'s snapshot `id` (the `snapshot_store_load` command).
 pub fn load_snapshot(ctx: &StoreContext, uid: &str, id: &str) -> Result<String, SnapshotError> {
     validate_uid(uid)?;
     let dir = snapshot_dir(ctx, uid);
@@ -199,7 +199,7 @@ pub fn load_snapshot(ctx: &StoreContext, uid: &str, id: &str) -> Result<String, 
 }
 
 /// Writes `json` over the body of `uid`'s snapshot `id`
-/// (`SNAPSHOT_STORE_UPDATE`), with `vil_version` when given.
+/// (the `snapshot_store_update` command), with `vil_version` when given.
 ///
 /// Without `migrate_from` this is a user save: an explicit overwrite that
 /// brings a deleted entry back. With it, it is the mechanical v1 → v2
@@ -259,8 +259,8 @@ pub fn update_snapshot(
     })
 }
 
-/// A meta-only change of `uid`'s snapshot `id` (`updateEntry`): `mutate`
-/// edits the entry, then `mutation` moves its clock or tombstones it.
+/// A meta-only change of `uid`'s snapshot `id`: `mutate` edits the entry,
+/// then `mutation` moves its clock or tombstones it.
 fn change_entry(
     ctx: &StoreContext,
     uid: &str,
@@ -284,19 +284,19 @@ fn change_entry(
     })
 }
 
-/// Gives `uid`'s snapshot `id` the label `label` (`SNAPSHOT_STORE_RENAME`).
+/// Gives `uid`'s snapshot `id` the label `label` (the `snapshot_store_rename` command).
 pub fn rename_snapshot(ctx: &StoreContext, uid: &str, id: &str, label: &str) -> Result<(), SnapshotError> {
     change_entry(ctx, uid, id, EntryMutation::Meta(MetaGroup::Name), |entry| entry.set("label", label))
 }
 
-/// Tombstones `uid`'s snapshot `id` (`SNAPSHOT_STORE_DELETE`); its body
+/// Tombstones `uid`'s snapshot `id` (the `snapshot_store_delete` command); its body
 /// stays for sync.
 pub fn delete_snapshot(ctx: &StoreContext, uid: &str, id: &str) -> Result<(), SnapshotError> {
     change_entry(ctx, uid, id, EntryMutation::Delete, |_| {})
 }
 
 /// Links `uid`'s snapshot `id` to a public Hub post
-/// (`SNAPSHOT_STORE_SET_HUB_POST_ID`), dropping any private link: the two
+/// (the `snapshot_store_set_hub_post_id` command), dropping any private link: the two
 /// are exclusive. A post id that is `None` or blank once trimmed clears the
 /// link instead.
 pub fn set_snapshot_hub_post_id(
@@ -322,7 +322,7 @@ pub fn set_snapshot_hub_post_id(
 }
 
 /// Links `uid`'s snapshot `id` to a private Hub post
-/// (`SNAPSHOT_STORE_SET_HUB_PRIVATE`), dropping any public post id, or
+/// (the `snapshot_store_set_hub_private` command), dropping any public post id, or
 /// clears the private link when `link` is `None`.
 pub fn set_snapshot_hub_private(
     ctx: &StoreContext,

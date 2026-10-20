@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The requests to the token endpoint (src/main/sync/google-auth.ts): the
-//! code exchange of a sign-in and the refresh, each a form POST bounded by
-//! a time limit.
+//! The requests to the token endpoint: the code exchange of a sign-in and
+//! the refresh, each a form POST bounded by a time limit.
 
 use std::time::Duration;
 
@@ -18,8 +17,7 @@ pub(crate) struct TokenResponse {
     pub access_token: String,
     #[serde(default)]
     pub refresh_token: Option<String>,
-    /// Seconds. Without it the tokens count as expired at once (Electron
-    /// stores `NaN`, which refreshes on every use).
+    /// Seconds. Without it the tokens count as expired at once.
     #[serde(default)]
     pub expires_in: Option<f64>,
     #[serde(default)]

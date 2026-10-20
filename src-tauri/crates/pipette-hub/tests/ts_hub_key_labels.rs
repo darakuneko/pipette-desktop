@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The key label scenarios recorded from the Electron Hub handlers
+//! The recorded golden key label scenarios of the Hub handlers
 //! (ts_hub_handlers_key_labels.json): the recorded userData is seeded, the
 //! scripted Hub answers the Rust handlers, which must give the same
 //! answers, send the same requests, wait the same waits, report the same
@@ -44,7 +44,7 @@ async fn run_call(token: &HubToken, stores: &StoreContext, call: &str, args: &[V
 }
 
 #[test]
-fn the_key_label_scenarios_match_the_ts() {
+fn the_key_label_scenarios_match_the_golden() {
     let f = fixture("ts_hub_handlers_key_labels.json");
     let base = text(field(&f, "hubBase")).to_owned();
     let now = number(field(&f, "nowMs")).unwrap();

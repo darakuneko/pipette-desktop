@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The private (unlisted) keymap post handlers of
-//! `src/main/hub/hub-ipc-private.ts`: the upload, which answers the share
-//! URL and the expiry for the page to keep on its entry, and the delete
-//! that Remove and the switch to public share.
+//! The private (unlisted) keymap post handlers: the upload, which answers
+//! the share URL and the expiry for the page to keep on its entry, and the
+//! delete that Remove and the switch to public share.
 //!
 //! The upload checks and sends a keymap post as [`crate::posts`] does, to
 //! `/api/private/files`, with `expires_in_days` last when there is an
@@ -20,7 +19,7 @@ use crate::posts::{
 };
 use crate::token::{HubFailure, HubToken};
 
-/// `HUB_UPLOAD_PRIVATE_POST`: `{ success, id, url, expiresAt }`.
+/// The `hub_upload_private_post` command: `{ success, id, url, expiresAt }`.
 /// `expires_in_days` is `None` for no expiry; it is written as
 /// `String(expiresInDays)`. The checks are those of a public upload.
 pub async fn upload_private_post(
@@ -31,7 +30,7 @@ pub async fn upload_private_post(
     upload_private_prepared(token, prepare_upload(params), expires_in_days).await
 }
 
-/// `HUB_UPLOAD_PRIVATE_POST` of a post [`prepare_upload`] prepared.
+/// The `hub_upload_private_post` command of a post [`prepare_upload`] prepared.
 pub async fn upload_private_prepared(
     token: &HubToken,
     post: Result<CheckedKeymapPost, HubFailure>,
@@ -45,7 +44,7 @@ pub async fn upload_private_prepared(
                 send(token, &Endpoint::UploadPrivatePost, jwt, body)
             })
             .await?;
-        // `toPrivateResult`.
+        // The answer: the post's id, url and expiry.
         let data = data.as_ref();
         Ok(vec![
             ("id", property(data, "id")?),
@@ -57,7 +56,7 @@ pub async fn upload_private_prepared(
     answer(result)
 }
 
-/// `HUB_DELETE_PRIVATE_POST`: `kind` is `String(kind)` of what the page
+/// The `hub_delete_private_post` command: `kind` is `String(kind)` of what the page
 /// sent; `id` is `None` for a value that is not a string.
 pub async fn delete_private_post(token: &HubToken, kind: &str, id: Option<&str>) -> Value {
     let Some(id) = id.filter(|id| !id.is_empty()) else {

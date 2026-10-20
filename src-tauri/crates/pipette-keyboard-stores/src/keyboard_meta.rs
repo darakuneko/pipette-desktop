@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The keyboard names: `sync/meta/keyboard-names.json`, the uid → device
-//! name map of src/main/sync/keyboard-meta.ts, synced as the unit
-//! `meta/keyboard-names`.
+//! name map, synced as the unit `meta/keyboard-names`.
 //!
 //! The file is `{"type":"keyboard-meta","version":1,"entries":[…]}` written
 //! as `JSON.stringify(index, null, 2)`; each entry is
@@ -59,9 +58,9 @@ pub(crate) fn meta_file_path(ctx: &StoreContext) -> PathBuf {
     ctx.sync_dir().join("meta").join("keyboard-names.json")
 }
 
-/// The index in the file at `path` (`readKeyboardMetaIndex`): empty when
-/// the file is missing, unreadable, not JSON, or not a keyboard-meta index
-/// with an `entries` list. Fails only for a file nested too deeply to read.
+/// The index in the file at `path`: empty when the file is missing,
+/// unreadable, not JSON, or not a keyboard-meta index with an `entries`
+/// list. Fails only for a file nested too deeply to read.
 pub(crate) fn read_index(path: &Path) -> Result<MetaIndex, StoreError> {
     let Ok(bytes) = std::fs::read(path) else { return Ok(MetaIndex::empty()) };
     // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD.
@@ -138,9 +137,9 @@ pub(crate) fn drop_expired_tombstones(entries: Vec<Value>, now_ms: i64) -> Resul
     Ok(kept)
 }
 
-/// The active names by uid (`getActiveKeyboardMetaMap`): entries that are
-/// not deleted and have a name, the last one of a uid winning. The name is
-/// the entry's value as it is, whatever its type.
+/// The active names by uid: entries that are not deleted and have a name,
+/// the last one of a uid winning. The name is the entry's value as it is,
+/// whatever its type.
 pub fn active_keyboard_names(entries: &[Value]) -> Result<HashMap<String, Value>, StoreError> {
     let mut names = HashMap::new();
     for entry in entries {
@@ -262,12 +261,11 @@ fn write_name(
 }
 
 /// Records each `(uid, device_name)` (trimmed) for a uid the index has no
-/// entry for, in one write (`batchUpsertKeyboardMeta` as the backfill uses
-/// it); pairs with an empty uid or name are skipped. A uid that has gained
-/// an entry by the time of the write (a name, or a tombstone of a delete
-/// made while the names were being looked up) keeps it, so the backfill
-/// never revives a deleted name. Answers how many entries were added;
-/// nothing is written when none were.
+/// entry for, in one write, for the backfill; pairs with an empty uid or
+/// name are skipped. A uid that has gained an entry by the time of the
+/// write (a name, or a tombstone of a delete made while the names were
+/// being looked up) keeps it, so the backfill never revives a deleted name.
+/// Answers how many entries were added; nothing is written when none were.
 pub fn name_unnamed_keyboards(ctx: &StoreContext, names: &[(String, JsString)]) -> Result<usize, StoreError> {
     if names.is_empty() {
         return Ok(0);
@@ -311,10 +309,9 @@ fn mark_entry_deleted(entry: &mut Value, now: &str) -> Result<(), StoreError> {
     }
 }
 
-/// Deletes the name of `uid` (`tombstoneKeyboardMeta`): an active entry
-/// becomes a tombstone, and a uid with no entry gets one, so the other
-/// devices learn of the delete. Unchanged for an empty uid or an entry
-/// already deleted.
+/// Deletes the name of `uid`: an active entry becomes a tombstone, and a
+/// uid with no entry gets one, so the other devices learn of the delete.
+/// Unchanged for an empty uid or an entry already deleted.
 pub fn tombstone_keyboard_meta(ctx: &StoreContext, uid: &str) -> Result<TombstoneOutcome, StoreError> {
     if uid.is_empty() {
         return Ok(TombstoneOutcome::Unchanged);
@@ -342,8 +339,8 @@ pub fn tombstone_keyboard_meta(ctx: &StoreContext, uid: &str) -> Result<Tombston
     )
 }
 
-/// Deletes every active name (`tombstoneAllKeyboardMeta`) and answers how
-/// many there were; nothing is written when there were none.
+/// Deletes every active name and answers how many there were; nothing is
+/// written when there were none.
 pub fn tombstone_all_keyboard_meta(ctx: &StoreContext) -> Result<usize, StoreError> {
     rewrite_index(
         ctx,
@@ -362,8 +359,8 @@ pub fn tombstone_all_keyboard_meta(ctx: &StoreContext) -> Result<usize, StoreErr
     )
 }
 
-/// Records `device_name` (trimmed) for `uid` (`upsertKeyboardMeta`): a new
-/// entry, a new name for an active entry, or a tombstone revived with it.
+/// Records `device_name` (trimmed) for `uid`: a new entry, a new name for
+/// an active entry, or a tombstone revived with it.
 /// Unchanged for an empty uid or name, or an active entry of that name.
 pub fn upsert_keyboard_meta(
     ctx: &StoreContext,
@@ -373,10 +370,9 @@ pub fn upsert_keyboard_meta(
     write_name(ctx, uid, device_name, Rule::SameName)
 }
 
-/// Names a keyboard from its firmware name when it connects
-/// (`nameKeyboardOnConnect`): a uid with no entry gets one, a tombstone is
-/// revived with the name, and an active entry is left as it is, so a name
-/// the user gave it is never replaced.
+/// Names a keyboard from its firmware name when it connects: a uid with no
+/// entry gets one, a tombstone is revived with the name, and an active
+/// entry is left as it is, so a name the user gave it is never replaced.
 pub fn name_keyboard_on_connect(
     ctx: &StoreContext,
     uid: &str,
@@ -385,7 +381,7 @@ pub fn name_keyboard_on_connect(
     write_name(ctx, uid, device_name, Rule::AnyActive)
 }
 
-/// The `KEYBOARD_META_NAME_IF_MISSING` handler: `uid` and `name` are the
+/// The `keyboard_meta_name_if_missing` command: `uid` and `name` are the
 /// renderer's arguments when they are strings. Does nothing unless the uid
 /// is a safe key; reports the unit when the names changed.
 pub fn keyboard_meta_name_if_missing(
@@ -404,8 +400,8 @@ pub fn keyboard_meta_name_if_missing(
 }
 
 /// The device name at the start of a snapshot filename
-/// (`extractDeviceNameFromFilename`, `/^(.+?)_\d{4}-\d{2}-/`): the shortest
-/// non-empty prefix, with no line terminator, followed by `_YYYY-MM-`.
+/// (`/^(.+?)_\d{4}-\d{2}-/`): the shortest non-empty prefix, with no line
+/// terminator, followed by `_YYYY-MM-`.
 pub fn extract_device_name_from_filename(filename: &JsString) -> Option<JsString> {
     let units = filename.utf16_units();
     for end in 1..units.len() {

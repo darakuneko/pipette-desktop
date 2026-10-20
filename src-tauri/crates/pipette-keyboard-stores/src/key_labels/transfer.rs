@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The import of key label files and the export of one label, as
-//! `importFromDialog` / `exportToDialog` of src/main/key-label-store.ts
-//! do them once the dialog has answered.
+//! The import of key label files and the export of one label, once
+//! the dialog has answered.
 
 use std::path::{Path, PathBuf};
 
@@ -45,7 +44,7 @@ fn file_name_of(path: &Path) -> JsString {
     path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default().into()
 }
 
-/// Imports the files the user picked (the `data` of `KEY_LABEL_STORE_IMPORT`
+/// Imports the files the user picked (the `data` of the `key_label_store_import` command
 /// once its dialog answered): `{imported: [{fileName, meta}], rejections:
 /// [{fileName, errorCode, error}]}`. Each file stands alone, in the order
 /// given; one that cannot be read or saved is a rejection and the others
@@ -85,7 +84,7 @@ pub struct KeyLabelExport {
     pub content: String,
 }
 
-/// The export of the live entry `id` (`exportToDialog` up to its dialog).
+/// The export of the live entry `id`, up to its save dialog.
 pub fn export_key_label(ctx: &StoreContext, id: &JsString) -> Result<KeyLabelExport, KeyLabelError> {
     let record = get_key_label(ctx, id)?;
     let data = record.get("data").and_then(Value::as_object).cloned().unwrap_or_default();

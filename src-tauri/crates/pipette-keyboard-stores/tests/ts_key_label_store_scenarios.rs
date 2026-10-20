@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript key label handlers by
-//! scripts/keyboard-store-fixtures/record-key-label-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the key label handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the dialogs shown, the notified units and every file left
 //! behind compared byte for byte. The texts of a file-system error, of a
@@ -177,7 +176,7 @@ fn recorded_dialogs(dialogs: &Value) -> Shown {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_key_label_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

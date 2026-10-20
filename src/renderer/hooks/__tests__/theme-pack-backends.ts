@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the theme pack hooks' tests run against,
-// both answering from the same VialAPI-shaped spies: a preload-like mock
+// both answering from the same VialAPI-shaped spies: a plain mock
 // (the spies themselves), and the Tauri shim's theme pack members over a
 // mocked Tauri IPC, whose commands hand the spies their arguments in the
 // members' order.
 //
 // Each backend also sends the main process's THEME_PACK_CHANGED broadcast
-// its own way: the preload-like mock calls the callbacks given to
+// its own way: the plain mock calls the callbacks given to
 // `themePackOnChanged`, and the shim's backend emits `theme-pack:changed`.
 // For the shim, the import dialog's answer crosses as each file's text
 // (pack-backends.ts).
@@ -63,12 +63,12 @@ function installShim(spies: ThemePackSpies): Partial<VialAPI> {
   return { ...themePacksApi }
 }
 
-/** The preload-like mock: the spies, and `themePackOnChanged` keeping its
+/** The plain mock: the spies, and `themePackOnChanged` keeping its
  *  callbacks for the broadcast. */
-function preloadLike(spies: ThemePackSpies): ThemePackBackend {
+function plainMockBackend(spies: ThemePackSpies): ThemePackBackend {
   const callbacks = new Set<() => void>()
   return {
-    name: 'preload-like mock',
+    name: 'plain mock',
     install: () => {
       callbacks.clear()
       const onChanged = (callback: () => void): (() => void) => {
@@ -85,7 +85,7 @@ function preloadLike(spies: ThemePackSpies): ThemePackBackend {
 
 export function themePackBackends(spies: ThemePackSpies): ThemePackBackend[] {
   return [
-    preloadLike(spies),
+    plainMockBackend(spies),
     {
       name: 'Tauri shim over mockIPC',
       install: () => installShim(spies),

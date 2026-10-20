@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Rebuilding the SQLite cache from the JSONL masters, and deciding whether
-//! it can be trusted for this device (src/main/typing-analytics/
-//! cache-rebuild.ts).
+//! it can be trusted for this device.
 //!
 //! The cache is rebuilt when `sync_state.json` is missing, cannot be read
 //! or names another device, or when the caller forces it (a schema
 //! migration dropped tables, an import replaced day files). The database
 //! file itself is not looked at: deleting only the database leaves an
-//! empty cache that is not rebuilt, as in the Electron build.
+//! empty cache that is not rebuilt.
 //!
 //! A rebuild empties the data tables and replays every day file, one
 //! database job per file: the files of other devices with their deleted
 //! ranges hidden (deleted_ranges_cache.rs), the ranges read inside that
-//! file's job. Between the jobs the queries and the flush run, as they run
-//! between the awaits of the Electron rebuild.
+//! file's job. Between the jobs the queries and the flush run.
 
 use std::fs::File;
 use std::io::{self, Read};
@@ -53,7 +51,7 @@ impl CacheRebuildResult {
     }
 }
 
-/// The text of a day file as `readRows` reads it: a file that cannot be
+/// The text of a day file: a file that cannot be
 /// opened has none (`None`), an error while reading an opened one fails.
 fn read_day_text(path: &Path) -> io::Result<Option<String>> {
     let Ok(mut file) = File::open(path) else { return Ok(None) };
@@ -62,7 +60,7 @@ fn read_day_text(path: &Path) -> io::Result<Option<String>> {
     Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
 }
 
-/// `rebuildCacheFromMasterFiles`: empties the data tables of the cache and
+/// Empties the data tables of the cache and
 /// replays every day file of every keyboard and device, the files of a
 /// hash other than `own_hash` with that hash's deleted ranges hidden at
 /// the clock's time. A file without rows is skipped without reading its

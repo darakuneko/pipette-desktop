@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The import dialog of the language and theme packs
-//! (`readSelectedImportFiles` of src/main/pack-import-dialog.ts): a
-//! multi-selection open dialog whose files are read one by one, a file that
-//! cannot be read failing alone. The answer carries each file's text; the
-//! shim parses it into the `{filePath, raw, fileSizeBytes}` or
-//! `{…, parseError}` the renderer gets.
+//! The import dialog of the language and theme packs: a multi-selection open
+//! dialog whose files are read one by one, a file that cannot be read failing
+//! alone. The answer carries each file's text; the shim parses it into the
+//! `{filePath, raw, fileSizeBytes}` or `{…, parseError}` the renderer gets.
 
 use pipette_pack_stores::{ImportFileRead, read_import_file};
 use serde::Serialize;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// Runs against both vialAPI implementations: a preload-like mock, and the
+// Runs against both vialAPI implementations: a plain mock, and the
 // Tauri shim's dataset members over a mocked Tauri IPC
 // (./typing-dataset-backends.ts).
 
@@ -8,13 +8,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { clearMocks } from '@tauri-apps/api/mocks'
 import { useTypingDatasetUpdate } from '../useTypingDatasetUpdate'
-import { type DatasetSpies, datasetSpies, preloadLikeMock, shimOverMockIPC } from './typing-dataset-backends'
+import { type DatasetSpies, datasetSpies, plainMock, shimOverMockIPC } from './typing-dataset-backends'
 
 afterEach(() => {
   clearMocks()
 })
 
-describe.each([preloadLikeMock, shimOverMockIPC])('useTypingDatasetUpdate ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('useTypingDatasetUpdate ($name)', (backend) => {
   let spies: DatasetSpies
 
   beforeEach(() => {

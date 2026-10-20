@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The keycode lookups of the Layout Comparison resolver, on the keycode
-//! registry of src/shared/keycodes/keycodes.ts as the Electron main
-//! process holds it (data/keycodes.rs, generated from it).
+//! registry of src/shared/keycodes/keycodes.ts as recorded in
+//! data/keycodes.rs.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;

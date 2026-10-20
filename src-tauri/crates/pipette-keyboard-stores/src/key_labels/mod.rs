@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The key labels: `sync/key-labels`, the store of
-//! src/main/key-label-store.ts, synced as the unit `key-labels`.
+//! The key labels: `sync/key-labels`, synced as the unit
+//! `key-labels`.
 //!
 //! `index.json` is `{entries}` written as `JSON.stringify(index, null, 2)`;
 //! each body (`{id}_{ts}.json`) is `{name, map, compositeLabels?,
@@ -14,7 +14,7 @@
 //! of the entries and their order, survive every write; the other
 //! top-level fields of the index survive the writes that change entries in
 //! place (rename, delete, Hub link, the QWERTY entry) and are dropped by a
-//! save and a reorder, which write `{entries}`, as the Electron build does.
+//! save and a reorder, which write `{entries}`.
 //!
 //! The writes run under the store's write lock (`key-labels`, the name of
 //! its sync unit) and move legacy body names to id-carrying ones on their
@@ -166,7 +166,7 @@ fn ensure_qwerty_locked(ctx: &StoreContext, dir: &Path) -> Result<(), KeyLabelEr
     Ok(())
 }
 
-/// The entries of a list (`KEY_LABEL_STORE_LIST` / `…_LIST_ALL`), in the
+/// The entries of a list (the `key_label_store_list` / `key_label_store_list_all` command), in the
 /// index's order, tombstones included when `include_deleted`. Makes sure of
 /// the QWERTY entry first, taking the lock only when it has to be written.
 pub fn list_key_labels(ctx: &StoreContext, include_deleted: bool) -> Result<Vec<Entry>, KeyLabelError> {
@@ -179,7 +179,7 @@ pub fn list_key_labels(ctx: &StoreContext, include_deleted: bool) -> Result<Vec<
     Ok(entries.into_iter().filter(|entry| include_deleted || !entry.is_deleted()).collect())
 }
 
-/// The live entry `id` and its body (`KEY_LABEL_STORE_GET`): `{meta,
+/// The live entry `id` and its body (the `key_label_store_get` command): `{meta,
 /// data}`, the body as [`normalize_file`] reads it with the entry's name,
 /// which a rename changes in the index only.
 pub fn get_key_label(ctx: &StoreContext, id: &JsString) -> Result<Object, KeyLabelError> {
@@ -202,7 +202,7 @@ pub fn get_key_label(ctx: &StoreContext, id: &JsString) -> Result<Object, KeyLab
     Ok([("meta", Value::from(meta)), ("data", Value::Object(data))].into_iter().collect())
 }
 
-/// What a save writes (`SaveRecordInput`). The optional Hub fields are
+/// What a save writes. The optional Hub fields are
 /// kept when truthy, as the handler does.
 #[derive(Clone, Debug, PartialEq)]
 pub struct KeyLabelSave {
@@ -225,10 +225,9 @@ fn truthy(value: Option<&Value>) -> Option<&Value> {
     value.filter(|value| value.is_truthy())
 }
 
-/// Saves a label (`saveRecord`): a new entry last in the index, or the
-/// entry `input.id` written over in its place, brought back if deleted
-/// (every save is a user action). The previous body file is removed. Returns
-/// the entry.
+/// Saves a label: a new entry last in the index, or the entry `input.id`
+/// written over in its place, brought back if deleted (every save is a user
+/// action). The previous body file is removed. Returns the entry.
 pub fn save_key_label(ctx: &StoreContext, input: &KeyLabelSave) -> Result<Entry, KeyLabelError> {
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || save_locked(ctx, input))
 }
@@ -308,8 +307,8 @@ fn save_locked(ctx: &StoreContext, input: &KeyLabelSave) -> Result<Entry, KeyLab
     Ok(meta)
 }
 
-/// Renames the live entry `id` (`renameRecord`): the index only, the body
-/// file keeps the name it was saved with. Returns the entry.
+/// Renames the live entry `id`: the index only, the body file keeps the
+/// name it was saved with. Returns the entry.
 pub fn rename_key_label(ctx: &StoreContext, id: &JsString, name: &JsString) -> Result<Entry, KeyLabelError> {
     let name = validate_name(name)?;
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || {
@@ -334,8 +333,8 @@ pub fn rename_key_label(ctx: &StoreContext, id: &JsString, name: &JsString) -> R
     })
 }
 
-/// Tombstones the entry `id` (`deleteRecord`), again when it already is;
-/// its body stays for sync. The QWERTY entry is refused.
+/// Tombstones the entry `id`, again when it already is; its body stays for
+/// sync. The QWERTY entry is refused.
 pub fn delete_key_label(ctx: &StoreContext, id: &JsString) -> Result<(), KeyLabelError> {
     if *id == *QWERTY_ENTRY_ID {
         return Err(KeyLabelError::invalid_name("QWERTY cannot be deleted"));
@@ -351,11 +350,11 @@ pub fn delete_key_label(ctx: &StoreContext, id: &JsString) -> Result<(), KeyLabe
     })
 }
 
-/// Links the entry `id` (live or not) to a Hub post (`setHubPostId`). A
-/// post id that is `None` or blank once trimmed clears the link and the
-/// cached Hub time. `uploader_name` and `hub_updated_at` change their field
-/// only when given (`Some`): trimmed, or removed when `Some(None)` or blank.
-/// Returns the entry.
+/// Links the entry `id` (live or not) to a Hub post. A post id that is
+/// `None` or blank once trimmed clears the link and the cached Hub time.
+/// `uploader_name` and `hub_updated_at` change their field only when given
+/// (`Some`): trimmed, or removed when `Some(None)` or blank. Returns the
+/// entry.
 pub fn set_key_label_hub_post_id(
     ctx: &StoreContext,
     id: &JsString,
@@ -386,11 +385,10 @@ pub fn set_key_label_hub_post_id(
     })
 }
 
-/// Puts the live entries named in `ordered_ids` first, in that order
-/// (`reorderActive`); the others follow in their order. An id the index
-/// holds more than once is placed once, as its last entry, and its other
-/// entries go. No clock moves and no change is reported: the order is this
-/// device's own.
+/// Puts the live entries named in `ordered_ids` first, in that order; the
+/// others follow in their order. An id the index holds more than once is
+/// placed once, as its last entry, and its other entries go. No clock moves
+/// and no change is reported: the order is this device's own.
 pub fn reorder_key_labels(ctx: &StoreContext, ordered_ids: &[JsString]) -> Result<(), KeyLabelError> {
     ctx.locks.with_write_lock(KEY_LABEL_SYNC_UNIT, || {
         let dir = store_dir(ctx);
@@ -419,7 +417,7 @@ pub fn reorder_key_labels(ctx: &StoreContext, ordered_ids: &[JsString]) -> Resul
 }
 
 /// Whether a live entry other than `exclude_id` has the name `name`,
-/// ignoring case and surrounding whitespace (`hasActiveName`).
+/// ignoring case and surrounding whitespace.
 pub fn has_key_label_name(
     ctx: &StoreContext,
     name: &JsString,

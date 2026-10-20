@@ -73,8 +73,7 @@ serde_json = { workspace = true }
 # Keyboard definition decompression (src/definition.rs): LZMA-alone with
 # lzma-rs; XZ with xz4rust, whose decoder streams its output so the size
 # limit applies while decoding (lzma-rs buffers a whole XZ block first).
-# Without the "sha256" feature a SHA-256 checked stream fails, as it does
-# with the xz-decompress package of the Electron main process.
+# Without the "sha256" feature a SHA-256 checked stream fails.
 lzma-rs = { workspace = true }
 xz4rust = { version = "=0.2.3", default-features = false, features = ["std", "no_unsafe", "crc64"] }
 # TypeScript declarations of the types that cross the IPC boundary, written

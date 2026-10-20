@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The request each Hub API function of the Electron code sends, against
-//! the Rust endpoints and bodies (tests/fixtures/ts_hub_request_log.json,
-//! recorded by scripts/hub-fixtures/): method, path, the sorted query, the
+//! The recorded request of each Hub API call, against the Rust endpoints
+//! and bodies (tests/fixtures/ts_hub_request_log.json): method, path, the sorted query, the
 //! headers (without `User-Agent` / `Accept` and the boundary), the JSON
 //! text, and the whole multipart body with the boundary written
 //! `{boundary}`; and the result read from the recorded answer.
@@ -69,7 +68,7 @@ fn obj(fields: Vec<(&str, Value)>) -> Value {
     Value::Object(o)
 }
 
-/// The recorded `HubKeyLabelInput` for `key_labels::build_body`.
+/// The recorded key label input for `key_labels::build_body`.
 fn key_label_body(input: &Value) -> String {
     let given = |key: &str| get(input, key).filter(|value| get(value, "$u").is_none()).cloned();
     build_body(&KeyLabelInput {
@@ -82,7 +81,7 @@ fn key_label_body(input: &Value) -> String {
 
 const NORM: &str = "{boundary}";
 
-/// (endpoint, jwt, body) the TS function sends for `args`.
+/// (endpoint, jwt, body) the function sends for `args`.
 fn call<'a>(
     fn_name: &str,
     a: &'a [Value],
@@ -313,7 +312,7 @@ fn call<'a>(
 }
 
 #[test]
-fn each_request_matches_the_ts() {
+fn each_request_matches_the_golden() {
     let f = fixture("ts_hub_request_log.json");
     let base = get(&f, "hubBase").unwrap().as_str().unwrap().to_owned();
     let now = number(get(&f, "nowMs").unwrap()).unwrap();
@@ -349,7 +348,7 @@ fn each_request_matches_the_ts() {
         match &outcome {
             Ok(data) => {
                 let actual = data.clone().unwrap_or(Value::Null);
-                // A recorded `data: null` is the TS resolving `undefined`, `None` here.
+                // A recorded `data: null` is a resolved `undefined`, `None` here.
                 let exp =
                     if matches!(expected_data, Value::Null) { Value::Null } else { expected_data.clone() };
                 if stringify(&actual) != stringify(&exp) {

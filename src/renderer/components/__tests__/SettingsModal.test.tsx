@@ -1156,7 +1156,7 @@ describe('SettingsModal', () => {
   })
 
   // Runs against both vialAPI implementations (notification-backends.ts):
-  // the preload-like mock and the Tauri shim over a mocked Tauri IPC, both
+  // the plain mock and the Tauri shim over a mocked Tauri IPC, both
   // answering with mockNotificationFetch.
   describe.each(notificationBackends(() => mockNotificationFetch()))('Notification tab ($name)', (backend) => {
     beforeEach(() => {

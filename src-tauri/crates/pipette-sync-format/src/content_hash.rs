@@ -13,10 +13,9 @@ pub fn sha256_hex(parts: &[&[u8]]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-/// Hash of an entry body's text (snapshots, analyze filters and the other
-/// entry stores): the SHA-256 of its UTF-8 bytes exactly as stored. The text
-/// is not normalized, so whitespace and key order change the hash. Matches
-/// `bodyHash` in `src/main/sync/entry-clocks.ts`.
+/// Hash of an entry body's text (snapshots, analyze filters and the other entry
+/// stores): the SHA-256 of its UTF-8 bytes exactly as stored. The text is not
+/// normalized, so whitespace and key order change the hash.
 pub fn content_hash(text: &str) -> String {
     sha256_hex(&[text.as_bytes()])
 }

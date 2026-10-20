@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The store: what src/main/app-config.ts does with electron-store, on the
-//! same file.
+//! The store: the config's reads, writes and change listeners on
+//! config.json.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -12,7 +12,7 @@ use crate::AppConfigError;
 use crate::defaults::DEFAULTS;
 use crate::file::{INTERNAL_KEY, read_store, with_current_internal, write_store};
 
-/// The file name in the userData directory (electron-store's `name`).
+/// The file name in the userData directory.
 pub const CONFIG_FILE_NAME: &str = "config.json";
 
 type Listener = Box<dyn Fn(&str, &Value) + Send + Sync>;
@@ -27,15 +27,13 @@ pub struct AppConfigStore {
 }
 
 impl AppConfigStore {
-    /// Opens the config of the userData directory `dir` the way the
-    /// Electron main process starts:
+    /// Opens the config of the userData directory `dir`:
     /// - the defaults are merged in shallowly (`Object.assign({}, defaults,
     ///   file)`), and the result is written only when a default key is
     ///   missing: keys out of the defaults' order alone do not cause a write;
-    /// - the `language` migration of `loadAppConfig` runs once.
+    /// - the `language` migration runs once.
     ///
-    /// Unlike electron-store, which throws (and the Electron build fails to
-    /// start), a file that is not JSON is renamed to
+    /// A file that is not JSON is renamed to
     /// `config.json.corrupt-<epoch ms>` with a warning and the config starts
     /// from the defaults. Other errors are logged; the store then reports
     /// them on each call.
@@ -79,7 +77,7 @@ impl AppConfigStore {
         Ok(())
     }
 
-    /// `migrateLanguage` of src/main/app-config.ts: `en` and anything that is
+    /// The `language` migration: `en` and anything that is
     /// not a `pack:` id or `builtin:en` (strings or not) becomes `builtin:en`;
     /// `ja` also sets `oneShotNotice: 'ja-removed'`, in a second write.
     fn migrate_language(&self) -> Result<(), AppConfigError> {
@@ -107,7 +105,7 @@ impl AppConfigStore {
         self.lock.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// The whole config (`loadAppConfig()`, the `appConfigGetAll` answer).
+    /// The whole config (the `appConfigGetAll` answer).
     /// Empty when the file is gone; the defaults are not merged in again.
     pub fn get_all(&self) -> Result<Object, AppConfigError> {
         let _guard = self.lock();
@@ -164,14 +162,14 @@ impl AppConfigStore {
         self.replace(DEFAULTS.values.clone())
     }
 
-    /// `saveAppConfig(config)`: `config` as the whole content, plus the
+    /// Saves `config` as the whole content, plus the
     /// current `__internal__` when it has none.
     pub fn replace(&self, config: Object) -> Result<(), AppConfigError> {
         let _guard = self.lock();
         write_store(&self.path, with_current_internal(&self.path, config))
     }
 
-    /// `onAppConfigChange`: `listener` gets each key and value
+    /// `listener` gets each key and value
     /// [`set_from_renderer`](Self::set_from_renderer) stores, and nothing
     /// else. It runs under the store lock: it must not use the store, which
     /// would deadlock, nor wait for work that does.

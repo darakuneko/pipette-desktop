@@ -166,8 +166,8 @@ describe('Tauri build Pipette Hub', function () {
       expect(tokens.length).toBeGreaterThanOrEqual(2)
       expect(tokens[0].body).toEqual({ json: { id_token: '[redacted]' } })
       expect(tokens.map((r) => r.body)).toContainEqual({ json: { id_token: '[redacted]', display_name: DISPLAY_NAME } })
-      // Clearing the chosen name afterwards drops the JWT it got, as in
-      // Electron; the next request takes a token again.
+      // Clearing the chosen name afterwards drops the JWT it got; the next
+      // request takes a token again.
       await browser.waitUntil(
         async () => {
           const state = await hubState()

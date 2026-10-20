@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The units a full pass sends (`collectAllSyncUnits` and
-//! `collectAnalyticsSyncUnitsForUid` of src/main/sync/sync-bundle.ts).
+//! The units a full pass sends, and those of one keyboard's analytics sync.
 
 use std::fmt::Display;
 use std::path::Path;

@@ -1,33 +1,29 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The per-keyboard stores under the userData directory, writing the same
-//! files as the Electron build:
+//! The per-keyboard stores under the userData directory:
 //!
-//! - the key labels (`sync/key-labels`, the sync unit of the same name) of
-//!   src/main/key-label-store.ts, kept across keyboards;
+//! - the key labels (`sync/key-labels`, the sync unit of the same name),
+//!   kept across keyboards;
 //! - the typing test texts (`sync/typing-test-texts`, the sync unit of the
-//!   same name) of src/main/typing-test-text-store.ts, kept across
-//!   keyboards;
+//!   same name), kept across keyboards;
 //! - the favorites of each type (`sync/favorites/{type}`, the sync unit of
-//!   the same name) of src/main/favorite-store.ts;
+//!   the same name);
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
-//!   `meta/keyboard-names`) of src/main/sync/keyboard-meta.ts: the name a
+//!   `meta/keyboard-names`): the name a
 //!   keyboard gets when it connects, the name a snapshot save, the
 //!   stored-keyboard list or the sync's backfill records, and the
 //!   tombstones a reset leaves;
-//! - the list of stored keyboards (`sync/keyboards/{uid}`) of the
-//!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts;
+//! - the list of stored keyboards (`sync/keyboards/{uid}`);
 //! - the snapshots of a keyboard (`sync/keyboards/{uid}/snapshots`, the
-//!   sync unit of the same name) of src/main/snapshot-store.ts;
+//!   sync unit of the same name);
 //! - the saved Analyze filters of a keyboard
 //!   (`sync/keyboards/{uid}/analyze_filters`, the sync unit of the same
-//!   name) of src/main/analyze-filter-store.ts;
+//!   name);
 //! - the keystroke logs of a keyboard's Typing Test runs
-//!   (`sync/keyboards/{uid}/runs`, the sync unit of the same name) of
-//!   src/main/typing-run-log-store.ts;
+//!   (`sync/keyboards/{uid}/runs`, the sync unit of the same name);
 //! - the pipette settings of a keyboard
 //!   (`sync/keyboards/{uid}/pipette_settings.json`, the sync unit
-//!   `keyboards/{uid}/settings`) of src/main/pipette-settings-store.ts,
-//!   stored as text whose content rules stay with the caller.
+//!   `keyboards/{uid}/settings`), stored as text whose content rules stay with
+//!   the caller.
 //!
 //! Every store works through a [`StoreContext`]: the userData directory,
 //! the clock, the ids of new entries, the process-wide write locks shared
@@ -112,8 +108,7 @@ pub use typing_texts::{
     TypingTextSource, TypingTextStore, typing_text_response,
 };
 
-/// Told the sync unit of each change a store makes (`notifyChange` of
-/// src/main/sync/sync-flush.ts).
+/// Told the sync unit of each change a store makes.
 pub trait ChangeNotifier: Send + Sync {
     fn notify_change(&self, unit: &str);
 }

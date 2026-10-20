@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The stored Google tokens (src/main/sync/google-auth.ts): the token file
-//! of the secret store, its cache in memory, the session [`Stamp`] and the
-//! queue every read, write and removal of the file goes through. The queue
-//! is a fair lock, so the file work runs one at a time in call order
-//! (`queueTokenFileWork`).
+//! The stored Google tokens: the token file of the secret store, its cache
+//! in memory, the session [`Stamp`] and the queue every read, write and
+//! removal of the file goes through. The queue is a fair lock, so the file
+//! work runs one at a time in call order.
 //!
-//! Electron's one session generation is two counters here. The sign-outs
-//! asked for advance when `signOut` is called, as Electron's generation
-//! does, so a write under way or queued by then fails as it does there.
+//! The session generation is two counters. The sign-outs asked for advance
+//! when a sign-out is asked for, so a write under way or queued by then fails.
 //! The session advances inside the queue only, at the store of a sign-in
-//! and at the turn of a sign-out: Electron's single-threaded main process
-//! leaves no room between advancing its generation and queueing the work,
-//! but other threads would, and a read queued there would cache the file a
-//! sign-out is about to remove. Every change of either counter empties the
-//! cache under the cache lock, so the cache only holds tokens of the
-//! current stamp, and [`Loaded`] gives them with it. A refresh stores its
-//! tokens only while the stamp of the tokens it refreshed is the current
-//! one.
+//! and at the turn of a sign-out: other threads could run between advancing
+//! a generation and queueing the work, and a read queued there would cache
+//! the file a sign-out is about to remove. Every change of either counter
+//! empties the cache under the cache lock, so the cache only holds tokens
+//! of the current stamp, and [`Loaded`] gives them with it. A refresh
+//! stores its tokens only while the stamp of the tokens it refreshed is the
+//! current one.
 
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -28,13 +25,13 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::AuthError;
 
-/// The stored tokens, in the JSON shape of Electron's `StoredTokens`.
+/// The stored tokens, as the JSON of the token file.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredTokens {
     pub access_token: String,
-    /// Absent when the code exchange returned none: Electron's
-    /// `JSON.stringify` leaves out the `undefined` it holds then.
+    /// Absent when the code exchange returned none; left out of the JSON
+    /// then.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
     /// Unix time in milliseconds.
@@ -116,8 +113,7 @@ impl TokenFile {
     }
 
     /// Stores the tokens of a refresh of tokens of `stamp`, unless a
-    /// sign-in or sign-out came since, checked before and after the write
-    /// (`storeTokens`).
+    /// sign-in or sign-out came since, checked before and after the write.
     pub(crate) async fn store_refresh(&self, tokens: StoredTokens, stamp: Stamp) -> Result<(), AuthError> {
         let _queue = self.queue.lock().await;
         if stamp != self.stamp() {
@@ -171,8 +167,8 @@ impl TokenFile {
         Ok(())
     }
 
-    /// The stored tokens with their stamp, from memory or the file
-    /// (`loadTokens`); `None` when there are none or they cannot be read.
+    /// The stored tokens with their stamp, from memory or the file; `None`
+    /// when there are none or they cannot be read.
     pub(crate) async fn load(&self) -> Option<Loaded> {
         let stamp = {
             let cache = self.cache();
@@ -210,7 +206,7 @@ impl TokenFile {
     }
 
     /// Ends the session, forgets the cached tokens and removes the file,
-    /// ignoring every failure (`signOut`). The sign-out counts as asked for
+    /// ignoring every failure. The sign-out counts as asked for
     /// at once; the new session, the emptied cache and the removal come at
     /// its turn in the queue, so whatever a read queued before it cached is
     /// dropped there, and a read queued after it finds no file. A sign-in
@@ -231,8 +227,7 @@ impl TokenFile {
 
     /// The sign-out's work at its turn, unless a sign-in stored its tokens
     /// after the sign-out was asked for in session `asked_in`: that sign-in
-    /// came later, and in Electron its write is queued after the removal
-    /// and stays.
+    /// came later, so its tokens stay.
     async fn sign_out_in_turn(&self, asked_in: u64) {
         let _queue = self.queue.lock().await;
         if self.session.load(Ordering::SeqCst) != asked_in {
@@ -250,7 +245,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn serializes_in_the_electron_shape() {
+    fn serializes_in_the_recorded_shape() {
         let tokens = StoredTokens {
             access_token: "a".into(),
             refresh_token: Some("r".into()),
@@ -308,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    fn leaves_out_a_missing_refresh_token_as_electron_does() {
+    fn leaves_out_a_missing_refresh_token() {
         let text = r#"{"accessToken":"a","expiresAt":1,"idToken":null}"#;
         let tokens: StoredTokens = serde_json::from_str(text).unwrap();
         assert_eq!(tokens.refresh_token, None);

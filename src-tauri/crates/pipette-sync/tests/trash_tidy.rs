@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The automatic tidying of names with several copies (trash::tidy), the
-//! cases of src/main/sync/__tests__/sync-trash.test.ts on a Drive whose
-//! files the test names and dates itself.
+//! The automatic tidying of names with several copies (trash::tidy) on a Drive
+//! whose files the test names and dates itself.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

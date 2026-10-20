@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript favorite handlers by
-//! scripts/keyboard-store-fixtures/record-favorite-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the favorite handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the notified units and every file left behind compared byte
 //! for byte. A file-system error is recorded as `<os error>`, as its text
@@ -220,7 +219,7 @@ fn run_step(h: &Harness, step: &Object, transfer: Option<&Object>, want: Option<
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_favorite_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

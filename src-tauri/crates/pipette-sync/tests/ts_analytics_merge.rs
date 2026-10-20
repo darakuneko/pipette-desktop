@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript sync code by
-//! scripts/sync-fixtures/record-analytics-merge-fixtures.test.ts
+//! Replays the recorded golden scenarios
 //! (tests/fixtures/ts_analytics_merge.json):
 //!
 //! - the merges of typing-analytics day and deleted-ranges bundles and the
@@ -74,8 +73,8 @@ fn error_name(err: &MergeError) -> &'static str {
     }
 }
 
-/// The userData tree without the cache, which the TypeScript recording
-/// keeps outside userData.
+/// The userData tree without the cache, which the recording keeps outside
+/// userData.
 fn tree_without_cache(root: &std::path::Path) -> Tree {
     let mut tree = read_tree(root);
     tree.retain(|path, _| !path.starts_with("local/typing-analytics.db"));
@@ -91,7 +90,7 @@ fn outcome(result: Result<Option<AnalyticsMerge>, MergeError>) -> (Option<String
 }
 
 #[tokio::test]
-async fn merges_match_typescript() {
+async fn merges_match_the_recorded_golden() {
     let golden = fixture();
     let own_hash = text(get(&golden, "ownHash"));
     let machine_id = text(get(&golden, "machineId"));
@@ -205,7 +204,7 @@ fn collected(listing: &Listing, hash: &str) -> Value {
 }
 
 #[tokio::test]
-async fn reconciles_match_typescript() {
+async fn reconciles_match_the_recorded_golden() {
     let golden = fixture();
     let own_hash = text(get(&golden, "ownHash"));
     let now = number(get(&golden, "now")) as i64;

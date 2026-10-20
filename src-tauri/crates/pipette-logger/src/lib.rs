@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The app's log, the same files and lines as src/main/logger.ts of the
-//! Electron build:
+//! The app's log, the same files and lines as the 0.4 build's log:
 //!
 //! - `<userData>/logs/pipette-0.log`, rotated before a write once it has
 //!   reached 5 MB: `pipette-3.log` → `pipette-4.log`, …, `pipette-0.log` →
 //!   `pipette-1.log`, and the old `pipette-4.log` is deleted;
 //! - one line per record, `[<ISO 8601 UTC with ms>] [<LEVEL>] <message>\n`
-//!   (tests/ts_log_lines.rs checks lines the TypeScript logger wrote).
+//!   (tests/ts_log_lines.rs checks recorded lines of the 0.4 build's logger).
 //!
 //! Every line is also written to stderr. Records of the app's own crates
 //! (targets starting with `pipette`) are kept from DEBUG up; those of other

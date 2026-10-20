@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The native lookup of Windows and macOS, on `pipette_native::active_window`
 //! (the calls `@paymoapp/active-window` makes there). Where the binding finds
-//! no window it throws "Failed to get active window", which app-monitor.ts
-//! logs once; that is an error here too, so it is logged the same way.
+//! no window it throws "Failed to get active window"; that is an error here
+//! too, logged once.
 
 use pipette_js_json::JsString;
 

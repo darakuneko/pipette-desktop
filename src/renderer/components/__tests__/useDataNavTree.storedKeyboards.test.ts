@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 // useDataNavTree's stored keyboards against both vialAPI implementations: a
-// preload-like mock, and the Tauri shim's keyboard data members over a
+// plain mock, and the Tauri shim's keyboard data members over a
 // mocked Tauri IPC. Both answer from the same spy, so the tests read the
 // same for each.
 
@@ -24,7 +24,7 @@ function installVialAPI(members: object): void {
 }
 
 const backends = [
-  { name: 'preload-like mock', install: () => installVialAPI({ listStoredKeyboards }) },
+  { name: 'plain mock', install: () => installVialAPI({ listStoredKeyboards }) },
   {
     name: 'Tauri shim over mockIPC',
     install: () => {

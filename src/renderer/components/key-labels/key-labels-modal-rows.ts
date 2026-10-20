@@ -18,7 +18,7 @@ import { type InstalledRow, type HubRow } from './KeyLabelsInstalledTable'
  * `ensureQwertyEntry` guarantees a QWERTY entry exists, so QWERTY
  * participates in the same drag / sync ordering as every other label.
  * Newly downloaded labels arrive at the end of `metas` (saveRecord
- * appends), drag reorders persist via `KEY_LABEL_STORE_REORDER`.
+ * appends), drag reorders persist via `key_label_store_reorder`.
  *
  * `name` goes through `resolveLayoutDisplayName` — the same override
  * `useLayoutOptions` applies for the footer/Settings dropdowns — so the

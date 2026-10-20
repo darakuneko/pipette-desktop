@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript guard, sync-format
-//! and password-check code by
-//! scripts/sync-fixtures/record-preflight-fixtures.test.ts, and compares
-//! every step with the recording: its result or error message, the Drive
-//! requests it sent (with the bytes of the marker it created), the
-//! validated password-check and the sync-format status events; then the
-//! files left on Drive and the stored password. Also checks that
-//! `SYNC_FORMAT_VERSION` is the TypeScript value.
+//! Replays the recorded golden scenarios of the guard, the sync-format markers
+//! and the password-check, and compares every step with the recording: its
+//! result or error message, the Drive requests it sent (with the bytes of the
+//! marker it created), the validated password-check and the sync-format status
+//! events; then the files left on Drive and the stored password. Also checks
+//! that `SYNC_FORMAT_VERSION` is the recorded value.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -209,7 +207,7 @@ async fn replay(scenario: &Value) {
 }
 
 #[test]
-fn the_sync_format_version_is_the_typescript_one() {
+fn the_sync_format_version_is_the_recorded_and_shared_one() {
     let recorded = fixture();
     assert_eq!(recorded["syncFormatVersion"].as_u64(), Some(SYNC_FORMAT_VERSION));
     assert_eq!(recorded["startMs"].as_u64(), Some(START_MS));
@@ -225,7 +223,7 @@ fn the_sync_format_version_is_the_typescript_one() {
 }
 
 #[tokio::test]
-async fn the_preflight_matches_the_typescript_recording() {
+async fn the_preflight_matches_the_recorded_golden() {
     for scenario in fixture()["scenarios"].as_array().unwrap() {
         replay(scenario).await;
     }

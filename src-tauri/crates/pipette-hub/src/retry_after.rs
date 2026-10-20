@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `parseRetryAfter` of src/main/hub/hub-client.ts (copied verbatim into
-//! hub-i18n.ts, hub-theme.ts and hub-key-labels.ts): a number of seconds as
-//! JavaScript's `Number(header)` reads it, else an HTTP date as seconds from
-//! now, rounded up.
+//! The `Retry-After` header of a 429: a number of seconds as JavaScript's
+//! `Number(header)` reads it, else an HTTP date as seconds from now,
+//! rounded up.
 //!
 //! The number follows JavaScript's rules exactly (surrounding whitespace,
 //! `0x` / `0o` / `0b`, fractions, exponents). The date is read in the three

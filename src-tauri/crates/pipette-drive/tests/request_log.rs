@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Drive client sends the requests google-drive.ts sends, waits as
-//! drive-retry.ts waits and ends each step as it does: the scenarios of
-//! tests/fixtures/request_log.json, recorded from the TypeScript code
-//! against the Node fake Drive (scripts/sync-fixtures/record-drive-fixtures.test.ts),
-//! run here against the in-memory Drive.
+//! The Drive client sends the recorded requests, waits the recorded waits
+//! and ends each step with the recorded result: the recorded golden
+//! scenarios of tests/fixtures/request_log.json, run here against the
+//! in-memory Drive.
 
 #![allow(clippy::unwrap_used)]
 
@@ -37,7 +36,7 @@ fn op_of(name: &str) -> DriveOp {
     }
 }
 
-/// The files of a scenario's `seed` (drive-request-log.ts `seedFiles`).
+/// The files of a scenario's `seed`.
 fn seed_files(seed: &Value) -> Vec<(String, String)> {
     let Some(seed) = seed.as_array() else { return Vec::new() };
     seed.iter()
@@ -157,7 +156,7 @@ async fn run_scenario(golden: &Value, scenario: &Value) {
 }
 
 #[tokio::test]
-async fn sends_the_requests_of_google_drive_ts() {
+async fn sends_the_recorded_requests() {
     let golden: Value = serde_json::from_str(LOG).unwrap();
     let scenarios = golden["scenarios"].as_array().unwrap();
     assert_eq!(scenarios.len(), 12);

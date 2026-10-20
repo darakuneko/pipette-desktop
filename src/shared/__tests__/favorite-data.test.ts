@@ -178,7 +178,7 @@ describe('isFavoriteDataFile', () => {
 
 describe('isValidVialProtocol / isValidHubVialProtocol', () => {
   // Regression guard: `isValidVialProtocol` is the local (non-Hub)
-  // export/import boundary in `favorite-store.ts`, and it stays loose on
+  // export/import boundary (src/tauri-shim/api/favorites.ts), and it stays loose on
   // purpose — no caller passes -1 today, so tightening it there would be
   // an unforced, non-Hub-related behavior change. The only place -1
   // comes from is `emptyState()` in `keyboard-types.ts` (the disconnected

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The account handlers of `src/main/hub/hub-ipc-posts.ts`: the Hub origin,
-//! the display name of the next token and the account's own record. The
-//! answers are the TS's `{ success, user?, error? }`, with the Hub's user
-//! object as the Hub sent it.
+//! The account handlers: the Hub origin, the display name of the next token
+//! and the account's own record. The answers are
+//! `{ success, user?, error? }`, with the Hub's user object as the Hub sent
+//! it.
 
 use pipette_js_json::{Object, Value};
 
@@ -11,18 +11,18 @@ use crate::http::{HubHttp, RequestBody, StatusKind};
 use crate::token::{HUB_ERROR_DISPLAY_NAME_CONFLICT, HubFailure, HubToken};
 use crate::validate::validate_display_name;
 
-/// `HUB_GET_ORIGIN`: the Hub base the requests go to.
+/// The `hub_get_origin` command: the Hub base the requests go to.
 pub fn origin(http: &HubHttp) -> String {
     http.base().to_owned()
 }
 
-/// `HUB_SET_AUTH_DISPLAY_NAME`: `None` stands for any value that is not a
+/// The `hub_set_auth_display_name` command: `None` stands for any value that is not a
 /// string.
 pub fn set_auth_display_name(token: &HubToken, display_name: Option<&str>) {
     token.set_pending_display_name(display_name.map(str::to_owned));
 }
 
-/// `HUB_FETCH_AUTH_ME`.
+/// The `hub_fetch_auth_me` command.
 pub async fn fetch_auth_me(token: &HubToken) -> Value {
     let user = token
         .with_token_retry(|jwt| async move {
@@ -32,7 +32,7 @@ pub async fn fetch_auth_me(token: &HubToken) -> Value {
     user_answer(user)
 }
 
-/// `HUB_PATCH_AUTH_ME`: the trimmed display name; a 409 is
+/// The `hub_patch_auth_me` command: the trimmed display name; a 409 is
 /// `DISPLAY_NAME_CONFLICT`. `None` stands for any value that is not a
 /// string.
 pub async fn patch_auth_me(token: &HubToken, display_name: Option<&str>) -> Value {

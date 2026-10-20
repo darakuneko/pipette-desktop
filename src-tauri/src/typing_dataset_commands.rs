@@ -55,8 +55,8 @@ pub struct TypingDatasetCheckResult {
 /// downloads, which the word list commands wait for.
 pub fn manage<R: Runtime>(app: &AppHandle<R>, user_data: &Path) {
     let http = app.state::<Http>().inner().clone();
-    // Electron reads the Hub URL override in its development runs; this
-    // build in its builds with the development tools.
+    // The Hub URL override is read only in builds with the development
+    // tools.
     let store =
         LanguageStore::new(user_data, http, || pipette_net::hub_api_base(cfg!(feature = "dev-tools")));
     app.manage(store.clone());

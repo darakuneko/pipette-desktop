@@ -9,7 +9,7 @@
 //! The renderer sends the events one after another, each after the last
 //! one's answer, so the recorder takes them in the order they were typed.
 //! An event that is not valid is ignored and a flush for an argument that
-//! is not a keyboard uid does nothing, as the Electron handlers do.
+//! is not a keyboard uid does nothing.
 
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -54,7 +54,7 @@ pub(super) fn recorder_deps<R: Runtime>(app: &AppHandle<R>) -> RecorderDeps {
     }
 }
 
-/// `getCurrentAppName`: `None` unless Monitor App is on. One lookup is kept
+/// The application in focus: `None` unless Monitor App is on. One lookup is kept
 /// for the app's lifetime, so it warns about a failing OS lookup once.
 fn app_name_source<R: Runtime>(app: AppHandle<R>) -> Arc<dyn Fn() -> Option<JsString> + Send + Sync> {
     let window = Mutex::new(ActiveWindow::for_current_os());
@@ -81,11 +81,11 @@ pub(super) fn recorder<R: Runtime>(
 }
 
 /// The quit sequence's preSyncFinalizers phase: when anything is buffered,
-/// queued or being written, closes every session and writes everything
-/// (`flushTypingAnalyticsBeforeQuit`), before the pending sync units are
-/// written so the days it announces go with them. The flush is queued on
-/// the recorder's chain, so a deadline that drops this phase does not cut
-/// it short. `then` is how long the phase waits afterwards.
+/// queued or being written, closes every session and writes everything,
+/// before the pending sync units are written so the days it announces go
+/// with them. The flush is queued on the recorder's chain, so a deadline
+/// that drops this phase does not cut it short. `then` is how long the
+/// phase waits afterwards.
 pub fn quit_phase(recorder: Arc<Recorder>, name: &'static str, then: Duration) -> QuitPhase {
     QuitPhase::new(name, async move {
         if recorder.has_pending_work() {

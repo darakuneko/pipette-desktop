@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync's memory of the password-check it last opened
-//! (`validatedPasswordCheck`, src/main/sync/sync-password.ts) and of its own
-//! sync-format marker (`syncFormatMarker*`, src/main/sync/sync-format.ts).
-//! Memory only.
+//! The sync's memory of the password-check it last opened and of its own
+//! sync-format marker. Memory only.
 
 use std::sync::Mutex;
 
@@ -69,8 +67,8 @@ impl CredentialMemory {
         *lock(&self.sync_format)
     }
 
-    /// `forgetCreatedSyncFormatMarker`: for sign-out, the next account's
-    /// Drive is checked afresh.
+    /// Forgets the marker memory and bumps its generation, for sign-out: the
+    /// next account's Drive is checked afresh.
     pub fn forget_sync_format_marker(&self) {
         let mut memory = lock(&self.sync_format);
         *memory = SyncFormatMemory { generation: memory.generation + 1, ..SyncFormatMemory::default() };

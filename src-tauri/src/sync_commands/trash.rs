@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Data > Sync > Trash screen (the `SYNC_LIST_TRASH`,
-//! `SYNC_RESTORE_TRASH` and `SYNC_DELETE_TRASH` handlers of
-//! src/main/sync/sync-reset-ipc.ts), on crates/pipette-sync's
-//! `trash::manual`. Each answers as `wrapIpc` does, with the list or the
+//! The Data > Sync > Trash screen, on crates/pipette-sync's
+//! `trash::manual`. Each answers a `SyncOperationResult` (result.rs), with
+//! the list or the
 //! ids deleted and skipped on success. This machine's hash, which marks
 //! its own typing days as not restorable, is the unit sync's.
 

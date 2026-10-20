@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the language pack scenarios recorded from the real handlers of
-//! src/main/i18n-pack-ipc.ts (scripts/pack-store-fixtures/
-//! record-i18n-pack-store-fixtures.test.ts) through the handlers of this
-//! crate (common/replay.rs).
+//! Replays the recorded language pack scenarios through the handlers of
+//! this crate (common/replay.rs).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -13,7 +11,7 @@ use pipette_js_json::{Object, Value};
 use pipette_pack_stores::i18n_handlers as handlers;
 
 #[test]
-fn the_language_pack_handlers_answer_and_write_as_the_typescript_ones() {
+fn the_language_pack_handlers_answer_and_write_as_recorded() {
     replay("ts_i18n_pack_store_scenarios.json", &mut |h, op, step, effects| {
         let user_data = h.user_data().to_path_buf();
         let arg = |key: &str| step.get(key);
@@ -36,7 +34,7 @@ fn the_language_pack_handlers_answer_and_write_as_the_typescript_ones() {
             ),
             "importApply" => {
                 let raw = raw_of(arg("raw").unwrap().as_object().unwrap(), &user_data);
-                // The preload passes `options ?? {}`.
+                // The shim passes `options ?? {}` (src/tauri-shim/api/i18n-packs.ts).
                 let options = arg("options").cloned().unwrap_or_else(|| Value::Object(Object::new()));
                 handlers::import_apply(ctx, raw.as_ref(), Some(&options))
             }

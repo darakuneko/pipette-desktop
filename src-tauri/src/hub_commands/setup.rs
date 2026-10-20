@@ -68,7 +68,7 @@ impl Hub {
     }
 }
 
-/// The Google id_token of the sync's sign-in (`getIdToken`).
+/// The Google id_token of the sync's sign-in.
 struct GoogleIdTokens(Arc<GoogleAuth>);
 
 impl IdTokenSource for GoogleIdTokens {
@@ -96,10 +96,9 @@ fn id_tokens<R: Runtime>(app: &AppHandle<R>) -> Arc<dyn IdTokenSource> {
 }
 
 /// Forgets the Hub JWT whenever the stored sign-in changes: a sign-in, a
-/// sign-out, and the Reset Local Data that signs out (`forgetAccountCaches`
-/// of src/main/sync/sync-account-caches.ts). The sign-in calls this after
-/// it stored the new tokens or removed them, inside the account switch, as
-/// Electron does. Weak: the sign-in outlives nothing here.
+/// sign-out, and the Reset Local Data that signs out. The sign-in calls this
+/// after it stored the new tokens or removed them, inside the account
+/// switch. Weak: the sign-in outlives nothing here.
 fn forget_token_on_account_change<R: Runtime>(app: &AppHandle<R>, hub: &Arc<Hub>) {
     let Some(sync) = app.try_state::<SyncSecrets>() else { return };
     let weak: Weak<HubToken> = Arc::downgrade(&hub.token);
@@ -155,11 +154,10 @@ impl StartupPacks for BlockingPacks {
     }
 }
 
-/// Runs the startup update of the Hub-linked language packs once
-/// (`startI18nStartupSync`): logs what it did, sends `i18n-pack:changed`
-/// to every window when a pack changed, and records the counts. The pass
-/// stops at a save boundary once the app quits; a stopped pass reports
-/// nothing and records nothing.
+/// Runs the startup update of the Hub-linked language packs once: logs
+/// what it did, sends `i18n-pack:changed` to every window when a pack
+/// changed, and records the counts. The pass stops at a save boundary once
+/// the app quits; a stopped pass reports nothing and records nothing.
 pub async fn run_startup_sync<R: Runtime>(
     app: &AppHandle<R>,
     hub: &Hub,
@@ -183,8 +181,7 @@ pub async fn run_startup_sync<R: Runtime>(
 /// Starts the Hub's background work without waiting for it: the startup
 /// update of the Hub-linked language packs, not in an e2e run whose Hub is
 /// blocked. Runs at the end of the app's setup, after [`setup`] settled the
-/// destination. The quit does not wait for it (Electron's before-quit
-/// handler does not either).
+/// destination. The quit does not wait for it.
 pub fn start_background<R: Runtime>(app: &AppHandle<R>) {
     let Some(hub) = app.try_state::<Arc<Hub>>().map(|hub| Arc::clone(&hub)) else { return };
     if !hub.background_allowed() {
@@ -262,7 +259,7 @@ mod tests {
         );
         assert!(looped.background_allowed());
         assert_eq!(looped.http().base(), "http://127.0.0.1:9");
-        // Outside an e2e run the destination is Electron's, the real Hub.
+        // Outside an e2e run the destination is the real Hub.
         let normal = Hub::new(destination(&[], false), refused(), Arc::new(signed_out));
         assert!(normal.background_allowed());
         assert_eq!(normal.http().base(), pipette_net::HUB_API_DEFAULT);

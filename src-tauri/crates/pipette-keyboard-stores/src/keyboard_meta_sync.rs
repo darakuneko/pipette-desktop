@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync of the keyboard names (`readKeyboardMetaIndex`,
-//! `mergeKeyboardMetaIndex` and `applyRemoteKeyboardMetaIndex` of
-//! src/main/sync/keyboard-meta.ts): the index as it is bundled, and the
+//! The sync of the keyboard names: the index as it is bundled, and the
 //! merge of a remote index into the local one.
 //!
 //! The merge is last writer wins per uid on the entry's `deletedAt`, else
@@ -39,7 +37,7 @@ pub struct KeyboardMetaMerge {
 
 /// The index as the bundle sends it: the file's object, or the empty index
 /// when the file is missing or not a keyboard-meta index. Read without the
-/// lock, as the bundle of the Electron build reads it.
+/// lock.
 pub fn read_keyboard_meta_index(ctx: &StoreContext) -> Result<Object, StoreError> {
     let MetaIndex { mut root, entries } = read_index(&meta_file_path(ctx))?;
     root.insert("entries", Value::Array(entries));
@@ -89,9 +87,8 @@ fn effective_time(entry: &Value) -> f64 {
     source.filter(|s| s.is_truthy()).and_then(date_value_ms).unwrap_or(0.0)
 }
 
-/// Merges `remote` (the `index` of a remote bundle) into the local entries
-/// (`mergeKeyboardMetaIndex`): the merged entries and whether Drive needs
-/// this device's index.
+/// Merges `remote` (the `index` of a remote bundle) into the local entries:
+/// the merged entries and whether Drive needs this device's index.
 fn merge_entries(
     local: &[Value],
     remote: &Value,
@@ -150,10 +147,10 @@ fn merge_entries(
     Ok((kept.clone(), remote_needs_update || kept.len() != count))
 }
 
-/// Merges a remote index into the local one under the store's lock
-/// (`applyRemoteKeyboardMetaIndex`). The merged index is written, as
-/// `{type, version, entries}`, only when its entries differ from the local
-/// ones; a change of the tombstone GC alone counts.
+/// Merges a remote index into the local one under the store's lock. The
+/// merged index is written, as `{type, version, entries}`, only when its
+/// entries differ from the local ones; a change of the tombstone GC alone
+/// counts.
 pub fn apply_remote_keyboard_meta_index(
     ctx: &StoreContext,
     remote: &Value,

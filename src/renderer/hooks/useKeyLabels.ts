@@ -95,7 +95,7 @@ export function useKeyLabels(): UseKeyLabelsReturn {
       }
       // Preserve the index.json order from the store (the user's drag
       // reorder + the "append on download" rule both rely on it).
-      // Sorting client-side would fight `KEY_LABEL_STORE_REORDER`.
+      // Sorting client-side would fight `key_label_store_reorder`.
       setMetas(result.data)
     } catch (err) {
       if (!silent && gen === requestGenRef.current) setError(err instanceof Error ? err.message : String(err))

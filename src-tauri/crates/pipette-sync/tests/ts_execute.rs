@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays tests/fixtures/ts_execute.json, recorded from the TypeScript
-//! sync code by scripts/sync-fixtures/record-execute-fixtures.test.ts:
+//! Replays the recorded golden tests/fixtures/ts_execute.json:
 //!
-//! - the scope truth table (`matchesScope`, `shouldDownloadSyncUnit`);
-//! - full passes on the in-memory Drive seeded with the same files in the
-//!   same order (so the ids and the times match), in the envelope format
-//!   of the Electron build (each key derived once per salt; the format's
-//!   own goldens compare the bytes) and one unit at a time, each step
-//!   compared on its result,
-//!   its progress reports, its Drive requests, the pending units, the
-//!   revisions recorded as handled, the files remembered as created, the
-//!   units reported as applied, the flushes asked for, the backfills and
-//!   the applies of the own deleted ranges queued;
-//!   then the userData tree (byte for byte; the cache file aside) and the
-//!   Drive files, each data file by its decrypted plaintext.
+//! - the scope truth table (`matches_scope`, `should_download_sync_unit`);
+//! - full passes on the in-memory Drive seeded with the same files in the same
+//!   order (so the ids and the times match), in the sync envelope format (each
+//!   key derived once per salt; the format's own goldens compare the bytes) and
+//!   one unit at a time, each step compared on its result, its progress
+//!   reports, its Drive requests, the pending units, the revisions recorded as
+//!   handled, the files remembered as created, the units reported as applied,
+//!   the flushes asked for, the backfills and the applies of the own deleted
+//!   ranges queued; then the userData tree (byte for byte; the cache file
+//!   aside) and the Drive files, each data file by its decrypted plaintext.
 //!
 //! A unit's failure message is compared only when it is a Drive failure:
 //! the texts of a JSON or decryption error are V8's and Node's.
@@ -53,7 +50,7 @@ fn scope_of(value: &Value) -> SyncScope {
 }
 
 #[test]
-fn the_scopes_match_typescript() {
+fn the_scopes_match_the_recorded_truth_table() {
     let golden = fixture();
     let local = ["kbA".to_owned()].into();
     let mut failures = Vec::new();
@@ -333,7 +330,7 @@ fn recorded_step(want: &Value) -> Value {
 }
 
 #[tokio::test]
-async fn passes_match_typescript() {
+async fn passes_match_the_recorded_golden() {
     let golden = fixture();
     let password = golden["password"].as_str().unwrap().to_owned();
     let scenarios = golden["scenarios"].as_array().unwrap();

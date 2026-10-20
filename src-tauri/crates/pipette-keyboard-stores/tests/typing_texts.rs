@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing test text store, with the cases of
-//! src/main/__tests__/typing-test-text-store.test.ts and the save options
+//! The typing test text store, with the save options
 //! the Aozora Bunko import and the confirmed overwrite use (a catalog
 //! source, the current name kept, a tombstone brought back).
 
@@ -318,7 +317,7 @@ fn romaji_capable_is_cached_by_the_body_filename() {
     let kana = save(&h, &store, "Kana", "かな");
     let filename = kana.filename().unwrap().as_str().unwrap().to_owned();
     // The body changes behind the store's back under the same name: the
-    // cached answer stands, as the Electron build's does.
+    // cached answer stands.
     fs::write(store_dir(&h).join(&filename), r#"{"name":"Kana","text":"latin"}"#).unwrap();
     assert_eq!(romaji(&store.list(&h.ctx, false).unwrap()[0]), Some(true));
     // A new store reads the body.

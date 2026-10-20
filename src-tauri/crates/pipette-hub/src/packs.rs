@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language and theme pack handlers of `src/main/hub/hub-ipc-packs.ts`,
-//! with the requests of `hub-i18n.ts` and `hub-theme.ts`: the list (its
-//! fields from snake_case to camelCase), the download (a language pack
+//! The language and theme pack handlers and their Hub requests: the list
+//! (its fields from snake_case to camelCase), the download (a language pack
 //! checked by [`validate_i18n_export`], a theme pack by
 //! `validate_theme_pack`), the upload, update and delete with the local
 //! pack's Hub link, and the freshness timestamps.
 //!
 //! The handlers take their arguments as the renderer sent them, as
-//! JavaScript values, and answer the TS's `{ success, … }` objects with the
-//! Hub's values in the order the Hub sent them. Where the TS reads a
-//! property of a value that is not there, the answer carries the
-//! `TypeError` message V8 gives.
+//! JavaScript values, and answer `{ success, … }` objects with the Hub's
+//! values in the order the Hub sent them. Where a property of a value that
+//! is not there would be read, the answer carries the `TypeError` message
+//! V8 gives.
 //!
 //! After an upload, the uploader and the Hub time come from the list of
 //! the pack's name; after an update, the Hub time comes from the
@@ -97,9 +96,8 @@ impl PackKind {
     }
 }
 
-/// A change of a local pack's Hub link (`setHubPostId`): the pack `id` of
-/// `kind` linked to `post` (unlinked for `None`), with its cached uploader
-/// and Hub time.
+/// A change of a local pack's Hub link: the pack `id` of `kind` linked to
+/// `post` (unlinked for `None`), with its cached uploader and Hub time.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LinkChange {
     pub kind: PackKind,
@@ -111,7 +109,7 @@ pub struct LinkChange {
 
 impl LinkChange {
     /// Writes the change through the pack store. A failure is left
-    /// unreported, as the TS ignores the store's answer.
+    /// unreported: the store's answer is ignored.
     pub fn apply(self, stores: &StoreContext) {
         let Self { kind, id, post, uploader, updated } = self;
         let _ = match kind {
@@ -242,8 +240,8 @@ fn iso_string(ms: f64) -> String {
 
 /// The `i18n-export-v1.json` file of a language pack upload:
 /// `JSON.stringify({ version: 1, kind: 'i18n', exportedAt, pack })`, with
-/// `exportedAt` the ISO string of `now_ms` (`buildI18nExport`). The pack is
-/// left out where it is `undefined`.
+/// `exportedAt` the ISO string of `now_ms`. The pack is left out where it is
+/// `undefined`.
 pub fn i18n_export_file(pack: Option<&Value>, now_ms: f64) -> UploadFile {
     let mut export = Object::new();
     export.insert("version", Value::Number(1.0));
@@ -263,7 +261,7 @@ pub fn theme_pack_file(pack: &Value) -> UploadFile {
     UploadFile { name: "theme-pack.json".to_owned(), data: stringify(pack).into_bytes() }
 }
 
-/// What `validateI18nExport` found: `reason` is the first problem.
+/// What [`validate_i18n_export`] found: `reason` is the first problem.
 #[derive(Clone, Debug, PartialEq)]
 pub struct I18nExportCheck {
     pub reason: Option<JsString>,
@@ -280,9 +278,9 @@ impl I18nExportCheck {
     }
 }
 
-/// `validateI18nExport`: the `{ version: 1, kind: 'i18n', exportedAt, pack }`
-/// envelope of a downloaded language pack, and the pack in it
-/// (`validatePack`). `None` is `undefined`.
+/// The check of the `{ version: 1, kind: 'i18n', exportedAt, pack }`
+/// envelope of a downloaded language pack, and of the pack in it
+/// ([`validate_pack`]). `None` is `undefined`.
 pub fn validate_i18n_export(export: Option<&Value>) -> I18nExportCheck {
     let export = match export {
         Some(value @ (Value::Object(_) | Value::Array(_))) => value,
@@ -312,9 +310,8 @@ fn prefixed(prefix: &str, text: &JsString) -> JsString {
     JsString::from_utf16(units)
 }
 
-/// The list's answer (`fetchI18nPostList` / `fetchThemePostList`): each
-/// item's fields renamed to camelCase, the uploader's id and name `null`
-/// where the Hub sent none.
+/// The list's answer: each item's fields renamed to camelCase, the uploader's
+/// id and name `null` where the Hub sent none.
 fn list_answer(raw: Option<Value>) -> Result<Value, JsString> {
     let items = match property(raw.as_ref(), "items")? {
         Some(Value::Array(items)) => items,
@@ -350,13 +347,13 @@ fn list_answer(raw: Option<Value>) -> Result<Value, JsString> {
     Ok(Value::Object(list))
 }
 
-/// The list of `query` (`fetchI18nPostList` / `fetchThemePostList`).
+/// The list of `query`.
 async fn fetch_list(http: &HubHttp, kind: PackKind, query: ListQuery<'_>) -> Result<Value, JsString> {
     let raw = http.send(&kind.list(query), None, RequestBody::None).await.map_err(|err| err.to_string())?;
     list_answer(raw)
 }
 
-/// `HUB_LIST_I18N_POSTS` / `HUB_LIST_THEME_POSTS`: `q` and `name` when they
+/// `HUB_LIST_I18N_POSTS` / the `hub_list_theme_posts` command: `q` and `name` when they
 /// are strings, `page` and `perPage` when they are numbers.
 pub async fn list(http: &HubHttp, kind: PackKind, params: Option<&Value>) -> Value {
     let params = params.filter(|params| is_params(Some(params)));
@@ -378,7 +375,7 @@ pub async fn list(http: &HubHttp, kind: PackKind, params: Option<&Value>) -> Val
     answer(fetch_list(http, kind, query).await.map(|data| success("data", Some(data))))
 }
 
-/// `HUB_DOWNLOAD_I18N_POST` / `HUB_DOWNLOAD_THEME_POST`: the pack, once it
+/// `HUB_DOWNLOAD_I18N_POST` / the `hub_download_theme_post` command: the pack, once it
 /// passes its check.
 pub async fn download(http: &HubHttp, kind: PackKind, post_id: Option<&Value>) -> Value {
     let Some(post_id) = string_post_id(post_id) else { return failure("Invalid post ID") };
@@ -443,7 +440,7 @@ pub(crate) async fn fetch_timestamp_items(
     Ok(by_id)
 }
 
-/// `HUB_I18N_PACK_TIMESTAMPS` / `HUB_THEME_PACK_TIMESTAMPS`: the distinct
+/// `HUB_I18N_PACK_TIMESTAMPS` / the `theme_pack_hub_timestamps` command: the distinct
 /// ids asked for in batches of [`TIMESTAMPS_BATCH_LIMIT`], sent at once;
 /// the Hub's items come back in the order of the ids, without the ids it
 /// did not answer.
@@ -474,9 +471,9 @@ struct Enriched {
     hub_updated_at: Option<Value>,
 }
 
-/// `enrichHubPackMeta`: the uploader and the Hub time of `post_id`, from the
-/// list of the pack's name (the whole list when the name is empty or not
-/// there). Any failure finds nothing.
+/// The uploader and the Hub time of `post_id`, from the list of the pack's
+/// name (the whole list when the name is empty or not there). Any failure
+/// finds nothing.
 async fn enrich_from_list(
     http: &HubHttp,
     kind: PackKind,
@@ -501,8 +498,7 @@ async fn enrich_from_list(
     Enriched { uploader_name: defined("uploaderName"), hub_updated_at: defined("updatedAt") }
 }
 
-/// `enrichHubUpdatedAt`: the Hub time of `post_id` from the timestamps. Any
-/// failure finds nothing.
+/// The Hub time of `post_id` from the timestamps. Any failure finds nothing.
 async fn enrich_from_timestamps(http: &HubHttp, kind: PackKind, post_id: Option<&Value>) -> Enriched {
     // `JSON.stringify({ ids: [postId] })` writes `undefined` as `null`.
     let body: Object = [("ids", Value::Array(vec![or_null(post_id)]))].into_iter().collect();
@@ -531,9 +527,9 @@ async fn enrich_from_timestamps(http: &HubHttp, kind: PackKind, post_id: Option<
     }
 }
 
-/// How `setHubPostId` takes an optional cached field: `undefined` leaves it
-/// alone, `null` or a string sets it; `None` for any other value, on which
-/// the store fails before writing.
+/// How the stores' `set_hub_post_id` takes an optional cached field:
+/// `undefined` leaves it alone, `null` or a string sets it; `None` for any
+/// other value, on which the store fails before writing.
 fn cached(value: Option<&Value>) -> Option<Cached> {
     match value {
         None => Some(Cached::Keep),
@@ -543,10 +539,9 @@ fn cached(value: Option<&Value>) -> Option<Cached> {
     }
 }
 
-/// `setHubPostId(entryId, postId, uploaderName, hubUpdatedAt)` with the
-/// values the handler has: a local pack id that is not a string matches no
-/// pack, and a post id that is neither a string nor nullish fails the
-/// store's `trim`.
+/// Links the local pack `entry_id` to `post_id` with the values the handler
+/// has: a local pack id that is not a string matches no pack, and a post id
+/// that is neither a string nor nullish changes nothing.
 async fn link_pack(
     links: &dyn PackLinks,
     kind: PackKind,
@@ -569,8 +564,8 @@ async fn link_pack(
     links.link(change).await;
 }
 
-/// Uploads (no `post_id`) or updates the pack with the JWT, as
-/// `submitI18nPack` / `submitThemePack` do; the post the Hub answered.
+/// Uploads (no `post_id`) or updates the pack with the JWT; the post the
+/// Hub answered.
 async fn submit(
     token: &HubToken,
     kind: PackKind,
@@ -602,7 +597,7 @@ async fn submit(
         .map_err(|err| err.message.into())
 }
 
-/// `HUB_UPLOAD_I18N_POST` / `HUB_UPLOAD_THEME_POST`: uploads `params.pack`,
+/// `HUB_UPLOAD_I18N_POST` / the `hub_upload_theme_post` command: uploads `params.pack`,
 /// then links the local pack `params.entryId` to the new post with the
 /// uploader and Hub time the list of the pack's name gives.
 pub async fn upload(
@@ -628,7 +623,7 @@ pub async fn upload(
     )
 }
 
-/// `HUB_UPDATE_I18N_POST` / `HUB_UPDATE_THEME_POST`: replaces the post
+/// `HUB_UPDATE_I18N_POST` / the `hub_update_theme_post` command: replaces the post
 /// `params.postId` with `params.pack`, then refreshes the local pack's Hub
 /// time from the timestamps (its uploader stays).
 pub async fn update(
@@ -653,7 +648,7 @@ pub async fn update(
     )
 }
 
-/// `HUB_DELETE_I18N_POST` / `HUB_DELETE_THEME_POST`: deletes the post, then
+/// `HUB_DELETE_I18N_POST` / the `hub_delete_theme_post` command: deletes the post, then
 /// unlinks the local pack `local_pack_id` when it is a non-empty string.
 pub async fn delete(
     token: &HubToken,

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing day files on Drive (src/main/sync/sync-typing-remote.ts):
-//! finding a device's days in a listing; reconciling this device's days
-//! with the local day files and the upload bookkeeping of
-//! `sync_state.json` before an upload pass collects its units; and the Data
-//! modal's reads of other devices' days ([`RemoteTyping`]).
+//! The typing day files on Drive: finding a device's days in a listing;
+//! reconciling this device's days with the local day files and the upload
+//! bookkeeping of `sync_state.json` before an upload pass collects its units;
+//! and the Data modal's reads of other devices' days ([`RemoteTyping`]).
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io;
@@ -41,11 +40,10 @@ pub struct RemoteDay<'a> {
 /// UTC day → its file, in the order the listing first shows each day.
 pub type RemoteDays<'a> = IndexMap<String, RemoteDay<'a>>;
 
-/// `collectRemoteOwnHashDays`: the day files of `hash` in `listing`, by
-/// keyboard uid, in the order the listing first shows each uid and day. A
-/// name that is not a day unit is skipped. A day with several files of its
-/// name maps to the copy every lookup by name uses; a day with only trash
-/// files is listed without `live`.
+/// The day files of `hash` in `listing`, by keyboard uid, in the order the
+/// listing first shows each uid and day. A name that is not a day unit is
+/// skipped. A day with several files of its name maps to the copy every lookup
+/// by name uses; a day with only trash files is listed without `live`.
 pub fn collect_remote_own_hash_days<'a>(
     listing: &'a Listing,
     hash: &str,
@@ -83,9 +81,8 @@ pub(crate) fn pointer_key(uid: &str, hash: &str) -> String {
     format!("{uid}|{hash}")
 }
 
-/// The days `uploaded` lists under `key`. The record may be an array,
-/// which the Electron build reads too: none of its keys holds a `|`, so it
-/// lists nothing.
+/// The days `uploaded` lists under `key`. The record may be an array: none of
+/// its keys holds a `|`, so it lists nothing.
 pub(crate) fn uploaded_days(uploaded: &Value, key: &str) -> IndexSet<String> {
     match uploaded.as_object().and_then(|record| record.get(key)) {
         Some(Value::Array(days)) => days.iter().filter_map(|day| day.as_str().map(str::to_owned)).collect(),
@@ -101,7 +98,7 @@ pub(crate) fn set(record: &mut Value, key: &str, value: Value) {
     }
 }
 
-/// `isReconcilePending`: no time is recorded for `key` (missing or null).
+/// Whether no time is recorded for `key` (missing or null).
 fn reconcile_pending(reconciled_at: &Value, key: &str) -> bool {
     matches!(reconciled_at.as_object().and_then(|record| record.get(key)), None | Some(Value::Null))
 }
@@ -136,10 +133,9 @@ async fn delete_all_copies(drive: &DriveClient, listing: &Listing, day: &RemoteD
     }
 }
 
-/// `reconcileOwnHashTypingAnalytics`: reconciles this device's day files
-/// on Drive with the local ones and `sync_state.json` before the upload
-/// pass collects its units. For each keyboard in the uploaded record, on
-/// Drive or with a local directory:
+/// Reconciles this device's day files on Drive with the local ones and
+/// `sync_state.json` before the upload pass collects its units. For each
+/// keyboard in the uploaded record, on Drive or with a local directory:
 ///
 /// - rule 2: a day `uploaded` lists that is not local was removed here
 ///   (Local delete) → its files on Drive are deleted too;
@@ -312,7 +308,7 @@ impl RemoteTyping {
         Ok(Some((listing, generation)))
     }
 
-    /// The stored password once signed in (`requireSyncCredentials`).
+    /// The stored password once signed in.
     async fn signed_in_with_password(&self) -> Option<Zeroizing<String>> {
         self.preflight.require_sync_credentials().await.ok()
     }
@@ -331,8 +327,8 @@ impl RemoteTyping {
             .collect()
     }
 
-    /// `hasAnyRemoteTypingData`: whether Drive holds a day file of another
-    /// device, which decides whether the Sync > Typing tree is shown.
+    /// Whether Drive holds a day file of another device, which decides whether
+    /// the Sync > Typing tree is shown.
     pub async fn has_any_remote_typing_data(&self) -> Result<bool, RemoteTypingError> {
         if self.signed_in_with_password().await.is_none() {
             return Ok(false);
@@ -342,9 +338,8 @@ impl RemoteTyping {
         Ok(!Self::remote_day_units(&listing, &own).is_empty())
     }
 
-    /// `listRemoteTypingHashesForUidFromCloud`: the other devices with a day
-    /// file of keyboard `uid` on Drive, sorted; it finds those the cache
-    /// has not merged yet.
+    /// The other devices with a day file of keyboard `uid` on Drive, sorted; it
+    /// finds those the cache has not merged yet.
     pub async fn list_remote_typing_hashes(&self, uid: &str) -> Result<Vec<String>, RemoteTypingError> {
         if self.signed_in_with_password().await.is_none() {
             return Ok(Vec::new());
@@ -359,8 +354,8 @@ impl RemoteTyping {
         Ok(hashes.into_iter().collect())
     }
 
-    /// `listRemoteTypingDaysFor`: the UTC days with a live day file of
-    /// device `hash` of keyboard `uid` on Drive, sorted.
+    /// The UTC days with a live day file of device `hash` of keyboard `uid` on
+    /// Drive, sorted.
     pub async fn list_remote_typing_days(
         &self,
         uid: &str,
@@ -382,12 +377,11 @@ impl RemoteTyping {
         Ok(days)
     }
 
-    /// `fetchRemoteTypingDay`: downloads the day `utc_day` of device `hash`
-    /// of keyboard `uid` and merges it into the local files and the cache.
-    /// False when Drive has no such day, or when the fetch does not run (a
-    /// reset of the keyboard or a switch of accounts runs, no credentials,
-    /// the guard blocks). Fails when the password-check does not open with
-    /// the stored password.
+    /// Downloads the day `utc_day` of device `hash` of keyboard `uid` and
+    /// merges it into the local files and the cache. False when Drive has no
+    /// such day, or when the fetch does not run (a reset of the keyboard or a
+    /// switch of accounts runs, no credentials, the guard blocks). Fails when
+    /// the password-check does not open with the stored password.
     ///
     /// It takes no lock: it is counted as a fetch of the keyboard before
     /// its first await, so a password change refuses to start and a reset
@@ -428,10 +422,9 @@ impl RemoteTyping {
         Ok(true)
     }
 
-    /// `listRemoteFileNames` (src/main/sync/sync-scan.ts): the names of the
-    /// data files on Drive, which the typing data import checks a file
-    /// against; `None` when Drive is not consulted (no credentials, the
-    /// guard blocks).
+    /// The names of the data files on Drive, which the typing data import
+    /// checks a file against; `None` when Drive is not consulted (no
+    /// credentials, the guard blocks).
     pub async fn remote_data_file_names(&self) -> Result<Option<HashSet<String>>, PreflightError> {
         if self.signed_in_with_password().await.is_none() {
             return Ok(None);

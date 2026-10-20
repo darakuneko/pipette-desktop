@@ -60,7 +60,7 @@ export interface AppConfig {
    * (`'en'`, `'ja'`) are migrated on first load. */
   language?: string
   /** One-shot UX notice key. Surface a banner once, then the renderer
-   * calls APP_CONFIG_SET with `null` to dismiss it. Currently only
+   * calls `app_config_set` with `null` to dismiss it. Currently only
    * `'ja-removed'` is emitted (during the bundled-ja → pack-only
    * migration) but the field stays open-ended for future migrations. */
   oneShotNotice?: 'ja-removed' | null
@@ -107,21 +107,22 @@ export interface AppConfig {
    * exposes no Settings UI toggle — nothing for the user to turn on or
    * off. True once the app has successfully run a one-time `'packs'`-
    * scoped download (i18n + theme packs) after sync credentials became
-   * ready — see `useDeviceLifecycle`'s first-sync seam. Exists because
-   * the 3-minute poll cannot discover a pack that was already on Drive
-   * before this machine ever polled (see `matchesScope`'s doc in
-   * sync-service.ts), so a fresh machine would otherwise never learn
-   * about pre-existing remote packs without the user manually opening a
-   * Pack Manager modal and clicking pull. Stays false on failure so the
-   * next launch retries. */
+   * ready — see `useDeviceLifecycle`'s first-sync seam. The poll merges
+   * packs too, but only on its passes (the first about 15 s after launch,
+   * then every 3 minutes); this pull brings the packs already on Drive in
+   * at the first connect. Stays false on failure so the next launch
+   * retries. */
   packsPulledOnce: boolean
   /** The version the user chose to skip in the update modal ("Skip this
    * version"), as the manifest names it. The startup check does not offer
    * exactly that version again; a newer one is offered. Per machine, not
-   * synced. The Tauri build only: the Electron build has no updater. */
+   * synced. */
   updateSkippedVersion?: string | null
 }
 
+// src-tauri/crates/pipette-app-config/data/defaults.json copies the zoom
+// range, SETTABLE_APP_CONFIG_KEYS and DEFAULT_APP_CONFIG; change both
+// together (src/shared/__tests__/rust-data-copies.test.ts compares them).
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'autoSync',
   'theme',

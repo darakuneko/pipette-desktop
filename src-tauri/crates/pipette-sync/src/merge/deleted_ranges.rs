@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The merge of a downloaded deleted-ranges bundle
-//! (`keyboards/{uid}/devices/{hash}/deleted-ranges`) into the local file
-//! (src/main/sync/typing-deleted-ranges-merge.ts): the union of the
-//! entries by id, read, merged and written under the file's store lock.
-//! What follows runs after that lock is released, with the merged entries
+//! (`keyboards/{uid}/devices/{hash}/deleted-ranges`) into the local file: the
+//! union of the entries by id, read, merged and written under the file's store
+//! lock. What follows runs after that lock is released, with the merged entries
 //! from memory: the store lock is not reentrant, and the follow-up must not
 //! read the file under it again.
 //!
@@ -124,12 +123,12 @@ fn queue_own_apply(
     })
 }
 
-/// `queueOwnDeletedRangesApply`: queues the apply of this device's own
-/// deleted ranges of every keyboard, read from the local files (the ids
-/// already applied are skipped). Run at the end of each sync pass, so an
-/// apply that a reset skipped or that failed is tried again even when Drive
-/// has nothing new and no merge of the ranges unit runs. Not awaited by the
-/// pass, which holds a sync lock while the apply waits on the flush chain.
+/// Queues the apply of this device's own deleted ranges of every keyboard,
+/// read from the local files (the ids already applied are skipped). Run at
+/// the end of each sync pass, so an apply that a reset skipped or that
+/// failed is tried again even when Drive has nothing new and no merge of
+/// the ranges unit runs. Not awaited by the pass, which holds a sync lock
+/// while the apply waits on the flush chain.
 pub fn queue_own_deleted_ranges_apply(ops: Arc<DataOps>, holds: ResetHolds) -> JoinHandle<()> {
     tokio::spawn(async move { ops.apply_own_deleted_ranges_for_all_keyboards(holds).await })
 }

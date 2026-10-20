@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 // The catalog tab's import of a work against both vialAPI implementations:
-// a preload-like mock, and the Tauri shim's members over a mocked Tauri IPC
+// a plain mock, and the Tauri shim's members over a mocked Tauri IPC
 // (./typing-dataset-backends.ts).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,7 +12,7 @@ import i18n from '../../i18n'
 import { AozoraCatalogTab, clearAozoraCatalogCache } from '../AozoraCatalogTab'
 import type { LanguageListEntry } from '../../../shared/types/language-store'
 import type { TypingTestTextMeta } from '../../../shared/types/typing-test-text-store'
-import { type DatasetSpies, datasetSpies, preloadLikeMock, shimOverMockIPC } from './typing-dataset-backends'
+import { type DatasetSpies, datasetSpies, plainMock, shimOverMockIPC } from './typing-dataset-backends'
 
 const WORK_ID = '000001/files/1_ruby_1.zip'
 
@@ -50,7 +50,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe.each([preloadLikeMock, shimOverMockIPC])('AozoraCatalogTab import ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('AozoraCatalogTab import ($name)', (backend) => {
   let spies: DatasetSpies
 
   beforeEach(() => {

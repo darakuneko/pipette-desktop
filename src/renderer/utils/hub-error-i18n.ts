@@ -6,7 +6,8 @@
 //   1. Bare sentinel constants for "well-known" auth/quota issues
 //      (e.g. `HUB_ERROR_ACCOUNT_DEACTIVATED`, `HUB_ERROR_RATE_LIMITED`,
 //      `HUB_ERROR_NOT_AUTHENTICATED`).
-//   2. Formatted HubHttpError strings from `hub-client.ts`:
+//   2. Formatted Hub HTTP error strings
+//      (src-tauri/crates/pipette-hub/src/http.rs):
 //      `<label>: <status> <body>` (e.g. `"Hub analytics upload failed:
 //      400 {\"ok\":false,\"error\":\"INVALID_PAYLOAD: keystrokes
 //      below threshold\"}"`).
@@ -67,7 +68,7 @@ const STATUS_KEY_BY_CODE: Record<string, string> = {
 }
 
 const INVALID_PAYLOAD_PREFIX = 'INVALID_PAYLOAD:'
-/** Matches the body that hub-client.ts wraps every HubHttpError in. */
+/** Matches the `<label>: <status> <body>` text of a Hub HTTP error. */
 const HUB_HTTP_RE = /:\s+(\d{3})(?:\s|$)/
 
 /**

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync of the pack stores (src/main/sync/pack-sync.ts and the stores'
-//! sync and GC entry points), shared by the language and theme packs.
+//! The sync of the pack stores (the stores' sync and GC entry points),
+//! shared by the language and theme packs.
 //!
 //! A pack has two sync units: the roster (`{i18n|themes}/index`, every
 //! pack's meta) and one body unit per pack (`…/packs/{id}`, the pack JSON).
@@ -96,7 +96,7 @@ fn is_js_object(value: Option<&Value>) -> bool {
     matches!(value, Some(Value::Object(_) | Value::Array(_)))
 }
 
-/// An object `m` whose `id` is a string (`isPackMetaCandidate`).
+/// The `id` of `meta` when it is an object whose `id` is a string.
 fn meta_candidate_id(meta: &Value) -> Option<&pipette_js_json::JsString> {
     match meta {
         Value::Object(o) => match o.get("id") {

@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The temp file names of `write_file_atomic` against the names the
-//! TypeScript writer (src/main/utils/write-file-atomic.ts) built for the same
-//! target names, pids and random bytes, and against the orphan sweep pattern
-//! of src/main/utils/sweep-orphan-pack-bodies.ts.
-//!
-//! Regenerate the fixture with `pnpm run generate:fs-logger-fixtures`.
+//! The temp file names of `write_file_atomic` against the recorded names the
+//! 0.4 build's writer built for the same target names, pids and
+//! random bytes, and against the recorded orphan sweep pattern.
 
 use std::path::Path;
 
@@ -36,7 +33,7 @@ fn fixture() -> Fixture {
 }
 
 #[test]
-fn the_temp_names_are_the_typescript_ones() {
+fn the_temp_names_are_the_recorded_ones() {
     let fixture = fixture();
     let random = u64::from_str_radix(&fixture.random_hex, 16).unwrap();
     let sweep = Regex::new(&fixture.sweep_pattern).unwrap();

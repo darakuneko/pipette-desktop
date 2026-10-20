@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the startup notice tests run against,
-// both answering with the same spy: a preload-like mock (the spy itself),
+// both answering with the same spy: a plain mock (the spy itself),
 // and the Tauri shim's notification member over a mocked Tauri IPC, whose
 // `notification_fetch` command answers with what the spy resolves (or
 // rejects with what it rejects with). `install` puts the notice member on
@@ -22,7 +22,7 @@ function installVialAPI(members: object): void {
 
 export function notificationBackends(notificationFetch: () => Promise<NotificationFetchResult>): NotificationBackend[] {
   return [
-    { name: 'preload-like mock', install: (base) => installVialAPI({ ...base, notificationFetch }) },
+    { name: 'plain mock', install: (base) => installVialAPI({ ...base, notificationFetch }) },
     {
       name: 'Tauri shim over mockIPC',
       install: (base) => {

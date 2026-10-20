@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript snapshot handlers by
-//! scripts/keyboard-store-fixtures/record-snapshot-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the snapshot handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the notified units and every file left behind compared byte
 //! for byte. A file-system error is recorded as `<os error>`, as its text
@@ -97,7 +96,7 @@ fn as_recorded(got: String) -> String {
 }
 
 #[test]
-fn the_scenarios_match_the_typescript_handlers() {
+fn the_scenarios_match_the_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_snapshot_store_scenarios.json");
     let fixture = pipette_js_json::parse(&fs::read_to_string(path).unwrap()).unwrap();
     let Value::Array(scenarios) = fixture else { panic!("not a list") };

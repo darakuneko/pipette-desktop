@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Google Drive v3 client of the sync on `appDataFolder`
-//! (src/main/sync/google-drive.ts, drive-retry.ts, drive-canonical.ts and
-//! drive-trash.ts):
+//! The Google Drive v3 client of the sync on `appDataFolder`:
 //!
 //! - [`DriveApi`]: one attempt of each operation (a listing page, a
 //!   download, the two creates, a content update, a rename and a delete).
 //!   A failed attempt is a [`DriveError`] with what the retries need: the
 //!   status, the start of the body and `Retry-After`. [`http::HttpDrive`]
-//!   sends the requests google-drive.ts sends;
-//! - [`retry`]: the retries around each attempt (drive-retry.ts);
+//!   sends the requests over HTTP;
+//! - [`retry`]: the retries around each attempt;
 //! - [`client::DriveClient`]: the operations the sync calls, with their
 //!   retries, the 404s they accept and the bulk deletes and renames;
 //! - [`canonical`]: the copy every lookup by name uses when Drive lists
-//!   several files with the same name (drive-canonical.ts);
+//!   several files with the same name;
 //! - [`trash_names`]: the names copies are renamed to instead of being
-//!   deleted (drive-trash.ts).
+//!   deleted.
 //!
 //! With the `test-util` feature, [`fake::InMemoryDrive`] is a Drive in
 //! memory. Every Rust test of the sync runs on it; the Node fake Drive
@@ -43,7 +41,8 @@ pub struct DriveFile {
     pub created_time: Option<String>,
 }
 
-/// One listing request (`listFiles` asks for every page in turn).
+/// One listing request (`DriveClient::list_files` asks for every page in
+/// turn).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ListQuery {
     /// The `name contains '…'` filter. Drive matches a prefix of the name
@@ -116,11 +115,10 @@ pub trait DriveApi: Send + Sync {
     fn list_page(&self, query: ListQuery) -> DriveFuture<'_, FileList>;
     /// The content of a file (`alt=media`).
     fn download(&self, id: String) -> DriveFuture<'_, Vec<u8>>;
-    /// Creates a file with `content` (the multipart create of
-    /// `uploadFile`) and returns the revision it wrote.
+    /// Creates a file with `content` (a multipart create) and returns the
+    /// revision it wrote.
     fn create(&self, name: String, content: String) -> DriveFuture<'_, UploadedFile>;
-    /// Creates a file with `content` and returns only its id
-    /// (`createRawFile`).
+    /// Creates a file with `content` and returns only its id.
     fn create_raw(&self, name: String, content: String) -> DriveFuture<'_, String>;
     /// Replaces the content of a file and returns the revision it wrote.
     fn update(&self, id: String, content: String) -> DriveFuture<'_, UploadedFile>;

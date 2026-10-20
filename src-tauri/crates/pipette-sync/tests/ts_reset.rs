@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The resets, deletes and trash actions against the recording of the
-//! TypeScript handlers (tests/fixtures/ts_reset.json, from
-//! scripts/sync-fixtures/record-reset-fixtures.test.ts): the same userData,
-//! pending file, Drive and steps give the same answers, calls, changed
-//! units, pending units, userData tree (path → bytes) and Drive files.
+//! The resets, deletes and trash actions against the recorded golden
+//! (tests/fixtures/ts_reset.json): the same userData, pending file, Drive and
+//! steps give the same answers, calls, changed units, pending units, userData
+//! tree (path → bytes) and Drive files.
 //!
-//! The Tauri build also removes this userData's key store entry with
-//! `local/auth/` (`forgetKey`), which the Electron build has none of; that
-//! call is left out of the comparison.
+//! The reset also removes this userData's key store entry with `local/auth/`
+//! (`forgetKey`), which the recording has none of; that call is left out of the
+//! comparison.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -24,11 +23,12 @@ use serde_json::{Value, json};
 
 const FIXTURE: &str = include_str!("fixtures/ts_reset.json");
 
-/// The answer of a handler wrapped by `wrapIpc`.
+/// The answer of a handler as the recording has it: `success` with the
+/// payload, or `success: false` with the error.
 fn answer(result: Result<Value, DataError>) -> Value {
     match result {
         Ok(Value::Object(payload)) => {
-            // `success` first, as the wrapper spreads the payload after it.
+            // `success` first, the key order of the recorded answers.
             let mut ordered = serde_json::Map::new();
             ordered.insert("success".into(), true.into());
             ordered.extend(payload.into_iter().filter(|(key, _)| key != "success"));
@@ -101,8 +101,8 @@ fn pending_state(w: &World) -> Value {
     })
 }
 
-/// The calls the Electron build logs: a typing cleanup with its scope,
-/// always every device's rows here.
+/// The calls the recording logs: a typing cleanup with its scope, always every
+/// device's rows here.
 fn calls(w: &World) -> Vec<String> {
     w.log()
         .into_iter()
@@ -124,7 +124,7 @@ async fn seed_drive(w: &World, seeds: &[Value]) {
 }
 
 #[tokio::test]
-async fn the_resets_match_the_typescript_recording() {
+async fn the_resets_match_the_recorded_golden() {
     let fixture: Value = serde_json::from_str(FIXTURE).unwrap();
     assert_eq!(fixture["now"].as_i64(), Some(NOW));
     assert_eq!(fixture["ownHash"], reset_harness::OWN_HASH);

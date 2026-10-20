@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Checks the X11 lookup against `@paymoapp/active-window`, recorded by
-//! scripts/resident-fixtures/record-x11-active-window-fixtures.test.ts: each
-//! case's properties are put on a window of a private Xvfb (test_server.rs)
-//! the way the generator puts them, and the lookup's answer must be the
-//! binding's. Skips when Xvfb is not installed (see `REQUIRE_VAR`).
+//! Checks the X11 lookup against the recorded answers of
+//! `@paymoapp/active-window`: each case's properties are put on a window of a
+//! private Xvfb (test_server.rs), and the lookup's answer must be the
+//! recorded one. Skips when Xvfb is not installed (see `REQUIRE_VAR`).
 
 use pipette_js_json::Value;
 use x11rb::protocol::xproto::{CreateWindowAux, PropMode, WindowClass};

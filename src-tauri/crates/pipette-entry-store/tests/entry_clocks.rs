@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The specs of src/main/sync/__tests__/entry-clocks.test.ts: the store
-//! groups, clock parsing, canonical JSON, the v1 → v2 normalization and the
-//! clock writers.
+//! The entry clock specs: the store groups, clock parsing, canonical JSON, the
+//! v1 → v2 normalization and the clock writers.
 
 #![allow(clippy::unwrap_used)]
 

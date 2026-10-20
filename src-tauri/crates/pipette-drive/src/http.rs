@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! [`HttpDrive`]: one attempt of each Drive operation as an HTTP request,
-//! the same requests src/main/sync/google-drive.ts sends (method, path,
-//! query, headers, body). The access token is asked for before every
-//! attempt, so a refreshed one is picked up by the next.
+//! [`HttpDrive`]: one attempt of each Drive operation as an HTTP request.
+//! The access token is asked for before every attempt, so a refreshed one
+//! is picked up by the next.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -23,9 +22,8 @@ const NOT_AUTHENTICATED: &str = "Not authenticated with Google Drive";
 
 pub type TokenFuture<'a> = Pin<Box<dyn Future<Output = Result<Option<String>, String>> + Send + 'a>>;
 
-/// The access token of the signed-in account (`getAccessToken` of
-/// google-auth.ts): `None` when no one is signed in, an error message
-/// when the token could not be had.
+/// The access token of the signed-in account: `None` when no one is signed
+/// in, an error message when the token could not be had.
 pub trait AccessTokenSource: Send + Sync {
     fn access_token(&self) -> TokenFuture<'_>;
 }
@@ -41,9 +39,9 @@ impl<F: Fn() -> Result<Option<String>, String> + Send + Sync> AccessTokenSource 
 pub struct HttpDrive<R, T> {
     requester: R,
     tokens: T,
-    /// `DRIVE_API` of google-drive.ts, without a trailing slash.
+    /// The Drive API base URL, without a trailing slash.
     api: String,
-    /// `UPLOAD_API` of google-drive.ts, without a trailing slash.
+    /// The Drive upload API base URL, without a trailing slash.
     upload: String,
 }
 
@@ -119,7 +117,7 @@ fn into_body(reply: HttpReply) -> Result<Vec<u8>, DriveError> {
 }
 
 /// The metadata part (the name in appDataFolder) and the content part of a
-/// create, as google-drive.ts writes them.
+/// create.
 fn multipart_body(name: &str, content: &str) -> String {
     let metadata = serde_json::json!({ "name": name, "parents": ["appDataFolder"] });
     [
@@ -303,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_the_multipart_body_of_google_drive_ts() {
+    fn writes_the_recorded_multipart_body() {
         assert_eq!(
             multipart_body("a.enc", "{\"v\":1}"),
             "-----pipette-sync-boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n\

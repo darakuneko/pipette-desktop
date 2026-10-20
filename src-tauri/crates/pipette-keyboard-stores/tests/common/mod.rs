@@ -189,7 +189,7 @@ pub fn step_text(step: &pipette_js_json::Object, key: &str) -> String {
 }
 
 /// `got` with an error text the crate does not copy replaced as the
-/// recorders of scripts/keyboard-store-fixtures record it: a file-system
+/// recorded goldens have it: a file-system
 /// error's as `<os error>` (every `Error: …` but the store's own `known`
 /// ones), a body that is not JSON as `<syntax error>`.
 pub fn as_recorded(got: String, known: &[&str]) -> String {
@@ -214,7 +214,7 @@ pub fn fixture_scenarios(name: &str) -> Vec<Value> {
 }
 
 /// Replays the scenarios of the fixture `name` (under tests/fixtures)
-/// recorded by a store's recorder in scripts/keyboard-store-fixtures: the
+/// recorded for a store: the
 /// same userData files and clock, each step run by `run_step` (`None` for
 /// a clock move, which it makes) and its answer compared as
 /// [`as_recorded`] with `known`, then the notified units and every file

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Typing Test word datasets, writing the same files as the Electron
-//! build:
+//! The Typing Test word datasets:
 //!
 //! - the bundled default dataset of each provider (monkeytype, tatoeba,
 //!   aozora), from src/shared/data/typing-test-providers.ts;

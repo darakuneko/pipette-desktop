@@ -4,8 +4,7 @@
 //! days and Delete All, the Sync tab's delete of another device's data, the
 //! export and the import (crates/pipette-typing-analytics, data_ops.rs).
 //!
-//! As the Electron handlers (sync-reset-ipc.ts, sync-ipc.ts), the deletes
-//! and the import answer `{ success, error? }`: a rejected argument fails
+//! The deletes and the import answer `{ success, error? }`: a rejected argument fails
 //! with `Invalid uid`, `Invalid device` or `Invalid dates`, and each runs
 //! holding the sync lock as a reset, waiting up to 30 seconds for a running
 //! sync pass or flush before it fails with `sync.deleteBusy` or
@@ -44,7 +43,7 @@ impl<E: std::fmt::Display> From<E> for Failed {
     }
 }
 
-/// `wrapIpc`: `{ success: true }` or `{ success: false, error }`.
+/// `{ success: true }` or `{ success: false, error }`.
 fn envelope(outcome: Result<(), Failed>) -> serde_json::Value {
     match outcome {
         Ok(()) => json!({ "success": true }),
@@ -65,7 +64,7 @@ fn uid_arg(uid: &Arg) -> Result<&str, Failed> {
     safe_key_arg(uid, "uid")
 }
 
-/// `validDays`: an array of `YYYY-MM-DD` days of the calendar.
+/// An array of `YYYY-MM-DD` days of the calendar.
 fn days_arg(dates: &Arg) -> Result<Vec<String>, Failed> {
     let days: Option<Vec<String>> = match dates {
         Some(serde_json::Value::Array(items)) => {

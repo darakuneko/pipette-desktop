@@ -3,8 +3,7 @@
 // window's visibility and the window of the Typing Test's view-only mode
 // (src-tauri/src/window_commands.rs). The backend sends
 // the window's show and hide as the window:visibility-changed event
-// (src-tauri/src/main_window.rs), which the Electron main process sends on
-// the same channel.
+// (src-tauri/src/main_window.rs).
 
 import { IpcChannels } from '../../shared/ipc/channels'
 import type { VialAPI } from '../../shared/types/vial-api'

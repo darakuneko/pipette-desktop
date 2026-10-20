@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Which units a sync of a scope covers (src/main/sync/sync-scope.ts), and
-//! the scopes the renderer may ask for (`validateSyncScope` of
-//! src/main/sync/sync-ipc.ts).
+//! Which units a sync of a scope covers, and the scopes the renderer may ask
+//! for.
 //!
 //! - `'all'`: every unit; a download takes a keyboard's units only for the
 //!   keyboards that have a local directory (lazy);
@@ -39,10 +38,9 @@ pub enum SyncScope {
 }
 
 impl SyncScope {
-    /// `validateSyncScope`: the scope `raw` names, `None` for one the
-    /// renderer may not ask for. The keyboard must be a safe key; an
-    /// object with a keyboard and `favorites` other than `true` is the
-    /// keyboard alone.
+    /// The scope `raw` names, `None` for one the renderer may not ask for. The
+    /// keyboard must be a safe key; an object with a keyboard and `favorites`
+    /// other than `true` is the keyboard alone.
     pub fn from_json(raw: &Value) -> Option<Self> {
         match raw {
             Value::String(name) => match name.as_str() {
@@ -71,8 +69,8 @@ fn is_pack_unit(unit: &str) -> bool {
     unit.starts_with(I18N_SYNC_UNIT_PREFIX) || unit.starts_with(THEME_SYNC_UNIT_PREFIX)
 }
 
-/// `matchesScope`: whether `scope` covers `unit` (`None`: a file name that
-/// is no unit, which only `'all'` covers).
+/// Whether `scope` covers `unit` (`None`: a file name that is no unit, which
+/// only `'all'` covers).
 pub fn matches_scope(unit: Option<&str>, scope: &SyncScope) -> bool {
     if *scope == SyncScope::All {
         return true;
@@ -97,8 +95,8 @@ pub fn matches_scope(unit: Option<&str>, scope: &SyncScope) -> bool {
     }
 }
 
-/// `listLocalKeyboardUids`: the directories under `sync/keyboards/` (not
-/// following links); none when it cannot be read.
+/// The directories under `sync/keyboards/` (not following links); none when it
+/// cannot be read.
 pub fn list_local_keyboard_uids(user_data: &Path) -> HashSet<String> {
     let Ok(entries) = std::fs::read_dir(user_data.join("sync").join("keyboards")) else {
         return HashSet::new();
@@ -110,10 +108,10 @@ pub fn list_local_keyboard_uids(user_data: &Path) -> HashSet<String> {
         .collect()
 }
 
-/// `shouldDownloadSyncUnit`: whether a download of `scope` merges the
-/// Drive file of `unit`. The connect-time scope leaves the analytics days
-/// and the run logs to the Analyze panel; `'all'` takes a keyboard's units
-/// only for the keyboards in `local_uids`.
+/// Whether a download of `scope` merges the Drive file of `unit`. The
+/// connect-time scope leaves the analytics days and the run logs to the Analyze
+/// panel; `'all'` takes a keyboard's units only for the keyboards in
+/// `local_uids`.
 pub fn should_download_sync_unit(
     unit: Option<&str>,
     scope: &SyncScope,

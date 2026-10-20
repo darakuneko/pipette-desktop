@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The merge of a remote roster into the local one
-//! (`mergeSyncedPackIndex` of src/main/sync/pack-sync.ts).
+//! The merge of a remote roster into the local one.
 
 use std::collections::HashMap;
 

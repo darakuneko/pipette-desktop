@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Hub's typing-test dataset API (`/api/typing-test/datasets`),
-//! anonymous and read-only: src/main/hub/hub-typing-dataset.ts. Both
-//! fetchers answer `None` on any network, status or shape error, so the
-//! callers fall back to what they have.
+//! The Hub's typing-test dataset API (`/api/typing-test/datasets`), anonymous
+//! and read-only. Both fetchers answer `None` on any network, status or shape
+//! error, so the callers fall back to what they have.
 
 use pipette_js_json::{JsString, Object, Value};
 use pipette_net::{HttpClient, encode_uri_component};
@@ -30,8 +29,7 @@ async fn fetch_data(http: &dyn HttpClient, url: &str) -> Option<Value> {
     body.remove("data")
 }
 
-/// `fetchTypingDatasetVersion`: the Hub's current version of the provider's
-/// dataset.
+/// The Hub's current version of the provider's dataset.
 pub async fn fetch_dataset_version(
     http: &dyn HttpClient,
     hub_base: &str,
@@ -47,7 +45,7 @@ pub async fn fetch_dataset_version(
     }
 }
 
-/// `fetchTypingDataset`: the provider's full dataset, checked, as the
+/// The provider's full dataset, checked, as the
 /// object the overrides file stores for it: `provider`, `version`,
 /// `downloadUrlBase`, `model` (only when the Hub sent one) and `languages`
 /// (its entries as sent), in that order.

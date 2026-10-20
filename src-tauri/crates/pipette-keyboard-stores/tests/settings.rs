@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The pipette settings storage: the storage cases of the handler tests in
-//! src/main/__tests__/device-prefs-store.test.ts, and the etag check the
-//! callers build their writes on.
+//! The pipette settings storage, and the etag check the callers build their
+//! writes on.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

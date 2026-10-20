@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze post export builder on a seeded cache (the cases of
-//! src/main/hub/__tests__/hub-analytics.test.ts): the totals, the device
-//! scopes, the category picker, the Layout Comparison and the size. The
-//! byte-for-byte comparison with the Electron builder is
+//! The Analyze post export builder on a seeded cache: the totals, the
+//! device scopes, the category picker, the Layout Comparison and the size.
+//! The byte-for-byte comparison with the recorded golden is
 //! ts_hub_analytics_export.rs.
 
 #![allow(clippy::unwrap_used)]

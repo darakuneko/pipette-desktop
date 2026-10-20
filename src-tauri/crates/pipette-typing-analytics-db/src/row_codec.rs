@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The value conversions shared by the writes and the reads
-//! (typing-analytics-row-codec.ts): the histogram BLOB and the local
+//! The value conversions shared by the writes and the reads: the histogram
+//! BLOB and the local
 //! calendar day a `localtime` query groups by.
 
 use rusqlite::types::ValueRef;
@@ -8,7 +8,7 @@ use rusqlite::types::ValueRef;
 use crate::Error;
 use crate::jsonl::HIST_BUCKETS;
 
-/// Pack a histogram into 8 little-endian u32 (`encodeHistBuffer`): a
+/// Pack a histogram into 8 little-endian u32: a
 /// negative or non-finite bucket becomes 0 and a fractional one is
 /// truncated, as Buffer.writeUInt32LE stores it. A bucket above u32::MAX
 /// makes writeUInt32LE throw, which aborts the whole write; here it is an
@@ -26,7 +26,7 @@ pub(crate) fn encode_hist(hist: &[f64; HIST_BUCKETS]) -> Result<[u8; HIST_BUCKET
     Ok(out)
 }
 
-/// Unpack a stored histogram (`decodeHistBuffer`). Anything but a 32-byte
+/// Unpack a stored histogram. Anything but a 32-byte
 /// BLOB reads as all zeros, so a broken row never fails a query.
 pub(crate) fn decode_hist(value: ValueRef<'_>) -> [u32; HIST_BUCKETS] {
     let mut out = [0u32; HIST_BUCKETS];
@@ -40,7 +40,7 @@ pub(crate) fn decode_hist(value: ValueRef<'_>) -> [u32; HIST_BUCKETS] {
     out
 }
 
-/// `localDateStringToMs(date)`: the local midnight of the `YYYY-MM-DD` text
+/// The local midnight of the `YYYY-MM-DD` text
 /// SQLite's `strftime(…, 'localtime')` gives, read the way JavaScript reads
 /// it: the text split at `-`, each part through `Number.parseInt(s, 10)`
 /// and `new Date(year, month - 1, day)`. NaN where JavaScript gives NaN.

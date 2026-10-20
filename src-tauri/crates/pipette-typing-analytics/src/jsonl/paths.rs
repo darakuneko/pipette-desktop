@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Where the JSONL masters and the deleted-range files live (paths.ts) and
-//! the UTC calendar days that name the day files (utc-day.ts):
+//! Where the JSONL masters and the deleted-range files live and the UTC
+//! calendar days that name the day files:
 //!
 //! `{userData}/sync/keyboards/{uid}/devices/{machineHash}/{YYYY-MM-DD}.jsonl`
 //!
@@ -147,7 +147,7 @@ pub fn list_all_device_day_jsonl_files(user_data: &Path) -> Vec<DeviceDayJsonlRe
 
 // --- UTC days -------------------------------------------------------------
 
-/// `utcDayFromMs(ms)`: the UTC calendar day of a time as `YYYY-MM-DD`, the
+/// The UTC calendar day of a time as `YYYY-MM-DD`, the
 /// year padded to four characters as `padStart` pads `String(year)`
 /// (`10000-01-01`, `00-1-01-01`). A time a `Date` cannot hold gives
 /// `0NaN-NaN-NaN`, as there.
@@ -165,18 +165,18 @@ pub fn utc_day_from_ms(ms: f64) -> String {
     format!("{year:0>4}{month_day}")
 }
 
-/// `isUtcDay(text)`: `YYYY-MM-DD` naming a day of the Gregorian calendar
+/// Whether `text` is `YYYY-MM-DD` naming a day of the Gregorian calendar
 /// that reads back as the same text (so the years 0000 to 0099 are not).
 pub fn is_utc_day(text: &str) -> bool {
     pipette_time::is_utc_day(text)
 }
 
-/// A text that is not a UTC day (`utcDayBoundaryMs` throws a RangeError).
+/// A text that is not a UTC day.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("Invalid UTC day: {0}")]
 pub struct InvalidUtcDay(pub String);
 
-/// `utcDayBoundaryMs(day)`: the half-open `[start, end)` of a UTC day.
+/// The half-open `[start, end)` of a UTC day.
 pub fn utc_day_boundary_ms(utc_day: &str) -> Result<(i64, i64), InvalidUtcDay> {
     if !is_utc_day(utc_day) {
         return Err(InvalidUtcDay(utc_day.to_owned()));

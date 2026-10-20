@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Choosing one copy when Drive lists several files with the same name
-//! (src/main/sync/drive-canonical.ts). Drive keys files by id and does not
-//! keep names unique, so two machines creating the same file at once leave
-//! two copies. Every lookup by name uses the same copy, so writes, merges
-//! and the recorded remote state all land on one file instead of
-//! alternating between them.
+//! Choosing one copy when Drive lists several files with the same name.
+//! Drive keys files by id and does not keep names unique, so two machines
+//! creating the same file at once leave two copies. Every lookup by name
+//! uses the same copy, so writes, merges and the recorded remote state all
+//! land on one file instead of alternating between them.
 //!
 //! A [`Listing`] indexes one listing on first use, so the many lookups of
 //! a pass are each O(1).
@@ -117,21 +116,20 @@ impl Listing {
         })
     }
 
-    /// The copy of `name` every lookup uses (`pickCanonicalFile`): the
-    /// newest modifiedTime, ties to the smallest id.
+    /// The copy of `name` every lookup uses: the newest modifiedTime, ties
+    /// to the smallest id.
     pub fn pick_canonical(&self, name: &str) -> Option<&DriveFile> {
         self.names().by_name.get(name).map(|(chosen, _)| &self.files[*chosen])
     }
 
-    /// One file per name, the chosen copy, names in first-listed order
-    /// (`canonicalFiles`).
+    /// One file per name, the chosen copy, names in first-listed order.
     pub fn canonical_files(&self) -> Vec<&DriveFile> {
         let index = self.names();
         index.names.iter().map(|name| &self.files[index.by_name[name].0]).collect()
     }
 
     /// Every copy of `name` in the listed order, for deletes that must not
-    /// leave a duplicate behind (`filesNamed`).
+    /// leave a duplicate behind.
     pub fn files_named(&self, name: &str) -> Vec<&DriveFile> {
         self.names()
             .by_name
@@ -140,14 +138,13 @@ impl Listing {
             .unwrap_or_default()
     }
 
-    /// Names with two or more copies, in first-listed order
-    /// (`duplicatedNames`).
+    /// Names with two or more copies, in first-listed order.
     pub fn duplicated_names(&self) -> Vec<&str> {
         let index = self.names();
         index.names.iter().filter(|name| index.by_name[*name].1.len() > 1).map(String::as_str).collect()
     }
 
-    /// The trash files of `name` in the listed order (`trashCopiesOf`).
+    /// The trash files of `name` in the listed order.
     pub fn trash_copies_of(&self, name: &str) -> Vec<TrashCopy<'_>> {
         self.trash()
             .by_name
@@ -161,14 +158,13 @@ impl Listing {
             .unwrap_or_default()
     }
 
-    /// Names with at least one trash file, in first-listed order
-    /// (`namesWithTrash`).
+    /// Names with at least one trash file, in first-listed order.
     pub fn names_with_trash(&self) -> Vec<&str> {
         self.trash().names.iter().map(String::as_str).collect()
     }
 
     /// Every copy of `name` and then every trash file of it, for deletes
-    /// meant to remove the name for good (`filesNamedWithTrash`).
+    /// meant to remove the name for good.
     pub fn files_named_with_trash(&self, name: &str) -> Vec<&DriveFile> {
         let mut files = self.files_named(name);
         files.extend(self.trash_copies_of(name).into_iter().map(|copy| copy.file));

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The local days against what JavaScript gave in each time zone: one
-//! fixture file per zone (tests/fixtures/local_days, written by
-//! `pnpm run generate:analytics-db-fixtures`), each replayed in a process
+//! recorded fixture file per zone (tests/fixtures/local_days), each
+//! replayed in a process
 //! started with that zone's `TZ`.
 
 // Helpers outside #[test] functions unwrap fixture data too.

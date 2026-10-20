@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The n-gram range reads (`selectInRangeForUid*` of ngram-statements.ts,
-//! `listNgramMinutesInRangeForUid*`): one row per (scope, minute, n-gram),
+//! The n-gram range reads: one row per (scope, minute, n-gram),
 //! ordered by n-gram id and minute, the histogram decoded.
 
 use crate::query::{Params, ScopeFilters, all, for_device};

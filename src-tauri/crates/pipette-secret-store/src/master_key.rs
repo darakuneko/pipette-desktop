@@ -200,7 +200,7 @@ impl MasterKey {
         .await
     }
 
-    /// Whether the key store answers: the probe of `isEncryptionAvailable`.
+    /// Whether the key store answers: a read of the key.
     /// A key already in memory counts as available.
     pub async fn available(&self) -> bool {
         self.read().await.is_ok()

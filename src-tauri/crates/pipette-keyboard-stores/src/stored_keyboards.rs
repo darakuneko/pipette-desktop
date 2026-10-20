@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The stored keyboards: the directories under `sync/keyboards`, each with
-//! a display name (the `LIST_STORED_KEYBOARDS` handler of
-//! src/main/sync/sync-ipc.ts).
+//! a display name.
 
 use std::path::Path;
 

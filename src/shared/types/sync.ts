@@ -203,12 +203,12 @@ export type SyncCredentialFailureReason =
   | 'unauthenticated'         // Google sign-in incomplete / token revoked
   | 'noPasswordFile'          // sync-password.enc has never been written
   | 'decryptFailed'           // file exists but the OS keychain refuses it
-  | 'keystoreUnavailable'     // safeStorage.isEncryptionAvailable() === false
+  | 'keystoreUnavailable'     // the OS keystore cannot be used
   | 'remoteCheckFailed'       // can't reach the remote password-check (network / drive)
 
 /** What the stored sync password file is, without the password: `readable`
- *  when it decrypts, otherwise the local reason `retrievePasswordResult`
- *  (sync-crypto.ts) gives. */
+ *  when it decrypts, otherwise the local reason the backend gives
+ *  (src-tauri/crates/pipette-sync/src/preflight.rs). */
 export type StoredPasswordStatus =
   | 'readable'
   | Extract<SyncCredentialFailureReason, 'noPasswordFile' | 'decryptFailed' | 'keystoreUnavailable'>
@@ -232,7 +232,7 @@ export type SyncCredentialResult =
   | { ok: true; password: string }
   | { ok: false; reason: SyncCredentialFailureReason }
 
-/** Real outcome of a SYNC_EXECUTE call, distinct from `SyncOperationResult.success`
+/** Real outcome of a `sync_execute` call, distinct from `SyncOperationResult.success`
  *  (which only reflects "the IPC call didn't throw" and stays `true` even when
  *  the sync never actually ran — see `SyncOperationResult.status`'s doc). */
 export type SyncExecuteStatus = 'completed' | 'skipped' | 'partial'
@@ -252,7 +252,7 @@ export function syncBlockI18nKey(reason: SyncBlockReason): string {
 }
 
 /** Drive's sync-format markers compared with this app's
- *  `SYNC_FORMAT_VERSION` (sync-format.ts). */
+ *  `SYNC_FORMAT_VERSION` (src-tauri/crates/pipette-sync/src/format.rs). */
 export interface SyncFormatStatus {
   /** Largest marker version on Drive; null when Drive has none. */
   required: number | null
@@ -276,7 +276,7 @@ export interface SyncOperationResult {
   success: boolean
   error?: string
   reason?: SyncCredentialFailureReason | SyncAuthFailureReason
-  /** Populated only by SYNC_EXECUTE. `success` stays `true` whenever the IPC
+  /** Populated only by `sync_execute`. `success` stays `true` whenever the IPC
    *  call itself didn't throw — including when the sync silently did
    *  nothing (busy race, missing credentials) — so callers that need to know
    *  whether a sync actually ran to completion must check `status`, not
@@ -286,7 +286,7 @@ export interface SyncOperationResult {
   skipReason?: SyncSkipReason
 }
 
-/** IMPORT_LOCAL_DATA's result. Distinguishes "the user cancelled the file
+/** `import_local_data`'s result. Distinguishes "the user cancelled the file
  *  picker" (not an error — the renderer must not touch the last import's
  *  displayed result/error) from a real failure, which carries the raw
  *  main-process error message so the renderer can show it as-is (this

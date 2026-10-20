@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The text rules of the Typing Test texts, ported from TypeScript with
-//! JavaScript's string semantics, for the text store and the Aozora Bunko
-//! import:
+//! The text rules of the Typing Test texts, with JavaScript's string
+//! semantics, for the text store and the Aozora Bunko import:
 //!
 //! - strings are UTF-16 code units (`&[u16]`), lone surrogates included, so
 //!   lengths and `String.fromCodePoint` behave as in JavaScript;
 //! - whitespace is JavaScript's `\s` / `trim()` (U+FEFF included, U+0085
-//!   not), and a line ends at `\n`, `\r`, U+2028 or U+2029 wherever the
-//!   TypeScript uses `^` / `$` with `/m` or `.`;
-//! - Shift_JIS and the zip container decode as Electron's main process
-//!   decodes them (`TextDecoder` and fflate).
+//!   not), and a line ends at `\n`, `\r`, U+2028 or U+2029 wherever
+//!   JavaScript's `^` / `$` with `/m` or `.` would end it;
+//! - Shift_JIS and the zip container decode as Chromium's `TextDecoder`
+//!   and fflate decode them.
 //!
-//! The fixtures recorded by scripts/typing-text-fixtures/ from the
-//! TypeScript functions check the results unit for unit.
+//! The recorded golden fixtures check the results unit for unit.
 
 mod aozora_clean;
 mod aozora_text;

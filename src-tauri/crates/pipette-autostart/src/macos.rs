@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The macOS login item, `app.setLoginItemSettings({ openAtLogin })` of the
-//! Electron build: the app registered with SMAppService (macOS 13 and
+//! The macOS login item: the app registered with SMAppService (macOS 13 and
 //! later), through the auto-launch crate. SMAppService registers the
-//! running app bundle, and the release replaces the Electron build's
+//! running app bundle, and the release replaces the 0.4 build's
 //! `/Applications/Pipette.app` under the same bundle id, so the item the
-//! Electron build registered is this build's item.
+//! 0.4 build registered is this build's item.
 //!
-//! macOS 12 has no SMAppService. Nothing else is used there (Electron falls
-//! back to an older API this build does not have): an item the Electron
+//! macOS 12 has no SMAppService. Nothing else is used there (the 0.4 build
+//! used an older API there that this build does not have): an item the 0.4
 //! build added keeps starting the app at the same path, but turning
 //! `autoLaunch` off cannot remove it. Each apply (at every launch, with
 //! `autoLaunch` on or off, and at every change) logs that as an error.
@@ -21,8 +20,7 @@ use crate::PRODUCT_NAME;
 
 /// Registers the app when `enabled`, else unregisters it unless it is not
 /// registered at all (unregistering then fails), so an item still waiting
-/// for the user's approval is removed too, as Electron's unconditional
-/// unregister does. A failure is logged as an error.
+/// for the user's approval is removed too. A failure is logged as an error.
 pub(crate) fn apply(enabled: bool, exe: Result<&Path, &str>) {
     let result = login_item(exe).and_then(|item| {
         if enabled {

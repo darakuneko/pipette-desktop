@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Applying JSONL rows to the cache with the authoritative LWW merges
-//! (`applyRowsToCache`, apply-to-cache.ts, and the `merge*` methods of
-//! typing-analytics-db-writes.ts): a row replaces the cached one only when
+//! Applying JSONL rows to the cache with the authoritative LWW merges: a
+//! row replaces the cached one only when
 //! its `updated_at` is newer, tombstone flag included. Every function here
 //! runs inside the transaction of its caller.
 
@@ -112,8 +111,8 @@ fn deleted(common: &RowCommon) -> i64 {
     i64::from(common.is_deleted)
 }
 
-/// One upsert per id of the minute (`mergeBigramMinute` /
-/// `mergeTrigramMinute`). Only the bigram table has the overlap columns.
+/// One upsert per id of the minute. Only the bigram table has the overlap
+/// columns.
 fn merge_ngrams(
     stmt: &mut CachedStatement<'_>,
     with_overlap: bool,

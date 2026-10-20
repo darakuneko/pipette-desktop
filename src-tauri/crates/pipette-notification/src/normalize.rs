@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The response of the notice query to the result the renderer gets, as
-//! `fetchNotifications` of src/main/notification-store.ts reads it: a
+//! The response of the notice query to the result the renderer gets: a
 //! status outside 2xx is `HTTP <status>`, the body is read as
 //! `response.json()` reads it, a body without a `notifications` array is
 //! `Invalid response format`, items that are not notices are dropped, and
 //! each publication date is kept as given (a string `Date.parse` reads,
 //! date_parse.rs) or written as `toISOString` writes it (a Firestore
 //! timestamp). A Firestore timestamp past the range of a `Date` fails the
-//! whole fetch, as the RangeError of `toISOString` does there. The notices
+//! whole fetch, as `toISOString` throws a RangeError for it. The notices
 //! keep the response's order; the renderer sorts them.
 
 use pipette_js_json::{JsString, Object, Value};
@@ -103,7 +102,7 @@ fn parse_json_body(body: &[u8]) -> Result<Value, String> {
     pipette_js_json::parse(&String::from_utf8_lossy(body)).map_err(|err| format!("SyntaxError: {err}"))
 }
 
-/// The fields of an item `isValidNotification` accepts.
+/// The fields of an item [`valid_notification`] accepts.
 struct RawNotification<'a> {
     title: &'a JsString,
     body: &'a JsString,
@@ -111,7 +110,7 @@ struct RawNotification<'a> {
     published_at: &'a Value,
 }
 
-/// `isValidNotification`: an object with string `title`, `body` and
+/// An item that is an object with string `title`, `body` and
 /// `type`, and a `publishedAt` that is a string or a Firestore timestamp.
 fn valid_notification(item: &Value) -> Option<RawNotification<'_>> {
     let object = item.as_object()?;
@@ -131,8 +130,8 @@ fn valid_notification(item: &Value) -> Option<RawNotification<'_>> {
     })
 }
 
-/// `_seconds` of a Firestore timestamp (`isFirestoreTimestamp`): an object
-/// with numbers `_seconds` and `_nanoseconds`.
+/// `_seconds` of a Firestore timestamp: an object with numbers `_seconds` and
+/// `_nanoseconds`.
 fn firestore_seconds(value: &Value) -> Option<f64> {
     let object: &Object = value.as_object()?;
     match (object.get("_seconds"), object.get("_nanoseconds")) {
@@ -141,7 +140,7 @@ fn firestore_seconds(value: &Value) -> Option<f64> {
     }
 }
 
-/// `normalizeTimestamp` of a valid notice's `publishedAt`: the string
+/// The time of a valid notice's `publishedAt`: the string
 /// when it is a date, `None` when it is not, and a Firestore timestamp as
 /// `new Date(_seconds * 1000).toISOString()` (the nanoseconds dropped), or
 /// the RangeError of a time out of range.
@@ -177,8 +176,6 @@ mod tests {
             published_at: published_at.to_owned(),
         }
     }
-
-    // The cases of src/main/__tests__/notification-store.test.ts.
 
     #[test]
     fn returns_the_notices_of_a_successful_fetch() {

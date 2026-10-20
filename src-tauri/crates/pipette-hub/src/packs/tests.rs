@@ -309,7 +309,7 @@ fn the_input_checks_answer_without_a_request() {
 }
 
 #[test]
-fn a_post_id_that_is_not_a_string_is_coerced_as_the_ts_does() {
+fn a_post_id_that_is_not_a_string_is_coerced_as_recorded() {
     assert_eq!(valid_post_id(Some(&Value::from(5.0))).as_deref(), Some("5"));
     assert_eq!(valid_post_id(Some(&Value::Bool(true))).as_deref(), Some("true"));
     assert_eq!(valid_post_id(Some(&Value::from(0.0))), None);
