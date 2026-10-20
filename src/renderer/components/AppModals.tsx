@@ -11,7 +11,7 @@ import { ComboPanelModal } from './editors/ComboPanelModal'
 import { AltRepeatKeyPanelModal } from './editors/AltRepeatKeyPanelModal'
 import { KeyOverridePanelModal } from './editors/KeyOverridePanelModal'
 import { NotificationModal } from './NotificationModal'
-import { UpdateAvailableModal } from './UpdateAvailableModal'
+import { StartupUpdateModal } from './UpdateAvailableModal'
 import { MissingKeyLabelDialog } from './key-labels/MissingKeyLabelDialog'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
 import type { decodeLayoutOptions } from '../../shared/kle/layout-options'
@@ -207,14 +207,7 @@ export function AppModals({
           onClose={startupNotification.dismiss}
         />
       )}
-      {updateCheck.prompt && (
-        <UpdateAvailableModal
-          key={`${updateCheck.prompt.kind}-${updateCheck.prompt.version}`}
-          prompt={updateCheck.prompt}
-          onClose={updateCheck.close}
-          onSkip={updateCheck.prompt.kind === 'available' ? updateCheck.skip : undefined}
-        />
-      )}
+      <StartupUpdateModal updateCheck={updateCheck} />
 
       <MissingKeyLabelDialog
         open={missingKeyLabel.missingName !== null}

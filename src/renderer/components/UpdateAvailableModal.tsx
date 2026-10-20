@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
-import type { UpdatePrompt } from '../hooks/useUpdateCheck'
+import type { UpdateCheckState, UpdatePrompt } from '../hooks/useUpdateCheck'
 import type { UpdateErrorCode, UpdateProgress } from '../../shared/types/update'
 import { BTN_PRIMARY, BTN_SECONDARY } from '../constants/ui-tokens'
 import { ModalCloseButton } from './editors/ModalCloseButton'
@@ -140,5 +140,19 @@ export function UpdateAvailableModal({ prompt, onClose, onSkip }: Props) {
         )}
       </div>
     </div>
+  )
+}
+
+/** The modal of the startup check (useUpdateCheck), when it has a prompt. */
+export function StartupUpdateModal({ updateCheck }: { updateCheck: UpdateCheckState }) {
+  const { prompt, close, skip } = updateCheck
+  if (!prompt) return null
+  return (
+    <UpdateAvailableModal
+      key={`${prompt.kind}-${prompt.version}`}
+      prompt={prompt}
+      onClose={close}
+      onSkip={prompt.kind === 'available' ? skip : undefined}
+    />
   )
 }

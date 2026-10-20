@@ -26,10 +26,7 @@ export function useStartupNotification(): StartupNotificationState {
     let cancelled = false
     window.vialAPI.notificationFetch().then((result) => {
       if (cancelled) return
-      if (!result.success || !result.notifications || result.notifications.length === 0) {
-        setSettled(true)
-        return
-      }
+      if (!result.success || !result.notifications || result.notifications.length === 0) return
 
       const parsed = appConfig.config.lastNotificationSeen
         ? new Date(appConfig.config.lastNotificationSeen).getTime()
@@ -38,16 +35,13 @@ export function useStartupNotification(): StartupNotificationState {
       const filtered = result.notifications
         .filter((n) => new Date(n.publishedAt).getTime() > lastSeenTs)
         .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-      if (filtered.length === 0) {
-        setSettled(true)
-        return
-      }
+      if (filtered.length === 0) return
 
       setNotifications(filtered)
       setVisible(true)
-      setSettled(true)
     }).catch(() => {
       // Network errors are non-critical
+    }).finally(() => {
       if (!cancelled) setSettled(true)
     })
     return () => { cancelled = true }

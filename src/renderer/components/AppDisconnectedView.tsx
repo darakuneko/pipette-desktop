@@ -7,7 +7,7 @@ import { DeviceSelector } from './DeviceSelector'
 import { SettingsModal } from './SettingsModal'
 import { DataModal } from './DataModal'
 import { NotificationModal } from './NotificationModal'
-import { UpdateAvailableModal } from './UpdateAvailableModal'
+import { StartupUpdateModal } from './UpdateAvailableModal'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
 import { SyncUpdateBanner } from './SyncUpdateBanner'
 import type { SyncUpdateBannerState } from '../hooks/use-sync-format-status'
@@ -141,14 +141,7 @@ export function AppDisconnectedView({
           onClose={startupNotification.dismiss}
         />
       )}
-      {updateCheck.prompt && (
-        <UpdateAvailableModal
-          key={`${updateCheck.prompt.kind}-${updateCheck.prompt.version}`}
-          prompt={updateCheck.prompt}
-          onClose={updateCheck.close}
-          onSkip={updateCheck.prompt.kind === 'available' ? updateCheck.skip : undefined}
-        />
-      )}
+      <StartupUpdateModal updateCheck={updateCheck} />
       <JaRemovedBanner />
     </>
   )
