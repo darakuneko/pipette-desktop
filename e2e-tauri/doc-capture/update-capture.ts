@@ -6,19 +6,15 @@
 // test-only key the development tools' build verifies with. Nothing reaches
 // GitHub, and the capture never installs the release.
 
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { fakeUpdateEnv, startFakeUpdate, type FakeUpdate } from '../../scripts/fake-update/server'
 import { startDriver } from '../helpers/driver'
-
-const PACKAGE_JSON = resolve(dirname(fileURLToPath(import.meta.url)), '../../package.json')
+import { appVersion } from '../helpers/updater-harness'
 
 /** The release the screenshots offer: the release of the app's own
  *  pre-release (0.5.0 for 0.5.0-beta.3), or the next patch release of a
  *  release (0.5.1 for 0.5.0). Either is newer than the app. */
 export function offeredRelease(): string {
-  const version = (JSON.parse(readFileSync(PACKAGE_JSON, 'utf8')) as { version: string }).version
+  const version = appVersion()
   const match = /^(\d+)\.(\d+)\.(\d+)(-.+)?$/.exec(version)
   if (!match) throw new Error(`package.json has the version ${version}`)
   const [, major, minor, patch, pre] = match
