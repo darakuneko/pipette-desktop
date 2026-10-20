@@ -200,6 +200,9 @@ pub enum UpdateErrorCode {
     Cancelled,
     /// Another check or the update is running.
     Busy,
+    /// The install failed and the previous app could not be put back; it
+    /// was kept elsewhere (`UpdateFailure::backup_path`).
+    PreviousAppNotRestored,
     Unknown,
 }
 
@@ -222,6 +225,7 @@ pub fn error_code(error: &tauri_plugin_updater::Error) -> UpdateErrorCode {
         Error::Io(err) if err.kind() == std::io::ErrorKind::PermissionDenied => UpdateErrorCode::Permission,
         Error::TempDirNotOnSameMountPoint => UpdateErrorCode::Permission,
         Error::AuthenticationFailed => UpdateErrorCode::Cancelled,
+        Error::PreviousAppNotRestored(_) => UpdateErrorCode::PreviousAppNotRestored,
         _ => UpdateErrorCode::Unknown,
     }
 }

@@ -11,18 +11,16 @@
 //! tauri.conf.json): the manifest itself is not signed, so without that a
 //! tampered manifest could offer an older signed release as a newer one.
 //!
-//! The order of an update:
-//! - macOS and Linux: download and verify, replace the app (on failure the
-//!   app keeps running as it was), run the quit sequence, then start the
-//!   new app (src/lifecycle.rs).
-//! - Windows: the installer ends the process itself, so: download and
-//!   verify, run the quit sequence, save the window state, then start the
-//!   installer (NSIS, passive, which starts the app again when done). When
-//!   the installer cannot be started the process still exits, and the next
-//!   launch shows the error (`update_take_failure`).
-//!
-//! Nothing is applied once the app has started quitting: the check comes
-//! before the replacement and before the quit is requested.
+//! The order of an update, the same on every system: download and verify,
+//! claim the quit (refused once a quit has started, and then nothing is
+//! applied), run the quit sequence, save the window state, install, then
+//! start the new app: `open -n` of the bundle on macOS, Tauri's restart on
+//! Linux, the installer itself on Windows (NSIS, passive, which ends this
+//! process and starts the app again when done). Nothing runs alongside the
+//! replacement, so a quit cannot cut it short. When the install fails the
+//! process exits all the same, and the next launch shows the failure
+//! (`update_take_failure`): the app never goes back to normal operation
+//! with its files half replaced.
 //!
 //! The policy (which builds update, from which manifest) is in
 //! updater/policy.rs. A build with the development tools reads three
@@ -45,7 +43,7 @@ use ts_rs::TS;
 pub use policy::UpdateErrorCode;
 use policy::{error_code, release_page_url, should_offer};
 
-use crate::lifecycle::{self, AfterQuit};
+use crate::lifecycle::{self, AfterQuit, Ending};
 
 /// `IpcChannels.UPDATE_PROGRESS`: the download's progress (`UpdateProgress`).
 pub const UPDATE_PROGRESS: &str = "update:progress";
@@ -123,6 +121,11 @@ pub struct UpdateFailure {
     pub version: String,
     pub code: UpdateErrorCode,
     pub release_url: String,
+    /// Where the previous app was kept when it could not be put back
+    /// (`previousAppNotRestored`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub backup_path: Option<String>,
 }
 
 /// How this process updates itself.
@@ -330,48 +333,111 @@ async fn apply<R: Runtime>(
     state: &UpdaterState,
     update: &Update,
 ) -> Result<(), UpdateErrorCode> {
-    let not_quitting = || {
-        if lifecycle::is_quitting(app) {
-            log::warn!("[update] the app started quitting; the update is not applied");
-            Err(UpdateErrorCode::Cancelled)
-        } else {
-            Ok(())
-        }
-    };
-    not_quitting()?;
+    if lifecycle::is_quitting(app) {
+        log::warn!("[update] the app started quitting; the update is not applied");
+        return Err(UpdateErrorCode::Cancelled);
+    }
     log::info!("[update] downloading {}", update.version);
     let bytes = update.download(progress_sender(app), || {}).await.map_err(|err| {
         log::warn!("[update] download or verification failed: {err}");
         error_code(&err)
     })?;
     log::info!("[update] {} downloaded and verified ({} bytes)", update.version, bytes.len());
-    not_quitting()?;
     let setup = state.setup.as_ref().map_err(|_| UpdateErrorCode::Unknown)?;
-    if let Some(record) = &setup.fake_install {
-        fake_install(record, &update.version, bytes.len())?;
-        return request_quit(state, AfterQuit::Exit);
+    let user_data = state.user_data.clone();
+    let install: Box<dyn FnOnce() -> Ending + Send> = match setup.fake_install.clone() {
+        Some(record) => {
+            let installer = FakeInstaller { version: update.version.clone(), record };
+            Box::new(move || install_after_quit(&installer, &bytes, &user_data))
+        }
+        None => {
+            let update = update.clone();
+            Box::new(move || install_after_quit(&update, &bytes, &user_data))
+        }
+    };
+    request_quit(state, AfterQuit::Install(install))
+}
+
+/// What installs a downloaded, verified update once the quit sequence has
+/// ended: the plugin's [`Update`], or the fake of the tests.
+trait Installer {
+    fn version(&self) -> &str;
+    /// Replaces the app (macOS, Linux) or starts the installer, which ends
+    /// the process (Windows).
+    fn install(&self, bytes: &[u8]) -> tauri_plugin_updater::Result<()>;
+    /// How the app ends once installed.
+    fn ending(&self) -> Ending;
+}
+
+impl Installer for Update {
+    fn version(&self) -> &str {
+        &self.version
     }
-    if cfg!(target_os = "windows") {
-        let update = update.clone();
-        let user_data = state.user_data.clone();
-        return request_quit(
-            state,
-            AfterQuit::Install(Box::new(move || run_installer(&update, &bytes, &user_data))),
-        );
+
+    fn install(&self, bytes: &[u8]) -> tauri_plugin_updater::Result<()> {
+        Update::install(self, bytes)
     }
-    let to_install = update.clone();
-    tauri::async_runtime::spawn_blocking(move || to_install.install(&bytes))
-        .await
-        .map_err(|err| {
-            log::error!("[update] the install task failed: {err}");
-            UpdateErrorCode::Unknown
-        })?
-        .map_err(|err| {
-            log::error!("[update] replacing the app failed: {err}");
-            error_code(&err)
-        })?;
-    log::info!("[update] the app was replaced with {}", update.version);
-    request_quit(state, AfterQuit::Relaunch)
+
+    /// Windows' installer starts the app again itself; elsewhere the app
+    /// starts the replaced app.
+    fn ending(&self) -> Ending {
+        if cfg!(target_os = "windows") { Ending::Exit } else { Ending::Relaunch }
+    }
+}
+
+/// Records the update in a file instead of installing it, and exits
+/// (development tools).
+struct FakeInstaller {
+    version: String,
+    record: PathBuf,
+}
+
+impl Installer for FakeInstaller {
+    fn version(&self) -> &str {
+        &self.version
+    }
+
+    fn install(&self, bytes: &[u8]) -> tauri_plugin_updater::Result<()> {
+        let text = serde_json::json!({ "version": self.version, "size": bytes.len() }).to_string();
+        pipette_fs::write_file_atomic(&self.record, text.as_bytes())?;
+        log::info!("[update] recorded the fake install of {} in {}", self.version, self.record.display());
+        Ok(())
+    }
+
+    fn ending(&self) -> Ending {
+        Ending::Exit
+    }
+}
+
+/// Installs after the quit sequence. A failure is written for the next
+/// launch and the app exits: it never goes back to normal operation.
+fn install_after_quit(installer: &dyn Installer, bytes: &[u8], user_data: &Path) -> Ending {
+    let version = installer.version();
+    log::info!("[update] installing {version}");
+    log::logger().flush();
+    match installer.install(bytes) {
+        Ok(()) => {
+            log::info!("[update] installed {version}");
+            installer.ending()
+        }
+        Err(err) => {
+            log::error!("[update] installing {version} failed: {err}");
+            let backup_path = match &err {
+                tauri_plugin_updater::Error::PreviousAppNotRestored(path) => Some(path.display().to_string()),
+                _ => None,
+            };
+            write_failure(
+                user_data,
+                &UpdateFailure {
+                    version: version.to_owned(),
+                    code: error_code(&err),
+                    release_url: release_page_url(version),
+                    backup_path,
+                },
+            );
+            Ending::Exit
+        }
+    }
 }
 
 /// Requests the quit that applies the update; refused once the app is
@@ -400,24 +466,6 @@ fn progress_sender<R: Runtime>(app: &AppHandle<R>) -> impl FnMut(usize, Option<u
                 UpdateProgress { downloaded: downloaded as f64, total: total.map(|total| total as f64) };
             crate::events::emit_all(&app, UPDATE_PROGRESS, progress);
         }
-    }
-}
-
-/// Starts the installer (Windows), which ends the process. Returns only
-/// when it could not start: the failure is written for the next launch.
-fn run_installer(update: &Update, bytes: &[u8], user_data: &Path) {
-    log::info!("[update] starting the installer of {}", update.version);
-    log::logger().flush();
-    if let Err(err) = update.install(bytes) {
-        log::error!("[update] the installer did not start: {err}");
-        write_failure(
-            user_data,
-            &UpdateFailure {
-                version: update.version.clone(),
-                code: error_code(&err),
-                release_url: release_page_url(&update.version),
-            },
-        );
     }
 }
 
@@ -455,17 +503,6 @@ fn take_failure(user_data: &Path) -> Option<UpdateFailure> {
         .ok()
 }
 
-/// Records the update instead of installing it (development tools).
-fn fake_install(record: &Path, version: &str, size: usize) -> Result<(), UpdateErrorCode> {
-    let text = serde_json::json!({ "version": version, "size": size }).to_string();
-    pipette_fs::write_file_atomic(record, text.as_bytes()).map_err(|err| {
-        log::error!("[update] failed to record the fake install in {}: {err}", record.display());
-        UpdateErrorCode::Permission
-    })?;
-    log::info!("[update] recorded the fake install of {version} in {}", record.display());
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -478,6 +515,7 @@ mod tests {
             version: "0.5.0-beta.3".into(),
             code: UpdateErrorCode::Permission,
             release_url: release_page_url("0.5.0-beta.3"),
+            backup_path: None,
         };
         write_failure(dir.path(), &failure);
         let text = std::fs::read_to_string(failure_path(dir.path())).unwrap();
@@ -535,11 +573,108 @@ mod tests {
         assert!(updater.get("endpoints").is_none());
     }
 
+    /// An installer that answers `result` and records that it ran.
+    struct ScriptedInstaller {
+        result: fn() -> tauri_plugin_updater::Result<()>,
+        ending: Ending,
+        ran: Mutex<usize>,
+    }
+
+    impl Installer for ScriptedInstaller {
+        fn version(&self) -> &str {
+            "0.5.0-beta.3"
+        }
+
+        fn install(&self, _bytes: &[u8]) -> tauri_plugin_updater::Result<()> {
+            *self.ran.lock().unwrap() += 1;
+            (self.result)()
+        }
+
+        fn ending(&self) -> Ending {
+            self.ending
+        }
+    }
+
+    /// The step that follows the quit sequence with `installer`, as
+    /// src/lifecycle.rs runs it, and whether the window state was saved
+    /// before the install.
+    fn after_quit_with(installer: Arc<ScriptedInstaller>, user_data: &Path) -> (Ending, bool) {
+        let saved = Arc::new(Mutex::new(false));
+        let saved_before = Arc::new(Mutex::new(false));
+        let user_data = user_data.to_path_buf();
+        let (seen, check) = (Arc::clone(&saved), Arc::clone(&saved_before));
+        let install = Box::new(move || {
+            *check.lock().unwrap() = *seen.lock().unwrap();
+            install_after_quit(&*installer, b"update", &user_data)
+        });
+        let ending = lifecycle::ending_after(AfterQuit::Install(install), || *saved.lock().unwrap() = true);
+        let before = *saved_before.lock().unwrap();
+        (ending, before)
+    }
+
+    fn scripted(result: fn() -> tauri_plugin_updater::Result<()>, ending: Ending) -> Arc<ScriptedInstaller> {
+        Arc::new(ScriptedInstaller { result, ending, ran: Mutex::new(0) })
+    }
+
     #[test]
-    fn a_fake_install_records_the_version_and_size() {
+    fn an_install_after_the_quit_starts_the_app_again_or_exits_as_the_system_does() {
+        for ending in [Ending::Relaunch, Ending::Exit] {
+            let dir = tempfile::TempDir::new().unwrap();
+            let installer = scripted(|| Ok(()), ending);
+            assert_eq!(after_quit_with(Arc::clone(&installer), dir.path()), (ending, true));
+            assert_eq!(*installer.ran.lock().unwrap(), 1);
+            assert_eq!(take_failure(dir.path()), None);
+        }
+    }
+
+    #[test]
+    fn a_failed_install_after_the_quit_is_written_for_the_next_launch_and_exits() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let denied = scripted(
+            || Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied).into()),
+            Ending::Relaunch,
+        );
+        assert_eq!(after_quit_with(denied, dir.path()), (Ending::Exit, true));
+        assert_eq!(
+            take_failure(dir.path()),
+            Some(UpdateFailure {
+                version: "0.5.0-beta.3".into(),
+                code: UpdateErrorCode::Permission,
+                release_url: release_page_url("0.5.0-beta.3"),
+                backup_path: None,
+            })
+        );
+
+        let lost = scripted(
+            || {
+                Err(tauri_plugin_updater::Error::PreviousAppNotRestored(PathBuf::from(
+                    "/tmp/tauri_current_app1/Pipette.app",
+                )))
+            },
+            Ending::Relaunch,
+        );
+        assert_eq!(after_quit_with(lost, dir.path()), (Ending::Exit, true));
+        let failure = take_failure(dir.path()).unwrap();
+        assert_eq!(failure.code, UpdateErrorCode::PreviousAppNotRestored);
+        assert_eq!(failure.backup_path.as_deref(), Some("/tmp/tauri_current_app1/Pipette.app"));
+        let text = serde_json::to_string(&failure).unwrap();
+        assert!(
+            text.contains(r#""code":"previousAppNotRestored""#) && text.contains(r#""backupPath":"#),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_fake_install_records_the_version_and_size_and_exits() {
         let dir = tempfile::TempDir::new().unwrap();
         let record = dir.path().join("installed.json");
-        fake_install(&record, "0.5.0-beta.3", 12).unwrap();
-        assert_eq!(std::fs::read_to_string(record).unwrap(), r#"{"size":12,"version":"0.5.0-beta.3"}"#);
+        let fake = FakeInstaller { version: "0.5.0-beta.3".into(), record: record.clone() };
+        assert_eq!(install_after_quit(&fake, &[0; 12], dir.path()), Ending::Exit);
+        assert_eq!(std::fs::read_to_string(&record).unwrap(), r#"{"size":12,"version":"0.5.0-beta.3"}"#);
+        // A record that cannot be written is a failure of the install.
+        let unwritable =
+            FakeInstaller { version: "0.5.0-beta.3".into(), record: dir.path().join("missing/dir/x.json") };
+        assert_eq!(install_after_quit(&unwritable, &[0; 12], dir.path()), Ending::Exit);
+        assert!(take_failure(dir.path()).is_some());
     }
 }

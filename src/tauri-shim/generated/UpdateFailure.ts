@@ -4,4 +4,9 @@ import type { UpdateErrorCode } from "./UpdateErrorCode";
 /**
  * The failure an update left for the next launch.
  */
-export type UpdateFailure = { version: string, code: UpdateErrorCode, releaseUrl: string, };
+export type UpdateFailure = { version: string, code: UpdateErrorCode, releaseUrl: string, 
+/**
+ * Where the previous app was kept when it could not be put back
+ * (`previousAppNotRestored`).
+ */
+backupPath?: string, };

@@ -5,12 +5,13 @@
 // first and the update modal only after it is closed, the modal's release
 // page link and its three buttons, a skipped version not offered again
 // after a restart while a newer one is, a tampered signature shown as an
-// error, and Update recording the fake install and quitting through the
-// quit sequence. The tests share one session and run in order; each
+// error, an install that fails after the quit shown at the next launch,
+// and Update quitting through the quit sequence before it records the
+// fake install. The tests share one session and run in order; each
 // restart quits the app and starts it again on the same userData
 // directory.
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { $, browser, expect } from '@wdio/globals'
 import { clickInPage, countIn, readAppLog, restartApp, tid, waitForGone } from '../helpers/app'
 import { readAppConfig, sessionAppPid, userDataPath, waitForAppExit } from '../helpers/driver'
@@ -137,10 +138,35 @@ describe('in-app update', () => {
     expect(readAppLog()).toContain('signed for version 0.0.1')
   })
 
-  it('records the update and quits through the quit sequence on Update', async () => {
+  it('shows an install that failed after the quit at the next launch', async () => {
     fakeUpdates().setRelease({ version: newer })
+    // A directory where the fake install writes its record makes the
+    // install fail.
+    mkdirSync(userDataPath(FAKE_INSTALL_FILE))
     await restartAndWaitForCheck()
     await waitForUpdateModal()
+    const pid = sessionAppPid()
+    await clickInPage(tid('update-modal-install'))
+    await waitForAppExit(pid, QUIT_TIMEOUT_MS, 'of the failed update')
+    expect(existsSync(userDataPath('local', 'update-failed.json'))).toBe(true)
+    expect(readAppLog()).toContain(`[update] installing ${newer} failed`)
+    rmSync(userDataPath(FAKE_INSTALL_FILE), { recursive: true })
+
+    const before = manifestRequests()
+    await browser.reloadSession()
+    await $(tid('update-modal-error')).waitForDisplayed({ timeout: MODAL_TIMEOUT_MS })
+    expect(await $(tid('update-modal-install')).isExisting()).toBe(false)
+    expect(existsSync(userDataPath('local', 'update-failed.json'))).toBe(false)
+    // The failure is shown instead of checking.
+    expect(manifestRequests()).toBe(before)
+    await clickInPage(tid('update-modal-close'))
+    await waitForGone(UPDATE_MODAL, 'the failure did not close')
+  })
+
+  it('quits through the quit sequence on Update, then records the update', async () => {
+    await restartAndWaitForCheck()
+    await waitForUpdateModal()
+    const quitsBefore = countIn(readAppLog(), '[quit] an update requested the quit; starting the quit sequence')
     const pid = sessionAppPid()
     await clickInPage(tid('update-modal-install'))
     await waitForAppExit(pid, QUIT_TIMEOUT_MS, 'of the update')
@@ -148,8 +174,8 @@ describe('in-app update', () => {
     expect(installed.version).toBe(newer)
     expect(installed.size).toBeGreaterThan(0)
     const log = readAppLog()
-    expect(countIn(log, '[quit] an update requested the quit; starting the quit sequence')).toBe(1)
-    expect(log.indexOf('[update] recorded the fake install')).toBeLessThan(log.lastIndexOf('[quit] sequence ended'))
+    expect(countIn(log, '[quit] an update requested the quit; starting the quit sequence')).toBe(quitsBefore + 1)
+    expect(log.lastIndexOf('[quit] sequence ended')).toBeLessThan(log.lastIndexOf('[update] recorded the fake install'))
     expect(fakeUpdates().requests.some((request) => request.path.startsWith('/download/'))).toBe(true)
   })
 })

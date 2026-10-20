@@ -3,4 +3,4 @@
 /**
  * Why an update step failed, for the renderer to put in words.
  */
-export type UpdateErrorCode = "network" | "signature" | "permission" | "cancelled" | "busy" | "unknown";
+export type UpdateErrorCode = "network" | "signature" | "permission" | "cancelled" | "busy" | "previousAppNotRestored" | "unknown";

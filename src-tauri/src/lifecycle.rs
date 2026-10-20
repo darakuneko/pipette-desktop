@@ -39,8 +39,9 @@
 //!
 //! An update (src/updater.rs) quits through [`quit_for_update`], which only
 //! starts a quit that has not started yet, and says what follows the
-//! sequence ([`AfterQuit`]): starting the new app, or the Windows
-//! installer, which ends the process itself.
+//! sequence ([`AfterQuit`]): the update is installed only once the
+//! sequence has ended, on every system, and the app then starts again or
+//! exits ([`Ending`]); it never goes back to normal operation.
 //!
 //! SIGKILL cannot be caught.
 
@@ -100,11 +101,30 @@ const QUIT_PHASES: [&str; 5] =
 pub enum AfterQuit {
     /// The process exits, as after every quit but an update's.
     Exit,
-    /// The app starts again: the update has replaced it (macOS, Linux).
+    /// After the window state is saved, this installs the update and says
+    /// how the app ends. The Windows installer ends the process itself
+    /// when it starts, and restarts the app when done.
+    Install(Box<dyn FnOnce() -> Ending + Send>),
+}
+
+/// How the app ends after the quit sequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ending {
+    Exit,
+    /// Start the app again: the update replaced it.
     Relaunch,
-    /// After the window state is saved, this runs the installer, which ends
-    /// the process (Windows); when it returns, the process exits.
-    Install(Box<dyn FnOnce() + Send>),
+}
+
+/// Runs what follows the sequence: an install, after `save_state`. Every
+/// path ends the app.
+pub(crate) fn ending_after(after: AfterQuit, save_state: impl FnOnce()) -> Ending {
+    match after {
+        AfterQuit::Exit => Ending::Exit,
+        AfterQuit::Install(install) => {
+            save_state();
+            install()
+        }
+    }
 }
 
 /// The quit guard, shared by the window and exit handlers and the handling
@@ -403,15 +423,9 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
 
 /// Ends the app once the sequence has ended, as `after_quit` says.
 fn after_quit_sequence(app: &AppHandle<Wry>, lifecycle: &Lifecycle) {
-    match lifecycle.take_after_quit() {
-        AfterQuit::Exit => app.exit(0),
-        AfterQuit::Relaunch => relaunch(app, lifecycle),
-        AfterQuit::Install(install) => {
-            main_window::save_main_window_state(app);
-            install();
-            // The installer did not start; the next launch shows the error.
-            app.exit(0);
-        }
+    match ending_after(lifecycle.take_after_quit(), || main_window::save_main_window_state(app)) {
+        Ending::Exit => app.exit(0),
+        Ending::Relaunch => relaunch(app, lifecycle),
     }
 }
 
@@ -694,19 +708,33 @@ mod tests {
     fn an_update_sets_what_follows_only_when_it_starts_the_quit() {
         let lifecycle = Lifecycle::default();
         assert!(matches!(lifecycle.take_after_quit(), AfterQuit::Exit));
-        assert!(lifecycle.start_quit_for_update(AfterQuit::Relaunch));
+        assert!(lifecycle.start_quit_for_update(AfterQuit::Install(Box::new(|| Ending::Relaunch))));
         assert!(lifecycle.quit.is_quitting());
-        assert!(!lifecycle.start_quit_for_update(AfterQuit::Install(Box::new(|| {}))));
-        assert!(matches!(lifecycle.take_after_quit(), AfterQuit::Relaunch));
+        assert!(!lifecycle.start_quit_for_update(AfterQuit::Install(Box::new(|| Ending::Exit))));
+        assert_eq!(ending_after(lifecycle.take_after_quit(), || {}), Ending::Relaunch);
         assert!(matches!(lifecycle.take_after_quit(), AfterQuit::Exit));
 
         // A quit already under way (the tray's Quit) is neither interrupted
         // nor followed by the update's step.
         let quitting = Lifecycle::default();
         assert_eq!(quitting.quit.on_exit_requested(), ExitDecision::StartSequence);
-        assert!(!quitting.start_quit_for_update(AfterQuit::Relaunch));
+        assert!(!quitting.start_quit_for_update(AfterQuit::Install(Box::new(|| Ending::Relaunch))));
         assert!(matches!(quitting.take_after_quit(), AfterQuit::Exit));
         assert_eq!(quitting.quit.on_exit_requested(), ExitDecision::ExitNow);
+    }
+
+    #[test]
+    fn the_install_runs_after_the_state_is_saved_and_ends_the_app() {
+        let order = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let (saved, installed) = (Arc::clone(&order), Arc::clone(&order));
+        let after = AfterQuit::Install(Box::new(move || {
+            installed.lock().unwrap().push("install");
+            Ending::Exit
+        }));
+        assert_eq!(ending_after(after, || saved.lock().unwrap().push("save")), Ending::Exit);
+        assert_eq!(*order.lock().unwrap(), ["save", "install"]);
+        // A plain quit saves nothing here (its exit request saves the state).
+        assert_eq!(ending_after(AfterQuit::Exit, || panic!("saved")), Ending::Exit);
     }
 
     #[test]
