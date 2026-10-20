@@ -25,9 +25,6 @@ thiserror = "=2.0.21"
 # The scenarios whose recorded files this host cannot hold.
 pipette-fs = { path = "../pipette-fs", features = ["test-util"] }
 pipette-entry-store = { path = "../pipette-entry-store", features = ["test-util"] }
-# The pending store the userData tree of tests/rust_user_data.rs reports its
-# changes to, as the app does.
-pipette-sync-pending = { path = "../pipette-sync-pending" }
 tempfile = { workspace = true }
 
 [lints]
