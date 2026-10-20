@@ -2,7 +2,12 @@ name: Release
 
 # A v* tag builds the Tauri app for Linux, Windows and macOS and publishes the
 # files to a draft release, marked as a pre-release when the version has a
-# pre-release part (0.5.0-beta.1). Run by hand, it builds the same files as
+# pre-release part (0.5.0-beta.1). With them go the in-app update's files:
+# the update of each system (the AppImage, the installer, the macOS app as
+# .app.tar.gz), its minisign signature (.sig, bound to the version) and
+# latest.json, the manifest naming them. Publishing the release does not
+# offer the update to anyone: promote-update.yml makes a published
+# release's latest.json a channel's manifest. Run by hand, it builds the same files as
 # artifacts and publishes nothing; the version input builds them under another
 # version (to try a pre-release version before tagging one), and app: electron
 # builds the Electron app instead, as this workflow did before the Tauri app.
@@ -67,6 +72,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
 
       - run: pnpm install --frozen-lockfile
+
+      # A release must carry the updater's real public key: with the
+      # placeholder of src-tauri/tauri.conf.json the app accepts no update.
+      - name: Require the updater's public key
+        if: startsWith(github.ref, 'refs/tags/')
+        run: npx tsx scripts/update-manifest/cli.ts pubkey
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
@@ -182,6 +194,10 @@ jobs:
       # requires them (the step "Require the signing secrets"); a run by hand
       # without them builds the app unsigned.
       MAC_SIGN: ${{ secrets.CSC_LINK != '' }}
+      # Build the in-app update's files, signed with the updater key, when
+      # its secrets exist. A tag requires them (the step "Require the
+      # updater key"); a run by hand without them builds no update files.
+      UPDATER_SIGN: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     defaults:
       run:
         shell: bash
@@ -239,6 +255,28 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: npm pkg set version="$VERSION"
+
+      - name: Require the updater key
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The secret $name is not set"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      # The update files are made with the key (src-tauri/tauri.updater.conf.json
+      # turns them on); `tauri build` signs each with --app-version, binding
+      # the version, which the app requires (requireSignedVersion).
+      - name: Turn on the update files
+        if: env.UPDATER_SIGN == 'true'
+        run: echo "UPDATER_CONFIG=--config src-tauri/tauri.updater.conf.json" >> "$GITHUB_ENV"
 
       - name: Require the signing secrets
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
@@ -304,22 +342,44 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm exec tauri build --ci
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        # UPDATER_CONFIG is two words (--config and the path) or nothing.
+        run: |
+          # shellcheck disable=SC2086
+          pnpm exec tauri build --ci $UPDATER_CONFIG
 
       - name: Build (macOS, unsigned)
         if: runner.os == 'macOS' && env.MAC_SIGN != 'true'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           echo "::warning::No signing secrets: the macOS app is not signed or notarized"
-          pnpm exec tauri build --ci --no-sign
+          # shellcheck disable=SC2086
+          pnpm exec tauri build --ci --no-sign $UPDATER_CONFIG
 
       # Windows is not code-signed, as the Electron build was not.
       - name: Build (Linux, Windows)
         if: runner.os != 'macOS'
-        run: pnpm exec tauri build --ci
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          # shellcheck disable=SC2086
+          pnpm exec tauri build --ci $UPDATER_CONFIG
 
       # The release file names of the Electron build, which the README links
-      # to and the AppImage update information names.
+      # to and the AppImage update information names. The update files take
+      # the name of what they update, their signatures that name plus .sig:
+      # the Windows update is the installer itself. The AppImage changes
+      # when it is repacked, so it is signed again afterwards (bound to the
+      # version as `tauri build` binds the others); the bundler's signature
+      # of the AppImage before the repack is dropped.
       - name: Collect the files
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           bundle=src-tauri/target/release/bundle
           one() {
@@ -331,18 +391,30 @@ jobs:
             echo "${matches[0]}"
           }
           mkdir -p dist
+          version=$(node -p "require('./package.json').version")
           case "${{ matrix.platform }}" in
             linux)
               src=$(one "$bundle"/appimage/*.AppImage)
               bash scripts/repack-appimage.sh "$src"
+              if [ "$UPDATER_SIGN" = true ]; then
+                pnpm exec tauri signer sign --app-version "$version" dist/Pipette-linux-x86_64.AppImage
+              fi
               ;;
             win)
               src=$(one "$bundle"/nsis/*-setup.exe)
               cp "$src" dist/Pipette-win-x64.exe
+              if [ "$UPDATER_SIGN" = true ]; then
+                cp "$(one "$src.sig")" dist/Pipette-win-x64.exe.sig
+              fi
               ;;
             mac)
               src=$(one "$bundle"/dmg/*.dmg)
               cp "$src" dist/Pipette-mac-arm64.dmg
+              if [ "$UPDATER_SIGN" = true ]; then
+                src=$(one "$bundle"/macos/*.app.tar.gz)
+                cp "$src" dist/Pipette-mac-arm64.app.tar.gz
+                cp "$(one "$src.sig")" dist/Pipette-mac-arm64.app.tar.gz.sig
+              fi
               ;;
           esac
           ls -l dist
@@ -363,6 +435,22 @@ jobs:
           xcrun stapler validate "$app"
           spctl --assess --type execute --verbose=4 "$app"
 
+      # The update replaces the installed app with the .app of this archive:
+      # it must be the same signed, notarized and stapled app.
+      - name: Verify the app of the update
+        if: runner.os == 'macOS' && env.MAC_SIGN == 'true' && env.UPDATER_SIGN == 'true'
+        run: |
+          dir="$RUNNER_TEMP/update-app"
+          rm -rf "$dir"
+          mkdir -p "$dir"
+          tar -xzf dist/Pipette-mac-arm64.app.tar.gz -C "$dir"
+          app="$dir/Pipette.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          details=$(codesign --display --verbose=2 "$app" 2>&1)
+          grep -qE 'flags=0x[0-9a-f]+\([^)]*runtime' <<< "$details"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose=4 "$app"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: artifact-${{ matrix.platform }}
@@ -371,6 +459,8 @@ jobs:
             dist/*.exe
             dist/*.AppImage
             dist/*.AppImage.zsync
+            dist/*.app.tar.gz
+            dist/*.sig
           if-no-files-found: error
 
   build-electron:
@@ -440,9 +530,35 @@ jobs:
     needs: build-tauri
     runs-on: ubuntu-latest
     steps:
+      # The public key (src-tauri/tauri.conf.json) and the manifest scripts.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          path: release-files
           merge-multiple: true
+
+      # Every update file must verify, with minisign itself, against the
+      # public key the app has; the key line is read from tauri.conf.json.
+      - name: Verify the update signatures
+        working-directory: release-files
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y minisign
+          key=$(npx tsx ../scripts/update-manifest/cli.ts pubkey)
+          for file in Pipette-linux-x86_64.AppImage Pipette-win-x64.exe Pipette-mac-arm64.app.tar.gz; do
+            base64 -d "$file.sig" > "$RUNNER_TEMP/$file.minisig"
+            minisign -V -P "$key" -m "$file" -x "$RUNNER_TEMP/$file.minisig"
+          done
+
+      # latest.json names every platform's update and its signature, after
+      # checking again that each verifies and binds this version.
+      - name: Build latest.json
+        run: npx tsx scripts/update-manifest/cli.ts build --version "${GITHUB_REF_NAME#v}" --dir release-files
 
       # A version with a pre-release part (0.5.0-alpha.1) is a pre-release.
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -452,7 +568,12 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            Pipette-mac-arm64.dmg
-            Pipette-win-x64.exe
-            Pipette-linux-x86_64.AppImage
-            Pipette-linux-x86_64.AppImage.zsync
+            release-files/Pipette-mac-arm64.dmg
+            release-files/Pipette-win-x64.exe
+            release-files/Pipette-linux-x86_64.AppImage
+            release-files/Pipette-linux-x86_64.AppImage.zsync
+            release-files/Pipette-mac-arm64.app.tar.gz
+            release-files/Pipette-mac-arm64.app.tar.gz.sig
+            release-files/Pipette-win-x64.exe.sig
+            release-files/Pipette-linux-x86_64.AppImage.sig
+            release-files/latest.json
