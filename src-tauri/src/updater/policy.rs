@@ -139,12 +139,6 @@ pub struct Conditions<'a> {
     pub version: &'a Version,
 }
 
-/// Where an enabled updater reads its manifest.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Enabled {
-    pub manifest: Url,
-}
-
 /// Whether this process updates itself, and from which manifest; the
 /// reason when it does not. Fails closed: without the version bound into
 /// the signature or with the placeholder key, nothing is offered.
@@ -154,7 +148,7 @@ pub struct Enabled {
 /// when it is a distributed build outside an e2e run, run from where it can
 /// be replaced: an AppImage the runtime started on Linux, an app outside a
 /// disk image and app translocation on macOS, the installed app on Windows.
-pub fn updater_enabled(conditions: &Conditions<'_>) -> Result<Enabled, &'static str> {
+pub fn updater_enabled(conditions: &Conditions<'_>) -> Result<Url, &'static str> {
     if !conditions.signed_version_required {
         return Err("the updater does not require the version in the signature");
     }
@@ -163,7 +157,7 @@ pub fn updater_enabled(conditions: &Conditions<'_>) -> Result<Enabled, &'static 
     }
     if conditions.dev_tools {
         return match conditions.manifest_override {
-            Some(url) if is_loopback(url) => Ok(Enabled { manifest: url.clone() }),
+            Some(url) if is_loopback(url) => Ok(url.clone()),
             _ => Err(
                 "a build with the development tools updates only from a manifest on the loopback interface",
             ),
@@ -183,12 +177,11 @@ pub fn updater_enabled(conditions: &Conditions<'_>) -> Result<Enabled, &'static 
         Platform::Other => return Err("no release for this system"),
         Platform::Linux | Platform::MacOs | Platform::Windows => {}
     }
-    let manifest = match conditions.manifest_override {
-        Some(url) => url.clone(),
+    match conditions.manifest_override {
+        Some(url) => Ok(url.clone()),
         None => Url::parse(&manifest_url(channel_for(conditions.version)))
-            .map_err(|_| "the manifest address does not parse")?,
-    };
-    Ok(Enabled { manifest })
+            .map_err(|_| "the manifest address does not parse"),
+    }
 }
 
 /// Why an update step failed, for the renderer to put in words.
@@ -362,7 +355,7 @@ mod tests {
             }
         }
 
-        fn enabled(&self) -> Result<Enabled, &'static str> {
+        fn enabled(&self) -> Result<Url, &'static str> {
             updater_enabled(&Conditions {
                 dev_tools: self.dev_tools,
                 distributed: self.distributed,
@@ -379,7 +372,7 @@ mod tests {
     }
 
     fn manifest(case: &Case) -> String {
-        case.enabled().unwrap().manifest.to_string()
+        case.enabled().unwrap().to_string()
     }
 
     #[test]
@@ -396,7 +389,7 @@ mod tests {
                 .unwrap()
                 .unwrap();
         staging.manifest_override = Some(url.clone());
-        assert_eq!(staging.enabled().unwrap().manifest, url);
+        assert_eq!(staging.enabled().unwrap(), url);
     }
 
     #[test]
@@ -440,7 +433,7 @@ mod tests {
         assert!(tools.enabled().is_err());
         let fake = manifest_override(Some("http://127.0.0.1:4/beta.json"), true).unwrap().unwrap();
         tools.manifest_override = Some(fake.clone());
-        assert_eq!(tools.enabled().unwrap().manifest, fake);
+        assert_eq!(tools.enabled().unwrap(), fake);
         tools.pubkey = PUBKEY_PLACEHOLDER;
         assert!(tools.enabled().is_err());
     }

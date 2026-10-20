@@ -159,16 +159,6 @@ impl UpdaterState {
     }
 }
 
-/// The variable's value, `None` when unset or not Unicode.
-fn env(name: &str) -> Option<String> {
-    std::env::var(name).ok()
-}
-
-/// The updater's configuration in tauri.conf.json (`plugins.updater`).
-fn plugin_config<R: Runtime>(app: &AppHandle<R>) -> Option<&serde_json::Value> {
-    app.config().plugins.0.get("updater")
-}
-
 /// Settles whether this process updates itself, and manages the state.
 /// Called from the app's setup hook.
 pub fn manage(app: &AppHandle<Wry>, user_data: &Path) {
@@ -188,16 +178,18 @@ pub fn manage(app: &AppHandle<Wry>, user_data: &Path) {
 
 fn resolve_setup<R: Runtime>(app: &AppHandle<R>) -> Result<Setup, String> {
     let dev_tools = cfg!(feature = "dev-tools");
-    let manifest_override = policy::manifest_override(env(MANIFEST_URL_ENV).as_deref(), dev_tools)
-        .map_err(|err| format!("{MANIFEST_URL_ENV} ignored: {err}"))?;
-    let config = plugin_config(app);
+    let manifest_override =
+        policy::manifest_override(std::env::var(MANIFEST_URL_ENV).ok().as_deref(), dev_tools)
+            .map_err(|err| format!("{MANIFEST_URL_ENV} ignored: {err}"))?;
+    // The updater's configuration in tauri.conf.json (`plugins.updater`).
+    let config = app.config().plugins.0.get("updater");
     let configured_pubkey = config.and_then(|c| c.get("pubkey")).and_then(|v| v.as_str()).unwrap_or("");
     let signed_version_required =
         config.and_then(|c| c.get("requireSignedVersion")).and_then(|v| v.as_bool()) == Some(true);
     let dev_pubkey = dev_pubkey();
     let pubkey = dev_pubkey.as_deref().unwrap_or(configured_pubkey);
     let exe = std::env::current_exe().unwrap_or_default();
-    let enabled = policy::updater_enabled(&policy::Conditions {
+    let manifest = policy::updater_enabled(&policy::Conditions {
         dev_tools,
         distributed: crate::distributed_build(),
         e2e_mark: crate::e2e_run::e2e_mark_present(),
@@ -209,12 +201,12 @@ fn resolve_setup<R: Runtime>(app: &AppHandle<R>) -> Result<Setup, String> {
         manifest_override: manifest_override.as_ref(),
         version: &app.package_info().version,
     })?;
-    Ok(Setup { manifest: enabled.manifest, pubkey: dev_pubkey, fake_install: fake_install_path() })
+    Ok(Setup { manifest, pubkey: dev_pubkey, fake_install: fake_install_path() })
 }
 
 #[cfg(feature = "dev-tools")]
 fn dev_pubkey() -> Option<String> {
-    env(DEV_PUBKEY_ENV).filter(|key| !key.trim().is_empty())
+    std::env::var(DEV_PUBKEY_ENV).ok().filter(|key| !key.trim().is_empty())
 }
 
 #[cfg(not(feature = "dev-tools"))]
