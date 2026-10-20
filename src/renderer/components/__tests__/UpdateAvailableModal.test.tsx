@@ -128,6 +128,7 @@ describe('AboutUpdateCheck', () => {
     expect(await checkWith({ status: 'failed', code: 'network' })).toBe('update.error.network')
     const skipped = await checkWith({ status: 'available', version: '0.5.0-beta.3', currentVersion: '0.5.0-beta.2', releaseUrl: RELEASE_URL, skipped: true })
     expect(skipped).toContain('update.about.availableSkipped')
+    expect(screen.getByTestId('about-update-open').textContent).toBe('update.about.open {"version":"0.5.0-beta.3"}')
     fireEvent.click(screen.getByTestId('about-update-open'))
     expect(screen.getByTestId('update-modal')).toBeTruthy()
     expect(screen.queryByTestId('update-modal-skip')).toBeNull()

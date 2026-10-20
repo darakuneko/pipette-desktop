@@ -1,5 +1,5 @@
 {
-  "version": "0.1.122",
+  "version": "0.1.123",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -2079,8 +2079,8 @@
       "disabled": "この Pipette はご自分では更新しまへん。",
       "upToDate": "Pipette は新しいままどす。",
       "available": "Pipette {{version}} が出てますえ。",
-      "availableSkipped": "Pipette {{version}} が出てますえ（見送らはった版どす）。",
-      "open": "更新を見ますえ"
+      "availableSkipped": "Pipette {{version}} が出てますえ。起動のときは見送らはりましたけど、ここから更新できますえ。",
+      "open": "{{version}} に更新しますえ…"
     }
   },
   "favoriteStore": {

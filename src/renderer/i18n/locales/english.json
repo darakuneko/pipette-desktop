@@ -1,5 +1,5 @@
 {
-  "version": "0.1.122",
+  "version": "0.1.123",
   "name": "English",
   "common": {
     "save": "Save",
@@ -2089,8 +2089,8 @@
       "disabled": "This copy of Pipette does not update itself.",
       "upToDate": "Pipette is up to date.",
       "available": "Pipette {{version}} is available.",
-      "availableSkipped": "Pipette {{version}} is available (you chose to skip it).",
-      "open": "Show the update"
+      "availableSkipped": "Pipette {{version}} is available. You skipped it at startup, but you can still update here.",
+      "open": "Update to {{version}}…"
     }
   },
   "favoriteStore": {

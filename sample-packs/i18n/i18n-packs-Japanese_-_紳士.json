@@ -1,5 +1,5 @@
 {
-  "version": "0.1.122",
+  "version": "0.1.123",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -2079,8 +2079,8 @@
       "disabled": "この Pipette はご自身で更新いたしません。",
       "upToDate": "Pipette は最新でございます。",
       "available": "Pipette {{version}} をご用意いたしました。",
-      "availableSkipped": "Pipette {{version}} をご用意いたしました（見送りとされた版でございます）。",
-      "open": "更新を拝見する"
+      "availableSkipped": "Pipette {{version}} をご用意いたしております。起動時には見送られましたが、こちらから更新いただけます。",
+      "open": "{{version}} へ更新いたします…"
     }
   },
   "favoriteStore": {

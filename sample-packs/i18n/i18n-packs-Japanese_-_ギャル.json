@@ -1,5 +1,5 @@
 {
-  "version": "0.1.122",
+  "version": "0.1.123",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -2079,8 +2079,8 @@
       "disabled": "このPipetteは自分でアプデしないやつだよ〜",
       "upToDate": "Pipette 最新だよ☆",
       "available": "Pipette {{version}} 出てるよ！",
-      "availableSkipped": "Pipette {{version}} 出てるよ！（パスしたやつ）",
-      "open": "アプデ見る☆"
+      "availableSkipped": "Pipette {{version}} 出てるよ！起動のときはパスしたけど、ここからならアプデできるよ☆",
+      "open": "{{version}} にアプデする☆…"
     }
   },
   "favoriteStore": {
