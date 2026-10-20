@@ -92,7 +92,7 @@ describe('themePacksApi', () => {
     await Promise.allSettled(calls)
   })
 
-  it('answers a pack that fails the check as the Electron store does, without the backend', async () => {
+  it('answers a pack that fails the check with INVALID_FILE, without the backend', async () => {
     const { log } = heldBackend()
     const packs: unknown[] = [undefined, 'text', [theme('Array')], theme('Bad', { version: '1', colorScheme: 'blue' })]
     for (const raw of packs) {

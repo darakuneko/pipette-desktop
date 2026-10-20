@@ -135,7 +135,7 @@ describe('the favorite transfer worker', () => {
     expect([...ops].sort()).toEqual(['export', 'exportCurrent', 'import', 'importToCurrent'])
   })
 
-  it.each(CHECKS.map((check) => [check.label, check] as const))('answers as the main process: %s', (_label, check) => {
+  it.each(CHECKS.map((check) => [check.label, check] as const))('answers as recorded: %s', (_label, check) => {
     expect(at(check.time, () => runInWorker(check.request))).toEqual(check.want)
   })
 

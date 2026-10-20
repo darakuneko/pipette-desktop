@@ -58,7 +58,7 @@ describe('sync sign-in and password', () => {
     expect(calls).toEqual(['sync_auth_start', 'sync_auth_sign_out'])
   })
 
-  it('rates passwords as the Electron main process does, without the backend', async () => {
+  it('rates passwords as recorded, without the backend', async () => {
     const backend = vi.fn()
     mockIPC(backend)
     expect(STRENGTH.length).toBeGreaterThan(10)
