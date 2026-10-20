@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Client-side aggregation for the Analyze keypress-duration section.
-// The TYPING_ANALYTICS_LIST_DURATION_CELLS channel already folds every
+// The `typing_analytics_list_duration_cells` command already folds every
 // contributing minute into one total per (row, col, layer) cell (see
 // src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs) — this
 // module only needs to sum those per-cell totals into one

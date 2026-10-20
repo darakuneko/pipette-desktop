@@ -375,7 +375,7 @@ export interface TypingTombstoneResult {
   sessions: number
 }
 
-/** TYPING_ANALYTICS_IMPORT's IPC result. `result` and `cancelled` are set
+/** `typing_analytics_import`'s result. `result` and `cancelled` are set
  * when `success` is true; `cancelled` means the user closed the file
  * picker. On failure `error` is the message or an i18n key. */
 export interface TypingAnalyticsImportResult {
@@ -485,7 +485,7 @@ export type TypingBigramAggregateResult =
  * observed that minute — the per-minute granularity the Analyze
  * rollover trend chart needs (the bigram-aggregate IPC only returns a
  * single ratio for the whole range, not a time series). Backed by
- * `TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES`; see
+ * `typing_analytics_list_rollover_minutes`; see
  * src-tauri/crates/pipette-typing-analytics-db/src/range.rs. A minute
  * with no determined-overlap sample (pre-v8 data, or every row that
  * minute failed to observe overlap) is simply absent from the result

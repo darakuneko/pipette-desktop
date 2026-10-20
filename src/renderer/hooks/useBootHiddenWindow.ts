@@ -122,7 +122,7 @@ export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
       // a foreign reveal and disarm the phase, breaking this very show.
       //
       // That leaves a window-ownership race: the user may have shown the
-      // window via the tray in the gap between the WINDOW_IS_VISIBLE
+      // window via the tray in the gap between the `window_is_visible`
       // snapshot (arming effect) and this call. windowShow() resolves with
       // whether main actually transitioned the window from hidden to
       // shown — false means the user beat us to it. Roll back ownership in

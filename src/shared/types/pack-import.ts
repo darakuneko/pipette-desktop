@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Shared shapes for the multi-select import dialog used by Language
-// Packs (I18N_PACK_IMPORT) and Theme Packs (THEME_PACK_IMPORT). Both
+// Packs (`i18n_pack_import`) and Theme Packs (`theme_pack_import`). Both
 // handlers open the same kind of dialog and read+parse each selected
 // file the same way (src/tauri-shim/api/pack-import.ts). Key Labels'
 // import is deliberately NOT part of this — it saves each file in the

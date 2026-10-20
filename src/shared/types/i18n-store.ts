@@ -135,7 +135,7 @@ export interface I18nPackRecord {
  *  existing call sites don't need to change what they import. */
 export type { PackImportFile as I18nPackImportFile, PackImportDialogResult as I18nPackImportDialogResult } from './pack-import'
 
-/** Optional flags forwarded with I18N_PACK_IMPORT_APPLY. */
+/** Optional flags forwarded with `i18n_pack_import_apply`. */
 export interface I18nPackImportApplyOptions {
   enabled?: boolean
   hubPostId?: string

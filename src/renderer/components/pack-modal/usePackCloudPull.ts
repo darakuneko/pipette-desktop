@@ -47,7 +47,7 @@ export function usePackCloudPull(
       } else if (result.status === 'partial') {
         setActionError(t('sync.pullError.partial'))
       } else if (!result.success) {
-        // Defensive fallback — SYNC_EXECUTE always sets `status` on a
+        // Defensive fallback — `sync_execute` always sets `status` on a
         // non-throwing result, so this only covers an unexpected shape.
         setActionError(result.error ?? t(fallbackErrorKey))
       }

@@ -182,7 +182,7 @@ describe.each([plainMock, shimOverMockIPC])('useBootHiddenWindow ($name)', (back
 
   it('never hides the window when windowShow reports the user beat it to the reveal', async () => {
     // The user shows the window via the tray in the gap between the
-    // WINDOW_IS_VISIBLE snapshot and windowShow()'s invoke resolving.
+    // `window_is_visible` snapshot and windowShow()'s invoke resolving.
     // main reports transitioned=false, meaning it was already visible.
     windowShow.mockResolvedValue(false)
 

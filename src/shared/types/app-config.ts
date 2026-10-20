@@ -60,7 +60,7 @@ export interface AppConfig {
    * (`'en'`, `'ja'`) are migrated on first load. */
   language?: string
   /** One-shot UX notice key. Surface a banner once, then the renderer
-   * calls APP_CONFIG_SET with `null` to dismiss it. Currently only
+   * calls `app_config_set` with `null` to dismiss it. Currently only
    * `'ja-removed'` is emitted (during the bundled-ja → pack-only
    * migration) but the field stays open-ended for future migrations. */
   oneShotNotice?: 'ja-removed' | null

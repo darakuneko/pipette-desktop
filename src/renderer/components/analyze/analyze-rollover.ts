@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Client-side aggregation for the Analyze rollover section. Folds the
 // per-minute {minuteTs, oc, on} rows the
-// TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES channel returns into an
+// `typing_analytics_list_rollover_minutes` command returns into an
 // overall rate and a bucketed trend series. Bucket boundaries reuse
 // `snapBucketStartLocal` from analyze-bucket.ts so the trend line lines
 // up with the Interval chart above it, but the per-bucket value here is
