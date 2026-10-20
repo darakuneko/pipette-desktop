@@ -43,7 +43,7 @@ All local data is stored under the OS user data directory — the same directory
 | macOS | `~/Library/Application Support/pipette-desktop/` |
 | Windows | `%APPDATA%/pipette-desktop/` |
 
-A build you made from source uses `app.pipette.desktop/` in the same place instead, so it never opens the data of the installed Pipette. Uninstalling Pipette does not delete this directory (on Windows, the uninstaller's option to delete app data removes only the `app.pipette.desktop` data, not `pipette-desktop`).
+A debug build, a build with the development tools, and a release build started from inside its Cargo target directory (`pnpm dev`, `pnpm build:debug`, or a `.app` bundle or `pipette.exe` still under `src-tauri/target`) use `app.pipette.desktop/` in the same place instead, so they never open the data of the installed Pipette, and they do not take updates from the releases. A release build started from anywhere else counts as an installed Pipette, even when you built it from source: on Linux any executable outside the target directory and every AppImage, on macOS an app bundle (`.app`), on Windows the `pipette.exe` the installer put next to its `uninstall.exe`. Such a build uses `pipette-desktop/`. Uninstalling Pipette does not delete this directory (on Windows, the uninstaller's option to delete app data removes only the `app.pipette.desktop` data, not `pipette-desktop`).
 
 ### App Settings
 
