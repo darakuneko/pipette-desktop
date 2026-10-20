@@ -28,10 +28,10 @@ use crate::scope::list_local_keyboard_uids;
 use pipette_keyboard_stores::{KEY_LABEL_SYNC_UNIT, TYPING_TEXT_SYNC_UNIT};
 
 impl Resets {
-    /// `deleteTypingForAllKeyboards`: the typing-analytics cleanup of every
-    /// keyboard with a local directory or cache rows. Removing
-    /// `sync/keyboards` alone leaves the cache, so Analyze would keep
-    /// showing the removed keyboards. Failures are logged and skipped.
+    /// The typing-analytics cleanup of every keyboard with a local directory or
+    /// cache rows. Removing `sync/keyboards` alone leaves the cache, so Analyze
+    /// would keep showing the removed keyboards. Failures are logged and
+    /// skipped.
     async fn delete_typing_for_all_keyboards(&self) {
         let user_data = self.ctx.user_data().to_path_buf();
         let local = tokio::task::spawn_blocking(move || list_local_keyboard_uids(&user_data)).await;
@@ -54,7 +54,7 @@ impl Resets {
         }
     }
 
-    /// The `RESET_KEYBOARD_DATA` handler: removes `uid`'s local data and
+    /// The `reset_keyboard_data` command: removes `uid`'s local data and
     /// typing analytics, its Drive files when Drive allows it, and its
     /// keyboard name, so the other devices see the removal. Refused while
     /// a sync password change is in progress. When Drive cannot be checked
@@ -90,7 +90,7 @@ impl Resets {
         .await
     }
 
-    /// The `RESET_LOCAL_TARGETS` handler: removes the chosen targets of
+    /// The `reset_local_targets` command: removes the chosen targets of
     /// this machine's data. Favorites take the other global user content
     /// with them: the typing-test texts and the key labels.
     pub async fn reset_local_targets(&self, targets: &LocalResetTargets) -> Result<(), DataError> {

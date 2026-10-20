@@ -67,8 +67,8 @@ impl CredentialMemory {
         *lock(&self.sync_format)
     }
 
-    /// `forgetCreatedSyncFormatMarker`: for sign-out, the next account's
-    /// Drive is checked afresh.
+    /// Forgets the marker memory and bumps its generation, for sign-out: the
+    /// next account's Drive is checked afresh.
     pub fn forget_sync_format_marker(&self) {
         let mut memory = lock(&self.sync_format);
         *memory = SyncFormatMemory { generation: memory.generation + 1, ..SyncFormatMemory::default() };

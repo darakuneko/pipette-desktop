@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The units of a flush or a poll pass, a few at a time
-//! (`settlePackIndexUnitsFirst` with `pLimit(SYNC_CONCURRENCY)`).
+//! The units of a flush or a poll pass, a few at a time, the pack rosters
+//! first.
 
 use std::future::Future;
 

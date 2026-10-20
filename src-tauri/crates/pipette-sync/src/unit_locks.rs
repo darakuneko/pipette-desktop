@@ -15,11 +15,11 @@ use tokio::sync::{Mutex as AsyncMutex, OwnedMutexGuard};
 
 use crate::units::is_typing_deleted_ranges_sync_unit;
 
-/// The key a whole sync of `unit` holds (`withUnitSyncLock`): only a
-/// device's deleted-ranges unit has one. Without it, a sync that bundled
-/// the file before its upload could overwrite Drive after another sync of
-/// the same unit merged newer entries from Drive into the file and found
-/// nothing to upload, leaving Drive without entries this device holds.
+/// The key a whole sync of `unit` holds: only a device's deleted-ranges unit
+/// has one. Without it, a sync that bundled the file before its upload could
+/// overwrite Drive after another sync of the same unit merged newer entries
+/// from Drive into the file and found nothing to upload, leaving Drive without
+/// entries this device holds.
 pub fn unit_sync_lock_key(unit: &str) -> Option<String> {
     is_typing_deleted_ranges_sync_unit(unit).then(|| format!("sync:{unit}"))
 }

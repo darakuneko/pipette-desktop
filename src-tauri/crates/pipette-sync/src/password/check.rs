@@ -35,7 +35,7 @@ pub fn listed_password_checks(listing: &[DriveFile]) -> Vec<&DriveFile> {
 }
 
 /// The password-check every machine uses when several are listed: the copy
-/// `pickCanonicalFile` chooses, the newest `modifiedTime` with ties broken
+/// `Listing::pick_canonical` chooses, the newest `modifiedTime` with ties broken
 /// by the smallest id.
 pub fn find_password_check(listing: &[DriveFile]) -> Option<&DriveFile> {
     listed_password_checks(listing).into_iter().reduce(|best, file| {
@@ -58,7 +58,7 @@ impl Preflight {
         self.password_check_created.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// `requireSyncCredentials`: the stored password once signed in.
+    /// The stored password once signed in.
     pub async fn require_sync_credentials(&self) -> Result<Zeroizing<String>, SyncCredentialFailureReason> {
         if !self.sign_in.is_signed_in().await {
             return Err(SyncCredentialFailureReason::Unauthenticated);
@@ -290,7 +290,7 @@ impl Preflight {
         self.forget_created_password_check();
     }
 
-    /// `checkPasswordCheckExists`: whether Drive has a password-check.
+    /// Whether Drive has a password-check.
     pub async fn password_check_exists(&self) -> Result<bool, PreflightError> {
         let listing = self.drive.list_files(None).await?;
         Ok(find_password_check(&listing).is_some())
@@ -309,16 +309,15 @@ impl Preflight {
         }
     }
 
-    /// Sets the first password (`setPasswordAndValidate`). Refused while a
-    /// password change is in progress or Drive needs a newer app, before
-    /// the password is stored; refused when a readable password is already
-    /// stored, and when the OS key store is unavailable, both before any
-    /// Drive call. A stored password that no longer decrypts is not
-    /// refused: setting a new one is how it is replaced. A password that
-    /// does not open the password-check on Drive, or that was validated
-    /// against an account signed out meanwhile, is removed again. Sets and
-    /// replaces run one at a time, so a second set sees the password the
-    /// first one stored.
+    /// Sets the first password. Refused while a password change is in progress
+    /// or Drive needs a newer app, before the password is stored; refused when
+    /// a readable password is already stored, and when the OS key store is
+    /// unavailable, both before any Drive call. A stored password that no
+    /// longer decrypts is not refused: setting a new one is how it is replaced.
+    /// A password that does not open the password-check on Drive, or that was
+    /// validated against an account signed out meanwhile, is removed again.
+    /// Sets and replaces run one at a time, so a second set sees the password
+    /// the first one stored.
     pub async fn set_password_and_validate(self: &Arc<Self>, password: &str) -> Result<(), PreflightError> {
         let _setting = self.password_setting.lock().await;
         self.assert_no_local_password_change().await?;
@@ -342,16 +341,15 @@ impl Preflight {
         Ok(())
     }
 
-    /// Replaces the stored password with `password` once it opens the
-    /// chosen password-check on Drive, for a password changed on another
-    /// machine (`replacePasswordAndValidate`). Nothing is stored until it
-    /// opens, so a mismatch or a Drive failure leaves the stored password
-    /// as it was; so does a sign-in change before the store, since the
-    /// password opened the previous account's password-check. Refused
-    /// while signed out, while a password change is in progress or Drive
-    /// needs a newer app, when Drive has no password-check, and (before
-    /// any Drive call) when the OS key store is unavailable. Runs one at a
-    /// time with the sets.
+    /// Replaces the stored password with `password` once it opens the chosen
+    /// password-check on Drive, for a password changed on another machine.
+    /// Nothing is stored until it opens, so a mismatch or a Drive failure
+    /// leaves the stored password as it was; so does a sign-in change before
+    /// the store, since the password opened the previous account's
+    /// password-check. Refused while signed out, while a password change is in
+    /// progress or Drive needs a newer app, when Drive has no password-check,
+    /// and (before any Drive call) when the OS key store is unavailable. Runs
+    /// one at a time with the sets.
     pub async fn replace_password_and_validate(
         self: &Arc<Self>,
         password: &str,

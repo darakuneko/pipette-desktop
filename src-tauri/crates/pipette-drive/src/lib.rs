@@ -41,7 +41,8 @@ pub struct DriveFile {
     pub created_time: Option<String>,
 }
 
-/// One listing request (`listFiles` asks for every page in turn).
+/// One listing request (`DriveClient::list_files` asks for every page in
+/// turn).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ListQuery {
     /// The `name contains '…'` filter. Drive matches a prefix of the name
@@ -114,11 +115,10 @@ pub trait DriveApi: Send + Sync {
     fn list_page(&self, query: ListQuery) -> DriveFuture<'_, FileList>;
     /// The content of a file (`alt=media`).
     fn download(&self, id: String) -> DriveFuture<'_, Vec<u8>>;
-    /// Creates a file with `content` (the multipart create of
-    /// `uploadFile`) and returns the revision it wrote.
+    /// Creates a file with `content` (a multipart create) and returns the
+    /// revision it wrote.
     fn create(&self, name: String, content: String) -> DriveFuture<'_, UploadedFile>;
-    /// Creates a file with `content` and returns only its id
-    /// (`createRawFile`).
+    /// Creates a file with `content` and returns only its id.
     fn create_raw(&self, name: String, content: String) -> DriveFuture<'_, String>;
     /// Replaces the content of a file and returns the revision it wrote.
     fn update(&self, id: String, content: String) -> DriveFuture<'_, UploadedFile>;

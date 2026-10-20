@@ -49,8 +49,7 @@ pub const SYNC_BUSY_REASON: &str = "syncBusy";
 /// Why a sign-in or sign-out did not switch the tokens.
 #[derive(Debug, thiserror::Error)]
 pub enum AccountSwitchError {
-    /// Sync work kept running past the wait, or another switch runs
-    /// (`AccountSwitchBusyError`).
+    /// Sync work kept running past the wait, or another switch runs.
     #[error("{ACCOUNT_SWITCH_BUSY_MESSAGE}")]
     Busy,
     #[error("{SIGN_OUT_PASSWORD_CHANGING}")]
@@ -72,9 +71,9 @@ impl AccountSwitchError {
 
 /// The stored Google sign-in, as the switch needs it.
 pub trait SignedInAccount: Send + Sync {
-    /// The `sub` of the signed-in account's id_token (`getAccountSub`).
+    /// The `sub` of the signed-in account's id_token.
     fn account_sub(&self) -> impl Future<Output = Option<String>> + Send;
-    /// Removes the stored sign-in (`signOut`).
+    /// Removes the stored sign-in.
     fn sign_out(&self) -> impl Future<Output = ()> + Send;
 }
 
@@ -88,8 +87,8 @@ impl SignedInAccount for GoogleAuth {
     }
 }
 
-/// The part of `forgetAccountCaches` the sync runtime holds: the files
-/// this run created on the previous account's Drive. The rest is
+/// The account caches the sync runtime holds: the files this run created
+/// on the previous account's Drive. The rest is
 /// [`crate::preflight::Preflight::forget_account`], run once per change of
 /// the stored sign-in by its `GoogleAuth::on_account_changed` listener; it
 /// bumps the sign-out generation before it empties anything, so it is not
@@ -118,23 +117,24 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         Self { runtime, pending, account }
     }
 
-    /// `adoptPendingForSignedInAccount`: hands the pending units to the
-    /// account the stored tokens belong to and returns its id. Called by
-    /// every pass that uploads pending units, after its credential check and
-    /// before it reads them, and once at startup.
+    /// Hands the pending units to the account the stored tokens belong to
+    /// and returns its id. Called by every pass that uploads pending units,
+    /// after its credential check and before it reads them, and once at
+    /// startup.
     pub async fn adopt_pending_for_signed_in_account(&self) -> Option<String> {
         let sub = self.account.account_sub().await;
         self.pending.adopt_for_account(sub.as_deref());
         sub
     }
 
-    /// The startup's `adoptPendingForSignedInAccount`, which runs alongside
-    /// the commands: `changes` counts the changes of the stored sign-in
-    /// (bumped by `GoogleAuth::on_account_changed`). A sign-in or sign-out
-    /// that changed it after the account was read hands the units over
-    /// itself, so the account read is then stale and nothing is adopted.
-    /// The check and the hand-over run with the switch marked, so no switch
-    /// lands between them; one that starts meanwhile is refused as busy.
+    /// The startup's [`Self::adopt_pending_for_signed_in_account`], which
+    /// runs alongside the commands: `changes` counts the changes of the
+    /// stored sign-in (bumped by `GoogleAuth::on_account_changed`). A
+    /// sign-in or sign-out that changed it after the account was read hands
+    /// the units over itself, so the account read is then stale and nothing
+    /// is adopted. The check and the hand-over run with the switch marked,
+    /// so no switch lands between them; one that starts meanwhile is
+    /// refused as busy.
     pub async fn adopt_pending_at_startup(&self, changes: &AtomicU64) {
         let seen = changes.load(Ordering::SeqCst);
         let sub = self.account.account_sub().await;
@@ -144,8 +144,8 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         }
     }
 
-    /// `claimOwnerlessForSignedInAccount`: gives ownerless units to the
-    /// account still signed in, before its tokens are replaced or removed.
+    /// Gives ownerless units to the account still signed in, before its
+    /// tokens are replaced or removed.
     async fn claim_ownerless_for_signed_in_account(&self) -> std::io::Result<()> {
         if self.pending.owner().is_some() || !self.pending.has_pending_changes() {
             return Ok(());
@@ -154,11 +154,11 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         self.pending.claim_ownerless_durably(sub.as_deref())
     }
 
-    /// `duringAccountSwitch`: marks the switch, then waits up to
-    /// [`ACCOUNT_SWITCH_WAIT`] for the sync lock and for the lock-free
-    /// writers to end, holding the lock once it is free. When the wait runs
-    /// out, `refuse` answers [`AccountSwitchError::Busy`]; otherwise the
-    /// switch goes ahead, with the lock if it was had.
+    /// Marks the switch, then waits up to [`ACCOUNT_SWITCH_WAIT`] for the
+    /// sync lock and for the lock-free writers to end, holding the lock
+    /// once it is free. When the wait runs out, `refuse` answers
+    /// [`AccountSwitchError::Busy`]; otherwise the switch goes ahead, with
+    /// the lock if it was had.
     async fn begin_switch(&self, refuse: bool) -> Result<Switching, AccountSwitchError> {
         let switch = self.runtime.try_begin_account_switch().ok_or(AccountSwitchError::Busy)?;
         let claim = self.runtime.claim_sync_lock_when_idle_by(Instant::now() + ACCOUNT_SWITCH_WAIT).await;
@@ -168,13 +168,12 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         Ok(Switching { _lock: claim.lock, _switch: switch })
     }
 
-    /// `switchAccountKeepingPending`, the token switch of a new sign-in:
-    /// once running sync work has finished, gives ownerless units to the
-    /// account still signed in, hands the pending units to `new_account_sub`'s
-    /// account, stores the new tokens with `store`, and forgets the previous
-    /// account's caches before the lock is released. If storing fails, the
-    /// old tokens stay and the next pass hands the units back to their
-    /// account.
+    /// The token switch of a new sign-in: once running sync work has finished,
+    /// gives ownerless units to the account still signed in, hands the pending
+    /// units to `new_account_sub`'s account, stores the new tokens with
+    /// `store`, and forgets the previous account's caches before the lock is
+    /// released. If storing fails, the old tokens stay and the next pass hands
+    /// the units back to their account.
     pub async fn switch_account_keeping_pending(
         &self,
         store: impl Future<Output = Result<(), AuthError>> + Send,
@@ -188,11 +187,11 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         Ok(())
     }
 
-    /// `signOutKeepingPendingLocked`: signs out, first holding the
-    /// account's pending units for its next sign-in, then forgets the
-    /// account's caches; changes made from here on belong to whoever signs
-    /// in next. If the hold cannot be written, the tokens and caches stay.
-    /// The caller holds the sync lock (a reset removing the stored sign-in).
+    /// Signs out, first holding the account's pending units for its next
+    /// sign-in, then forgets the account's caches; changes made from here on
+    /// belong to whoever signs in next. If the hold cannot be written, the
+    /// tokens and caches stay. The caller holds the sync lock (a reset
+    /// removing the stored sign-in).
     pub async fn sign_out_keeping_pending_locked(&self) -> Result<(), AccountSwitchError> {
         self.claim_ownerless_for_signed_in_account().await?;
         self.pending.hold_for_sign_out_durably()?;
@@ -201,12 +200,11 @@ impl<A: SignedInAccount> AccountSwitcher<A> {
         Ok(())
     }
 
-    /// `signOutKeepingPending`: [`Self::sign_out_keeping_pending_locked`]
-    /// once running sync work has finished, or after the wait anyway.
-    /// Refused while a password change runs, before the wait and again
-    /// after it: removing the tokens would stop the change halfway. No
-    /// password change starts while the switch is marked, but one can start
-    /// between the first check and the mark.
+    /// [`Self::sign_out_keeping_pending_locked`] once running sync work has
+    /// finished, or after the wait anyway. Refused while a password change
+    /// runs, before the wait and again after it: removing the tokens would
+    /// stop the change halfway. No password change starts while the switch
+    /// is marked, but one can start between the first check and the mark.
     pub async fn sign_out_keeping_pending(&self) -> Result<(), AccountSwitchError> {
         if self.runtime.password_change_running() {
             return Err(AccountSwitchError::PasswordChanging);

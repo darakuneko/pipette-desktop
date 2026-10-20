@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Replays the recorded golden tests/fixtures/ts_execute.json:
 //!
-//! - the scope truth table (`matchesScope`, `shouldDownloadSyncUnit`);
+//! - the scope truth table (`matches_scope`, `should_download_sync_unit`);
 //! - full passes on the in-memory Drive seeded with the same files in the same
 //!   order (so the ids and the times match), in the sync envelope format (each
 //!   key derived once per salt; the format's own goldens compare the bytes) and

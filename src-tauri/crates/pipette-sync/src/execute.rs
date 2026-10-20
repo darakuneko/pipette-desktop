@@ -5,10 +5,9 @@
 //!
 //! A pass takes the sync lock. When another pass holds it, the pass waits
 //! for a holder that ends on its own (the polling, a reset) and answers
-//! `busy` for any other (a flush, another `executeSync`), which is how the
+//! `busy` for any other (a flush, another of these passes), which is how the
 //! renderer's parallel connect-time downloads dedupe. It then runs the
-//! preflight in the order of SYNC-PROCESS §3 on one unfiltered listing,
-//! and:
+//! preflight in the order of SYNC-PROCESS §3 on one unfiltered listing, and:
 //!
 //! - a download merges every Drive file the scope takes (one copy per
 //!   name), the pack rosters before the pack bodies, 10 at a time, then
@@ -92,8 +91,8 @@ pub enum SyncExecuteResult {
     Partial(Vec<String>),
 }
 
-/// The account a pass runs as: the `sub` of the stored sign-in
-/// (`getAccountSub`), which the pending units are handed to.
+/// The account a pass runs as: the `sub` of the stored sign-in, which the
+/// pending units are handed to.
 pub trait PassAccount: Send + Sync {
     fn account_sub(&self) -> BoxFuture<'_, Option<String>>;
 }
@@ -104,8 +103,8 @@ impl PassAccount for GoogleAuth {
     }
 }
 
-/// `backfillKeyboardMeta`: names the keyboards with files in `listing`
-/// that the keyboard names lack; how many it named.
+/// Names the keyboards with files in `listing` that the keyboard names
+/// lack; how many it named.
 pub trait KeyboardMetaBackfill: Send + Sync {
     fn backfill<'a>(
         &'a self,
@@ -115,14 +114,14 @@ pub trait KeyboardMetaBackfill: Send + Sync {
 }
 
 /// The triggers a pass hands work to: the flush of the pending units
-/// (`scheduleFlushIfPending`, after `delay`, or the flush's own delay for
-/// `None`), the polling and the apply of this device's own deleted ranges.
+/// (`Flusher::schedule_flush_if_pending`, after `delay`, or the flush's own delay
+/// for `None`), the polling and the apply of this device's own deleted ranges.
 pub trait PassHooks: Send + Sync {
     fn schedule_flush_if_pending(&self, delay: Option<Duration>);
-    /// `startPollingIfAutoSync`, after a download.
+    /// `Poller::start_polling_if_auto_sync`, after a download.
     fn start_polling_if_auto_sync(&self);
-    /// `queueOwnDeletedRangesApply`, at the end of every pass that ran its
-    /// units; the pass does not wait for it.
+    /// [`queue_own_deleted_ranges_apply`], at the end of every pass
+    /// that ran its units; the pass does not wait for it.
     fn queue_own_deleted_ranges_apply(&self, ops: Arc<DataOps>, holds: ResetHolds) {
         drop(queue_own_deleted_ranges_apply(ops, holds));
     }
@@ -382,8 +381,7 @@ impl SyncExecutor {
         outcomes
     }
 
-    /// `executeDownloadSync`: merges the Drive files of `scope`; the units
-    /// that failed.
+    /// Merges the Drive files of `scope`; the units that failed.
     async fn download(&self, password: &str, listing: &Listing, scope: &SyncScope) -> Vec<String> {
         let user_data = self.units.ctx().user_data().to_path_buf();
         let local = tokio::task::spawn_blocking(move || list_local_keyboard_uids(&user_data))
@@ -411,7 +409,7 @@ impl SyncExecutor {
     }
 
     /// The keyboards this device recorded typing for, with its machine
-    /// hash (`listLocalKeyboardUids` of the cache).
+    /// hash (the cache's `local_keyboard_uids`).
     async fn own_typing(&self) -> Result<(String, Vec<String>), String> {
         let hash = self.units.own_hash().map_err(|err| err.to_string())?;
         let ready = self.units.ops().analytics().ready().await.map_err(|err| err.to_string())?;
@@ -425,7 +423,7 @@ impl SyncExecutor {
         Ok((hash, uids))
     }
 
-    /// `executeUploadSync`: syncs every local unit of `scope`.
+    /// Syncs every local unit of `scope`.
     async fn upload(
         &self,
         password: &str,

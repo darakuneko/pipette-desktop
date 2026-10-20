@@ -16,7 +16,7 @@ use super::settings::written_bytes;
 use super::{AnalyticsEnv, MergeError, blocking, other, prop};
 use crate::units::DeviceDayUnit;
 
-/// The day file's text as `readRows` reads it: none when it cannot be read.
+/// The day file's text, invalid UTF-8 replaced: none when it cannot be read.
 fn read_text(path: &std::path::Path) -> Option<String> {
     std::fs::read(path).ok().map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
 }

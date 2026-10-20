@@ -109,8 +109,8 @@ impl SyncTriggers {
         self.poller.start_polling_at_launch();
     }
 
-    /// `notifyChange`: records a change of `unit` and pushes the flush out
-    /// by the full debounce.
+    /// Records a change of `unit` and pushes the flush out by the full
+    /// debounce.
     pub fn notify_change(&self, unit: &str) {
         self.flusher.notify_change(unit);
     }

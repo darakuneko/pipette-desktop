@@ -3,12 +3,12 @@
 //! and the choice between them. Every pass and entry point funnels each unit
 //! through [`UnitSync`].
 //!
-//! The revision a unit sync handled is recorded here and only on success
-//! (`lastKnownRemoteState`, SYNC-PROCESS §4): the merged Drive file when
-//! Drive needs nothing, or the revision the upload answered once its
-//! bookkeeping (a day's entry in `sync_state.json`) is written. A failure
-//! records nothing, so the next poll still sees the file as changed; an
-//! upload that Drive took but whose answer never arrived is a failure too.
+//! The revision a unit sync handled is recorded here and only on success (in the
+//! runtime's `RemoteMemory`, SYNC-PROCESS §4): the merged Drive file when Drive
+//! needs nothing, or the revision the upload answered once its bookkeeping (a
+//! day's entry in `sync_state.json`) is written. A failure records nothing, so
+//! the next poll still sees the file as changed; an upload that Drive took but
+//! whose answer never arrived is a failure too.
 //!
 //! The locks, in the order a task takes them: the unit's `sync:` lock (a
 //! device's deleted-ranges unit only, held from the download to the
@@ -126,21 +126,21 @@ impl UnitSync {
         &self.ops
     }
 
-    /// `resetHoldsKeyboard` of the running reset.
+    /// The keyboards the running reset holds.
     pub fn holds(&self) -> ResetHolds {
         let runtime = self.runtime.clone();
         Arc::new(move |uid: &str| runtime.reset_holds_keyboard(uid))
     }
 
-    /// This device's machine hash (`getMachineHash`).
+    /// This device's machine hash.
     pub fn own_hash(&self) -> Result<String, UnitError> {
         self.ops.analytics().machine_hash().map_err(other)
     }
 
-    /// `uploadSyncUnit`: bundles `unit`'s local files and uploads them to
-    /// its Drive file, one upload of the unit at a time. `listing` is the
-    /// pass's listing (Drive is listed when none is given). Nothing is
-    /// sent when the unit has nothing to bundle.
+    /// Bundles `unit`'s local files and uploads them to its Drive file,
+    /// one upload of the unit at a time. `listing` is the pass's listing
+    /// (Drive is listed when none is given). Nothing is sent when the
+    /// unit has nothing to bundle.
     pub async fn upload_sync_unit(
         &self,
         unit: &str,
@@ -240,10 +240,10 @@ impl UnitSync {
         .map_err(other)
     }
 
-    /// `mergeWithRemote`: merges the Drive file `file` of `unit` into the
-    /// local files, then uploads when Drive lacks something this device
-    /// holds. `file` must be the copy [`Listing::pick_canonical`] chooses
-    /// for its name, so an upload after the merge writes the same file.
+    /// Merges the Drive file `file` of `unit` into the local files, then
+    /// uploads when Drive lacks something this device holds. `file` must
+    /// be the copy [`Listing::pick_canonical`] chooses for its name, so
+    /// an upload after the merge writes the same file.
     pub async fn merge_with_remote(
         &self,
         file: &DriveFile,
@@ -288,8 +288,8 @@ impl UnitSync {
         Ok(())
     }
 
-    /// `mergeSyncUnit`: opens the downloaded `content` and merges its
-    /// bundle; whether Drive needs this device's copy.
+    /// Opens the downloaded `content` and merges its bundle; whether
+    /// Drive needs this device's copy.
     async fn merge_content(
         &self,
         unit: &str,
@@ -320,10 +320,10 @@ impl UnitSync {
         }
     }
 
-    /// Downloads another device's day file `file` of `day` and merges it
-    /// (`mergeDeviceDayBundle`), as the lazy fetch of a remote day does:
-    /// without the unit's locks, recording no revision and uploading
-    /// nothing (a day is never written back from here).
+    /// Downloads another device's day file `file` of `day` and merges it,
+    /// as the lazy fetch of a remote day does: without the unit's locks,
+    /// recording no revision and uploading nothing (a day is never
+    /// written back from here).
     pub async fn merge_remote_day(
         &self,
         file: &DriveFile,
@@ -339,8 +339,8 @@ impl UnitSync {
         Ok(merge_device_day_bundle(&env, &bundle, day, &own).await?)
     }
 
-    /// `syncOrUpload`: merges `unit` with its Drive file in `listing` when
-    /// there is one, otherwise uploads it.
+    /// Merges `unit` with its Drive file in `listing` when there is
+    /// one, otherwise uploads it.
     pub async fn sync_or_upload(
         &self,
         unit: &str,

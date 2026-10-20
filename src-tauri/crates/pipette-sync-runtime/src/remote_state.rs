@@ -33,21 +33,20 @@ pub struct RemoteMemory {
 }
 
 impl RemoteMemory {
-    /// `recordRemoteState`: marks `revision` as the one handled for
-    /// `name`. Other names are left alone, so a file nobody handled still
-    /// looks changed to the next poll.
+    /// Marks `revision` as the one handled for `name`. Other names are left
+    /// alone, so a file nobody handled still looks changed to the next poll.
     pub fn record(&self, name: &str, revision: RemoteRevision) {
         lock(&self.handled).insert(name.to_owned(), revision);
     }
 
-    /// `forgetRemoteState`: the next pass downloads `name` again even when
-    /// Drive has not changed it.
+    /// Forgets `name`: the next pass downloads it again even when Drive has
+    /// not changed it.
     pub fn forget(&self, name: &str) {
         lock(&self.handled).remove(name);
     }
 
-    /// `isKnownRemoteRevision`: whether the file `id` of `name` with
-    /// `modified_time` is the revision last handled.
+    /// Whether the file `id` of `name` with `modified_time` is the revision
+    /// last handled.
     pub fn is_known(&self, name: &str, id: &str, modified_time: &str) -> bool {
         lock(&self.handled)
             .get(name)

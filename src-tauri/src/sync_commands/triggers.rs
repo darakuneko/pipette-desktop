@@ -69,7 +69,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// `notifyChange`: records a change of `unit` and pushes the flush out.
+/// Records a change of `unit` and pushes the flush out.
 /// Before the triggers exist the change is only recorded; the launch
 /// schedules the flush of what is pending.
 pub fn notify_change<R: Runtime>(app: &AppHandle<R>, unit: &str) {

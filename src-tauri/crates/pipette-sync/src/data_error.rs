@@ -8,8 +8,7 @@ use crate::preflight::PreflightError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DataError {
-    /// `SyncCredentialError` in the `readiness` namespace: signed out or
-    /// without a sync password.
+    /// Signed out or without a sync password, in the `readiness` namespace.
     #[error("sync.readiness.{}", .0.as_str())]
     Readiness(SyncCredentialFailureReason),
     #[error(transparent)]

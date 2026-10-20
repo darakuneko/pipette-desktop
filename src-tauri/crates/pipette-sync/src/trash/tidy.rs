@@ -43,20 +43,19 @@ pub struct TidyContext<'a> {
     pub now_ms: i64,
 }
 
-/// Whether `name` is one of this machine's own typing days
-/// (`isOwnTypingDayName`). Such a day is never renamed back from trash: a
-/// day this machine deleted must stay deleted, and one it still has
-/// locally is uploaded again by the next sync anyway.
+/// Whether `name` is one of this machine's own typing days. Such a day is never
+/// renamed back from trash: a day this machine deleted must stay deleted, and
+/// one it still has locally is uploaded again by the next sync anyway.
 pub fn is_own_typing_day_name(name: &str, own_hash: &str) -> bool {
     sync_unit_from_file_name(name)
         .is_some_and(|unit| parse_device_day_unit(&unit).is_some_and(|day| day.machine_hash == own_hash))
 }
 
-/// Whether this machine tidies `name` (`nameScope`): `None` when it does
-/// not, otherwise whether `name` is one of its own typing days. Another
-/// machine's typing days are only tidied by that machine, and this
-/// machine's days are left to an analytics sync of their keyboard that
-/// runs, which uploads them with its own listing.
+/// Whether this machine tidies `name`: `None` when it does not, otherwise
+/// whether `name` is one of its own typing days. Another machine's typing days
+/// are only tidied by that machine, and this machine's days are left to an
+/// analytics sync of their keyboard that runs, which uploads them with its own
+/// listing.
 fn name_scope(name: &str, ctx: &TidyContext<'_>, runtime: &SyncRuntime) -> Option<bool> {
     let unit = sync_unit_from_file_name(name).filter(|_| is_data_file_name(name))?;
     if !unit.split('/').all(is_safe_path_segment)
@@ -88,9 +87,9 @@ pub struct Tidy<'a> {
 }
 
 impl Tidy<'_> {
-    /// `tidyDuplicateCopies`: tidies up to [`TRASH_NAMES_PER_PASS`] names
-    /// of `listing` and stops early once the app quits. A failed rename or
-    /// delete is logged and left to the next pass; nothing here fails.
+    /// Tidies up to [`TRASH_NAMES_PER_PASS`] names of `listing` and stops early
+    /// once the app quits. A failed rename or delete is logged and left to the
+    /// next pass; nothing here fails.
     pub async fn tidy_duplicate_copies(&self, listing: &Listing, ctx: &TidyContext<'_>) {
         let mut names: Vec<&str> = listing.duplicated_names();
         for name in listing.names_with_trash() {

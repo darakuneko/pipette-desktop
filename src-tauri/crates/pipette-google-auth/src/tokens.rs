@@ -2,7 +2,7 @@
 //! The stored Google tokens: the token file of the secret store, its cache
 //! in memory, the session [`Stamp`] and the queue every read, write and
 //! removal of the file goes through. The queue is a fair lock, so the file
-//! work runs one at a time in call order (`queueTokenFileWork`).
+//! work runs one at a time in call order.
 //!
 //! The session generation is two counters. The sign-outs asked for advance
 //! when a sign-out is asked for, so a write under way or queued by then fails.
@@ -113,8 +113,7 @@ impl TokenFile {
     }
 
     /// Stores the tokens of a refresh of tokens of `stamp`, unless a
-    /// sign-in or sign-out came since, checked before and after the write
-    /// (`storeTokens`).
+    /// sign-in or sign-out came since, checked before and after the write.
     pub(crate) async fn store_refresh(&self, tokens: StoredTokens, stamp: Stamp) -> Result<(), AuthError> {
         let _queue = self.queue.lock().await;
         if stamp != self.stamp() {
@@ -168,8 +167,8 @@ impl TokenFile {
         Ok(())
     }
 
-    /// The stored tokens with their stamp, from memory or the file
-    /// (`loadTokens`); `None` when there are none or they cannot be read.
+    /// The stored tokens with their stamp, from memory or the file; `None`
+    /// when there are none or they cannot be read.
     pub(crate) async fn load(&self) -> Option<Loaded> {
         let stamp = {
             let cache = self.cache();

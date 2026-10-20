@@ -76,7 +76,7 @@ impl From<DriveFailure> for PasswordChangeError {
 
 impl PasswordChangeError {
     /// The `reason` the renderer shows its own message for: the credential
-    /// failure of a `SyncCredentialError`.
+    /// failure of [`PreflightError::Credential`].
     pub fn reason(&self) -> Option<&'static str> {
         match self {
             Self::Preflight(PreflightError::Credential(reason)) => Some(reason.as_str()),

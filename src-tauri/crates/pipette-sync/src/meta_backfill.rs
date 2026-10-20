@@ -38,9 +38,8 @@ pub struct BackfillResult {
     pub failed: Vec<String>,
 }
 
-/// The device name in the snapshots bundle `file` on Drive
-/// (`resolveDeviceNameFromRemoteSnapshots`); `None` when it cannot be
-/// downloaded, opened with `password` or read, or names none.
+/// The device name in the snapshots bundle `file` on Drive; `None` when it
+/// cannot be downloaded, opened with `password` or read, or names none.
 async fn remote_device_name(
     drive: &DriveClient,
     file: &DriveFile,

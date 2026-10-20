@@ -18,7 +18,7 @@ impl State {
         self.owner.as_ref().is_some_and(|owner| owner.as_str() == Some(sub))
     }
 
-    /// `holdActiveFor`: moves the active units to the held set of `owner`.
+    /// Moves the active units to the held set of `owner`.
     fn hold_active_for(&mut self, owner: JsString) {
         let units: Vec<JsString> = self.units.drain(..).map(|(unit, _)| unit).collect();
         let held = self.held.entry(owner.clone()).or_default();
@@ -28,11 +28,11 @@ impl State {
         }
     }
 
-    /// `adoptFor`: makes `sub` the owner of the active units. Units of
-    /// another owner are held for it first, units held for `sub` become
-    /// active again with new generations, and units changed while signed
-    /// out go to `sub`. `None` (signed out, or an account whose tokens
-    /// carry no id) changes nothing. Whether anything changed.
+    /// Makes `sub` the owner of the active units. Units of another owner are
+    /// held for it first, units held for `sub` become active again with new
+    /// generations, and units changed while signed out go to `sub`. `None`
+    /// (signed out, or an account whose tokens carry no id) changes nothing.
+    /// Whether anything changed.
     fn adopt(&mut self, sub: Option<&str>) -> bool {
         let Some(sub) = sub else { return false };
         let held_for_sub = self.held.contains_key(sub);
@@ -55,7 +55,7 @@ impl State {
 }
 
 impl PendingStore {
-    /// The account the active units were changed under (`pendingOwner`).
+    /// The account the active units were changed under.
     pub fn owner(&self) -> Option<JsString> {
         lock(&self.shared.state).owner.clone()
     }
@@ -77,10 +77,10 @@ impl PendingStore {
         changed
     }
 
-    /// `markPendingFor`: marks `unit` pending for `owner`, the account a
-    /// pass ran as: held for it when another account has signed in since
-    /// the pass started. Not told to the listener while the unit stays
-    /// active; the pass tells it ([`Self::broadcast_status`]).
+    /// Marks `unit` pending for `owner`, the account a pass ran as: held for
+    /// it when another account has signed in since the pass started. Not
+    /// told to the listener while the unit stays active; the pass tells it
+    /// ([`Self::broadcast_status`]).
     pub fn mark_pending_for(&self, owner: Option<&str>, unit: &str) {
         let ticket = {
             let mut state = lock(&self.shared.state);
@@ -106,10 +106,9 @@ impl PendingStore {
     }
 
     /// Gives ownerless units to `sub`, the account still signed in, before
-    /// its tokens are replaced or removed (`claimOwnerlessForSignedInAccount`
-    /// once the signed-in account is known): with no pass since the launch
-    /// they were never handed over. Nothing changes while an owner is set
-    /// or for `None`.
+    /// its tokens are replaced or removed: with no pass since the launch they
+    /// were never handed over. Nothing changes while an owner is set or for
+    /// `None`.
     pub fn claim_ownerless_durably(&self, sub: Option<&str>) -> std::io::Result<()> {
         self.change_ownership_durably(|state| match sub {
             Some(sub) if state.owner.is_none() => {
@@ -120,8 +119,8 @@ impl PendingStore {
         })
     }
 
-    /// Hands the units to `sub`, the account a sign-in stores tokens for
-    /// (`adoptFor`), written before the tokens are.
+    /// Hands the units to `sub`, the account a sign-in stores tokens for,
+    /// written before the tokens are.
     pub fn adopt_durably(&self, sub: Option<&str>) -> std::io::Result<()> {
         self.change_ownership_durably(|state| state.adopt(sub))
     }
@@ -137,10 +136,10 @@ impl PendingStore {
         })
     }
 
-    /// `changeOwnershipDurably`: applies `change` (which returns whether it
-    /// changed anything) and writes the result. When the write fails, the
-    /// pending state is put back as it was and the error returned, so the
-    /// caller can stop before it switches tokens.
+    /// Applies `change` (which returns whether it changed anything) and writes
+    /// the result. When the write fails, the pending state is put back as it
+    /// was and the error returned, so the caller can stop before it switches
+    /// tokens.
     fn change_ownership_durably(&self, change: impl FnOnce(&mut State) -> bool) -> std::io::Result<()> {
         let changed = self.with_write_lock(|state| {
             let before = (state.owner.clone(), state.units.clone(), state.held.clone());

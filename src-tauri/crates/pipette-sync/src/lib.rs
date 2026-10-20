@@ -18,7 +18,7 @@
 //! - [`dispatch`]: the sync of one unit (its merge or upload) and the
 //!   Drive revisions it records, with the envelope of [`codec`];
 //! - [`scope`] and [`execute`]: the units a scope covers, and the full
-//!   pass of `executeSync`;
+//!   sync pass;
 //! - [`preflight`]: what every entry point runs before it touches data,
 //!   with its parts in [`format`] and [`format_status`] (the sync-format
 //!   marker and the status of the update banner) and [`password`] (the

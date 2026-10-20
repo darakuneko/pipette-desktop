@@ -141,18 +141,17 @@ impl PendingStore {
         self.broadcast_status();
     }
 
-    /// `markPending`: adds `unit` with a new generation; the ticket of the
-    /// write it needs, if any.
+    /// Adds `unit` with a new generation; the ticket of the write it needs,
+    /// if any.
     fn mark_pending(&self, state: &mut State, unit: JsString) -> Option<u64> {
         let added = state.mark(unit);
         // A unit already pending is on disk unless the last write failed.
         if self.shared.persist && (added || state.dirty) { state.reserve_write() } else { None }
     }
 
-    /// Tells the listener whether anything is pending now
-    /// (`broadcastPendingStatus`). A change, a cancel, putting units back
-    /// and a change of owner call it themselves; a settle does not, so a
-    /// pass calls it once after its settles.
+    /// Tells the listener whether anything is pending now. A change, a
+    /// cancel, putting units back and a change of owner call it themselves;
+    /// a settle does not, so a pass calls it once after its settles.
     pub fn broadcast_status(&self) {
         let _telling = lock(&self.shared.status);
         (self.shared.listener)(self.has_pending_changes());
@@ -226,9 +225,9 @@ impl PendingStore {
         change(&mut lock(&self.shared.state))
     }
 
-    /// Writes `content` now, in place of a write that is due
-    /// (`writePendingNow`); nothing when the file could not be read at
-    /// startup. Called by [`Self::with_write_lock`]'s `change`.
+    /// Writes `content` now, in place of a write that is due; nothing when the
+    /// file could not be read at startup. Called by [`Self::with_write_lock`]'s
+    /// `change`.
     fn write_locked(&self, state: &mut State, content: &str) -> std::io::Result<()> {
         if !self.shared.persist {
             return Ok(());
@@ -240,8 +239,8 @@ impl PendingStore {
         Ok(())
     }
 
-    /// `commitPendingState`: writes the state now (a failure is logged and
-    /// left to the next write) and tells the listener.
+    /// Writes the state now (a failure is logged and left to the next write)
+    /// and tells the listener.
     fn commit_state(&self) {
         self.persist_now();
         self.broadcast_status();

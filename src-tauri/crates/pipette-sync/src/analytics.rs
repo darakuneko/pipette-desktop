@@ -10,8 +10,8 @@
 //! deleted-ranges units it syncs go through the process's one
 //! [`UnitSync`], whose `sync:` and `upload:` locks serialize them with a
 //! pass that syncs the same unit. It never reconciles this device's days
-//! with Drive: that is the upload pass's (`executeSync`), which runs under
-//! the sync lock.
+//! with Drive: that is the upload pass's (in [`crate::execute`]), which
+//! runs under the sync lock.
 //!
 //! Its listing is name-filtered to the keyboard, so the guard's files (the
 //! password-change lock and the sync-format markers) and the

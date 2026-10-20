@@ -119,10 +119,9 @@ pub fn parse_pack_body_unit(unit: &str) -> Option<(&'static PackStore, &str)> {
     (!id.is_empty()).then_some((&I18N_PACKS, id))
 }
 
-/// Puts the pack roster units of `items` before the others
-/// (`settlePackIndexUnitsFirst`): a pass runs the first group to the end
-/// before it starts the second, so a body unit is applied against a roster
-/// already merged in the same pass.
+/// Puts the pack roster units of `items` before the others: a pass runs the
+/// first group to the end before it starts the second, so a body unit is
+/// applied against a roster already merged in the same pass.
 pub fn pack_index_units_first<T>(items: Vec<T>, unit_of: impl Fn(&T) -> &str) -> (Vec<T>, Vec<T>) {
     items.into_iter().partition(|item| pack_index_store(unit_of(item)).is_some())
 }

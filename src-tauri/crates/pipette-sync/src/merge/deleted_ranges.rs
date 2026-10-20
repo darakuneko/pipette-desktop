@@ -123,12 +123,12 @@ fn queue_own_apply(
     })
 }
 
-/// `queueOwnDeletedRangesApply`: queues the apply of this device's own
-/// deleted ranges of every keyboard, read from the local files (the ids
-/// already applied are skipped). Run at the end of each sync pass, so an
-/// apply that a reset skipped or that failed is tried again even when Drive
-/// has nothing new and no merge of the ranges unit runs. Not awaited by the
-/// pass, which holds a sync lock while the apply waits on the flush chain.
+/// Queues the apply of this device's own deleted ranges of every keyboard,
+/// read from the local files (the ids already applied are skipped). Run at
+/// the end of each sync pass, so an apply that a reset skipped or that
+/// failed is tried again even when Drive has nothing new and no merge of
+/// the ranges unit runs. Not awaited by the pass, which holds a sync lock
+/// while the apply waits on the flush chain.
 pub fn queue_own_deleted_ranges_apply(ops: Arc<DataOps>, holds: ResetHolds) -> JoinHandle<()> {
     tokio::spawn(async move { ops.apply_own_deleted_ranges_for_all_keyboards(holds).await })
 }

@@ -134,7 +134,7 @@ fn error_name(err: &MergeError) -> &'static str {
     }
 }
 
-/// The `errorName` recorded for a failed bundle: a bundle fails only on a file
+/// The error name recorded for a failed bundle: a bundle fails only on a file
 /// or store read, recorded as a plain `Error`.
 fn bundle_error_name(_: &BundleError) -> &'static str {
     "Error"

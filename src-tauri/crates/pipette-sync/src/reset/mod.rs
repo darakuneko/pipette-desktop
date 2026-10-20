@@ -39,25 +39,22 @@ pub const THEME_SYNC_UNIT_PREFIX: &str = "themes/";
 
 /// What a reset asks of the rest of the app.
 pub trait ResetHooks: Send + Sync {
-    /// `signOutKeepingPendingLocked`: signs out under the sync lock the
-    /// reset holds, holding the account's pending units for its next
-    /// sign-in. A failure keeps the sign-in.
+    /// Signs out under the sync lock the reset holds, holding the account's
+    /// pending units for its next sign-in. A failure keeps the sign-in.
     fn sign_out_keeping_pending_locked(&self) -> BoxFuture<'_, Result<(), String>>;
-    /// `stopPolling`.
+    /// Stops the polling.
     fn stop_polling(&self);
-    /// Puts the app config back to its defaults (`store.clear()`), and the
-    /// sync's auto sync with it.
+    /// Puts the app config back to its defaults, and the sync's auto sync
+    /// with it.
     fn clear_app_config(&self) -> Result<(), String>;
     /// Removes this userData's master key from the OS key store, once the
     /// files it opened are gone. Never fails: a key left behind opens
     /// nothing.
     fn forget_secret_key(&self) -> BoxFuture<'_, ()>;
-    /// The keyboards the typing-analytics cache has rows of
-    /// (`listTypingKeyboards`).
+    /// The keyboards the typing-analytics cache has rows of.
     fn typing_keyboards(&self) -> BoxFuture<'_, Result<Vec<String>, String>>;
-    /// `deleteAllTypingForKeyboard(uid, now, 'all')`: flushes and removes
-    /// this machine's day files of `uid` and hides every device's rows of
-    /// it in the cache, so Analyze stops showing the keyboard.
+    /// Flushes and removes this machine's day files of `uid` and hides every
+    /// device's rows of it in the cache, so Analyze stops showing the keyboard.
     fn delete_all_typing_for_keyboard<'a>(&'a self, uid: &'a str) -> BoxFuture<'a, Result<(), String>>;
 }
 
@@ -115,14 +112,14 @@ impl Resets {
         self.preflight.runtime().with_reset_lock(keyboards, busy, work).await?
     }
 
-    /// `cancelPendingChanges(prefixes, { writeAlways })`; `None` cancels
+    /// Cancels the pending units of `prefixes` (`PendingStore::cancel`); `None` cancels
     /// every unit.
     fn cancel(&self, prefixes: Option<&[String]>, write_always: bool) -> Result<(), DataError> {
         let prefixes: Option<Vec<&str>> = prefixes.map(|list| list.iter().map(String::as_str).collect());
         self.pending.cancel(prefixes.as_deref(), write_always).map_err(DataError::other)
     }
 
-    /// The `SYNC_DELETE_FILES` handler: deletes the Drive files of
+    /// The `sync_delete_files` command: deletes the Drive files of
     /// `file_ids` (only those ids, as listed on the screen), refused with
     /// `sync.deleteBusy` while a sync runs and by the sync guards.
     pub async fn delete_files(&self, file_ids: &[String]) -> Result<(), DataError> {
@@ -142,10 +139,10 @@ impl Resets {
         .await
     }
 
-    /// `deleteFilesByExactName`: every Drive copy of `name` and every trash
-    /// file of it, the reset of a unit with no subtree (a prefix would also
-    /// catch other names starting with it). The trash goes too, or the poll
-    /// would rename it back to the emptied name.
+    /// Deletes every Drive copy of `name` and every trash file of it, the reset
+    /// of a unit with no subtree (a prefix would also catch other names
+    /// starting with it). The trash goes too, or the poll would rename it back
+    /// to the emptied name.
     async fn delete_files_by_exact_name(&self, name: &str) -> Result<BulkOutcome, DataError> {
         let listing = Listing::new(self.drive().list_files(Some(name)).await.map_err(PreflightError::from)?);
         let ids: Vec<String> =
@@ -157,7 +154,7 @@ impl Resets {
         Ok(self.drive().delete_files_by_prefix(prefix).await.map_err(PreflightError::from)?)
     }
 
-    /// The `SYNC_RESET_TARGETS` handler: removes the chosen targets from
+    /// The `sync_reset_targets` command: removes the chosen targets from
     /// Drive, and the keyboard names of removed keyboards, so the other
     /// devices learn of it. Every target is attempted; those with a failed
     /// delete are named in the error.
@@ -243,7 +240,7 @@ impl Resets {
         .await
     }
 
-    /// `tombstoneKeyboardMeta(uid)`.
+    /// Deletes the keyboard name of `uid` ([`tombstone_keyboard_meta`]).
     async fn tombstone_keyboard(&self, uid: &str) -> Result<TombstoneOutcome, DataError> {
         let (ctx, uid) = (self.ctx.clone(), uid.to_owned());
         blocking(move || tombstone_keyboard_meta(&ctx, &uid).map_err(|err| err.to_string())).await

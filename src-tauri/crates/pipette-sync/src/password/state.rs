@@ -129,7 +129,7 @@ impl PasswordChangeState {
     }
 }
 
-/// `ChangeStateReadResult`.
+/// What a read of the change state found.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ChangeStateRead {
     None,
@@ -143,8 +143,8 @@ fn non_empty_string(value: Option<&Value>) -> Option<String> {
     value.and_then(Value::as_str).filter(|s| !s.is_empty()).map(str::to_owned)
 }
 
-/// `parseChangeState`: every field is checked strictly; keys that are not
-/// part of the state are dropped.
+/// Parses the state: every field is checked strictly; keys that are not part of
+/// the state are dropped.
 pub fn parse_change_state(value: &Value) -> Option<PasswordChangeState> {
     let object = value.as_object()?;
     if object.get("version").and_then(Value::as_f64) != Some(1.0) {
@@ -202,9 +202,8 @@ impl ChangeStateFile {
         ChangeStateRead::Invalid
     }
 
-    /// `readChangeState`: `None` when no change is in progress, `Invalid`
-    /// (with a warning) when the file is there but does not read as a
-    /// state.
+    /// Reads the state: `None` when no change is in progress, `Invalid` (with a
+    /// warning) when the file is there but does not read as a state.
     pub async fn read(&self) -> ChangeStateRead {
         let path = self.path.clone();
         let read = tokio::task::spawn_blocking(move || std::fs::read(path)).await;
@@ -227,9 +226,9 @@ impl ChangeStateFile {
         }
     }
 
-    /// `writeChangeState`: fails without touching the disk when `state`
-    /// would not pass the checks of a read. Creates `local/auth/` and
-    /// replaces the file atomically.
+    /// Writes the state; fails without touching the disk when `state` would not
+    /// pass the checks of a read. Creates `local/auth/` and replaces the file
+    /// atomically.
     pub async fn write(&self, state: &PasswordChangeState) -> Result<(), String> {
         if !state.is_valid() {
             return Err("Invalid sync password change state".to_owned());
@@ -246,7 +245,7 @@ impl ChangeStateFile {
         blocking_result(written)
     }
 
-    /// `clearChangeState`: removes the file; a missing one is not an error.
+    /// Removes the file; a missing one is not an error.
     pub async fn clear(&self) -> Result<(), String> {
         let _forget = ForgetOnDrop(self);
         let path = self.path.clone();
@@ -258,7 +257,7 @@ impl ChangeStateFile {
         blocking_result(removed)
     }
 
-    /// `hasChangeState`: whether the file is there, readable or not.
+    /// Whether the file is there, readable or not.
     pub async fn has(&self) -> bool {
         let generation = match self.cached() {
             Ok(present) => return present,
@@ -284,16 +283,16 @@ impl ChangeStateFile {
         }
     }
 
-    /// `forgetChangeStateCache`: whatever writes or removes the file (or
-    /// the whole `local/auth/`) without [`ChangeStateFile::write`] or
-    /// [`ChangeStateFile::clear`] calls this.
+    /// Forgets the cached answer of [`Self::has`]; whatever writes or removes
+    /// the file (or the whole `local/auth/`) without [`ChangeStateFile::write`]
+    /// or [`ChangeStateFile::clear`] calls this.
     pub fn forget_cache(&self) {
         let mut cache = self.cache();
         *cache = (None, cache.1 + 1);
     }
 }
 
-/// `PasswordChangeKeys`: both passwords, each non-empty.
+/// The keys of a password change: both passwords, each non-empty.
 pub struct ChangeKeys {
     pub old_password: Zeroizing<String>,
     pub new_password: Zeroizing<String>,
@@ -334,7 +333,7 @@ impl ChangeKeys {
         out
     }
 
-    /// `parseChangeKeys`: both fields non-empty strings.
+    /// Parses the keys: both fields non-empty strings.
     fn parse(text: &str) -> Option<Self> {
         let value: Value = serde_json::from_str(text).ok()?;
         let object = value.as_object()?;
@@ -343,7 +342,7 @@ impl ChangeKeys {
     }
 }
 
-/// `ChangeKeysFailureReason`: why the keys cannot be returned.
+/// Why the keys cannot be returned.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ChangeKeysFailure {
@@ -378,8 +377,8 @@ impl From<SecretFailure> for ChangeKeysFailure {
     }
 }
 
-/// `storeChangeKeys`: fails without touching the disk when either password
-/// is empty.
+/// Stores the change keys; fails without touching the disk when either
+/// password is empty.
 pub async fn store_change_keys(secrets: &SecretStore, keys: &ChangeKeys) -> Result<(), String> {
     if !keys.is_valid() {
         return Err("Invalid sync password change keys".to_owned());
@@ -388,13 +387,13 @@ pub async fn store_change_keys(secrets: &SecretStore, keys: &ChangeKeys) -> Resu
     secrets.store(SecretKind::SyncPasswordChangeKeys, json.as_bytes()).await.map_err(|err| err.to_string())
 }
 
-/// `retrieveChangeKeys`.
+/// Reads the change keys from the secret store.
 pub async fn retrieve_change_keys(secrets: &SecretStore) -> Result<ChangeKeys, ChangeKeysFailure> {
     let text = secrets.retrieve_string(SecretKind::SyncPasswordChangeKeys).await?;
     ChangeKeys::parse(&text).ok_or(ChangeKeysFailure::InvalidContent)
 }
 
-/// `clearChangeKeys`: a missing file is not an error.
+/// Removes the change keys; a missing file is not an error.
 pub async fn clear_change_keys(secrets: &SecretStore) -> Result<(), String> {
     secrets.clear(SecretKind::SyncPasswordChangeKeys).await.map_err(|err| err.to_string())
 }

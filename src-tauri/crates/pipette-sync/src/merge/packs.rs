@@ -15,15 +15,14 @@ use pipette_sync_format::drive_names::drive_file_name;
 use super::{MergeEnv, MergeError, PackKind, opt_prop, prop};
 use crate::units::pack_index_store;
 
-/// The pack rosters merged with Drive in this process
-/// (`syncedPackRosters`): a body unit whose meta is missing waits for its
-/// roster only while the roster has not been merged.
+/// The pack rosters merged with Drive in this process: a body unit whose meta
+/// is missing waits for its roster only while the roster has not been merged.
 #[derive(Debug, Default)]
 pub struct PackRosters(Mutex<HashSet<String>>);
 
 impl PackRosters {
-    /// Records that `unit`, when it is a roster, is in step with Drive
-    /// (`markPackRosterSynced`); called after a unit's merge or upload.
+    /// Records that `unit`, when it is a roster, is in step with Drive;
+    /// called after a unit's merge or upload.
     pub fn mark_synced(&self, unit: &str) {
         if pack_index_store(unit).is_some() {
             self.0.lock().unwrap_or_else(PoisonError::into_inner).insert(unit.to_owned());
@@ -39,11 +38,10 @@ fn kind_of(store: &PackStore) -> PackKind {
     if store.dir == "themes" { PackKind::Theme } else { PackKind::I18n }
 }
 
-/// Merges a remote roster (`mergePackIndexBundle`). A pack whose meta now
-/// shows a body this device does not hold gets its body unit's handled
-/// revision forgotten, so the next pass downloads that body even when
-/// Drive did not change it. A `metas` that is not an array at all is
-/// malformed rather than an empty roster.
+/// Merges a remote roster. A pack whose meta now shows a body this device does
+/// not hold gets its body unit's handled revision forgotten, so the next pass
+/// downloads that body even when Drive did not change it. A `metas` that is not
+/// an array at all is malformed rather than an empty roster.
 pub(super) fn merge_pack_index(
     env: &MergeEnv<'_>,
     store: &PackStore,
@@ -64,9 +62,8 @@ pub(super) fn merge_pack_index(
     Ok(result.remote_needs_update)
 }
 
-/// Merges a remote body (`mergePackBodyBundle`). A remote win writes the
-/// file and the meta's body group together and reports the roster unit,
-/// so Drive gets the new body fields too.
+/// Merges a remote body. A remote win writes the file and the meta's body group
+/// together and reports the roster unit, so Drive gets the new body fields too.
 pub(super) fn merge_pack_body(
     env: &MergeEnv<'_>,
     store: &PackStore,

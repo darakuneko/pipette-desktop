@@ -23,11 +23,12 @@ use serde_json::{Value, json};
 
 const FIXTURE: &str = include_str!("fixtures/ts_reset.json");
 
-/// The answer of a handler wrapped by `wrapIpc`.
+/// The answer of a handler as the recording has it: `success` with the
+/// payload, or `success: false` with the error.
 fn answer(result: Result<Value, DataError>) -> Value {
     match result {
         Ok(Value::Object(payload)) => {
-            // `success` first, as the wrapper spreads the payload after it.
+            // `success` first, the key order of the recorded answers.
             let mut ordered = serde_json::Map::new();
             ordered.insert("success".into(), true.into());
             ordered.extend(payload.into_iter().filter(|(key, _)| key != "success"));

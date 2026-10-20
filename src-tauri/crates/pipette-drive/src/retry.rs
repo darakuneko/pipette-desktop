@@ -35,7 +35,7 @@ pub type SleepFuture<'a> = Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
 
 /// What the retries read from the world.
 pub trait RetryEnv: Send + Sync {
-    /// Whether the app is quitting (`syncRuntime.isQuitting`).
+    /// Whether the app is quitting.
     fn is_quitting(&self) -> bool;
     /// `Date.now()`, for a `Retry-After` date.
     fn now_ms(&self) -> i64;
@@ -140,8 +140,8 @@ where
     run(env, policy, None, attempt).await
 }
 
-/// [`drive_request`] for an operation whose 404 the caller handles
-/// (`acceptStatus`): `Ok(None)` for a 404, which is never retried.
+/// [`drive_request`] for an operation whose 404 the caller handles:
+/// `Ok(None)` for a 404, which is never retried.
 pub async fn drive_request_or_not_found<T, F, Fut>(
     env: &dyn RetryEnv,
     policy: RetryPolicy,

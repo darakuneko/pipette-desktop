@@ -67,8 +67,8 @@ pub struct AnalyticsEnv<'a> {
     pub ctx: &'a StoreContext,
     /// The cache, the clock and this device's flush chain.
     pub ops: &'a Arc<DataOps>,
-    /// Whether a reset holds a keyboard (`resetHoldsKeyboard`): nothing of
-    /// this device's own ranges is applied to a keyboard a reset removes.
+    /// Whether a reset holds a keyboard: nothing of this device's own
+    /// ranges is applied to a keyboard a reset removes.
     pub holds: ResetHolds,
 }
 

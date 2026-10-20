@@ -83,7 +83,7 @@ pub enum SecretFailure {
 /// Why a secret was not stored.
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
-    /// The message of `storeSecretFile`.
+    /// The key store could not read or create the master key.
     #[error("OS keychain encryption is not available")]
     KeystoreUnavailable,
     #[error("{0}")]
@@ -169,7 +169,7 @@ impl SecretStore {
         }
     }
 
-    /// `local/auth/` (`getAuthDir`).
+    /// `local/auth/`.
     pub fn auth_dir(&self) -> &Path {
         &self.auth_dir
     }
@@ -185,7 +185,7 @@ impl SecretStore {
     }
 
     /// Encrypts `secret` and writes it as the `kind` file, creating
-    /// `local/auth/` and the master key when missing (`storeSecretFile`).
+    /// `local/auth/` and the master key when missing.
     pub async fn store(&self, kind: SecretKind, secret: &[u8]) -> Result<(), StoreError> {
         let key = self.key.read_or_create().await.map_err(|_| StoreError::KeystoreUnavailable)?;
         let sealed = seal_secret(&key, kind, self.key.account(), secret)?;
@@ -242,7 +242,7 @@ impl SecretStore {
         }
     }
 
-    /// Removes the `kind` file; a missing one is no error (`clearSecretFile`).
+    /// Removes the `kind` file; a missing one is no error.
     pub async fn clear(&self, kind: SecretKind) -> std::io::Result<()> {
         let path = self.path(kind);
         blocking(move || match std::fs::remove_file(&path) {

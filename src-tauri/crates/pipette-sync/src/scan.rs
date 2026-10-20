@@ -37,10 +37,9 @@ pub struct UndecryptableFile {
     pub sync_unit: Option<String>,
 }
 
-/// `fetchValidatedDataFiles`: the stored password and the data files of
-/// one listing, once the guard passed and the password opens the
-/// password-check (created when Drive has none). `None` without
-/// credentials.
+/// The stored password and the data files of one listing, once the guard passed
+/// and the password opens the password-check (created when Drive has none).
+/// `None` without credentials.
 pub async fn fetch_validated_data_files(
     preflight: &Arc<Preflight>,
 ) -> Result<Option<(Zeroizing<String>, Vec<DriveFile>)>, PreflightError> {
@@ -96,8 +95,7 @@ async fn find_undecryptable_files(
     found.into_iter().map(|(_, file)| file).collect()
 }
 
-/// `listUndecryptableFiles`: the data files the stored password does not
-/// open; empty without credentials.
+/// The data files the stored password does not open; empty without credentials.
 pub async fn list_undecryptable_files(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,
@@ -214,8 +212,8 @@ async fn local_keyboard_names(ctx: &StoreContext, uids: Vec<String>) -> Vec<(Str
     read.await.ok().flatten().unwrap_or_default()
 }
 
-/// `scanRemoteData`: what Drive holds and which of its files the stored
-/// password does not open; empty without credentials.
+/// What Drive holds and which of its files the stored password does not open;
+/// empty without credentials.
 pub async fn scan_remote_data(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,
@@ -230,9 +228,9 @@ pub async fn scan_remote_data(
     Ok(result)
 }
 
-/// `fetchRemoteBundle`: the plaintext of the chosen Drive copy of `unit`,
-/// JSON the renderer parses; `None` without credentials, without a copy,
-/// or when it cannot be downloaded, opened or parsed.
+/// The plaintext of the chosen Drive copy of `unit`, JSON the renderer parses;
+/// `None` without credentials, without a copy, or when it cannot be downloaded,
+/// opened or parsed.
 pub async fn fetch_remote_bundle(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,

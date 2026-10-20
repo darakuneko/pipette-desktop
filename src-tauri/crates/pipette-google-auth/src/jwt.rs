@@ -7,12 +7,12 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde_json::{Map, Value};
 
-/// How old an id_token may be for the Hub (`ID_TOKEN_MAX_AGE`), in
-/// seconds; the Hub allows 10 minutes.
+/// How old an id_token may be for the Hub, in seconds; the Hub allows
+/// 10 minutes.
 pub const ID_TOKEN_MAX_AGE_SECS: f64 = 300.0;
 
-/// The payload of `jwt` (`parseJwtPayload`): its second segment as base64url
-/// JSON, `None` when it is not an object.
+/// The payload of `jwt`: its second segment as base64url JSON, `None`
+/// when it is not an object.
 pub fn payload(jwt: &str) -> Option<Map<String, Value>> {
     let segment = jwt.split('.').nth(1)?;
     // Node's base64url decoder takes padding too.
@@ -23,8 +23,8 @@ pub fn payload(jwt: &str) -> Option<Map<String, Value>> {
     }
 }
 
-/// The `sub` of `id_token` (`accountSubOf`); `None` when there is no
-/// non-empty string `sub`.
+/// The `sub` of `id_token`; `None` when there is no non-empty string
+/// `sub`.
 pub fn account_sub(id_token: Option<&str>) -> Option<String> {
     let id_token = id_token.filter(|token| !token.is_empty())?;
     match payload(id_token)?.get("sub")? {
@@ -33,8 +33,8 @@ pub fn account_sub(id_token: Option<&str>) -> Option<String> {
     }
 }
 
-/// Whether `jwt` is expired at `now_ms` (`isJwtExpired`): also when it has
-/// no numeric `exp`.
+/// Whether `jwt` is expired at `now_ms`: also when it has no numeric
+/// `exp`.
 pub fn is_expired(jwt: &str, now_ms: i64) -> bool {
     match payload(jwt).and_then(|claims| claims.get("exp").and_then(Value::as_f64)) {
         Some(exp) => now_ms as f64 >= exp * 1000.0,
@@ -42,8 +42,8 @@ pub fn is_expired(jwt: &str, now_ms: i64) -> bool {
     }
 }
 
-/// Whether `jwt` was issued more than `max_age_secs` before `now_ms`
-/// (`isJwtStale`): also when it has no numeric `iat`.
+/// Whether `jwt` was issued more than `max_age_secs` before `now_ms`:
+/// also when it has no numeric `iat`.
 pub fn is_stale(jwt: &str, max_age_secs: f64, now_ms: i64) -> bool {
     match payload(jwt).and_then(|claims| claims.get("iat").and_then(Value::as_f64)) {
         Some(iat) => now_ms as f64 / 1000.0 - iat > max_age_secs,

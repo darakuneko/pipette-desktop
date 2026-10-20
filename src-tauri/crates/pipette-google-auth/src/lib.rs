@@ -28,7 +28,7 @@ pub const CLIENT_SECRET: &str = "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";
 /// The OAuth scopes the sign-in asks for.
 pub const SCOPE: &str = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 
-/// The variable of the Hub test account (`getHubTestAccount`).
+/// The variable of the Hub test account.
 pub const HUB_TEST_ACCOUNT_ENV: &str = "PIPETTE_HUB_TEST_ACCOUNT";
 
 /// Why a sign-in, a refresh or a token write failed.
@@ -93,7 +93,7 @@ pub trait TokenSwitch: Send + Sync {
     fn switch<'a>(&'a self, store: StoreTokens<'a>, new_account_sub: Option<String>) -> SwitchFuture<'a>;
 }
 
-/// Stores the tokens and nothing else (`switchDirectly`).
+/// Stores the tokens and nothing else.
 pub struct SwitchDirectly;
 
 impl TokenSwitch for SwitchDirectly {

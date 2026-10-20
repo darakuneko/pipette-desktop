@@ -53,10 +53,10 @@ pub async fn sync_password_status(
     Ok(stored_password_status(&sync.secrets).await)
 }
 
-/// Sets the first sync password (`setPasswordAndValidate`): stored once
-/// it opens the password-check on Drive, which is created (after the
-/// sync-format marker) when Drive has none. Once stored, the pending
-/// changes are scheduled and polling starts when auto sync is on.
+/// Sets the first sync password: stored once it opens the password-check
+/// on Drive, which is created (after the sync-format marker) when Drive
+/// has none. Once stored, the pending changes are scheduled and polling
+/// starts when auto sync is on.
 #[tauri::command]
 pub async fn sync_set_password(
     preflight: State<'_, Arc<Preflight>>,
@@ -71,10 +71,9 @@ pub async fn sync_set_password(
     Ok(result.into())
 }
 
-/// Replaces the stored password with one changed on another machine
-/// (`replacePasswordAndValidate`): stored only once it opens the
-/// password-check on Drive, then schedules the pending changes and starts
-/// polling as a set does.
+/// Replaces the stored password with one changed on another machine:
+/// stored only once it opens the password-check on Drive, then schedules
+/// the pending changes and starts polling as a set does.
 #[tauri::command]
 pub async fn sync_replace_password(
     preflight: State<'_, Arc<Preflight>>,
@@ -92,8 +91,8 @@ pub async fn sync_replace_password(
     Ok(result.into())
 }
 
-/// Whether Drive has a password-check (`checkPasswordCheckExists`); a
-/// Drive failure is the command's error.
+/// Whether Drive has a password-check; a Drive failure is the command's
+/// error.
 #[tauri::command]
 pub async fn sync_check_password_exists(preflight: State<'_, Arc<Preflight>>) -> Result<bool, CommandError> {
     Ok(preflight.password_check_exists().await?)

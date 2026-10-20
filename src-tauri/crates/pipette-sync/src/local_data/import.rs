@@ -88,7 +88,7 @@ fn lossy(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// `isRecord`: an object that is not an array.
+/// `value` when it is an object that is not an array.
 fn as_record(value: Option<&Value>) -> Option<&Object> {
     match value {
         Some(Value::Object(object)) => Some(object),
@@ -144,8 +144,8 @@ fn spread(value: &Value) -> Object {
     }
 }
 
-/// The local index of a store directory for the plan (`readIndexStrict`):
-/// its bytes and parsed value, `None` when it does not exist.
+/// The local index of a store directory for the plan: its bytes and parsed
+/// value, `None` when it does not exist.
 fn read_index_strict(path: &Path) -> Result<Option<(Vec<u8>, Value)>> {
     let bytes = match read_existing(path) {
         Ok(Some(bytes)) => bytes,
@@ -339,8 +339,9 @@ fn bundles<'a>(data: &'a Object, category: &str) -> Vec<(&'a str, &'a Value)> {
         .unwrap_or_default()
 }
 
-/// The store lock keys of the units the file touches (`storeLockKey` of
-/// the units: the uid for a keyboard's units, `favorites/{type}`).
+/// The store lock keys of the units the file touches
+/// ([`crate::units::store_lock_key`] of the units: the uid for a
+/// keyboard's units, `favorites/{type}`).
 fn lock_keys(data: &Object) -> Vec<String> {
     let uids =
         ["snapshots", "settings"].into_iter().flat_map(|c| bundles(data, c)).map(|(uid, _)| uid.to_owned());

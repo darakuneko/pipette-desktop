@@ -116,8 +116,8 @@ impl PasswordChange {
         self.preflight.change_state.write(state).await.map_err(other)
     }
 
-    /// `clearLocalChange`: removes the local keys and state file, and what
-    /// this run remembered about the change. Drive is not touched.
+    /// Removes the local keys and state file, and what this run remembered
+    /// about the change. Drive is not touched.
     pub(crate) async fn clear_local_change(&self) -> Result<(), PasswordChangeError> {
         clear_change_keys(&self.secrets).await.map_err(other)?;
         self.preflight.change_state.clear().await.map_err(other)?;
@@ -159,7 +159,7 @@ impl PasswordChange {
         Some((plaintext, envelope.sync_unit))
     }
 
-    /// `fileOpensWith`: whether `password` opens the downloaded `file`.
+    /// Whether `password` opens the downloaded `file`.
     pub(crate) async fn file_opens_with(
         &self,
         file: &DriveFile,
@@ -169,10 +169,10 @@ impl PasswordChange {
         Ok(self.open_envelope(&raw, password).await.is_some())
     }
 
-    /// `readFileKeyState`: downloads `file` and reports which key opens it.
-    /// A failed download fails; only a failed open is `Neither`.
-    /// `other_first` tries the other key first: each wrong try costs a key
-    /// derivation, so the likelier key goes first.
+    /// Downloads `file` and reports which key opens it. A failed download
+    /// fails; only a failed open is `Neither`. `other_first` tries the other
+    /// key first: each wrong try costs a key derivation, so the likelier key
+    /// goes first.
     pub(crate) async fn read_file_key_state(
         &self,
         file: &DriveFile,
@@ -391,7 +391,7 @@ impl PasswordChange {
         Ok(())
     }
 
-    /// `cleanupChange`: releases our lock, then forgets the change.
+    /// Releases our lock, then forgets the change.
     pub(crate) async fn cleanup_change(
         &self,
         state: &PasswordChangeState,
@@ -402,11 +402,11 @@ impl PasswordChange {
         self.clear_local_change().await
     }
 
-    /// `runPasswordSwitch`: runs the remaining steps from `initial.step`,
-    /// whose lock the caller holds. A failure before `committing` leaves
-    /// the state at `reencrypting` for a resume or revert. `committing`
-    /// runs the passes again first, so every data file is confirmed on the
-    /// target key (and the lock held) before the password-check moves.
+    /// Runs the remaining steps from `initial.step`, whose lock the caller
+    /// holds. A failure before `committing` leaves the state at `reencrypting`
+    /// for a resume or revert. `committing` runs the passes again first, so
+    /// every data file is confirmed on the target key (and the lock held)
+    /// before the password-check moves.
     pub(crate) async fn run_password_switch(
         &self,
         initial: PasswordChangeState,

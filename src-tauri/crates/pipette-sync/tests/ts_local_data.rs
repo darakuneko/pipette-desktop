@@ -75,8 +75,7 @@ fn exports_match_the_recorded_golden() {
     }
 }
 
-/// The kind the generator gives a failure (`errorOf`) and whether its text
-/// is compared.
+/// The kind the generator gives a failure and whether its text is compared.
 fn kind_of(err: &LocalDataImportError) -> (&'static str, bool) {
     match err {
         LocalDataImportError::InvalidFormat => ("format", true),
