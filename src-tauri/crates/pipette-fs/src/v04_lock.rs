@@ -311,6 +311,7 @@ mod tests {
     /// This test binary started under the executable name `name`, from a
     /// copy in `dir`, running only [`sleep_helper`] (a system `sleep` can be
     /// one binary for many programs that refuses to run under another name).
+    /// Returns once the process reports `name` as its executable.
     fn sleeper(dir: &Path, name: &str) -> Child {
         let exe: PathBuf = dir.join(name);
         std::fs::copy(std::env::current_exe().unwrap(), &exe).unwrap();
@@ -322,10 +323,31 @@ mod tests {
                 Err(err) if err.raw_os_error() == Some(26) => {
                     std::thread::sleep(std::time::Duration::from_millis(20))
                 }
-                spawned => return spawned.unwrap(),
+                spawned => return running_as(spawned.unwrap(), name),
             }
         }
         panic!("{} stayed busy", exe.display());
+    }
+
+    /// Waits until `child` reports `name` as its executable. On Linux the
+    /// spawn can return while the child is still inside `execve`: glibc's
+    /// `posix_spawn` resumes the parent when the child releases the parent's
+    /// memory, before the kernel installs the new image, so `/proc/<pid>/exe`
+    /// and `comm` can still name this test binary for a moment.
+    fn running_as(mut child: Child, name: &str) -> Child {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        loop {
+            let seen = executable_name(child.id());
+            if seen.as_deref() == Some(name) {
+                return child;
+            }
+            if std::time::Instant::now() >= deadline {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("process {} never ran as {name}; its executable is {seen:?}", child.id());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
     }
 
     /// The process [`sleeper`] starts.
