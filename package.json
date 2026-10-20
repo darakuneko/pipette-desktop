@@ -1,106 +1,48 @@
 {
   "name": "pipette-desktop",
   "version": "0.5.0-beta.3",
-  "description": "Pipette — Vial-compatible keyboard configurator built with Electron and TypeScript",
+  "description": "Pipette — Vial-compatible keyboard configurator built with Tauri and TypeScript",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "author": "darakuneko <tvkids@gmail.com>",
   "homepage": "https://github.com/darakuneko/pipette-desktop",
   "packageManager": "pnpm@12.8.2+sha512.a5941679663d952c5f0ecc38ba98af98b4dc01b95780354f6894f2f873973cef2f7e2989d7db3ee5393938ae21f62fe06bcdf685d475ddad829a62095d2b8b11",
-  "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
-    "dev:linux": "electron-vite dev --noSandbox",
-    "typecheck": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && tsc -p tsconfig.scripts.json && tsc -p e2e-tauri/tsconfig.json",
-    "build": "rm -rf out && electron-vite build",
-    "build:win": "if exist out (rd /s /q \"out\") && electron-vite build",
-    "dist": "rm -rf out dist && electron-vite build && electron-builder",
-    "dist:linux": "rm -rf out dist && electron-vite build && electron-builder --linux && bash scripts/repack-appimage.sh",
-    "dist:win": "if exist out (rd /s /q \"out\") && if exist dist (rd /s /q \"dist\") && electron-vite build && electron-builder --win",
-    "dist:mac": "rm -rf out dist && electron-vite build && electron-builder --mac",
-    "preview": "electron-vite preview",
-    "postinstall": "electron-rebuild -f -w better-sqlite3,node-hid,@paymoapp/active-window",
-    "rebuild": "electron-rebuild -f -w better-sqlite3,node-hid,@paymoapp/active-window",
+    "dev": "tauri dev --features dev-tools",
+    "typecheck": "tsc -p tsconfig.renderer.json && tsc -p tsconfig.scripts.json && tsc -p e2e-tauri/tsconfig.json",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug --no-bundle --features dev-tools",
     "lint": "eslint src/ scripts/ e2e-tauri/",
     "lint:tdz": "npx tsx scripts/check-hook-deps-tdz.ts",
     "format": "prettier --write src/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:dev": "E2E_MODE=dev playwright test",
-    "test:e2e:tauri": "wdio run e2e-tauri/wdio.conf.ts",
+    "test:e2e": "wdio run e2e-tauri/wdio.conf.ts",
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
     "generate:tray-template-icon": "tsx scripts/generate-tray-template-icon.ts",
-    "generate:virtual-device-fixtures": "vitest run --config scripts/virtual-device-fixtures/vitest.config.ts",
-    "generate:sync-format-fixtures": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts record-sync-format-fixtures",
-    "generate:definition-fixtures": "vitest run --config scripts/definition-fixtures/vitest.config.ts",
-    "generate:fs-logger-fixtures": "vitest run --config scripts/fs-logger-fixtures/vitest.config.ts",
-    "generate:js-json-fixtures": "vitest run --config scripts/js-json-fixtures/vitest.config.ts",
-    "generate:app-config-fixtures": "vitest run --config scripts/app-config-fixtures/vitest.config.ts",
-    "generate:entry-store-fixtures": "vitest run --config scripts/entry-store-fixtures/vitest.config.ts",
-    "generate:sync-pending-fixtures": "vitest run --config scripts/sync-pending-fixtures/vitest.config.ts",
-    "generate:keyboard-store-fixtures": "vitest run --config scripts/keyboard-store-fixtures/vitest.config.ts record-",
-    "generate:pack-store-fixtures": "vitest run --config scripts/pack-store-fixtures/vitest.config.ts record-",
-    "verify:keyboard-store-rust-user-data": "vitest run --config scripts/keyboard-store-fixtures/vitest.config.ts verify-rust-stores",
-    "verify:typing-dataset-rust-user-data": "vitest run --config scripts/typing-dataset-fixtures/vitest.config.ts verify-rust-stores",
-    "verify:analytics-rust-user-data": "vitest run --config scripts/analytics-db-fixtures/verify-rust-analytics.config.ts",
-    "verify:pack-store-rust-user-data": "vitest run --config scripts/pack-store-fixtures/vitest.config.ts verify-rust-stores",
-    "verify:hub-rust-user-data": "vitest run --config scripts/hub-fixtures/vitest.config.ts verify-rust",
-    "test:hub-peer": "vitest run --config scripts/hub-peer/vitest.config.ts --disableConsoleIntercept && ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/hub-peer/analytics.config.ts --disableConsoleIntercept",
-    "generate:hid-fixtures": "vitest run --config scripts/hid-fixtures/vitest.config.ts",
-    "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts record- && tsx scripts/analytics-db-fixtures/run-time-zones.ts",
-    "generate:node-identity": "tsx scripts/analytics-db-fixtures/record-node-identity.ts",
-    "generate:typing-text-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/typing-text-fixtures/vitest.config.ts",
-    "generate:active-window-fixtures": "vitest run --config scripts/active-window-fixtures/vitest.config.ts",
-    "generate:typing-dataset-fixtures": "vitest run --config scripts/typing-dataset-fixtures/vitest.config.ts record-",
+    "generate:node-identity": "tsx scripts/node-identity/record-node-identity.ts",
     "test:fake-drive": "vitest run --config scripts/fake-drive/vitest.config.ts",
     "test:fake-hub": "vitest run --config scripts/fake-hub/vitest.config.ts",
     "test:fake-notification": "vitest run --config scripts/fake-notification/vitest.config.ts",
     "test:fake-update": "vitest run --config scripts/fake-update/vitest.config.ts",
     "test:update-manifest": "vitest run --config scripts/update-manifest/vitest.config.ts",
-    "generate:sync-auth-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-secrets-auth",
-    "generate:drive-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-drive",
-    "generate:sync-fixtures": "vitest run --config scripts/sync-fixtures/vitest.config.ts record-",
-    "test:sync-fixtures-harness": "vitest run --config scripts/sync-fixtures/vitest.config.ts harness",
-    "generate:hub-fixtures": "vitest run --config scripts/hub-fixtures/vitest.config.ts record- && ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/hub-fixtures/analytics-export/vitest.config.ts",
-    "test:hub-fixtures-harness": "vitest run --config scripts/hub-fixtures/vitest.config.ts harness",
-    "generate:resident-fixtures": "vitest run --config scripts/resident-fixtures/vitest.config.ts",
-    "test:resident-fixtures-harness": "vitest run --config scripts/resident-fixtures/vitest.config.ts harness",
-    "test:sync-interop": "vitest run --config scripts/sync-interop/vitest.config.ts",
-    "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "wdio run e2e-tauri/doc-capture/wdio.conf.ts",
-    "doc:guide": "node docs/build-guide.mjs",
-    "tauri:dev": "tauri dev --features dev-tools",
-    "tauri:build": "tauri build",
-    "tauri:build:debug": "tauri build --debug --no-bundle --features dev-tools"
+    "doc:guide": "node docs/build-guide.mjs"
   },
   "dependencies": {
-    "@paymoapp/active-window": "^2.1.4",
     "@zxcvbn-ts/core": "^4.1.2",
     "@zxcvbn-ts/language-common": "^4.1.3",
-    "@zxcvbn-ts/language-en": "^4.1.1",
-    "better-sqlite3": "^13.0.3",
-    "electron-store": "^11.0.2",
-    "fflate": "^0.8.3",
-    "lzma": "^2.3.2",
-    "node-hid": "^3.4.0",
-    "node-machine-id": "^1.1.12",
-    "xz-decompress": "^0.2.3"
+    "@zxcvbn-ts/language-en": "^4.1.1"
   },
   "devDependencies": {
-    "@electron/rebuild": "4.2.0",
-    "@playwright/mcp": "0.0.78",
-    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "2.12.1",
     "@tauri-apps/cli": "2.12.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "@types/sql.js": "^1.4.11",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
     "@vitejs/plugin-react": "^5.2.0",
@@ -111,15 +53,13 @@
     "@wdio/spec-reporter": "9.32.0",
     "@wdio/types": "9.32.0",
     "date-fns": "^4.4.0",
-    "electron": "^44.3.0",
-    "electron-builder": "^26.16.1",
-    "electron-vite": "^5.0.0",
     "eslint": "^10.8.0",
     "i18next": "^26.3.6",
     "jsdom": "^30.0.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.28.0",
     "mermaid": "11.17.2",
+    "node-machine-id": "^1.1.12",
     "pdfjs-dist": "^6.2.108",
     "prettier": "^3.9.6",
     "react": "^19.2.8",
@@ -127,77 +67,10 @@
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",
     "recharts": "^3.10.1",
-    "sql.js": "^1.14.1",
     "tailwindcss": "^4.3.3",
     "tsx": "4.23.15",
     "typescript": "^6.0.3",
     "vite": "^7.3.1",
     "vitest": "^4.1.10"
-  },
-  "build": {
-    "appId": "app.pipette.desktop",
-    "productName": "Pipette",
-    "npmRebuild": false,
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "out/**/*",
-      "package.json",
-      "build/icon.png"
-    ],
-    "artifactName": "${productName}-${os}-${arch}.${ext}",
-    "generateUpdatesFilesForAllChannels": false,
-    "linux": {
-      "target": [
-        "AppImage"
-      ],
-      "category": "Utility",
-      "icon": "build/icon.png",
-      "extraResources": [
-        {
-          "from": "scripts/99-vial.rules",
-          "to": "udev/99-vial.rules"
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "build/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "license": "LICENSE",
-      "differentialPackage": false
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "icon": "build/icon.icns",
-      "category": "public.app-category.utilities",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": true
-    },
-    "dmg": {
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    }
   }
 }
