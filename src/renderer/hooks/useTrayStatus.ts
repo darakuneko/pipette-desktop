@@ -20,7 +20,7 @@ export interface TrayStatusInput {
 
 /**
  * Forwards the connected keyboard's name and REC keystroke count to the
- * main-process tray (see src/main/app-behavior.ts). Identity/recording
+ * tray (src-tauri/src/tray.rs). Identity/recording
  * edges (keyboard connect/disconnect, REC toggle) are sent immediately so
  * the tray feels responsive; count-only movement is throttled to at most
  * one send per second (trailing, so the final value always lands) since

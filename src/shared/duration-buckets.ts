@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Keypress-duration histogram grid, shared between the main-process
-// bucketizer (bigram-bucket.ts) and every renderer surface that needs
+// Keypress-duration histogram grid of the backend's bucketizer
+// (src-tauri/crates/pipette-typing-analytics/src/bigram_bucket.rs, which
+// holds the same values) and of every renderer surface that needs
 // to label or re-derive stats from the same buckets (Analyze's
 // duration distribution chart, the Heatmap duration mode, and their
 // CSV exports) — one array pair so none of those can drift from the
@@ -8,7 +9,7 @@
 
 /** Exclusive upper bounds of each keypress-duration histogram bucket, in
  * ms. Deliberately a much tighter grid than the bigram IKI grid
- * (bigram-bucket.ts's BIGRAM_BUCKET_UPPER_BOUNDS_MS): the CHI 2018
+ * (BIGRAM_BUCKET_UPPER_BOUNDS_MS of bigram_bucket.rs): the CHI 2018
  * typing-behaviour literature this project's benchmarks are modeled on
  * (see `typing-benchmarks.ts`) puts typical keypress durations in the
  * 80-150 ms range — an order of magnitude narrower than inter-key

@@ -52,9 +52,9 @@ export function useLanguagePackList({
 
   // Built-in English's row shape is always this — hardcoded rather than
   // read from the store meta, since the meta's own name/version/body is
-  // just a trivial placeholder (see `ensureBuiltinEnglishEntry`'s doc in
-  // main/i18n-pack-store.ts). Only `packId` varies: the real store id
-  // once `ensureBuiltinEnglishEntry` has run (normal case), or `null`
+  // just a trivial placeholder (see `ensure_builtin_english` in
+  // src-tauri/crates/pipette-pack-stores/src/i18n.rs). Only `packId` varies:
+  // the real store id once the store has created the entry (normal case), or `null`
   // during the brief pre-load window before `store.metas` has arrived —
   // `null` also intentionally covers older/mocked stores in tests that
   // don't include the entry, so this row's appearance never depends on

@@ -66,8 +66,9 @@ function effectiveWeakSpotSettings(config: TypingTestConfig): TypingTestResult['
  *  `< persistedWordCount`. A line break describes where a line ENDS
  *  before ANOTHER FOLLOWS — the run's own last persisted word can never
  *  be one, mirroring `parseFileImportText`'s own terminal-break removal
- *  (typing-test-text-store.ts) and `isValidLineBreaks`'s matching bound
- *  (typing-run-log-store.ts):
+ *  (typing-test-text-store.ts) and the run log store's matching bound
+ *  (`is_valid_line_breaks` in
+ *  src-tauri/crates/pipette-keyboard-stores/src/run_logs/validate.rs):
  *   1. `hasRealLineStructure(config.mode)` — REAL line breaks
  *      (tatoeba/fileImport text, `state.lineBreaks`). Always used for
  *      these modes, persisted EVEN WHEN EMPTY (a genuinely single-line

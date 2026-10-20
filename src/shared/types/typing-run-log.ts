@@ -143,7 +143,8 @@ export interface RunKeystrokeLog {
    *  STRICTLY less than `words.length - 1` — a line break describes
    *  where a line ENDS before ANOTHER FOLLOWS, so the last word in
    *  `words` (which has nothing after it) can never be one; see
-   *  `isValidLineBreaks` (typing-run-log-store.ts) for the enforced
+   *  `is_valid_line_breaks`
+   *  (src-tauri/crates/pipette-keyboard-stores/src/run_logs/validate.rs) for the enforced
    *  bound and `parseFileImportText`'s matching terminal-break removal
    *  (typing-test-text-store.ts). FIELD PRESENCE (not emptiness)
    *  selects rendering mode: `[]` legitimately means "the run was one
@@ -164,7 +165,8 @@ export interface RunKeystrokeLog {
 /** Index entry — deliberately `id` (not `runId`) to mirror every other
  *  index-based store's meta shape (`AnalyzeFilterSnapshotMeta`,
  *  `KeyLabelMeta`, ...) so this store's index merges through the generic
- *  `mergeEntries` in `sync/entry-merge.ts`, which keys strictly on `.id`
+ *  `merge_entries` (src-tauri/crates/pipette-entry-store/src/merge.rs),
+ *  which keys strictly on `.id`
  *  (run logs additionally pass `runLogRetentionMax`). `id` holds the same
  *  value as the matching `RunKeystrokeLog.runId`. */
 export interface RunLogMeta {
@@ -195,8 +197,8 @@ export const MAX_RUN_LOG_EVENTS = 10_000
  *  main-process side (defense in depth) before a save is accepted. */
 export const MAX_RUN_LOG_BYTES = 1_000_000
 
-/** Retention: newest N runs kept per keyboard (see `applyRunLogRetention`
- *  in sync/entry-merge.ts). Ranked by immutable `startedAt` (runId as
+/** Retention: newest N runs kept per keyboard (see
+ *  src-tauri/crates/pipette-entry-store/src/retention.rs). Ranked by immutable `startedAt` (runId as
  *  tiebreaker) so every device converges on the same 50 after a merge,
  *  rather than LWW resurrecting an evicted entry. */
 export const MAX_RUN_LOGS_PER_KEYBOARD = 50

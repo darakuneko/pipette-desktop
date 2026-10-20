@@ -118,7 +118,7 @@ export interface AppConfig {
   /** The version the user chose to skip in the update modal ("Skip this
    * version"), as the manifest names it. The startup check does not offer
    * exactly that version again; a newer one is offered. Per machine, not
-   * synced. The Tauri build only: the Electron build has no updater. */
+   * synced. */
   updateSkippedVersion?: string | null
 }
 

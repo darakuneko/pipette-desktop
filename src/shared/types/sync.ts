@@ -203,12 +203,12 @@ export type SyncCredentialFailureReason =
   | 'unauthenticated'         // Google sign-in incomplete / token revoked
   | 'noPasswordFile'          // sync-password.enc has never been written
   | 'decryptFailed'           // file exists but the OS keychain refuses it
-  | 'keystoreUnavailable'     // safeStorage.isEncryptionAvailable() === false
+  | 'keystoreUnavailable'     // the OS keystore cannot be used
   | 'remoteCheckFailed'       // can't reach the remote password-check (network / drive)
 
 /** What the stored sync password file is, without the password: `readable`
- *  when it decrypts, otherwise the local reason `retrievePasswordResult`
- *  (sync-crypto.ts) gives. */
+ *  when it decrypts, otherwise the local reason the backend gives
+ *  (src-tauri/crates/pipette-sync/src/preflight.rs). */
 export type StoredPasswordStatus =
   | 'readable'
   | Extract<SyncCredentialFailureReason, 'noPasswordFile' | 'decryptFailed' | 'keystoreUnavailable'>
@@ -252,7 +252,7 @@ export function syncBlockI18nKey(reason: SyncBlockReason): string {
 }
 
 /** Drive's sync-format markers compared with this app's
- *  `SYNC_FORMAT_VERSION` (sync-format.ts). */
+ *  `SYNC_FORMAT_VERSION` (src-tauri/crates/pipette-sync/src/format.rs). */
 export interface SyncFormatStatus {
   /** Largest marker version on Drive; null when Drive has none. */
   required: number | null

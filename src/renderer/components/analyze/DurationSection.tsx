@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Analyze > Interval > Keypress duration — Pipette-only metric derived
-// from matrix-release duration capture (see
-// bigram-bucket.ts's DURATION_BUCKET_* grid, now shared via
-// shared/duration-buckets.ts). One of the three panes AnalyzePane's
+// from matrix-release duration capture (see the DURATION_BUCKET_* grid
+// of shared/duration-buckets.ts). One of the three panes AnalyzePane's
 // "Section" filter-row select picks between (see `DistributionSection`
 // in shared/types/analyze-filters.ts), only in `distribution` mode —
 // the tighter duration grid pairs with a histogram, not a time series,

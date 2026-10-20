@@ -15,8 +15,8 @@ interface Options {
   /** `vialProtocol` passed through `isValidHubVialProtocol` with a
    *  fallback for the not-yet-connected sentinel (computed in
    *  useHubState.ts) — never the raw `vialProtocol` value. `-1` is that
-   *  sentinel, and hub-ipc-favorite.ts's own `isValidHubVialProtocol`
-   *  guard rejects it outright. */
+   *  sentinel, and the `isValidHubVialProtocol` guard of
+   *  src/tauri-shim/api/hub-favorite.ts rejects it outright. */
   favVialProtocol: number
   markAccountDeactivated: () => void
   hubReady: boolean

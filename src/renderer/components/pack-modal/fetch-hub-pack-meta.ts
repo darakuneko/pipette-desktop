@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Renderer-side counterpart to `enrichHubPackMeta` in `hub-ipc.ts`.
+// Renderer-side counterpart to the uploader and Hub time lookup of
+// src-tauri/crates/pipette-hub/src/packs.rs.
 // Language/Theme Pack downloads and syncs only return the pack body —
 // no `uploaderName`/`updatedAt` — so this re-uses the already-exposed
 // Hub list IPC (`hubListI18nPosts` / `hubListThemePosts`) with its

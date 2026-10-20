@@ -218,8 +218,9 @@ export function useInputModes({
   // can run this cleanup once against a session that never actually
   // recorded anything (the replay happens before any real HID poll frame
   // lands). That is harmless, not merely low-impact: flushAfterPendingEmits
-  // ends up calling closeSessionsForUid(uid) in main
-  // (typing-analytics-pipeline.ts), which returns immediately when the
+  // ends up closing the uid's sessions in the backend
+  // (src-tauri/crates/pipette-typing-analytics/src/pipeline/mod.rs), which
+  // returns immediately when the
   // session detector has no open session for that uid — no state is
   // touched and no IPC-visible side effect occurs, so a redundant call
   // from the replay is a genuine no-op rather than merely a safe one. This

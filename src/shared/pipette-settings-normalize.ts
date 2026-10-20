@@ -4,8 +4,7 @@
 // reads or writes one: which files are valid, which fields a read keeps and
 // in what order, how a patch merges into the stored settings, what a new
 // file starts from, and the text a write stores. The file I/O stays with
-// the caller (src/main/pipette-settings-store.ts, and the Tauri shim's
-// src/tauri-shim/api/settings.ts).
+// the caller (src/tauri-shim/api/settings.ts).
 
 import type { AppConfig } from './types/app-config'
 import type { PipetteSettings, PipetteSettingsPatch, ViewMode } from './types/pipette-settings'

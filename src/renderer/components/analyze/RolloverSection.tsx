@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Analyze > Interval > Observed rollover rate — Pipette-only metric
-// derived from bigram physical-overlap sampling (see
-// bigram-aggregate.ts's `observedRolloverRatio` for the "observed, not
-// true" framing this section must never drop). Mounted below
+// derived from bigram physical-overlap sampling (see the observed rollover
+// ratio of src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs
+// for the "observed, not true" framing this section must never drop). Mounted below
 // IntervalChart, only in timeSeries mode — the same gate AnalyzePane
 // already applies to the benchmark toggle for that chart.
 //

@@ -1407,9 +1407,10 @@ describe.each(hubPackBackends(vialAPI))('LanguagePacksModal ($name)', ({ install
   })
 
   // --- Built-in English as a real, orderable store entry -------------------
-  // (ensureBuiltinEnglishEntry materializes id 'builtin-english'; see
-  // main/i18n-pack-store.ts. These mock it directly in `storeMetas` the
-  // way the real main-side store always does once ensured.)
+  // (the store materializes id 'builtin-english'; see
+  // `ensure_builtin_english` in src-tauri/crates/pipette-pack-stores/src/i18n.rs.
+  // These mock it directly in `storeMetas` the way the real store always
+  // does once ensured.)
 
   it('shows a drag grip and is draggable once built-in English is a real store entry', () => {
     storeMetas = [meta({ id: 'builtin-english', name: 'English' }), meta({ id: 'p1', name: 'Japanese' })]

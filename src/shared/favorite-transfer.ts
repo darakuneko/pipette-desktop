@@ -4,8 +4,7 @@
 // and numbers again on import, at the file's Vial protocol. Everything
 // here reads the module-global keycode tables of
 // src/shared/keycodes/keycodes.ts, so it must run where those tables are
-// the defaults: the Electron main process (src/main/favorite-store.ts),
-// or the Tauri build's worker
+// the defaults: the favorite transfer worker
 // (src/tauri-shim/workers/favorite-transfer.worker.ts), never the
 // renderer, whose tables follow the connected keyboard.
 
@@ -199,8 +198,7 @@ export interface FavoriteImportPlan {
   failure?: string
 }
 
-/** The import of `file` as the FAVORITE_STORE_IMPORT handler of
- *  src/main/favorite-store.ts runs it, split for a backend that writes the
+/** The import of `file`, split into batches for a backend that writes the
  *  stores without converting keycodes. */
 export function planFavoriteImport(file: FavoriteExportFile): FavoriteImportPlan {
   const batches: FavoriteImportBatch[] = []

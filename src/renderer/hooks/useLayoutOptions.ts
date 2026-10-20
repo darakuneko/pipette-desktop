@@ -11,8 +11,8 @@ import type { KeyLabelMeta } from '../../shared/types/key-label-store'
  * built-in QWERTY id's stored name with the shared, localized
  * `keyLabels.qwertyDefaultName` string ("QWERTY (Default)").
  *
- * The stored name ("QWERTY") is written once by the main process's
- * `ensureQwertyEntry` (`src/main/key-label-store.ts`) — no i18n
+ * The stored name ("QWERTY") is written once by the backend's
+ * `ensure_qwerty_locked` (src-tauri/crates/pipette-keyboard-stores/src/key_labels/mod.rs) — no i18n
  * available there, so it can never carry a localized suffix on disk.
  * This is a plain function (not part of the `useLayoutOptions` hook) so
  * every surface that lists Key Label entries by id/name — the "pick a

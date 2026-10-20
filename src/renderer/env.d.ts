@@ -4,7 +4,7 @@ import type React from 'react'
 declare global {
   // `declare const` at module top-level (this file is a module because of
   // the `import type` above) is scoped to the module, not global — these
-  // two esbuild-injected `define` constants (see electron.vite.config.ts /
+  // two esbuild-injected `define` constants (see vite.tauri.config.ts /
   // vitest.config.ts) need to be visible from any renderer file, so they
   // live inside this block instead.
   const __APP_VERSION__: string
@@ -14,13 +14,8 @@ declare global {
     vialAPI: VialAPI
   }
 
-  // Vite's own ambient types (`vite/client`) aren't reliably resolvable
-  // here — `vite` is only a transitive dependency of electron-vite/vitest,
-  // not a direct one, so pnpm doesn't expose `node_modules/vite` at the
-  // project root for a `/// <reference types="vite/client" />` to resolve.
-  // Declare just the two surfaces the renderer actually touches instead of
-  // adding a direct `vite` devDependency (which risks electron-vite's
-  // build resolving a different vite instance than the one it bundles).
+  // Declare just the two `import.meta.env` surfaces the renderer actually
+  // touches instead of Vite's own ambient types (`vite/client`).
   interface ImportMetaEnv {
     readonly VITE_APP_VERSION?: string
   }
