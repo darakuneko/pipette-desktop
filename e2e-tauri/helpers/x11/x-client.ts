@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // A minimal X11 client for the e2e tests (../x11-window.ts): they read
 // windows with QueryTree, GetWindowAttributes and GetProperty and ask one to
-// close with SendEvent. The module also has InternAtom, CreateWindow
-// (InputOnly, never mapped), DestroyWindow, ChangeProperty and
-// DeleteProperty, with GetInputFocus as the round trip that surfaces errors.
+// close with SendEvent, with InternAtom for the atoms and GetInputFocus as
+// the round trip that surfaces errors.
 // Little-endian, over the server's local socket, MIT-MAGIC-COOKIE-1 or no
 // authorization.
 
@@ -18,10 +17,6 @@ function padded(data: Buffer): Buffer {
 export interface XClient {
   root: number
   internAtom(name: string, onlyIfExists?: boolean): Promise<number>
-  createWindow(): number
-  destroyWindow(window: number): void
-  changeProperty(window: number, property: number, type: number, format: 8 | 16 | 32, data: Buffer): void
-  deleteProperty(window: number, property: number): void
   /** The children of `window`, bottom to top. */
   queryTree(window: number): Promise<number[]>
   /** Whether `window` is viewable (mapped, and its ancestors too). */
@@ -156,13 +151,11 @@ export async function connectX(display: string, cookie: Buffer | null, options: 
     end(reason)
     throw reason
   }
-  const idBase = body.readUInt32LE(4)
   const vendorLength = body.readUInt16LE(16)
   const formats = body[21]
   const root = body.readUInt32LE(32 + vendorLength + pad4(vendorLength) + formats * 8)
 
   let sequence = 0
-  let nextId = 0
   let errors: string[] = []
 
   const send = (opcode: number, data: number, payload: Buffer): number => {
@@ -229,29 +222,6 @@ export async function connectX(display: string, cookie: Buffer | null, options: 
       head2.writeUInt16LE(bytes.length, 0)
       const reply = await request(16, onlyIfExists ? 1 : 0, Buffer.concat([head2, padded(bytes)]))
       return reply.readUInt32LE(8)
-    },
-    createWindow: () => {
-      const id = idBase | ++nextId
-      const geometry = Buffer.alloc(12)
-      geometry.writeInt16LE(0, 0)
-      geometry.writeInt16LE(0, 2)
-      geometry.writeUInt16LE(1, 4)
-      geometry.writeUInt16LE(1, 6)
-      geometry.writeUInt16LE(0, 8)
-      geometry.writeUInt16LE(2, 10) // InputOnly
-      send(1, 0, Buffer.concat([u32(id, root), geometry, u32(0, 0)]))
-      return id
-    },
-    destroyWindow: (window) => {
-      send(4, 0, u32(window))
-    },
-    changeProperty: (window, property, type, format, data) => {
-      const head2 = Buffer.alloc(4)
-      head2[0] = format
-      send(18, 0, Buffer.concat([u32(window, property, type), head2, u32(data.length / (format / 8)), padded(data)]))
-    },
-    deleteProperty: (window, property) => {
-      send(19, 0, u32(window, property))
     },
     queryTree: async (window) => {
       const reply = await request(15, 0, u32(window))
