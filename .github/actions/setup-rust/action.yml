@@ -28,9 +28,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: ./.github/actions/install-linux-deps
-      with:
-        extra-packages: libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+    # The libraries Tauri builds against on Linux, libudev for hidapi's
+    # hidraw backend (its linux-static-hidraw feature) and libdbus for
+    # keyring's Secret Service client.
+    - name: Install the Linux build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libudev-dev libdbus-1-dev
 
     # Installs the toolchain of src-tauri/rust-toolchain.toml and makes it the
     # default, so the rustc version rust-cache reads from the repository root
