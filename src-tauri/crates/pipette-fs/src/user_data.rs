@@ -4,15 +4,15 @@
 //!
 //! - `PIPETTE_USER_DATA_DIR`, when set to an absolute path, wins. It isolates
 //!   e2e runs, CI and screenshots, and lets a run use real data (with the
-//!   Electron build stopped).
+//!   0.4 build stopped).
 //! - Otherwise a distributed build (src/distribution.rs) uses
-//!   `<config dir>/pipette-desktop`, the Electron build's directory: the
+//!   `<config dir>/pipette-desktop`, the 0.4 build's directory: the
 //!   release takes the user's data over where it is, without copying it.
 //! - Every other build uses `<config dir>/app.pipette.desktop`, a directory
 //!   of its own, so a debug, development tools' or locally built release
 //!   build never opens the user's data.
 //!
-//! `<config dir>` is the base Electron's `app.getPath('userData')` is under
+//! `<config dir>` is the base the 0.4 build's userData is under
 //! on every OS (`$XDG_CONFIG_HOME` or `~/.config` on Linux,
 //! `~/Library/Application Support` on macOS, `%APPDATA%` on Windows).
 
@@ -26,10 +26,10 @@ pub const USER_DATA_DIR_ENV: &str = "PIPETTE_USER_DATA_DIR";
 /// app identifier.
 pub const MIGRATION_USER_DATA_NAME: &str = "app.pipette.desktop";
 
-/// The Electron build's userData directory name, its package name (`name`
+/// The 0.4 build's userData directory name, its package name (`name`
 /// in package.json, which src/tauri-shim/__tests__/user-data-name.test.ts
 /// checks against this value). A distributed build uses it too.
-pub const ELECTRON_USER_DATA_NAME: &str = "pipette-desktop";
+pub const V04_USER_DATA_NAME: &str = "pipette-desktop";
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum UserDataError {
@@ -65,7 +65,7 @@ pub fn resolve_user_data_dir(
         }
         return Ok(dir);
     }
-    let name = if distributed { ELECTRON_USER_DATA_NAME } else { MIGRATION_USER_DATA_NAME };
+    let name = if distributed { V04_USER_DATA_NAME } else { MIGRATION_USER_DATA_NAME };
     config_dir.map(|dir| dir.join(name)).ok_or(UserDataError::NoConfigDir)
 }
 
@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn a_distributed_build_defaults_to_the_electron_directory() {
+    fn a_distributed_build_defaults_to_the_v04_directory() {
         let config = absolute("config");
         assert_eq!(
             resolve_user_data_dir(None, Some(config.clone()), true),
@@ -117,7 +117,7 @@ mod tests {
         );
         assert_eq!(
             resolve_user_data_dir(Some(OsString::new()), Some(config.clone()), true),
-            Ok(config.join(ELECTRON_USER_DATA_NAME))
+            Ok(config.join(V04_USER_DATA_NAME))
         );
     }
 
@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn the_migration_directory_is_not_the_electron_one() {
-        assert_ne!(MIGRATION_USER_DATA_NAME, ELECTRON_USER_DATA_NAME);
+    fn the_migration_directory_is_not_the_v04_one() {
+        assert_ne!(MIGRATION_USER_DATA_NAME, V04_USER_DATA_NAME);
     }
 }

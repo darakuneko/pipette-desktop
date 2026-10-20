@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Whether a running Electron build holds the userData directory, so this
+//! Whether a running 0.4 build holds the userData directory, so this
 //! build does not start on top of it (both would write the config, run sync
 //! and append to the same analytics files, and neither's single-instance
 //! check sees the other).
@@ -10,34 +10,34 @@
 //! running browser listens on. Both stay behind after a crash, and after a
 //! reboot the pid can belong to any process. The directory counts as held
 //! when the socket accepts a connection (whatever host the lock names: the
-//! host may have been renamed while Electron runs), or else when the lock
-//! names this host and a live process that is the Electron build (its
-//! executable is `pipette-desktop` or Electron's own; a process whose name
-//! cannot be read counts as the Electron build). Windows has no such links;
+//! host may have been renamed while 0.4 runs), or else when the lock
+//! names this host and a live process that is the 0.4 build (its
+//! executable is one of `V04_EXECUTABLES`; a process whose name
+//! cannot be read counts as the 0.4 build). Windows has no such links;
 //! there the check never finds a holder.
 //!
 //! On Windows Chromium keeps `lockfile` in the userData directory open,
 //! sharing it for reading only, while it runs. [`hold_lockfile`] opens the
-//! same file sharing nothing and keeps it open: it fails while Electron
-//! holds the file, and while this build holds it, an Electron build started
+//! same file sharing nothing and keeps it open: it fails while 0.4
+//! holds the file, and while this build holds it, a 0.4 build started
 //! later cannot open it and gives up its single-instance lock. On Linux and
-//! macOS the check is one way: an Electron build started later is not
+//! macOS the check is one way: a 0.4 build started later is not
 //! stopped.
 
 use std::path::Path;
 
 /// The name of Chromium's lock link in the userData directory.
-pub const ELECTRON_LOCK_FILE: &str = "SingletonLock";
+pub const V04_LOCK_FILE: &str = "SingletonLock";
 
 /// The name of Chromium's link to its singleton socket.
 #[cfg(unix)]
-const ELECTRON_SOCKET_LINK: &str = "SingletonSocket";
+const V04_SOCKET_LINK: &str = "SingletonSocket";
 
-/// The executable names of the Electron build: electron-builder names the
+/// The executable names of the 0.4 build: electron-builder names the
 /// Linux executable after the package (`pipette-desktop`) and the macOS one
-/// after the product (`Pipette`); a development run is Electron's own
-/// (`electron`, `Electron`).
-const ELECTRON_EXECUTABLES: &[&str] = &["pipette-desktop", "Pipette", "electron", "Electron"];
+/// after the product (`Pipette`); a development run is the Electron
+/// runtime's own (`electron`, `Electron`).
+const V04_EXECUTABLES: &[&str] = &["pipette-desktop", "Pipette", "electron", "Electron"];
 
 /// What the lock link names.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,7 +49,7 @@ pub struct LockHolder {
 /// The holder the lock link in `user_data` names, `None` when there is no
 /// link or its target is not `<host>-<pid>`.
 pub fn read_lock_holder(user_data: &Path) -> Option<LockHolder> {
-    let target = std::fs::read_link(user_data.join(ELECTRON_LOCK_FILE)).ok()?;
+    let target = std::fs::read_link(user_data.join(V04_LOCK_FILE)).ok()?;
     // The host name can contain dashes; the pid cannot.
     let (host, pid) = target.to_str()?.rsplit_once('-')?;
     if !pid.bytes().all(|b| b.is_ascii_digit()) {
@@ -59,8 +59,8 @@ pub fn read_lock_holder(user_data: &Path) -> Option<LockHolder> {
     Some(LockHolder { host: host.to_owned(), pid })
 }
 
-/// The running Electron build that holds `user_data`, if any.
-pub fn electron_lock_holder(user_data: &Path) -> Option<LockHolder> {
+/// The running 0.4 build that holds `user_data`, if any.
+pub fn v04_lock_holder(user_data: &Path) -> Option<LockHolder> {
     let holder = read_lock_holder(user_data)?;
     let probe = Probe {
         this_host: host_name(),
@@ -85,7 +85,7 @@ struct Probe<'a> {
 
 impl Probe<'_> {
     /// Whether `holder` holds the directory: the socket answers, or the
-    /// lock names a live Electron build on this host other than this
+    /// lock names a live 0.4 build on this host other than this
     /// process (a link left by a crash can name a pid this process now has).
     fn holds(&self, holder: &LockHolder) -> bool {
         if self.socket_answers {
@@ -94,13 +94,13 @@ impl Probe<'_> {
         self.this_host.as_deref() == Some(holder.host.as_str())
             && holder.pid != self.this_pid
             && (self.is_alive)(holder.pid)
-            && (self.executable)(holder.pid).is_none_or(|name| is_electron_executable(&name))
+            && (self.executable)(holder.pid).is_none_or(|name| is_v04_executable(&name))
     }
 }
 
-/// Whether `name` (an executable's file name) is the Electron build's.
-fn is_electron_executable(name: &str) -> bool {
-    ELECTRON_EXECUTABLES.contains(&name)
+/// Whether `name` (an executable's file name) is the 0.4 build's.
+fn is_v04_executable(name: &str) -> bool {
+    V04_EXECUTABLES.contains(&name)
 }
 
 /// Whether the socket the `SingletonSocket` link in `user_data` leads to
@@ -108,7 +108,7 @@ fn is_electron_executable(name: &str) -> bool {
 /// message, which Chromium discards.
 #[cfg(unix)]
 fn socket_answers(user_data: &Path) -> bool {
-    std::fs::read_link(user_data.join(ELECTRON_SOCKET_LINK))
+    std::fs::read_link(user_data.join(V04_SOCKET_LINK))
         .is_ok_and(|target| std::os::unix::net::UnixStream::connect(user_data.join(target)).is_ok())
 }
 
@@ -184,12 +184,12 @@ fn executable_name(_pid: u32) -> Option<String> {
 
 /// The name of the file Chromium keeps open in the userData directory on
 /// Windows while it runs.
-pub const ELECTRON_LOCKFILE: &str = "lockfile";
+pub const V04_LOCKFILE: &str = "lockfile";
 
 /// Why [`hold_lockfile`] could not take the file.
 #[derive(Debug, thiserror::Error)]
 pub enum LockfileError {
-    /// Another process has the file open: a running Electron build.
+    /// Another process has the file open: a running 0.4 build.
     #[error("the file is in use")]
     InUse,
     #[error("{0}")]
@@ -220,7 +220,7 @@ pub fn hold_lockfile(user_data: &Path) -> Result<std::fs::File, LockfileError> {
         .create(true)
         .truncate(false)
         .share_mode(0)
-        .open(user_data.join(ELECTRON_LOCKFILE))
+        .open(user_data.join(V04_LOCKFILE))
         .map_err(classify)
 }
 
@@ -236,7 +236,7 @@ mod decision_tests {
         Probe { this_host: Some("here".into()), this_pid: 1, socket_answers, is_alive, executable }
     }
 
-    const ELECTRON: &dyn Fn(u32) -> Option<String> = &|_| Some("pipette-desktop".into());
+    const V04: &dyn Fn(u32) -> Option<String> = &|_| Some("pipette-desktop".into());
     const OTHER: &dyn Fn(u32) -> Option<String> = &|_| Some("sleep".into());
     const UNREADABLE: &dyn Fn(u32) -> Option<String> = &|_| None;
     const ALIVE: &dyn Fn(u32) -> bool = &|_| true;
@@ -247,35 +247,35 @@ mod decision_tests {
     }
 
     #[test]
-    fn a_live_electron_build_on_this_host_holds_it() {
-        assert!(probe(false, ALIVE, ELECTRON).holds(&holder("here", 4242)));
-        // A process whose name cannot be read is taken for the Electron build.
+    fn a_live_v04_build_on_this_host_holds_it() {
+        assert!(probe(false, ALIVE, V04).holds(&holder("here", 4242)));
+        // A process whose name cannot be read is taken for the 0.4 build.
         assert!(probe(false, ALIVE, UNREADABLE).holds(&holder("here", 4242)));
     }
 
     #[test]
     fn a_pid_reused_by_another_program_a_dead_pid_or_this_process_does_not() {
         assert!(!probe(false, ALIVE, OTHER).holds(&holder("here", 4242)));
-        assert!(!probe(false, DEAD, ELECTRON).holds(&holder("here", 4242)));
-        assert!(!probe(false, ALIVE, ELECTRON).holds(&holder("here", 1)));
+        assert!(!probe(false, DEAD, V04).holds(&holder("here", 4242)));
+        assert!(!probe(false, ALIVE, V04).holds(&holder("here", 1)));
     }
 
     #[test]
     fn another_host_holds_it_only_while_the_socket_answers() {
-        assert!(!probe(false, ALIVE, ELECTRON).holds(&holder("elsewhere", 4242)));
+        assert!(!probe(false, ALIVE, V04).holds(&holder("elsewhere", 4242)));
         assert!(probe(true, DEAD, OTHER).holds(&holder("elsewhere", 4242)));
-        let unknown_host = Probe { this_host: None, ..probe(false, ALIVE, ELECTRON) };
+        let unknown_host = Probe { this_host: None, ..probe(false, ALIVE, V04) };
         assert!(!unknown_host.holds(&holder("here", 4242)));
     }
 
     #[test]
-    fn the_electron_executables() {
+    fn the_v04_executables() {
         for name in ["pipette-desktop", "Pipette", "electron", "Electron"] {
-            assert!(is_electron_executable(name), "{name}");
+            assert!(is_v04_executable(name), "{name}");
         }
         // This build's own executable is not one.
         for name in ["pipette", "sleep", "pipette-desktop.AppImage", ""] {
-            assert!(!is_electron_executable(name), "{name}");
+            assert!(!is_v04_executable(name), "{name}");
         }
     }
 }
@@ -305,7 +305,7 @@ mod tests {
     }
 
     fn lock(dir: &Path, target: &str) {
-        symlink(target, dir.join(ELECTRON_LOCK_FILE)).unwrap();
+        symlink(target, dir.join(V04_LOCK_FILE)).unwrap();
     }
 
     /// This test binary started under the executable name `name`, from a
@@ -314,7 +314,7 @@ mod tests {
     fn sleeper(dir: &Path, name: &str) -> Child {
         let exe: PathBuf = dir.join(name);
         std::fs::copy(std::env::current_exe().unwrap(), &exe).unwrap();
-        let args = ["--exact", "electron_lock::tests::sleep_helper", "--ignored", "--test-threads=1"];
+        let args = ["--exact", "v04_lock::tests::sleep_helper", "--ignored", "--test-threads=1"];
         // A fork in another test thread can briefly hold the copy open for
         // writing (ETXTBSY).
         for _ in 0..50 {
@@ -352,7 +352,7 @@ mod tests {
         let dir = user_data();
         assert_eq!(read_lock_holder(dir.path()), None);
         for target in ["nopid", "host-", "host-abc", "host-0", "host-+1", "host-99999999999"] {
-            let _ = std::fs::remove_file(dir.path().join(ELECTRON_LOCK_FILE));
+            let _ = std::fs::remove_file(dir.path().join(V04_LOCK_FILE));
             lock(dir.path(), target);
             assert_eq!(read_lock_holder(dir.path()), None, "{target}");
         }
@@ -361,13 +361,13 @@ mod tests {
     #[test]
     fn a_regular_file_is_not_a_lock() {
         let dir = user_data();
-        std::fs::write(dir.path().join(ELECTRON_LOCK_FILE), "host-4242").unwrap();
+        std::fs::write(dir.path().join(V04_LOCK_FILE), "host-4242").unwrap();
         assert_eq!(read_lock_holder(dir.path()), None);
     }
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn a_running_electron_build_holds_the_lock_until_it_ends() {
+    fn a_running_v04_build_holds_the_lock_until_it_ends() {
         let _serial = serial();
         let dir = user_data();
         let bin = tempfile::tempdir().unwrap();
@@ -375,9 +375,9 @@ mod tests {
         let pid = child.id();
         assert_eq!(executable_name(pid).as_deref(), Some("pipette-desktop"));
         lock(dir.path(), &format!("{}-{pid}", host_name().unwrap()));
-        assert_eq!(electron_lock_holder(dir.path()).map(|h| h.pid), Some(pid));
+        assert_eq!(v04_lock_holder(dir.path()).map(|h| h.pid), Some(pid));
         stop(child);
-        assert_eq!(electron_lock_holder(dir.path()), None);
+        assert_eq!(v04_lock_holder(dir.path()), None);
     }
 
     #[test]
@@ -387,7 +387,7 @@ mod tests {
         let bin = tempfile::tempdir().unwrap();
         let child = sleeper(bin.path(), "unrelated-program");
         lock(dir.path(), &format!("{}-{}", host_name().unwrap(), child.id()));
-        assert_eq!(electron_lock_holder(dir.path()), None);
+        assert_eq!(v04_lock_holder(dir.path()), None);
         stop(child);
     }
 
@@ -396,13 +396,13 @@ mod tests {
         let _serial = serial();
         let dir = user_data();
         lock(dir.path(), &format!("not-{}-{}", host_name().unwrap(), std::os::unix::process::parent_id()));
-        assert_eq!(electron_lock_holder(dir.path()), None);
+        assert_eq!(v04_lock_holder(dir.path()), None);
         // A socket file nobody listens on any more (the browser crashed).
         let sockets = tempfile::tempdir().unwrap();
         let socket = sockets.path().join("SingletonSocket");
         drop(UnixListener::bind(&socket).unwrap());
-        symlink(&socket, dir.path().join(ELECTRON_SOCKET_LINK)).unwrap();
-        assert_eq!(electron_lock_holder(dir.path()), None);
+        symlink(&socket, dir.path().join(V04_SOCKET_LINK)).unwrap();
+        assert_eq!(v04_lock_holder(dir.path()), None);
     }
 
     #[test]
@@ -412,11 +412,11 @@ mod tests {
         let sockets = tempfile::tempdir().unwrap();
         let socket = sockets.path().join("SingletonSocket");
         let listener = UnixListener::bind(&socket).unwrap();
-        symlink(&socket, dir.path().join(ELECTRON_SOCKET_LINK)).unwrap();
+        symlink(&socket, dir.path().join(V04_SOCKET_LINK)).unwrap();
         // The host was renamed while the browser runs; its pid is gone too.
         lock(dir.path(), "renamed-host-999999");
         assert_eq!(
-            electron_lock_holder(dir.path()),
+            v04_lock_holder(dir.path()),
             Some(LockHolder { host: "renamed-host".into(), pid: 999_999 })
         );
         // The browser takes the probe's connection off the queue, as
@@ -424,14 +424,14 @@ mod tests {
         listener.set_nonblocking(true).unwrap();
         while listener.accept().is_ok() {}
         drop(listener);
-        assert_eq!(electron_lock_holder(dir.path()), None);
+        assert_eq!(v04_lock_holder(dir.path()), None);
     }
 
     #[test]
-    fn this_process_is_not_the_electron_build() {
+    fn this_process_is_not_the_v04_build() {
         let _serial = serial();
         let name = executable_name(std::process::id());
-        assert!(name.as_deref().is_some_and(|name| !is_electron_executable(name)), "{name:?}");
+        assert!(name.as_deref().is_some_and(|name| !is_v04_executable(name)), "{name:?}");
     }
 }
 
@@ -457,7 +457,7 @@ mod lockfile_tests {
             .create(true)
             .truncate(true)
             .share_mode(FILE_SHARE_READ)
-            .open(dir.join(ELECTRON_LOCKFILE))
+            .open(dir.join(V04_LOCKFILE))
     }
 
     #[cfg(windows)]
@@ -486,8 +486,8 @@ mod lockfile_tests {
     #[test]
     fn an_existing_file_keeps_its_content() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join(ELECTRON_LOCKFILE), b"left behind").unwrap();
+        std::fs::write(dir.path().join(V04_LOCKFILE), b"left behind").unwrap();
         drop(hold_lockfile(dir.path()).unwrap());
-        assert_eq!(std::fs::read(dir.path().join(ELECTRON_LOCKFILE)).unwrap(), b"left behind");
+        assert_eq!(std::fs::read(dir.path().join(V04_LOCKFILE)).unwrap(), b"left behind");
     }
 }

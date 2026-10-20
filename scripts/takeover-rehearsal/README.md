@@ -1,6 +1,6 @@
 # Takeover rehearsal
 
-A distributed release of the Tauri build takes the Electron build's data over
+A distributed release of this build takes the 0.4 build's data over
 where it is (`pipette-desktop` in the OS configuration directory) and points
 the autostart entry at itself. Before a user's first launch, the rehearsal
 starts the release on a **copy** of that data and checks that nothing is lost
@@ -42,12 +42,12 @@ Exit codes: 0 passed, 1 findings to look at, 2 refused before anything ran.
 
 What a rehearsal cannot check: the key in the real OS key store (its name
 depends on the userData path, so the copy gets another one; signing in is not
-part of the rehearsal), Windows' `lockfile` against a running Electron build,
+part of the rehearsal), Windows' `lockfile` against a running 0.4 build,
 and the macOS privacy permissions (Accessibility, Screen Recording).
 
 ## Linux
 
-1. Quit the Electron build (from the tray, not just the window).
+1. Quit the 0.4 build (from the tray, not just the window).
 2. Make two copies, one for (a) and one for (b), without the `Singleton*`
    files ((b) must not start from what (a) changed):
 
@@ -95,7 +95,7 @@ Changing `HOME` or `APPDATA` does not separate the login item, the Run key or
 the Keychain, so the rehearsal runs as a **temporary OS user** created for it
 and deleted afterwards. Its own userData directory then holds the copy.
 
-1. Quit the Electron build. Create a standard (not administrator) local user,
+1. Quit the 0.4 build. Create a standard (not administrator) local user,
    for example `pipette-rehearsal`, and sign in to it once.
 2. As the real user, copy the userData directory into the temporary user's,
    without `lockfile` (Windows) or the `Singleton*` files (macOS):
@@ -108,9 +108,9 @@ and deleted afterwards. Its own userData directory then holds the copy.
      (`sudo rsync -a --exclude 'Singleton*'` …), then
      `sudo chown -R pipette-rehearsal` on the copy.
 3. Sign in as the temporary user. To rehearse the autostart takeover, turn
-   the Electron build's autostart on there first: install Pipette 0.4 for that
+   the 0.4 build's autostart on there first: install Pipette 0.4 for that
    user, start it once on the copy with **Start at login** as the real user
-   has it, and quit it. (Windows: this writes the Electron Run value. macOS:
+   has it, and quit it. (Windows: this writes the 0.4 Run value. macOS:
    this registers the login item.)
 4. Install the release for that user only:
    - Windows: run `Pipette-win-x64.exe` as the temporary user (it installs per
@@ -133,9 +133,9 @@ and deleted afterwards. Its own userData directory then holds the copy.
    Also check by hand that one autostart item is left and it starts the
    release: Windows: `reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
    (one value `Pipette` with the quoted path of `pipette.exe`, no other value
-   whose data is a path to `Pipette.exe`) and no value for the Electron
+   whose data is a path to `Pipette.exe`) and no value for the 0.4
    build left under `Explorer\StartupApproved\Run`; macOS 13+: System Settings › General ›
-   Login Items. Record the name of the Electron value that was removed.
+   Login Items. Record the name of the 0.4 value that was removed.
 7. (b) As the real user, replace the temporary user's copy with a fresh one
    (step 2 again: delete the old copy first), so (b) does not start from what
    (a) changed. As the temporary user, take a new snapshot

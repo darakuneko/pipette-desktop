@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Whether this process runs a build that was handed out to users: a
 //! release build without the development tools, started from the
-//! executable a release ships. Only such a build opens the Electron build's
+//! executable a release ships. Only such a build opens the 0.4 build's
 //! userData directory by default and registers itself to start at sign-in;
 //! every other build (debug, development tools, a release built in a source
 //! tree, the e2e runs) keeps to a directory of its own and to no real

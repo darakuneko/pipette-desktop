@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // The takeover rehearsal on Linux: a distributed release started on a copy
-// of the Electron build's data, with its home, configuration and autostart
+// of the 0.4 build's data, with its home, configuration and autostart
 // directories all inside the rehearsal root, to check that the takeover
 // loses and corrupts nothing. The copy is made beforehand by the user (or
-// with the user's permission), with the Electron build quit and without its
+// with the user's permission), with the 0.4 build quit and without its
 // Singleton* files; this script never copies, moves or deletes data.
 //
 //   tsx scripts/takeover-rehearsal/rehearsal.ts launch-only --root <dir> --app <AppImage> [--firejail]

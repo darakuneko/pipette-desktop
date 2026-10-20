@@ -3,9 +3,9 @@
 // definition, app config and window commands its vialAPI shim calls, the
 // typing analytics, the tray of tray.rs, the quit handling of lifecycle.rs
 // and the window geometry of window_ops. Before any of that it settles the
-// userData directory (the Electron build's for a distributed build) and
-// refuses to start while the Electron build holds it; once no other instance
-// of this build runs, it locks the directory against the Electron build on
+// userData directory (the 0.4 build's for a distributed build) and
+// refuses to start while the 0.4 build holds it; once no other instance
+// of this build runs, it locks the directory against the 0.4 build on
 // Windows, starts the log in the directory and loads the app config.
 
 // Builds in the release profile (the ones that get bundled) must not open a
@@ -336,9 +336,9 @@ pub fn distributed_build() -> bool {
     })
 }
 
-/// The userData directory. Exits when there is none or a running Electron
+/// The userData directory. Exits when there is none or a running 0.4
 /// build holds it (Linux and macOS); runs before the log exists, so nothing
-/// is written to the directory of a running Electron build.
+/// is written to the directory of a running 0.4 build.
 fn startup_user_data() -> PathBuf {
     let dir = match pipette_fs::user_data_dir(distributed_build()) {
         Ok(dir) => dir,
@@ -347,14 +347,14 @@ fn startup_user_data() -> PathBuf {
             std::process::exit(1);
         }
     };
-    if let Some(holder) = pipette_fs::electron_lock_holder(&dir) {
-        let lock = dir.join(pipette_fs::ELECTRON_LOCK_FILE);
-        refusal::refuse(&refusal::electron_running(&dir, Some(holder.pid), &lock));
+    if let Some(holder) = pipette_fs::v04_lock_holder(&dir) {
+        let lock = dir.join(pipette_fs::V04_LOCK_FILE);
+        refusal::refuse(&refusal::v04_running(&dir, Some(holder.pid), &lock));
     }
     dir
 }
 
-/// How long a launch tries again to open the Electron build's `lockfile`
+/// How long a launch tries again to open the 0.4 build's `lockfile`
 /// while it is in use: the installer of an update starts the new app while
 /// the old process may still be ending, holding the file.
 #[cfg(target_os = "windows")]
@@ -363,19 +363,19 @@ const LOCKFILE_RETRY: std::time::Duration = std::time::Duration::from_secs(5);
 #[cfg(target_os = "windows")]
 const LOCKFILE_RETRY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 
-/// On Windows, opens the Electron build's `lockfile` in `dir` sharing
-/// nothing and keeps it open until the process ends: a running Electron
-/// build makes the open fail, and an Electron build started later cannot
+/// On Windows, opens the 0.4 build's `lockfile` in `dir` sharing
+/// nothing and keeps it open until the process ends: a running 0.4
+/// build makes the open fail, and a 0.4 build started later cannot
 /// take the directory. A file in use is tried again for up to
 /// `LOCKFILE_RETRY` before the launch is refused; it is never opened
 /// without the lock. Runs after the single-instance check, so a second
 /// launch of this build hands over to the first instead of finding the
 /// file in use, and before the log, so nothing is written to the directory
-/// of a running Electron build.
+/// of a running 0.4 build.
 #[cfg(target_os = "windows")]
-fn lock_against_electron(dir: &Path) {
+fn lock_against_v04(dir: &Path) {
     static HELD: OnceLock<std::fs::File> = OnceLock::new();
-    let lock = dir.join(pipette_fs::ELECTRON_LOCKFILE);
+    let lock = dir.join(pipette_fs::V04_LOCKFILE);
     let deadline = std::time::Instant::now() + LOCKFILE_RETRY;
     loop {
         match pipette_fs::hold_lockfile(dir) {
@@ -386,9 +386,7 @@ fn lock_against_electron(dir: &Path) {
             Err(pipette_fs::LockfileError::InUse) if std::time::Instant::now() < deadline => {
                 std::thread::sleep(LOCKFILE_RETRY_INTERVAL);
             }
-            Err(pipette_fs::LockfileError::InUse) => {
-                refusal::refuse(&refusal::electron_running(dir, None, &lock))
-            }
+            Err(pipette_fs::LockfileError::InUse) => refusal::refuse(&refusal::v04_running(dir, None, &lock)),
             Err(err) => refusal::refuse(&refusal::lock_failed(&lock, &err)),
         }
     }
@@ -439,7 +437,7 @@ fn main() {
     let builder = dev_commands::install_or_passthrough(builder, app_commands(), lifecycle::on_page_load);
     let built = builder.build(tauri::generate_context!());
     #[cfg(target_os = "windows")]
-    lock_against_electron(&user_data);
+    lock_against_v04(&user_data);
     start_log(&user_data);
     let app = match built {
         Ok(app) => app,
