@@ -33,6 +33,7 @@ import type { Options } from '@wdio/types'
 import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver, userDataPath } from '../helpers/driver'
 import { startHubDriver, stopHubHarness } from '../helpers/hub-harness'
 import { assertCaptureUserData, screenshotDir } from './capture-paths'
+import { startUpdateCaptureDriver, stopUpdateCaptureHarness } from './update-capture'
 
 /** The specs whose app talks to the fake Hub of scripts/fake-hub, signed in
  *  as the Hub test account (helpers/hub-harness.ts): their screenshots show
@@ -53,6 +54,11 @@ const SPEC_FILES = [
 ].map((name) => join(SPECS_DIR, name))
 
 const HUB_SPECS = ['hub.ts', 'key-labels.ts', 'language-packs.ts', 'theme-packs.ts'].map((name) => `/specs/${name}`)
+
+/** The spec whose app reads its update manifest from the fake update server
+ *  of scripts/fake-update (update-capture.ts). Every other spec's app has
+ *  no update manifest to read. */
+const UPDATE_SPEC = '/specs/update.ts'
 
 const PORT_CHECK_TIMEOUT_MS = 2_000
 
@@ -132,6 +138,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
         throw new Error(`something already listens on ${DRIVER_HOST}:${DRIVER_PORT}; stop it before the capture`)
       }
       if (specs.some((spec) => HUB_SPECS.some((hubSpec) => spec.endsWith(hubSpec)))) await startHubDriver()
+      else if (specs.some((spec) => spec.endsWith(UPDATE_SPEC))) await startUpdateCaptureDriver()
       else await startDriver()
     } catch (err) {
       refuse(err)
@@ -152,7 +159,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
     try {
       await stopDriver({ keepUserData: sessionFailed })
     } finally {
-      await stopHubHarness()
+      await Promise.all([stopHubHarness(), stopUpdateCaptureHarness()])
     }
   },
 }
