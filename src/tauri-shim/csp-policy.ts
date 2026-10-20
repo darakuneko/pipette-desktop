@@ -29,6 +29,6 @@ export function tauriCsp(isDev: boolean): string {
 export function devServerHeaders(): Record<string, string> {
   return {
     'Content-Security-Policy': tauriCsp(true),
-    ...Object.fromEntries(Object.entries(securityHeaders).map(([name, values]) => [name, values.join(', ')])),
+    ...securityHeaders,
   }
 }

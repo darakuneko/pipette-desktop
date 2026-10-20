@@ -77,10 +77,10 @@ describe('buildCsp', () => {
 
 describe('securityHeaders', () => {
   it('includes X-Content-Type-Options nosniff', () => {
-    expect(securityHeaders).toHaveProperty('X-Content-Type-Options', ['nosniff'])
+    expect(securityHeaders).toHaveProperty('X-Content-Type-Options', 'nosniff')
   })
 
   it('includes X-Frame-Options DENY', () => {
-    expect(securityHeaders).toHaveProperty('X-Frame-Options', ['DENY'])
+    expect(securityHeaders).toHaveProperty('X-Frame-Options', 'DENY')
   })
 })

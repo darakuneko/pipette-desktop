@@ -85,9 +85,7 @@ describe('Tauri CSP', () => {
 describe('Tauri security headers', () => {
   it('sends the base headers it can, and no others', () => {
     const expected = Object.fromEntries(
-      Object.entries(securityHeaders)
-        .filter(([name]) => !(name in REPLACED_HEADERS))
-        .map(([name, values]) => [name, values.join(', ')]),
+      Object.entries(securityHeaders).filter(([name]) => !(name in REPLACED_HEADERS)),
     )
     expect(security.headers).toEqual(expected)
   })
@@ -110,9 +108,7 @@ describe('Tauri dev server headers', () => {
 
   it('carry the base security headers', () => {
     const { 'Content-Security-Policy': _csp, ...rest } = headers
-    expect(rest).toEqual(
-      Object.fromEntries(Object.entries(securityHeaders).map(([name, values]) => [name, values.join(', ')])),
-    )
+    expect(rest).toEqual(securityHeaders)
   })
 
   it('are what vite.tauri.config.ts serves', () => {

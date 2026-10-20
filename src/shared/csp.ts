@@ -25,7 +25,7 @@ export function buildCsp(isDev: boolean): string {
   return directives.join('; ')
 }
 
-export const securityHeaders: Record<string, string[]> = {
-  'X-Content-Type-Options': ['nosniff'],
-  'X-Frame-Options': ['DENY'],
+export const securityHeaders: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
 }
