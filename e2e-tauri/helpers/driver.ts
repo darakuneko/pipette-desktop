@@ -285,6 +285,13 @@ export function assertAutostartDir(dir: string, sessionDir: string, realDirs: st
   return normalized
 }
 
+/** The variables that point HTTP clients at a proxy, in both cases. */
+export const PROXY_VARIABLES = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy'] as const
+
+/** The hosts no proxy is used for in a session: the loopback addresses the
+ *  fake servers listen on. */
+export const LOOPBACK_NO_PROXY = '127.0.0.1,localhost,::1'
+
 /** The environment the app of a session runs with: the virtual keyboard
  *  only, the session's userData directory, a Hub and a startup-notice
  *  server on the loopback interface (E2E_HUB_URL and E2E_NOTIFICATION_URL
@@ -302,7 +309,12 @@ export function assertAutostartDir(dir: string, sessionDir: string, realDirs: st
  *  the loopback interface, a notice address that is not http on 127.0.0.1,
  *  or an autostart directory {@link assertAutostartDir} refuses stops the
  *  launch. The autostart directory comes from the session's variables
- *  only, never from the shell's. */
+ *  only, never from the shell's.
+ *
+ *  The proxy variables are removed and NO_PROXY names the loopback
+ *  addresses: the app's HTTP clients (the updater's included) use the
+ *  system's proxies, which would send a request for a fake server on
+ *  127.0.0.1 to a proxy elsewhere. */
 export function appEnv(userDataDir: string, extra: Record<string, string>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -316,7 +328,10 @@ export function appEnv(userDataDir: string, extra: Record<string, string>): Node
     PIPETTE_E2E: '1',
     PIPETTE_HUB_TEST: '1',
     PIPETTE_DEV_SUPPRESS_BROWSER: '1',
+    NO_PROXY: LOOPBACK_NO_PROXY,
+    no_proxy: LOOPBACK_NO_PROXY,
   }
+  for (const name of PROXY_VARIABLES) delete env[name]
   if (!isLoopbackUrl(env.PIPETTE_HUB_URL)) {
     throw new Error(`PIPETTE_HUB_URL must be on 127.0.0.1 or [::1] in an e2e session, not ${String(env.PIPETTE_HUB_URL)}`)
   }
