@@ -25,10 +25,15 @@ export const STARTUP_NOTICE_TITLE = 'E2E updater notice'
 
 const PACKAGE_JSON = resolve(dirname(fileURLToPath(import.meta.url)), '../../package.json')
 
+/** The app's own version (package.json). */
+export function appVersion(): string {
+  return (JSON.parse(readFileSync(PACKAGE_JSON, 'utf8')) as { version: string }).version
+}
+
 /** Two versions above the app's own (package.json): `X.Y.(Z+1)-e2e.1` and
  *  `-e2e.2`, newer than a pre-release and a release of `X.Y.Z` alike. */
 export function releasesAboveApp(): { next: string; newer: string } {
-  const version = (JSON.parse(readFileSync(PACKAGE_JSON, 'utf8')) as { version: string }).version
+  const version = appVersion()
   const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version)
   if (!match) throw new Error(`package.json has the version ${version}`)
   const base = `${match[1]}.${match[2]}.${Number(match[3]) + 1}`

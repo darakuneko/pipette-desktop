@@ -57,6 +57,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [6.4 Theme Packs Manage](#64-theme-packs-manage)
   - [6.5 Zoom (UI Scale)](#65-zoom-ui-scale)
   - [6.6 Launch at Login / Stay in System Tray](#66-launch-at-login--stay-in-system-tray)
+  - [6.7 Updating Pipette](#67-updating-pipette)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
@@ -2381,6 +2382,31 @@ The Tools tab shows four toggles below the Theme Packs and Zoom rows:
 - **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog — including because Typing Record (§4.3) is on for a keyboard that reconnects locked — the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
 
 All four are machine-local settings — they are not synced to other devices via Cloud Sync.
+
+### 6.7 Updating Pipette
+
+Pipette checks for a new version once per launch, about 3 seconds after its window is on screen. When the startup notice is shown, the check waits until you close it, so the two never appear together; when Pipette starts hidden in the tray, the check waits until you first show the window. When a new version is available, the **Update available** modal opens:
+
+![Update available](screenshots/update-modal.png)
+
+- **See what's new in {version}** opens that version's release page in your browser
+- **Update** downloads the update and verifies its signature, showing **Downloading… N%** while it runs. Pipette then quits the same way as when you quit it yourself (a running sync is finished first), installs the update, and starts again as the new version — **Finishing up. Pipette will restart.** is shown at that point
+- **Not now** closes the modal. The update is offered again at the next launch
+- **Skip this version** closes the modal and stops the startup check from offering exactly this version. A newer version is offered again, and the skipped one can still be installed from the About tab (below)
+
+If the download or the verification fails, the modal shows what went wrong (for example **The update could not be verified, so it was not installed.**), nothing is installed and Pipette keeps running; **Update** becomes **Try again**. If the install itself fails, Pipette has already quit: at the next launch the **The update failed** modal shows the reason instead of checking again. Either way you can download the new version from the release page and install it yourself. A failed startup check shows nothing.
+
+**Check for updates** in the **About** tab of the Settings modal (gear icon on the device selection screen) checks at any time and shows the result below the button:
+
+![About — Check for updates](screenshots/about-update-check.png)
+
+- **Pipette is up to date.** — there is no newer version
+- **Pipette {version} is available.** — with an **Update to {version}…** link that opens the same modal (without **Skip this version**)
+- **Pipette {version} is available. You skipped it at startup, but you can still update here.** — the version you skipped, with the same link
+- **This copy of Pipette does not update itself.** — Pipette is run from somewhere it cannot replace itself: on macOS from the disk image instead of the Applications folder, on Linux anything other than the AppImage, or a build from source
+- An error message when the check fails (for example, no network)
+
+A pre-release (beta) of Pipette is offered both betas and releases; a release is offered releases only. The skipped version is a machine-local setting — it is not synced to other devices via Cloud Sync.
 
 ---
 
