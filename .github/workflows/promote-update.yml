@@ -18,7 +18,17 @@ name: Promote update
 #
 # Deleting a release whose version a channel's manifest names leaves that
 # manifest pointing at files that are gone: promote another release first.
+#
+# GitHub dispatches only a workflow it knows, and it learns of one on a
+# branch other than the default from a push that runs it, so a push that
+# changes this file runs it too; that run promotes nothing (the job runs on
+# a dispatch only).
 on:
+  push:
+    branches:
+      - feat/tauri-migration
+    paths:
+      - .github/workflows/promote-update.yml
   workflow_dispatch:
     inputs:
       tag:
@@ -44,6 +54,7 @@ concurrency:
 
 jobs:
   promote:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag }}
