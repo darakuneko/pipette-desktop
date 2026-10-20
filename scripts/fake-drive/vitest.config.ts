@@ -3,6 +3,6 @@
 //
 // Run: pnpm run test:fake-drive
 
-import { fixtureConfig } from '../fixture-vitest-config'
+import { scriptVitestConfig } from '../script-vitest-config'
 
-export default fixtureConfig('fake-drive')
+export default scriptVitestConfig('fake-drive')

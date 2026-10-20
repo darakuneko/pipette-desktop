@@ -286,9 +286,8 @@ describe('buildSpeedRanking', () => {
 
   it('ranks protocol-dependent codes using the snapshot protocol\'s own label and restores the global RAWCODES_MAP', () => {
     // 0x7c00 is QK_BOOT under v6 but the masked keycode RAG_T(kc) with a
-    // KC_NO inner under v5 (src/shared/keycodes/keycodes-v5.ts:75) — the
-    // same v6-session-viewing-v5-snapshot collision code as the
-    // favorite-store 0x7c00 case (src/main/__tests__/favorite-store.test.ts:551).
+    // KC_NO inner under v5 (src/shared/keycodes/keycodes-v5.ts) — the
+    // v6-session-viewing-v5-snapshot collision code.
     // Establish the v6 map explicitly first so this doesn't depend on
     // leftover state from earlier tests in this file.
     setProtocol(6)

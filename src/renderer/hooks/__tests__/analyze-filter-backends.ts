@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the Analyze filter hooks' tests run
 // against, both answering from the same VialAPI-shaped spies: a
-// preload-like mock (the spies themselves), and the Tauri shim's Analyze
+// plain mock (the spies themselves), and the Tauri shim's Analyze
 // filter and Analyze post members over a mocked Tauri IPC, whose commands
 // hand the spies their arguments in the members' order, a private Hub link
 // and the post parameters as the value of the JSON text the shim sends.
@@ -39,7 +39,7 @@ function spy<K extends AnalyzeFilterMember>(spies: AnalyzeFilterSpies, member: K
 
 export function analyzeFilterBackends(spies: AnalyzeFilterSpies, extra: object = {}): AnalyzeFilterBackend[] {
   return [
-    { name: 'preload-like mock', install: () => installVialAPI({ ...extra, ...spies }) },
+    { name: 'plain mock', install: () => installVialAPI({ ...extra, ...spies }) },
     {
       name: 'Tauri shim over mockIPC',
       install: () => {

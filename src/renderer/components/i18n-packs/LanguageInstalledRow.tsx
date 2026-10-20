@@ -131,8 +131,8 @@ export function LanguageInstalledRow({
   const showUpdateRemove = showHubPair && isMine && hubCanWrite
   const showSync = showHubPair && !showUpdateRemove
 
-  // Built-in English is a real store entry (see `ensureBuiltinEnglishEntry`
-  // in main/i18n-pack-store.ts) and drags like any other row — except
+  // Built-in English is a real store entry (see `ensure_builtin_english`
+  // in src-tauri/crates/pipette-pack-stores/src/i18n.rs) and drags like any other row — except
   // during the brief pre-load window before the store has materialised
   // it, when `row.packId` is still null and there is no real id yet to
   // persist an order against.

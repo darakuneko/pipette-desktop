@@ -244,7 +244,8 @@ export interface HubUpdateFavoritePostParams extends HubUploadFavoritePostParams
 //
 // Wire format for "Analyze 集計データ" uploads, the payload shape shared
 // with pipette-hub. The types below mirror that contract; the validators
-// in `src/main/hub/hub-analytics.ts` enforce the runtime invariants.
+// of the pipette-hub crate (src-tauri/crates/pipette-hub/src/analytics/validate.rs)
+// enforce the runtime invariants.
 
 /** Hub-side `analytics-export-v1.json` payload. */
 export interface HubAnalyticsExportV1 {

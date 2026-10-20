@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the favorite Hub handlers' tests
 // (use-hub-favorite-handlers.test.ts) run against, both answering from the
-// same VialAPI-shaped spies: a preload-like mock (the spies themselves),
+// same VialAPI-shaped spies: a plain mock (the spies themselves),
 // and the Tauri shim's favorite store and favorite post members over a
 // mocked Tauri IPC, whose commands hand the spies their arguments in the
 // members' order. The post members read the entry `ENTRY_BODY` and build
@@ -76,7 +76,7 @@ function installShim(spies: HubFavoriteSpies, sentJson: string[]): void {
 export function hubFavoriteBackends(spies: HubFavoriteSpies): HubFavoriteBackend[] {
   const shimJson: string[] = []
   return [
-    { name: 'preload-like mock', sentJson: [], install: () => installVialAPI(spies) },
+    { name: 'plain mock', sentJson: [], install: () => installVialAPI(spies) },
     {
       name: 'Tauri shim over mockIPC',
       sentJson: shimJson,

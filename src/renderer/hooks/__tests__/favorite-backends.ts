@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the favorite hooks' tests run against,
-// both answering from the same VialAPI-shaped spies: a preload-like mock
+// both answering from the same VialAPI-shaped spies: a plain mock
 // (the spies themselves), and the Tauri shim's favorite members over a
 // mocked Tauri IPC, whose commands and conversion worker hand the spies
 // their arguments in the members' order. The test file must mock the
@@ -99,7 +99,7 @@ function installShim(spies: FavoriteSpies): void {
 
 export function favoriteBackends(spies: FavoriteSpies): FavoriteBackend[] {
   return [
-    { name: 'preload-like mock', install: () => installVialAPI(spies) },
+    { name: 'plain mock', install: () => installVialAPI(spies) },
     { name: 'Tauri shim over mockIPC', install: () => installShim(spies) },
   ]
 }

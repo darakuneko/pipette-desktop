@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// The favorite post members (api/hub-favorite.ts) against the scenarios
-// recorded from the Electron handlers
+// The favorite post members (api/hub-favorite.ts) against the recorded
+// golden scenarios
 // (src-tauri/crates/pipette-hub/tests/fixtures/ts_hub_handlers_favorite.json),
 // with the worker's request run in place. Each step must give the recorded
 // answer; a check that fails must fail before the entry is read, a read
-// that fails before anything is sent, and a post must send the export JSON
-// the Electron handler sent, byte for byte. The backend's own read and
+// that fails before anything is sent, and a post must send the recorded
+// export JSON, byte for byte. The backend's own read and
 // sending of those steps are the Rust test of the same file
 // (crates/pipette-hub/tests/ts_hub_handlers_favorite.rs).
 //

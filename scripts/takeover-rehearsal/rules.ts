@@ -54,8 +54,7 @@ function configObject(text: string): Record<string, unknown> {
 
 /** A changed config is allowed when every key it had keeps its value
  *  (`windowState` aside): the store also writes the default of every key
- *  the file lacks when it opens, as electron-store does, and the key order
- *  may change. */
+ *  the file lacks when it opens, and the key order may change. */
 function configVerdict(dataDir: string, change: ChangeKind, configBefore: string | undefined): [boolean, string] {
   if (change === 'removed') return [false, 'the config was removed']
   try {

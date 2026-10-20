@@ -3,17 +3,16 @@
 // (src-tauri/src/store_commands/favorites.rs). The writes of a type's
 // favorites are queued under `favorites/{type}`, the key the backend locks,
 // so they reach the backend one at a time in the order the renderer made
-// them; the list, the load and the export's read go without waiting, as
-// the Electron handlers do. A private Hub link crosses as the text of
+// them; the list, the load and the export's read go without waiting. A
+// private Hub link crosses as the text of
 // JSON.stringify(link), so the backend keeps its keys in their order.
 //
 // The export and the import convert keycodes, which happens in a worker
 // with its own keycode tables (workers/favorite-transfer.worker.ts): the
 // backend reads the stored favorites and saves the file the worker built,
 // or reads the file the user picks and stores the batches the worker made
-// of it. The checks and answers before and between those steps are the
-// Electron handlers' (src/main/favorite-store.ts), and like them the
-// members answer every failure as `{ success: false, error }`.
+// of it. The members check the arguments before those steps and answer
+// every failure as `{ success: false, error }`.
 
 import { isValidFavoriteType, isValidVialProtocol } from '../../shared/favorite-data'
 import type { FavoriteExportBody, FavoriteImportEntry } from '../../shared/favorite-transfer'
@@ -50,7 +49,7 @@ export function openImport(): Promise<FileOpenResult> {
 
 /** Stores one type's converted favorites of an import. The entries cross
  *  as the text of JSON.stringify(entries), so a label keeps a lone
- *  surrogate as the Electron handler stores it. */
+ *  surrogate. */
 export function importBatch(
   type: FavoriteType,
   entries: FavoriteImportEntry[],
@@ -59,7 +58,7 @@ export function importBatch(
   return enqueue(key(type), () => call('favorite_store_import_batch', { favoriteType: type, entries: text }))
 }
 
-/** `{ success }` of a save, without the path Electron's export does not answer. */
+/** `{ success }` of a save, without the path the export does not answer. */
 function saved(result: FileSaveResult): Result {
   return result.success ? { success: true } : { success: false, error: result.error }
 }
@@ -116,8 +115,7 @@ async function importFile(): Promise<FavoriteImportResult> {
   return { success: true, imported, skipped }
 }
 
-/** `run`'s answer, or a thrown error answered as the Electron handlers
- *  answer one. */
+/** `run`'s answer, or a thrown error answered with its `String(err)`. */
 async function caught<T>(run: () => Promise<T>, failed: (error: string) => T): Promise<T> {
   try {
     return await run()

@@ -3,10 +3,10 @@
 // of src-tauri/src/hub_commands/packs.rs with its arguments by name.
 //
 // The pack of an upload or update crosses as the text of `JSON.stringify`,
-// so its key order reaches the Hub as Electron sends it; the rest of the
-// parameters go as they are. The Hub requests do not wait in the pack
-// stores' write queue (api/i18n-packs.ts): the backend writes the pack's
-// Hub link under the store's lock after the request, as Electron does.
+// so its key order reaches the Hub as it is; the rest of the parameters go
+// as they are. The Hub requests do not wait in the pack stores' write queue
+// (api/i18n-packs.ts): the backend writes the pack's Hub link under the
+// store's lock after the request.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'

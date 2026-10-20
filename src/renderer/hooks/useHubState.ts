@@ -72,7 +72,7 @@ export function useHubState(options: Options) {
   // Hub server rejects outright — substitute the shared fallback protocol
   // in that case. Any other value (a real connected protocol, e.g. 5 or 6)
   // passes through unchanged. Reusing the same predicate
-  // `hub-ipc-favorite.ts` validates with keeps this sanitizer from
+  // src/tauri-shim/api/hub-favorite.ts validates with keeps this sanitizer from
   // drifting out of lockstep.
   const favVialProtocol = isValidHubVialProtocol(vialProtocol) ? vialProtocol : FALLBACK_VIAL_PROTOCOL
 

@@ -9,7 +9,7 @@ import type { Answer } from './hub-answer'
 
 export const hubAccountApi = {
   hubGetOrigin: () => call<Answer<'hubGetOrigin'>>('hub_get_origin'),
-  // Resolves with nothing, as the Electron handler does.
+  // Resolves with nothing.
   hubSetAuthDisplayName: async (displayName) => {
     await call<null>('hub_set_auth_display_name', { displayName })
   },

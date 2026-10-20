@@ -313,9 +313,9 @@ function readMachineHashFromSyncState(syncStatePath: string): string | null {
   }
 }
 
-// Mirrors the algorithm in src/main/typing-analytics/machine-hash.ts so
-// the seed lands in the same `own` device scope the main process computes
-// on app launch — even when a prior run's restore pass deleted sync_state.
+// Mirrors the machine hash of `MachineIdentity`
+// (src-tauri/crates/pipette-typing-analytics/src/identity.rs) so the seed
+// lands in the same `own` device scope the app computes on launch — even when a prior run's restore pass deleted sync_state.
 async function computeMachineHash(userDataPath: string): Promise<string> {
   const installationIdPath = join(userDataPath, 'local', 'installation-id')
   const installationId = readFileSync(installationIdPath, 'utf-8').trim()
@@ -350,7 +350,8 @@ function recentTailOffsetsMinutes(): number[] {
   return [50, 40, 30, 20, 10, 6, 4, 2, 1]
 }
 
-// Bucket centers mirror BIGRAM_BUCKET_CENTERS_MS in bigram-bucket.ts —
+// Bucket centers mirror BUCKET_CENTERS_MS in
+// src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs —
 // treating every sample as sitting at its bucket center is the same
 // estimate the histogram-only avgIki approximation already uses, so
 // `s` / `sq` (see `sumsFromHist`) read as a natural companion to Avg
@@ -1052,7 +1053,8 @@ export async function seedDummyTypingAnalytics(
   mkdirSync(join(userDataPath, 'sync', 'keyboards', DUMMY_TA_UID), { recursive: true })
   writeFileSync(pipetteSettingsPath, buildPipetteSettingsContent(runDates), 'utf-8')
 
-  // Force ensureCacheIsFresh to rebuild from the JSONL master on next launch.
+  // Force the cache (`ensure_cache_is_fresh`) to rebuild from the JSONL
+  // master on next launch.
   try { unlinkSync(syncStatePath) } catch { /* ignore */ }
 
   return {
@@ -1068,9 +1070,9 @@ export async function seedDummyTypingAnalytics(
 }
 
 // Delete every file we seeded plus the cache artifacts so the next real
-// app launch runs `ensureCacheIsFresh` on an empty JSONL master and
+// app launch runs `ensure_cache_is_fresh` on an empty JSONL master and
 // rebuilds a clean DB. Restoring the original DB / sync_state would race
-// against the Electron process's own shutdown writes. pipette_settings.json
+// against the app's own shutdown writes. pipette_settings.json
 // is a plain sync file (not cache-derived), so its original content is
 // restored (or deleted, if it didn't exist before seeding) instead.
 export function restoreTypingAnalytics(backup: TypingAnalyticsSeedBackup): void {

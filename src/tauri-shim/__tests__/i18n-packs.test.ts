@@ -93,7 +93,7 @@ describe('i18nPacksApi', () => {
     const raw = { '2': 'index key', name: 'A', version: '1' }
     const options = { coverage: { totalKeys: 2, coveredKeys: 1 }, enabled: true }
     const calls = [i18nPacksApi.i18nPackImportApply(raw, options), i18nPacksApi.i18nPackImportApply(undefined, undefined)]
-    // A change after the call does not reach the backend, as with Electron's IPC.
+    // A change after the call does not reach the backend.
     options.enabled = false
     await settle()
     releaseAll()

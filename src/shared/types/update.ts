@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The in-app update of the Tauri build (src-tauri/src/updater.rs). The
-// Electron build has none: its check answers `disabled`.
+// The in-app update (src-tauri/src/updater.rs).
 
 /** Why an update step failed. `busy`: another check or the update is
  *  running; `cancelled`: the app started quitting first;

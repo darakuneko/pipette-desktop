@@ -99,8 +99,7 @@ export interface ThemePackStoreResult<T> {
 
 /** Structurally identical to Language Packs' `I18nPackImportFile` /
  *  `I18nPackImportDialogResult` — both alias the shared shape in
- *  `pack-import.ts` (see `readSelectedImportFiles` in
- *  `src/main/pack-import-dialog.ts`, which both IPC handlers call).
+ *  `pack-import.ts`.
  *  Aliased (not just re-exported) under the domain-specific name so
  *  existing call sites don't need to change what they import. */
 export type { PackImportFile as ThemePackImportFile, PackImportDialogResult as ThemePackImportDialogResult } from './pack-import'

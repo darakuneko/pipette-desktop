@@ -249,8 +249,8 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setAppliedUid(uid)
 
     if (!prefs) {
-      // Defaults stay in memory; only the keyboard's directory is created
-      // (see the handler in pipette-settings-store.ts for why).
+      // Defaults stay in memory; only the keyboard's directory is created:
+      // the directory alone marks the keyboard as stored here.
       void window.vialAPI.pipetteSettingsEnsureDir(uid).catch(() => {})
     }
   }, [applyValidated, validatePrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])

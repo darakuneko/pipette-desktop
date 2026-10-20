@@ -10,7 +10,7 @@
 // two manage modals — including built-in English's real-store-entry
 // treatment, which mirrors Key Labels' built-in QWERTY: both drag
 // reorder and Name sort include it like any imported entry (see
-// `ensureBuiltinEnglishEntry` in main/i18n-pack-store.ts).
+// `ensure_builtin_english` in src-tauri/crates/pipette-pack-stores/src/i18n.rs).
 //
 // The row model (built-in + installed + Hub browse), the per-row
 // actions, and the import surface each live in their own sibling hook

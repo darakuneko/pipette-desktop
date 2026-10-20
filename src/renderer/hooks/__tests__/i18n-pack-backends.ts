@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the language pack hooks' tests run
 // against, both answering from the same VialAPI-shaped spies: a
-// preload-like mock (the spies themselves), and the Tauri shim's language
+// plain mock (the spies themselves), and the Tauri shim's language
 // pack members over a mocked Tauri IPC, whose commands hand the spies their
 // arguments in the members' order.
 //
@@ -60,7 +60,7 @@ function installShim(spies: I18nPackSpies): Partial<VialAPI> {
 
 export function i18nPackBackends(spies: I18nPackSpies): I18nPackBackend[] {
   return [
-    { name: 'preload-like mock', install: () => ({ i18nPackOnChanged: () => () => undefined, ...spies }) as Partial<VialAPI> },
+    { name: 'plain mock', install: () => ({ i18nPackOnChanged: () => () => undefined, ...spies }) as Partial<VialAPI> },
     { name: 'Tauri shim over mockIPC', install: () => installShim(spies) },
   ]
 }

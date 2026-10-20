@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-// Runs against both vialAPI implementations: a preload-like mock, and the
+// Runs against both vialAPI implementations: a plain mock, and the
 // Tauri shim's sideloadJson over a mocked Tauri IPC. The backend of the shim
 // answers a file's text, so its command answers the mock's data as JSON
 // text and the shim parses it back.
@@ -24,8 +24,8 @@ function installVialAPI(value: object): void {
   Object.defineProperty(window, 'vialAPI', { value, writable: true, configurable: true })
 }
 
-const preloadLikeMock = {
-  name: 'preload-like mock',
+const plainMock = {
+  name: 'plain mock',
   install: () => {
     installVialAPI({ sideloadJson: mockSideloadJson })
   },
@@ -57,7 +57,7 @@ function createHook() {
   return { applyDefinition, ...hook }
 }
 
-describe.each([preloadLikeMock, shimOverMockIPC])('useSideloadJson ($name)', (backend) => {
+describe.each([plainMock, shimOverMockIPC])('useSideloadJson ($name)', (backend) => {
   beforeEach(() => {
     vi.clearAllMocks()
     backend.install()
@@ -221,7 +221,7 @@ describe.each([preloadLikeMock, shimOverMockIPC])('useSideloadJson ($name)', (ba
 
     // A file's text always parses to a value, so the Tauri backend never
     // answers success without data.
-    it.runIf(backend === preloadLikeMock)('sets error when data is undefined', async () => {
+    it.runIf(backend === plainMock)('sets error when data is undefined', async () => {
       mockSideloadJson.mockResolvedValueOnce({
         success: true,
         data: undefined,

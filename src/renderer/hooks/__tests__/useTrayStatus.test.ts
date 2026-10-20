@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 // Runs against both vialAPI implementations (tray-backends.ts): a
-// preload-like mock, and the Tauri shim's tray member over a mocked Tauri
+// plain mock, and the Tauri shim's tray member over a mocked Tauri
 // IPC. Both hand the same spy the reported status.
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'

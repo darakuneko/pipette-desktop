@@ -730,9 +730,9 @@ describe('KeyLabelsModal', () => {
 
   it('dedupes a batch where two files resolve to the same id: hub-sync and badge run only once', async () => {
     metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
-    // Two files sharing a name both overwrite the same entry — main
-    // resolves this in file-list order (see key-label-store.ts's
-    // importFromDialog), so `imported` legitimately contains the same
+    // Two files sharing a name both overwrite the same entry — the store
+    // resolves this in file-list order (see
+    // src-tauri/crates/pipette-keyboard-stores/src/key_labels/transfer.rs), so `imported` legitimately contains the same
     // id twice.
     const overwritten = meta({ id: 'dup', name: 'Duplicate', hubPostId: 'hub-1' })
     importFromFile.mockResolvedValueOnce({

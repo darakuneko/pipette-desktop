@@ -54,14 +54,16 @@ export function isValidVialProtocol(v: unknown): v is number {
 export const FALLBACK_VIAL_PROTOCOL = 6
 
 /**
- * Stricter than {@link isValidVialProtocol} — used only at the Hub
- * upload boundary (`hub-ipc.ts`), where a raw negative protocol should
- * fail fast locally instead of reaching the server as a confusing 400.
- * `isValidVialProtocol` itself stays loose on purpose: it's the local
- * (non-Hub) export/import boundary in `favorite-store.ts`, and tightening
+ * Stricter than {@link isValidVialProtocol} — used at the Hub upload
+ * boundary (`src/tauri-shim/api/hub-favorite.ts`), where a raw negative
+ * protocol should fail fast locally instead of reaching the server as a
+ * confusing 400. `isValidVialProtocol` itself stays loose on purpose: it's
+ * the local (non-Hub) export/import boundary
+ * (`src/tauri-shim/api/favorites.ts`), and tightening
  * it there is a separate, non-breaking-guaranteed change no caller
  * currently needs — no caller passes -1 today. (A connected device can
- * never actually hold -1: preload's protocol read ends in `>>> 0`, so
+ * never actually hold -1: the protocol read (`readLE32` in
+ * `src/tauri-shim/protocol.ts`) ends in `>>> 0`, so
  * `vialProtocol` is unsigned once connected, and a genuinely VIA-only
  * board never reaches the connected state — `useDeviceLifecycle`
  * disconnects it with `error.notVialCompatible` first. The only place

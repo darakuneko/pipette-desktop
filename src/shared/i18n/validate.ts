@@ -3,8 +3,8 @@
 // Pure-function validators for i18n language pack JSON. The same
 // rules are applied on both Desktop (during import) and Hub Worker
 // (when accepting an upload) so a malformed pack cannot persist
-// past either gate. The module deliberately has no Electron / Node
-// dependency so it can be ported into pipette-hub verbatim.
+// past either gate. The module deliberately has no Node dependency so it
+// can be copied into pipette-hub verbatim.
 
 const MAX_FILE_SIZE_BYTES = 256 * 1024
 const MAX_DEPTH = 8

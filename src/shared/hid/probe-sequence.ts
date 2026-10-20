@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Vial requests that read a secondary keyboard's definition, keymap,
 // layout options and encoders for the layout picker, without touching the
-// main connection. Each host supplies the raw exchange over its temporary
-// handle and the definition decompression: the Electron main process
-// (src/main/hid-service.ts) and the Tauri shim (src/tauri-shim/api/device.ts).
+// main connection. The caller supplies the raw exchange over its temporary
+// handle and the definition decompression (src/tauri-shim/api/device.ts).
 
 import {
   MSG_LEN,

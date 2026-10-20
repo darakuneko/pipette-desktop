@@ -17,7 +17,7 @@
  *
  *  ## Observation holes
  *  The renderer polls on a ~20ms cadence, but a HID read can block behind
- *  other queued requests on the shared mutex (`hid-service.ts`) or simply
+ *  other queued HID requests or simply
  *  time out, opening a gap of unknown length with zero visibility into
  *  what happened during it. A key could have been released and
  *  re-pressed inside that gap without either edge ever reaching this
@@ -32,8 +32,7 @@ import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-anal
 import { OBSERVATION_HOLE_MS } from '../../shared/typing-analytics-timing'
 import type { PressStartRecord } from './matrix-layers'
 
-// Re-exported so existing imports keep working — main's validator imports
-// the same constant directly from shared/typing-analytics-timing.ts.
+// Re-exported so existing imports keep working.
 export { OBSERVATION_HOLE_MS }
 
 interface PressRecord<TPreparedEvent> {
@@ -179,8 +178,9 @@ export class PressDurationTracker<TPreparedEvent> {
     // than the poll period never produces a press AND a release edge in
     // the first place (both would land in the same polled frame with no
     // edge to detect at all). Discarding rather than reporting 0 is
-    // deliberate, not a rounding nicety: main's own validator agrees
-    // (`durationMs > 0` — see isValidEvent in typing-analytics-service.ts).
+    // deliberate, not a rounding nicety: the backend's own validator agrees
+    // (`durationMs > 0` — see the event parse in
+    // src-tauri/crates/pipette-typing-analytics/src/event.rs).
     if (durationMs <= 0) return null
     return {
       prepared: press.prepared,

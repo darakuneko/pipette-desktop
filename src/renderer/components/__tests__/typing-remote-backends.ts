@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The two vialAPI implementations the Data modal's Sync > Typing tests run
 // against, both answering from the same VialAPI-shaped spies: a
-// preload-like mock (the spies themselves), and the Tauri shim's members
+// plain mock (the spies themselves), and the Tauri shim's members
 // over a mocked Tauri IPC, whose commands hand the spies their arguments in
 // the members' order. A spy that rejects makes the command fail, so the
 // shim's call rejects too. The test file clears the IPC mock after each
@@ -40,7 +40,7 @@ function installVialAPI(members: object): void {
 
 export function typingRemoteBackends(spies: TypingRemoteSpies): TypingRemoteBackend[] {
   return [
-    { name: 'preload-like mock', install: () => installVialAPI({ ...spies }) },
+    { name: 'plain mock', install: () => installVialAPI({ ...spies }) },
     {
       name: 'Tauri shim over mockIPC',
       install: () => {

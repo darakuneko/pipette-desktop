@@ -3,8 +3,8 @@
 // (src-tauri/src/sync_commands/analytics_remote.rs): whether another device
 // has typing data on Drive, its devices and days, and the fetch of one of
 // its days. Each passes its arguments as they are; the backend checks them
-// as the Electron handlers do and answers as they do (`false` or an empty
-// list for a rejected argument, a rejection when Drive fails).
+// and answers `false` or an empty list for a rejected argument, and rejects
+// when Drive fails.
 // coverage.test.ts lists the members each of these modules holds.
 
 import type { VialAPI } from '../../shared/types/vial-api'

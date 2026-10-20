@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI members of the Analyze posts on the Hub and their preview, each the backend command
 // of src-tauri/src/hub_commands/analytics.rs. The parameters go as the text of
-// `JSON.stringify(params)`, which the backend reads as `JSON.parse` would, so it
-// answers a field of an unexpected type as the Electron handler does. The export
+// `JSON.stringify(params)`, which the backend reads as `JSON.parse` would. The export
 // is built and sent in the backend; the Hub token stays there.
 
 import type { VialAPI } from '../../shared/types/vial-api'

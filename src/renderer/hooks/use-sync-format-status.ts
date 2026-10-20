@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Whether to show the "update Pipette to keep syncing" banner: Drive holds
-// a sync-format marker newer than this app's. The status lives in main
-// (sync-format-status.ts), which pushes every change (a blocked sync,
-// sign-in, sign-out); it is fetched once on mount for the value main had
-// before this hook subscribed.
+// a sync-format marker newer than this app's. The status lives in the
+// backend (src-tauri/crates/pipette-sync/src/format_status.rs), which
+// pushes every change (a blocked sync, sign-in, sign-out); it is fetched
+// once on mount for the value the backend had before this hook subscribed.
 
 import { useCallback, useEffect, useState } from 'react'
 

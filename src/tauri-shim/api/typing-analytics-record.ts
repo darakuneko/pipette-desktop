@@ -4,7 +4,7 @@
 // event after the previous one has settled and the flush after them, so the
 // shim sends them as they come, in that order. An event crosses as JSON:
 // what JSON cannot carry (a NaN or infinite time) arrives as null, which the
-// backend rejects as the Electron handler rejects a non-finite number.
+// backend rejects.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'

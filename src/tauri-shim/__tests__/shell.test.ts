@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// openExternal rejects with the backend's message, as the Electron
-// handler's rejection reaches the renderer.
+// openExternal rejects with the backend's message.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

@@ -1,8 +1,11 @@
 # The packages whose install scripts run (pnpm 11's per-package map).
-# esbuild's binary install needs its script; core-js's postinstall is just a
-# sponsorship console message (no build). edgedriver's and geckodriver's
-# download browser drivers WebdriverIO can fetch on its own; the Tauri e2e
-# (e2e-tauri/) talks to tauri-driver and uses neither.
+# esbuild's postinstall checks that its platform binary package is there
+# (fetching it when it is missing) and swaps its `bin/esbuild` launcher for
+# that binary; the JS API Vite calls finds the platform package on its own,
+# so an install with --ignore-scripts still builds. core-js's postinstall is
+# just a sponsorship console message (no build). edgedriver's and
+# geckodriver's download browser drivers WebdriverIO can fetch on its own;
+# the Tauri e2e (e2e-tauri/) talks to tauri-driver and uses neither.
 allowBuilds:
   core-js: false
   edgedriver: false

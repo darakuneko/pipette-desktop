@@ -2,7 +2,7 @@
 // Client-side aggregation for the Analyze keypress-duration section.
 // The TYPING_ANALYTICS_LIST_DURATION_CELLS channel already folds every
 // contributing minute into one total per (row, col, layer) cell (see
-// aggregateMatrixDurationTotals in main's bigram-aggregate.ts) — this
+// src-tauri/crates/pipette-typing-analytics/src/bigram_aggregate.rs) — this
 // module only needs to sum those per-cell totals into one
 // selection-wide histogram + sum/sumSq, and turn the shared
 // DURATION_BUCKET_UPPER_BOUNDS_MS grid into axis/tooltip labels so the

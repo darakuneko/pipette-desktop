@@ -3,7 +3,7 @@
 // the sync of a scope, the Analyze sync, the sync format status, and the
 // progress, format and applied-unit events, all the backend's
 // (src-tauri/src/sync_commands/{execute,analytics_remote,preflight}.rs), the
-// events on the channels the Electron main process uses.
+// events on the channels of src/shared/ipc/channels.ts.
 // coverage.test.ts lists the members each of these modules holds.
 
 import { IpcChannels } from '../../shared/ipc/channels'

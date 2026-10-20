@@ -64,10 +64,10 @@ export interface I18nPackIndex {
 
 /**
  * Stable id for the built-in English entry so drag/sort order and rename
- * history survive sync — mirrors `key-label-store.ts`'s
- * `QWERTY_ENTRY_ID` precedent, promoted from a renderer-synthesized row
- * to a real store entry (`ensureBuiltinEnglishEntry` in
- * `main/i18n-pack-store.ts`) so English can participate in drag reorder
+ * history survive sync — mirrors the key label store's `QWERTY_ENTRY_ID`
+ * (src-tauri/crates/pipette-keyboard-stores/src/key_labels/mod.rs): a real
+ * store entry (`ensure_builtin_english` in
+ * src-tauri/crates/pipette-pack-stores/src/i18n.rs) so English can participate in drag reorder
  * and Name sort like any imported pack. Its on-disk pack body is a
  * trivial placeholder (`{ name, version }`, no translation keys) —
  * unlike an imported pack, the renderer always renders English from the
@@ -130,8 +130,7 @@ export interface I18nPackRecord {
 
 /** Structurally identical to Theme Packs' `ThemePackImportFile` /
  *  `ThemePackImportDialogResult` — both alias the shared shape in
- *  `pack-import.ts` (see `readSelectedImportFiles` in
- *  `src/main/pack-import-dialog.ts`, which both IPC handlers call).
+ *  `pack-import.ts`.
  *  Aliased (not just re-exported) under the domain-specific name so
  *  existing call sites don't need to change what they import. */
 export type { PackImportFile as I18nPackImportFile, PackImportDialogResult as I18nPackImportDialogResult } from './pack-import'

@@ -3,6 +3,6 @@
 //
 // Run: pnpm run test:fake-hub
 
-import { fixtureConfig } from '../fixture-vitest-config'
+import { scriptVitestConfig } from '../script-vitest-config'
 
-export default fixtureConfig('fake-hub')
+export default scriptVitestConfig('fake-hub')

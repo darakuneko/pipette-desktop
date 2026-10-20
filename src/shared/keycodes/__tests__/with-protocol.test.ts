@@ -4,9 +4,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { deserialize, getProtocol, recreateKeycodes, serialize, setProtocol } from '../keycodes'
 import { withDeserializeProtocol, withSerializeProtocol } from '../with-protocol'
 
-// 0x7c00 is a deliberate protocol collision (see
-// src/main/__tests__/favorite-store.test.ts:511 and
-// src/renderer/components/analyze/__tests__/key-heatmap-helpers-speed.test.ts:214):
+// 0x7c00 is a deliberate protocol collision (see the 0x7c00 case of
+// src/renderer/components/analyze/__tests__/key-heatmap-helpers-speed.test.ts):
 // QK_BOOT under v6, but the masked keycode RAG_T(kc) with a KC_NO inner
 // under v5. Serializing it only proves anything if RAWCODES_MAP was
 // actually rebuilt for the requested protocol -- a stale v6 map would

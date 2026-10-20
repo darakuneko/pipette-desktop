@@ -2,9 +2,8 @@
 // What the language and theme pack members share (api/i18n-packs.ts,
 // api/theme-packs.ts): the import dialog answers the text of each chosen
 // file (src-tauri/src/store_commands/pack_import.rs), parsed here with
-// JSON.parse into the `{ filePath, raw, fileSizeBytes }` or
-// `{ …, parseError }` the Electron handler answers
-// (src/main/pack-import-dialog.ts); a pack and its options cross to the
+// JSON.parse into `{ filePath, raw, fileSizeBytes }` or
+// `{ …, parseError }`; a pack and its options cross to the
 // backend as the text of JSON.stringify, so the backend keeps their key
 // order.
 

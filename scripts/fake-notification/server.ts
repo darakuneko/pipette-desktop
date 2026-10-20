@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // A fake startup-notice server for the notice tests: it stands in for the
-// endpoint `fetchNotifications` (src/main/notification-store.ts) POSTs its
-// query to, answers each POST with the scripted response, logs every
+// endpoint the notice fetch (src-tauri/crates/pipette-notification) POSTs
+// its query to, answers each POST with the scripted response, logs every
 // request with its body, and takes faults for the next requests. It keeps
 // its state in memory and listens on 127.0.0.1 only.
 //
