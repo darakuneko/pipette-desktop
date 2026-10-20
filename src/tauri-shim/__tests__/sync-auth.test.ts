@@ -2,10 +2,8 @@
 // @vitest-environment jsdom
 // The sign-in and password statuses, setting and re-entering the password,
 // the password-check and the sync format status come from the backend; the
-// password strength check runs in the shim and gives the answers of the
-// Electron main process's checkPasswordStrength
-// (src-tauri/tests/fixtures/password-strength.json, recorded by
-// scripts/sync-fixtures/record-secrets-auth.test.ts).
+// password strength check runs in the shim and gives the recorded golden
+// answers (src-tauri/tests/fixtures/password-strength.json).
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'

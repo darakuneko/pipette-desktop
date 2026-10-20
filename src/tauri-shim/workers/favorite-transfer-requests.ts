@@ -2,11 +2,8 @@
 // What the favorite transfer worker (favorite-transfer.worker.ts) does for
 // each request: the keycode conversion and file building of the favorite
 // export and import (src/shared/favorite-transfer.ts) and of a favorite
-// post's export JSON (`buildFavoriteExportJson` of
-// src/main/hub/hub-ipc-favorite.ts), on the worker's own copy of the keycode
-// tables. Every answer is a value; an exception is
-// answered as `{ error: String(err) }`, the text the Electron handlers
-// answer for it.
+// post's export JSON, on the worker's own copy of the keycode tables. Every
+// answer is a value; an exception is answered as `{ error: String(err) }`.
 
 import { buildFavExportFile } from '../../shared/favorite-data'
 import {
@@ -42,8 +39,8 @@ export interface FavoriteTransferResults {
   importToCurrent: { data: unknown } | { error: string }
   import: { plan: FavoriteImportPlan } | { error: string }
   /** `thrown`: the message of an `Error` thrown while building, `null` for
-   *  a thrown value that is not one, which the post member answers as the
-   *  Electron handler's `extractError` does. */
+   *  a thrown value that is not one, which the post member answers with
+   *  `extractError`'s fallback (api/hub-favorite-checks.ts). */
   hubExport: { json: string } | { error: string } | { thrown: string | null }
 }
 
@@ -67,8 +64,8 @@ function answer(request: FavoriteTransferRequest): FavoriteTransferResults[Favor
       return file ? { plan: planFavoriteImport(file) } : INVALID_FILE
     }
     case 'hubExport': {
-      // One entry, unindented: `JSON.stringify(exportFile)` of the Electron
-      // handler. The backend has checked that the body has `data`.
+      // One entry, unindented. The backend has checked that the body has
+      // `data`.
       const { scope, vialProtocol, entry } = request
       const exported = favoriteExportEntry(scope, vialProtocol, entry.label, entry.savedAt, entry.body)
       if (!exported) return { error: 'Entry data is empty' }

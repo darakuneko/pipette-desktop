@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Right-clicking opens the webview's menu on editable fields only, as in the
-// Electron build, whose main process (src/main/index.ts) shows Cut, Copy,
-// Paste and Select All for editable fields and no menu anywhere else.
+// Right-clicking opens the webview's menu on editable fields only.
 // WebKitGTK's own menu outside them offers Back, Forward, Stop and Reload
 // (and Inspect Element in debug builds); Reload would restart the app's
 // page. Builds with the development tools keep the webview's menu

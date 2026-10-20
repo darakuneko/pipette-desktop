@@ -3,9 +3,9 @@
 // (src-tauri/src/store_commands/i18n_packs.rs). The writes are queued under
 // `i18n/index`, the key the backend locks, so they reach the backend one at
 // a time in the order the renderer made them. The list is queued too: it
-// may create the built-in English entry, which Electron does in the same
-// write queue. A read of one pack or of a name goes without waiting, as in
-// Electron, and so does a dialog: the backend locks each save itself.
+// may create the built-in English entry. A read of one pack or of a name
+// goes without waiting, and so does a dialog: the backend locks each save
+// itself.
 //
 // The pack JSON and the import options cross as JSON text, and the import
 // dialog's file texts are parsed here (api/pack-import.ts).
@@ -57,7 +57,7 @@ export const i18nPacksApi = {
     return enqueue(KEY, () => call<I18nPackStoreResult<void>>('i18n_pack_store_reorder', { orderedIds: sent }))
   },
   i18nPackImport: async () => parseImportFiles(await openImport()),
-  // The preload sends `options ?? {}`.
+  // Missing options are sent as `{}`.
   i18nPackImportApply: (raw, options) => {
     const args = { raw: jsonText(raw), options: jsonText(options ?? {}) }
     return enqueue(KEY, () => call<I18nPackStoreResult<I18nPackMeta>>('i18n_pack_import_apply', args))

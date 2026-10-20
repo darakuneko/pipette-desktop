@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VialAPI members of the favorite posts on the Hub. The Electron
-// handlers (src/main/hub/hub-ipc-favorite.ts, and the private upload of
-// hub-ipc-private.ts) build a post's export JSON in the main process, whose
-// keycode tables are the defaults; here the favorite transfer worker
-// (workers/favorite-transfer.worker.ts) names the keycodes, so each member
-// runs the handler's steps in the handler's order: the post id of an
-// update, the checks of `prepareFavoritePost` (the type, the Vial protocol,
-// the title), the read of the entry (`hub_favorite_entry`), the JSON from
-// the worker, then the command of src-tauri/src/hub_commands/favorite.rs,
-// which checks the post again and sends it with the Hub token. A failure of
-// any step is the handler's `{ success: false, error }`.
+// The VialAPI members of the favorite posts on the Hub. A post's export
+// JSON names its keycodes with the default keycode tables, which the
+// favorite transfer worker (workers/favorite-transfer.worker.ts) keeps, so
+// each member runs these steps in this order: the post id of an update, the
+// checks of `prepareFavoritePost` (the type, the Vial protocol, the title),
+// the read of the entry (`hub_favorite_entry`), the JSON from the worker,
+// then the command of src-tauri/src/hub_commands/favorite.rs, which checks
+// the post again and sends it with the Hub token. A failure of any step is
+// `{ success: false, error }`.
 
 import type { VialAPI } from '../../shared/types/vial-api'
 import type { FavoriteType } from '../../shared/types/favorite-store'

@@ -4,10 +4,9 @@
 // keyboard's filters are queued under its uid, the key its snapshot and
 // pipette settings writes share, so they reach the backend one at a time in
 // the order the renderer made them; the list and the load read without
-// waiting, as the Electron handlers do. The two Hub members only record the
-// link on the entry. A private Hub link crosses as the text of
-// JSON.stringify(link), so the backend keeps its keys in their order, taken
-// when the member is called as Electron's IPC copies its arguments then.
+// waiting. The two Hub members only record the link on the entry. A private
+// Hub link crosses as the text of JSON.stringify(link), taken when the
+// member is called, so the backend keeps its keys in their order.
 
 import type { AnalyzeFilterSnapshotMeta } from '../../shared/types/analyze-filter-store'
 import type { VialAPI } from '../../shared/types/vial-api'

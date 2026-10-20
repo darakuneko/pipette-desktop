@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The VialAPI pipette settings members for the Tauri build
 // (src-tauri/src/store_commands/settings.rs). The backend only stores the
-// text of a keyboard's settings file; the content rules are the ones the
-// Electron main process applies (src/shared/pipette-settings-normalize.ts),
-// applied here.
+// text of a keyboard's settings file; the content rules
+// (src/shared/pipette-settings-normalize.ts) are applied here.
 //
 // A patch reads the file with its etag, merges, validates and serializes
 // here, and writes the text back naming that etag. The backend writes it
@@ -12,9 +11,8 @@
 // patch starts over from a new read. The patches of a keyboard are queued
 // under its uid, the key its snapshot writes share, from the read to the
 // write, so the renderer's own patches never conflict with each other and
-// apply in the order it made them, as the Electron handler's lock does.
-// As with Electron's IPC, which copies the arguments when the member is
-// called, a queued patch applies the object as it was at the call.
+// apply in the order it made them. A queued patch applies the object as it
+// was at the call.
 
 import type { AppConfig } from '../../shared/types/app-config'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../../shared/types/pipette-settings'
@@ -57,8 +55,7 @@ export const writeSettingsFile = (uid: string, content: string, etag: string): P
   call<'written' | 'conflict'>('pipette_settings_write', { uid, content, etag })
 
 /** Uid → product name of the keyboards with typing data; none when the
- *  analytics cannot answer, as the Electron handler skips a cache it
- *  cannot open. */
+ *  analytics cannot answer. */
 async function readAnalyticsNames(): Promise<Map<string, string>> {
   try {
     const keyboards = await call<TypingKeyboardSummary[]>('typing_analytics_list_keyboards')

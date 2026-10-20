@@ -3,11 +3,10 @@
 // (src-tauri/src/store_commands/snapshots.rs). The writes of a keyboard's
 // snapshots are queued under its uid, the key its pipette settings writes
 // share, so they reach the backend one at a time in the order the renderer
-// made them; the list and the load read without waiting, as the Electron
-// handlers do. A private Hub link crosses as the text of
-// JSON.stringify(link), so the backend keeps its keys in their order. As
-// with Electron's IPC, which copies the arguments when the member is
-// called, a queued write sends its objects as they were at the call.
+// made them; the list and the load read without waiting. A private Hub
+// link crosses as the text of JSON.stringify(link), so the backend keeps its
+// keys in their order. A queued write sends its objects as they were at the
+// call.
 
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
 import type { VialAPI } from '../../shared/types/vial-api'

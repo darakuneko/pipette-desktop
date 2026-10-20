@@ -3,10 +3,9 @@
 // (src-tauri/src/store_commands/key_labels.rs). The writes are queued under
 // `key-labels`, the key the backend locks, so they reach the backend one at
 // a time in the order the renderer made them. The lists are queued too: a
-// list can write the built-in QWERTY entry, which the Electron store does
-// in the same lock queue, so a list made after a write reads what it wrote.
-// The read of one label and the name check go without waiting, as the
-// Electron handlers do, and so do the import and the export: their dialogs
+// list can write the built-in QWERTY entry, and a list made after a write
+// reads what it wrote. The read of one label and the name check go without
+// waiting, and so do the import and the export: their dialogs
 // wait for the user outside the queue, and the backend takes the lock for
 // each save.
 

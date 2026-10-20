@@ -3,9 +3,8 @@
 // analytics_commands/range.rs): the Monitor App lists, the key heatmap,
 // the bigram ranking, the rollover trend, the keypress durations and the
 // Layout Comparison over a window and a device scope. Each passes its
-// arguments as they are and the backend checks them as the Electron
-// handlers do; a filter list the renderer leaves out is sent as the empty
-// list, as the preload's defaults send it.
+// arguments as they are and the backend checks them; a filter list the
+// renderer leaves out is sent as the empty list.
 //
 // The Layout Comparison options cross as the text of
 // JSON.stringify(options), taken when the member is called: the order of a

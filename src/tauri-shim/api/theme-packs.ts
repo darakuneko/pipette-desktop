@@ -3,11 +3,11 @@
 // (src-tauri/src/store_commands/theme_packs.rs). The writes are queued under
 // `themes/index`, the key the backend locks, so they reach the backend one
 // at a time in the order the renderer made them. The list, a read of one
-// pack or of a name, and a dialog go without waiting, as in Electron: the
-// list writes nothing, and the backend locks each save itself.
+// pack or of a name, and a dialog go without waiting: the list writes
+// nothing, and the backend locks each save itself.
 //
 // An imported pack is checked here with validateThemePack before it is
-// queued, as the Electron store checks it before taking its lock; a pack
+// queued; a pack
 // that fails answers INVALID_FILE with the check's errors without a call
 // to the backend, which checks every pack again and answers the same. The pack JSON and the import options cross as JSON
 // text, and the import dialog's file texts are parsed here
@@ -54,7 +54,7 @@ export const themePacksApi = {
     return enqueue(KEY, () => call<ThemePackStoreResult<void>>('theme_pack_store_reorder', { orderedIds: sent }))
   },
   themePackImport: async () => parseImportFiles(await openImport()),
-  // The preload sends `options ?? {}`.
+  // Missing options are sent as `{}`.
   themePackImportApply: (raw, options) => {
     const checked = validateThemePack(raw)
     if (!checked.ok) {

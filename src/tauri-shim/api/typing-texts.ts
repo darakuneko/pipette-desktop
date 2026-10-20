@@ -4,8 +4,8 @@
 // the confirmed overwrite of a held import are queued under
 // `typing-test-texts`, the key the backend locks, so they reach the backend
 // one at a time in the order the renderer made them. The list and the read
-// of one text go without waiting, as the Electron handlers read without the
-// lock, and so does the import: its dialog waits for the user outside the
+// of one text go without waiting, and so does the import: its dialog waits
+// for the user outside the
 // queue, and the backend takes the lock for the save.
 
 import type {
