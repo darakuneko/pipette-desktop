@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The file commands against scripted dialogs and temp directories. The
-//! expected titles, default names, filters and results are those of
-//! src/main/file-io.ts.
+//! The file commands against scripted dialogs and temp directories.
 
 use std::collections::VecDeque;
 use std::path::PathBuf;

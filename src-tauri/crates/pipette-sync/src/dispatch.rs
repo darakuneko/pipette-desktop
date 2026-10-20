@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync of one unit (src/main/sync/sync-merge-dispatch.ts): its upload,
-//! its merge with the Drive file of its name, and the choice between them.
-//! Every pass and entry point funnels each unit through [`UnitSync`].
+//! The sync of one unit: its upload, its merge with the Drive file of its name,
+//! and the choice between them. Every pass and entry point funnels each unit
+//! through [`UnitSync`].
 //!
 //! The revision a unit sync handled is recorded here and only on success
 //! (`lastKnownRemoteState`, SYNC-PROCESS §4): the merged Drive file when

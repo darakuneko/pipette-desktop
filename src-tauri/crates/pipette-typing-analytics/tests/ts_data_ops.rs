@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The data operations against the TypeScript code: each scenario of
-//! data_ops.json and of data_ops_local_days/<zone>.json
-//! (scripts/analytics-db-fixtures/data-ops-harness.ts) replayed on the
-//! recorder and [`DataOps`] must answer every step the same, announce the
-//! same sync units in order, log the same lines and leave the same files
-//! and cache tables. The local days run once per recorded time zone, each
-//! in a process of its own.
+//! data_ops.json and of data_ops_local_days/<zone>.json (recorded goldens)
+//! replayed on the recorder and [`DataOps`] must answer every step the
+//! same, announce the same sync units in order, log the same lines and
+//! leave the same files and cache tables. The local days run once per
+//! recorded time zone, each in a process of its own.
 //!
 //! An OS error's text is not compared (`<os error>`), nor the temp
 //! directory (`<userData>`).

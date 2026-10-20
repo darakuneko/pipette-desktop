@@ -4,8 +4,7 @@
 //! days and Delete All, the Sync tab's delete of another device's data, the
 //! export and the import (crates/pipette-typing-analytics, data_ops.rs).
 //!
-//! As the Electron handlers (sync-reset-ipc.ts, sync-ipc.ts), the deletes
-//! and the import answer `{ success, error? }`: a rejected argument fails
+//! The deletes and the import answer `{ success, error? }`: a rejected argument fails
 //! with `Invalid uid`, `Invalid device` or `Invalid dates`, and each runs
 //! holding the sync lock as a reset, waiting up to 30 seconds for a running
 //! sync pass or flush before it fails with `sync.deleteBusy` or
@@ -44,7 +43,7 @@ impl<E: std::fmt::Display> From<E> for Failed {
     }
 }
 
-/// `wrapIpc`: `{ success: true }` or `{ success: false, error }`.
+/// `{ success: true }` or `{ success: false, error }`.
 fn envelope(outcome: Result<(), Failed>) -> serde_json::Value {
     match outcome {
         Ok(()) => json!({ "success": true }),

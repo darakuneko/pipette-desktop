@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The keymap post handlers of `src/main/hub/hub-ipc-posts.ts`: upload,
-//! update, rename and delete a keymap post, and the account's own posts
-//! (all of them by page, or those of one keyboard). The answers are the
-//! TS's `{ success, postId? | posts?, pagination?, error? }`, with what the
-//! Hub sent as it sent it; a value the Hub left out is left out of the
-//! answer.
+//! The keymap post handlers: upload, update, rename and delete a keymap
+//! post, and the account's own posts (all of them by page, or those of one
+//! keyboard). The answers are
+//! `{ success, postId? | posts?, pagination?, error? }`, with what the Hub
+//! sent as it sent it; a value the Hub left out is left out of the answer.
 //!
-//! The checks run before any request and in the TS's order: the post id
+//! The checks run before any request and in this order: the post id
 //! (update, rename, delete), the title, then the files (`buildFiles`: the
 //! names from the keyboard name with each unsafe UTF-16 unit as `_`, the
 //! size limits thumbnail → vil → pipette → keymap C → PDF). The keyboard
 //! name itself goes into the `keyboard_name` field as the page sent it,
 //! untrimmed and unchecked.
 //!
-//! The page always sends strings and numbers. Where it does not, Electron
-//! fails on JavaScript's coercions with messages of the engine; here a text
+//! The page always sends strings and numbers. Where it does not, a text
 //! input that is not a string fails with the handler's own message
 //! (`Upload failed` …) once the checks before it pass, and a post id that
 //! is not a string is an invalid post id.
@@ -90,7 +88,7 @@ impl KeymapPostParams<'_> {
 }
 
 /// The multipart body of a keymap post, with the boundary of this moment:
-/// the TS builds the body anew for each send, the retry after a 401 too.
+/// the body is built anew for each send, the retry after a 401 too.
 pub(crate) fn keymap_body(
     token: &HubToken,
     post: &CheckedKeymapPost,
@@ -199,7 +197,7 @@ pub async fn update_prepared(
 }
 
 /// Sends a checked keymap post to `endpoint`. The body is assembled anew
-/// for each send, as the TS does (a copy of the files, no decoding).
+/// for each send (a copy of the files, no decoding).
 async fn submit(
     token: &HubToken,
     post: &CheckedKeymapPost,

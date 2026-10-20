@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language store of src/main/language-store.ts: the word lists of each
+//! The language store: the word lists of each
 //! provider (`local/downloads/languages/{provider}/{name}.json`), the Hub
 //! overrides of the bundled datasets (`local/typing-test-dataset.json`),
 //! and the session's "update available" answers. Machine-local: nothing
@@ -376,9 +376,9 @@ impl LanguageStore {
         .await
     }
 
-    /// `LANG_GET`: the downloaded word list as JSON text (the file's text,
-    /// which reads back as the object Electron answers), or `None` for a
-    /// bundled language, a catalog dataset, or a missing or invalid file.
+    /// `LANG_GET`: the downloaded word list as JSON text (the file's text),
+    /// or `None` for a bundled language, a catalog dataset, or a missing or
+    /// invalid file.
     pub async fn get(&self, name: &str, provider: Option<&str>) -> Result<Option<String>, DatasetError> {
         if !is_valid_name(name) {
             return Ok(None);

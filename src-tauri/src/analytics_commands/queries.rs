@@ -38,9 +38,8 @@ pub(super) fn js_args<const N: usize>(args: [Arg; N]) -> Vec<Value> {
 }
 
 /// `query`'s answer to `args`: the handler's answer to rejected arguments
-/// without waiting for the analytics, as the Electron handlers check their
-/// arguments before they touch the cache, and any other on the database
-/// thread.
+/// without waiting for the analytics (the arguments are checked before the
+/// cache is touched), and any other on the database thread.
 pub(super) async fn answer(
     analytics: &Arc<TypingAnalytics>,
     query: Query,

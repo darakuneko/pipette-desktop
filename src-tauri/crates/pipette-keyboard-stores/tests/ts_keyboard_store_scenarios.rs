@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript handlers by
-//! scripts/keyboard-store-fixtures/record-keyboard-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the keyboard store handlers:
 //! the same userData files and clock, the same calls, then each response,
 //! the notified units and every file left behind compared byte for byte.
 

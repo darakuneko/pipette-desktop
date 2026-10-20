@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The account handlers of `src/main/hub/hub-ipc-posts.ts`: the Hub origin,
-//! the display name of the next token and the account's own record. The
-//! answers are the TS's `{ success, user?, error? }`, with the Hub's user
-//! object as the Hub sent it.
+//! The account handlers: the Hub origin, the display name of the next token
+//! and the account's own record. The answers are
+//! `{ success, user?, error? }`, with the Hub's user object as the Hub sent
+//! it.
 
 use pipette_js_json::{Object, Value};
 

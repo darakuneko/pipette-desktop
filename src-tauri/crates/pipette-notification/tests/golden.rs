@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The notice fetch against what `fetchNotifications`
-//! (src/main/notification-store.ts) did on the Electron main process,
-//! recorded by scripts/resident-fixtures without sending anything
-//! (tests/fixtures/notification.json):
+//! The notice fetch against the recorded golden
+//! (tests/fixtures/notification.json), recorded without sending anything:
 //!
 //! - `requests`: the request for each `Date.now()`, byte for byte;
 //! - `cases`: a scripted response and the result, compared whole
@@ -107,7 +105,7 @@ fn the_requests_match_the_golden() {
     let golden = golden();
     assert_eq!(golden.requests.len(), 5);
     // The destination of a build without the development tools, whatever
-    // the environment holds: the URL Electron posts to. Nothing is sent.
+    // the environment holds: the recorded URL. Nothing is sent.
     let destination = NoticeDestination::resolve(false, &|_| Some("http://127.0.0.1:9".to_owned()));
     let answer = ScriptedResponse {
         status: Some(200),

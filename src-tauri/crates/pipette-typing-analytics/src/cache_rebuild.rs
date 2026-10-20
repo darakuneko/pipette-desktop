@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Rebuilding the SQLite cache from the JSONL masters, and deciding whether
-//! it can be trusted for this device (src/main/typing-analytics/
-//! cache-rebuild.ts).
+//! it can be trusted for this device.
 //!
 //! The cache is rebuilt when `sync_state.json` is missing, cannot be read
 //! or names another device, or when the caller forces it (a schema
 //! migration dropped tables, an import replaced day files). The database
 //! file itself is not looked at: deleting only the database leaves an
-//! empty cache that is not rebuilt, as in the Electron build.
+//! empty cache that is not rebuilt.
 //!
 //! A rebuild empties the data tables and replays every day file, one
 //! database job per file: the files of other devices with their deleted
 //! ranges hidden (deleted_ranges_cache.rs), the ranges read inside that
-//! file's job. Between the jobs the queries and the flush run, as they run
-//! between the awaits of the Electron rebuild.
+//! file's job. Between the jobs the queries and the flush run.
 
 use std::fs::File;
 use std::io::{self, Read};

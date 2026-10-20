@@ -18,8 +18,7 @@ pub enum HidError {
     /// by `close_probe` while being opened.
     #[error("No probe device is open")]
     ProbeNotOpen,
-    /// An empty read on the probe handle, in the words of the Electron main
-    /// process's probe. Probes never retry.
+    /// An empty read on the probe handle. Probes never retry.
     #[error("HID read timeout during probe")]
     ProbeReadTimeout,
     #[error("HID data exceeds maximum length of {max}")]

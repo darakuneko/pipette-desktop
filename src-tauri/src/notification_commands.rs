@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The command behind the shim's notification member
-//! (src/tauri-shim/api/notification.ts): `NOTIFICATION_FETCH` of
-//! src/main/notification-store.ts, the startup notices. The renderer asks
+//! (src/tauri-shim/api/notification.ts): the fetch of the startup notices.
+//! The renderer asks
 //! for them (useStartupNotification and the Settings Notification tab);
 //! nothing here fetches on its own.
 //!

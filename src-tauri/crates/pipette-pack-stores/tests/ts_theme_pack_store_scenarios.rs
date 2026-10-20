@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the theme pack scenarios recorded from the real handlers of
-//! src/main/theme-pack-ipc.ts (scripts/pack-store-fixtures/
-//! record-theme-pack-store-fixtures.test.ts) through the handlers of this
+//! Replays the recorded theme pack scenarios through the handlers of this
 //! crate (common/replay.rs).
 //!
 //! A pack that fails the page's check (`validateThemePack`) is answered by

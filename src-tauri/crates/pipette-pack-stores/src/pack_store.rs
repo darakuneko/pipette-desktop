@@ -163,8 +163,7 @@ impl PackStore {
         Ok(PackIndex { root, metas })
     }
 
-    /// The metas of an index file as v2 entries (`readPackMetas` of
-    /// src/main/sync/pack-sync.ts). A meta stored without `clocks` was
+    /// The metas of an index file as v2 entries. A meta stored without `clocks` was
     /// written by the v1 pack sync, which kept the body file's mtime equal
     /// to Drive's `modifiedTime`: its body clock is that mtime (when after
     /// the epoch; none without a body file). Local-only and unsafe ids keep
@@ -305,8 +304,7 @@ fn mtime_ms(path: &std::path::Path) -> Option<i64> {
     Some(ms)
 }
 
-/// The value the three-state fields of a save take (`resolveOptionalField`
-/// of src/main/i18n-pack-store-internal.ts): set, cleared with `null`, or
+/// The value the three-state fields of a save take: set, cleared with `null`, or
 /// inherited from the existing meta when not given.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum Field<T> {

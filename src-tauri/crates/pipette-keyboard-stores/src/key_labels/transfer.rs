@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The import of key label files and the export of one label, as
-//! `importFromDialog` / `exportToDialog` of src/main/key-label-store.ts
-//! do them once the dialog has answered.
+//! The import of key label files and the export of one label, once
+//! the dialog has answered.
 
 use std::path::{Path, PathBuf};
 

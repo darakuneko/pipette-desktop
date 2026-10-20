@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Why a delete, a reset or a trash action of the Data modal failed, with
-//! the message the renderer shows (`wrapIpc` of
-//! src/main/sync/sync-ipc-wrap.ts): an i18n key or the text of the failure.
+//! Why a delete, a reset or a trash action of the Data modal failed, with the
+//! message the renderer shows: an i18n key or the text of the failure.
 
 use pipette_sync_runtime::{Busy, SyncCredentialFailureReason};
 

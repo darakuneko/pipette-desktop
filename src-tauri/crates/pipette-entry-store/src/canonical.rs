@@ -8,8 +8,8 @@ use crate::entry::EntryGroup;
 use crate::store_groups::{RESERVED_FIELDS, StoreGroupDef};
 
 /// A key JavaScript's `obj[key] = value` does not create as a property: it
-/// sets the prototype instead, so canonicalJson and groupValues of the
-/// Electron build never carry it.
+/// sets the prototype instead, so the canonical JSON and the group values
+/// never carry it.
 const PROTO: &str = "__proto__";
 
 /// JSON with object keys sorted (by UTF-16 code units, as `Array.sort`

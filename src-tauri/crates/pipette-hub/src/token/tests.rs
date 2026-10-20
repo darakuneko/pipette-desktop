@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The token cache and `withTokenRetry`, as the JWT tests of
-//! src/main/__tests__/hub-ipc.test.ts check them, on a scripted Hub whose
+//! The token cache and the retry after a 401, on a scripted Hub whose
 //! answers can be held until a test lets them go.
 
 #![allow(clippy::unwrap_used)]
@@ -275,8 +274,8 @@ async fn a_failed_token_request_is_not_cached() {
     assert_eq!(s.hub.token_requests(), 2);
 }
 
-/// hub-ipc.test.ts "does not write cache if cleared during inflight auth":
-/// the callers of the overtaken request still get its token.
+/// A token taken while the cache is cleared is not cached, and the callers
+/// of the overtaken request still get its token.
 #[tokio::test]
 async fn a_token_taken_while_the_cache_is_cleared_is_not_kept() {
     let hold = Arc::new(Notify::new());
@@ -465,7 +464,7 @@ async fn the_failures_of_the_token_request() {
             (HUB_ERROR_RATE_LIMITED.to_owned(), None),
             ("Hub auth failed: 401 bad id token".to_owned(), Some(StatusKind::Unauthorized)),
             ("Hub auth failed: Invalid token".to_owned(), None),
-            // The token request reads as hub-client.ts's: a 404 has its class.
+            // The token request has a class of its own for a 404.
             ("Hub auth failed: 404 gone".to_owned(), Some(StatusKind::NotFound)),
         ]
     );

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The password change on the in-memory Drive beyond the TypeScript
-//! recording: a change interrupted at any Drive write is finished by the
-//! next launch and never leaves a file neither password opens; the run
-//! stops starting work once the app quits and ends only after the started
-//! work; the refusals while other sync work runs; two machines on one
-//! Drive; a peer writing with the old key between passes; and a change the
-//! Electron build left behind.
+//! The password change on the in-memory Drive beyond the recorded goldens: a
+//! change interrupted at any Drive write is finished by the next launch and
+//! never leaves a file neither password opens; the run stops starting work once
+//! the app quits and ends only after the started work; the refusals while other
+//! sync work runs; two machines on one Drive; a peer writing with the old key
+//! between passes; and a change the 0.4 build left behind.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -315,24 +314,23 @@ async fn files_that_keep_changing_stop_the_commit_and_keep_the_change() {
     assert_recoverable(&world, &machine, "not converged").await;
 }
 
-/// A userData the Electron build also uses: its state file is read as
-/// it is, its keys file is not, so the change waits as one whose keys
-/// cannot be read and can only be abandoned here; the Electron keys file
-/// is left alone.
+/// A userData the 0.4 build also used: its state file is read as it is, its
+/// keys file is not, so the change waits as one whose keys cannot be read and
+/// can only be abandoned here; the 0.4 keys file is left alone.
 #[tokio::test]
-async fn a_change_the_electron_build_left_reads_as_one_without_keys() {
+async fn a_change_the_0_4_build_left_reads_as_one_without_keys() {
     let world = World::new();
     let machine = world.machine("pc", MachineOptions::default());
     machine.passwords.set(Some("old"));
     world.seed_password_check("old").await;
     world.seed_data(UNITS[0], "new").await;
-    let lock = world.seed_lock("electron-lock", "golden-hash").await;
+    let lock = world.seed_lock("v04-lock", "golden-hash").await;
     machine.write_state_file(Some(&format!(
-        r#"{{"version":1,"target":"new","step":"reencrypting","lockId":"electron-lock","lockFileId":"{}","startedAt":1792108800000}}"#,
+        r#"{{"version":1,"target":"new","step":"reencrypting","lockId":"v04-lock","lockFileId":"{}","startedAt":1792108800000}}"#,
         lock.id
     )));
-    let electron_keys = machine.secrets.auth_dir().join("sync-password-change-keys.enc");
-    std::fs::write(&electron_keys, b"safeStorage bytes").unwrap();
+    let v04_keys = machine.secrets.auth_dir().join("sync-password-change-keys.enc");
+    std::fs::write(&v04_keys, b"safeStorage bytes").unwrap();
 
     assert_eq!(machine.change.recover_on_startup().await, PasswordChangeRecovery::AwaitingUser);
     assert_eq!(
@@ -355,7 +353,7 @@ async fn a_change_the_electron_build_left_reads_as_one_without_keys() {
     machine.change.abandon().await.unwrap();
     assert_eq!(machine.state_file(), None);
     assert_eq!(lock_count(&world), 0);
-    assert_eq!(std::fs::read(&electron_keys).unwrap(), b"safeStorage bytes");
+    assert_eq!(std::fs::read(&v04_keys).unwrap(), b"safeStorage bytes");
     machine.preflight.assert_sync_allowed(None).await.unwrap();
 }
 

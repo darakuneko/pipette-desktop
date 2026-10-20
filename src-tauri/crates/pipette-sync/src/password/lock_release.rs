@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading and force-removing the password-change lock from a machine that
-//! has no password change of its own (src/main/sync/
-//! sync-password-lock-release.ts). When the machine holding the lock broke
-//! or never comes back, every other machine stays blocked by the sync
-//! guard; removing the lock is the only way out, so neither operation here
-//! runs the guard's Drive lock check. The release still refuses while this
-//! machine has a change of its own, and while Drive needs a newer sync
-//! format: an app too old for Drive's data leaves the lock to an updated
-//! one.
+//! Reading and force-removing the password-change lock from a machine that has
+//! no password change of its own. When the machine holding the lock broke or
+//! never comes back, every other machine stays blocked by the sync guard;
+//! removing the lock is the only way out, so neither operation here runs the
+//! guard's Drive lock check. The release still refuses while this machine has a
+//! change of its own, and while Drive needs a newer sync format: an app too old
+//! for Drive's data leaves the lock to an updated one.
 
 use serde::Serialize;
 

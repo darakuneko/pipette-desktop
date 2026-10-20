@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Checks the crate against JSON.parse, JSON.stringify and String(number) as
-//! recorded in Node by scripts/js-json-fixtures/.
+//! recorded in Node.
 
 // Test helpers outside #[test] functions panic on a broken fixture.
 #![allow(clippy::unwrap_used)]

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The trash screen's actions (trash::manual), the cases of
-//! src/main/sync/__tests__/sync-trash-manual.test.ts and of the trash
-//! handlers in sync-ipc.test.ts, on the in-memory Drive.
+//! The trash screen's actions (trash::manual) on the in-memory Drive.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

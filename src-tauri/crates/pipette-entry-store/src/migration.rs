@@ -11,7 +11,7 @@
 //! names it any more. Body clocks do not move: the content is the same.
 //!
 //! A name with a lone surrogate maps to the file of its lossy form (U+FFFD),
-//! the path the Electron build's file calls use for it.
+//! the path the 0.4 build's file calls used for it.
 
 use std::collections::HashSet;
 use std::io;
@@ -177,7 +177,7 @@ pub fn is_body_file_name(store: EntryStore, name: &str) -> bool {
 
 /// Unlinks the body files under `dir` that no entry names. Returns how many
 /// were removed; failures are skipped. Names that are not UTF-8 are taken
-/// in their lossy form, as the Electron build lists them.
+/// in their lossy form.
 pub fn unlink_unreferenced_body_files(
     store: EntryStore,
     dir: &Path,

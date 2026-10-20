@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Bytes to text as the Electron main process reads them.
+//! Bytes to text.
 
 use std::borrow::Cow;
 

@@ -761,9 +761,8 @@ fn the_same_app_marked_twice_is_one_app() {
     assert_eq!(app_after(&["VSCode", "VSCode"]), Some("VSCode".into()));
 }
 
-/// `mark_app_name` takes only a name, so the absent application of the
-/// Electron build's `markAppName(null)` is simply no call, and leaves the
-/// one app seen.
+/// `mark_app_name` takes only a name, so an absent application is simply
+/// no call, and leaves the one app seen.
 #[test]
 fn no_app_observed_keeps_the_single_app() {
     assert_eq!(app_after(&["VSCode"]), Some("VSCode".into()));

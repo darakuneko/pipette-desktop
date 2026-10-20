@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Data modal's reads of Drive and the delete of chosen Drive files
-//! (the `SYNC_SCAN_REMOTE`, `SYNC_FETCH_REMOTE_BUNDLE` and
-//! `SYNC_DELETE_FILES` handlers of src/main/sync/sync-ipc.ts and
-//! sync-reset-ipc.ts), and the Local Data export and import (the
-//! `EXPORT_LOCAL_DATA` and `IMPORT_LOCAL_DATA` handlers), on
-//! crates/pipette-sync's `scan`, `reset` and `local_data`.
+//! The Data modal's reads of Drive and the delete of chosen Drive files,
+//! and the Local Data export and import, on crates/pipette-sync's `scan`,
+//! `reset` and `local_data`.
 //!
 //! The scan and the bundle are not wrapped: a refusal or a Drive failure
-//! is the command's error, and the answers are the JSON the Electron
-//! handlers send. The delete answers as `wrapIpc` does. The export and
-//! import dialogs have the default file name and the filter of those
-//! handlers and no title of their own, as there; the answers are
-//! `wrapIpc`'s: the failure's text, and `cancelled` for an import whose
+//! is the command's error, and the answers are JSON. The delete answers a
+//! `SyncOperationResult` (result.rs). The export and import dialogs have a
+//! default file name and a filter and no title of their own; the answers
+//! are `SyncOperationResult`s: the failure's text, and `cancelled` for an import whose
 //! dialog was cancelled (a cancelled export is a success).
 
 use std::sync::Arc;

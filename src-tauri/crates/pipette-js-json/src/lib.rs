@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! `JSON.parse` and `JSON.stringify` with the semantics of JavaScript, for
-//! files the Electron build reads and writes and the Tauri build must
-//! read and write byte for byte the same:
+//! files the 0.4 build wrote and the renderer's JavaScript reads and writes,
+//! which this build must read and write byte for byte the same:
 //!
 //! - numbers are f64: a literal is rounded to the nearest one (integers past
 //!   2^53 lose precision, `-0` stays `-0` but is written `0`) and written as

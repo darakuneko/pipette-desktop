@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The histograms the recorder writes (bigram-bucket.ts): an n-gram's
+//! The histograms the recorder writes: an n-gram's
 //! inter-key intervals (`h`) and a matrix cell's keypress durations (`dh`),
 //! each counted into [`HIST_BUCKETS`] buckets, and the sum and sum of
 //! squares stored beside them for the true standard deviation.

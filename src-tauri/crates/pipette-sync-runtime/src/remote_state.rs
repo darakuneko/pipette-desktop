@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What this machine knows about the files on Drive
-//! (`lastKnownRemoteState` and `createdFileIds` of
-//! src/main/sync/sync-runtime-state.ts). Memory only.
+//! What this machine knows about the files on Drive: the revisions it handled
+//! and the files it created. Memory only.
 //!
 //! The handled revisions are never cleared, not even when the account
 //! changes: a revision is the file id with its `modifiedTime`, and another

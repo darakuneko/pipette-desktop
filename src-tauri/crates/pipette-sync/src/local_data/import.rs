@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Local Data import of src/main/sync/local-data-import.ts: plan,
-//! back up, write, roll back.
+//! The Local Data import: plan, back up, write, roll back.
 //!
 //! Every unit the file touches (snapshots and settings by keyboard uid,
 //! favorites by type) is locked for the whole import, so a plan built from
@@ -30,8 +29,7 @@ use pipette_js_json::{JsString, Object, Value};
 use pipette_keyboard_stores::StoreContext;
 use pipette_time::date_value_ms;
 
-/// Why an import failed. The texts are the Electron build's, but for the
-/// system's own error texts.
+/// Why an import failed.
 #[derive(Debug, thiserror::Error)]
 pub enum LocalDataImportError {
     #[error("Invalid export file format")]

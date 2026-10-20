@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Choosing one copy when Drive lists several files with the same name
-//! (src/main/sync/drive-canonical.ts). Drive keys files by id and does not
-//! keep names unique, so two machines creating the same file at once leave
-//! two copies. Every lookup by name uses the same copy, so writes, merges
-//! and the recorded remote state all land on one file instead of
-//! alternating between them.
+//! Choosing one copy when Drive lists several files with the same name.
+//! Drive keys files by id and does not keep names unique, so two machines
+//! creating the same file at once leave two copies. Every lookup by name
+//! uses the same copy, so writes, merges and the recorded remote state all
+//! land on one file instead of alternating between them.
 //!
 //! A [`Listing`] indexes one listing on first use, so the many lookups of
 //! a pass are each O(1).

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync of the keyboard names (`readKeyboardMetaIndex`,
-//! `mergeKeyboardMetaIndex` and `applyRemoteKeyboardMetaIndex` of
-//! src/main/sync/keyboard-meta.ts): the index as it is bundled, and the
+//! The sync of the keyboard names: the index as it is bundled, and the
 //! merge of a remote index into the local one.
 //!
 //! The merge is last writer wins per uid on the entry's `deletedAt`, else
@@ -39,7 +37,7 @@ pub struct KeyboardMetaMerge {
 
 /// The index as the bundle sends it: the file's object, or the empty index
 /// when the file is missing or not a keyboard-meta index. Read without the
-/// lock, as the bundle of the Electron build reads it.
+/// lock.
 pub fn read_keyboard_meta_index(ctx: &StoreContext) -> Result<Object, StoreError> {
     let MetaIndex { mut root, entries } = read_index(&meta_file_path(ctx))?;
     root.insert("entries", Value::Array(entries));

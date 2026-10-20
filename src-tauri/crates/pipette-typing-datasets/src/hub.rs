@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Hub's typing-test dataset API (`/api/typing-test/datasets`),
-//! anonymous and read-only: src/main/hub/hub-typing-dataset.ts. Both
-//! fetchers answer `None` on any network, status or shape error, so the
-//! callers fall back to what they have.
+//! The Hub's typing-test dataset API (`/api/typing-test/datasets`), anonymous
+//! and read-only. Both fetchers answer `None` on any network, status or shape
+//! error, so the callers fall back to what they have.
 
 use pipette_js_json::{JsString, Object, Value};
 use pipette_net::{HttpClient, encode_uri_component};

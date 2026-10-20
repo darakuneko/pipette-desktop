@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The query layer between the commands and the database: the Analyze and
-//! Data modal IPC handlers (typing-analytics-ipc-analyze.ts, the cache
-//! readers of typing-analytics-service.ts) and the range aggregates
-//! (typing-analytics-ipc-range.ts), each a [`Query`] answering the
+//! Data modal handlers and the range aggregates, each a [`Query`] answering the
 //! handler's arguments with the handler's value.
 //!
 //! The arguments arrive as the JavaScript values the renderer sent, in the

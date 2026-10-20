@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The recording (typing-analytics-pipeline.ts): events go into the
+//! The recording: events go into the
 //! [`MinuteBuffer`] and the [`SessionDetector`] in the order they arrive,
 //! and a flush writes what is ready to this device's day files, then the
 //! same rows to the cache, then `last_synced_at` to `sync_state.json`, and

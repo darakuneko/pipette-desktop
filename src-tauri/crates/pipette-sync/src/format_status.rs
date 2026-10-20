@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The latest known sync-format status of the signed-in account's Drive,
-//! for the renderer's "update Pipette" banner
-//! (src/main/sync/sync-format-status.ts). Filled by a markers-only listing
-//! (at startup and after sign-in) and by the guard whenever an entry point
-//! stops with `updateRequired`; forgotten when the sign-in changes. `None`
-//! means unknown. Every change goes to the listener (the app sends it as
+//! The latest known sync-format status of the signed-in account's Drive, for
+//! the renderer's "update Pipette" banner. Filled by a markers-only listing (at
+//! startup and after sign-in) and by the guard whenever an entry point stops
+//! with `updateRequired`; forgotten when the sign-in changes. `None` means
+//! unknown. Every change goes to the listener (the app sends it as
 //! `sync:format-status-changed`).
 //!
 //! Two counters keep stale results out:

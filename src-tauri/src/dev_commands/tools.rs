@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Development tools, compiled only with the dev-tools feature (never in the
-//! release profile, see build.rs): the virtual keyboard controller
-//! (the Electron build exposes the same operations to its E2E tests as
-//! `globalThis.__pipetteVirtualDevice`), a log sink, window
+//! release profile, see build.rs): the virtual keyboard controller, a log
+//! sink, window
 //! screenshots (Linux), and a script hook that runs a local file in the
 //! window once the first page has loaded, so the UI can be driven without a
 //! WebDriver, a queue of answers for the file dialogs, so the e2e tests

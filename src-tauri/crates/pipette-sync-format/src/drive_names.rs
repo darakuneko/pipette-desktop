@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Sync unit ↔ Google Drive file name mapping, the pure functions of
-//! `src/main/sync/google-drive.ts`.
+//! Sync unit ↔ Google Drive file name mapping.
 //!
 //! A sync unit's file name is the unit with every `/` replaced by `_` plus
 //! `.enc`. The reverse mapping is pattern based and only knows the unit
@@ -98,9 +97,8 @@ fn group<'a>(captures: &regex::Captures<'a>, index: usize) -> &'a str {
     captures.get(index).map_or("", |m| m.as_str())
 }
 
-/// The sync unit a Drive file name holds, or `None` when the name is not a
-/// data sync unit. The keyboard uid and machine hash captures are
-/// non-greedy, as in the TypeScript patterns.
+/// The sync unit a Drive file name holds, or `None` when the name is not a data
+/// sync unit. The keyboard uid and machine hash captures are non-greedy.
 pub fn sync_unit_from_file_name(file_name: &str) -> Option<String> {
     if let Some(exact) = exact_sync_unit(file_name) {
         return Some(exact.to_owned());

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The app config commands behind the shim's `appConfigGetAll` and
 //! `appConfigSet` (src/tauri-shim/api/app-config.ts), and what a change the
-//! renderer makes does in this process, as the `onAppConfigChange`
-//! listeners of src/main/index.ts do. The store itself is
+//! renderer makes does in this process. The store itself is
 //! crates/pipette-app-config.
 
 use std::path::Path;
@@ -29,8 +28,7 @@ where
 }
 
 /// The whole config, as JSON text the WebView parses: the bytes of
-/// `JSON.stringify`, so the renderer gets the object the Electron build
-/// sends, key order and all.
+/// `JSON.stringify`, key order and all.
 #[tauri::command]
 pub async fn app_config_get_all(config: State<'_, AppConfig>) -> Result<Response, CommandError> {
     let text =
@@ -50,8 +48,7 @@ pub async fn app_config_set(
     blocking(&config, move |store| store.set_from_renderer(&key, value.as_deref())).await
 }
 
-/// Applies the stored zoom factor to `window`, as the Electron build does
-/// when it creates the window.
+/// Applies the stored zoom factor to `window` when it is created.
 pub fn apply_stored_zoom<R: Runtime>(store: &AppConfigStore, window: &WebviewWindow<R>) {
     let zoom = store.get("zoomFactor").unwrap_or_else(|err| {
         log::error!("[app-config] failed to read zoomFactor: {err}");
@@ -72,8 +69,7 @@ pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
 /// polling and the flush (sync_commands/triggers.rs), `autoLaunch`
 /// registers or unregisters the app to start at sign-in (pipette-autostart,
 /// which reaches the real entry only in a distributed build without
-/// `PIPETTE_USER_DATA_DIR`). Then applies the stored `autoLaunch`, as the
-/// Electron build does at every launch.
+/// `PIPETTE_USER_DATA_DIR`). Then applies the stored `autoLaunch`.
 ///
 /// The listener runs under the store lock, once per set in the order the
 /// sets were saved. The zoom, the tray and the sign-in changes are queued
@@ -114,7 +110,7 @@ pub fn listen_for_changes(app: &AppHandle) {
 
 /// Registers the app to start at sign-in, or unregisters it. Only a
 /// distributed build counts as packaged (the same build that takes the
-/// Electron build's userData directory over); only a build with the
+/// 0.4 build's userData directory over); only a build with the
 /// development tools reads `PIPETTE_DEV_AUTOSTART_DIR`, which must be
 /// inside `user_data`.
 fn apply_auto_launch(enabled: bool, user_data: &Path) {

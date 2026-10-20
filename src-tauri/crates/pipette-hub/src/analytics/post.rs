@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze post handlers of src/main/hub/hub-ipc-analytics.ts (upload,
-//! update, preview) and the private analytics upload of hub-ipc-private.ts,
-//! on the export of [`super::prepare`].
+//! The Analyze post handlers (upload, update, preview) and the private
+//! analytics upload, on the export of [`super::prepare`].
 //!
-//! Each step runs in the TS's order: the update's post id first, then the
+//! Each step runs in this order: the update's post id first, then the
 //! preparation (its failures answer before the title's), the title, the
 //! file names, the thumbnail, the request with the token retry and, after a
 //! public upload or update, the post id linked to the saved filter. That
-//! link may fail without undoing the post: its answer is ignored, as the
-//! TS ignores the `success: false` of `setAnalyzeFilterHubPostId`. The
-//! upload and the update send the export without
-//! `validateAnalyticsExport`; only the preview reports the validation.
+//! link may fail without undoing the post: its answer is ignored. The
+//! upload and the update send the export without validating it; only the
+//! preview reports the validation.
 //!
 //! The parameters are the JavaScript value the renderer sent; the answers
 //! are the handlers' `{ success, … }` objects, without the properties that
@@ -181,7 +179,7 @@ impl AnalyticsPosts<'_> {
         }
     }
 
-    /// The title, the file names and the files of a post, in the TS's
+    /// The title, the file names and the files of a post, in the recorded
     /// order, once the export is built. The export's JSON and the
     /// thumbnail's bytes, both as large as the post, are made on the
     /// blocking pool, off the async runtime's threads.
@@ -225,9 +223,7 @@ impl AnalyticsPosts<'_> {
 
     /// `setAnalyzeFilterHubPostId(params.uid, params.entryId, id)`, whose
     /// answer the handlers ignore. `undefined` and `null` clear the link; a
-    /// value that is not a string makes the TS's `trim()` throw inside the
-    /// store, which then answers `success: false` and writes nothing, and so
-    /// is not written here either.
+    /// value that is not a string writes nothing.
     async fn link(&self, params: &Value, id: Option<&Value>) {
         let post_id = match id {
             None | Some(Value::Null) => None,

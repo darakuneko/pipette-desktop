@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript sync code by
-//! scripts/sync-fixtures/record-sync-merge-fixtures.test.ts: each seeds a
-//! userData tree and runs merges, pack GCs, bundles and unit collections
-//! on it, and every step is compared with the recording: the outcome (the
-//! error kind, or whether Drive needs this device's copy and the bundle it
-//! would upload), the windows notified, the units reported for sync, the
-//! Drive revisions forgotten and the tree left behind, byte for byte.
+//! Replays the recorded golden sync scenarios: each seeds a userData tree and
+//! runs merges, pack GCs, bundles and unit collections on it, and every step is
+//! compared with the recording: the outcome (the error kind, or whether Drive
+//! needs this device's copy and the bundle it would upload), the windows
+//! notified, the units reported for sync, the Drive revisions forgotten and the
+//! tree left behind, byte for byte.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -135,8 +134,8 @@ fn error_name(err: &MergeError) -> &'static str {
     }
 }
 
-/// The `errorName` the generator records for a failed bundle: a bundle
-/// fails only on a file or store read, a plain `Error` in TypeScript.
+/// The `errorName` recorded for a failed bundle: a bundle fails only on a file
+/// or store read, recorded as a plain `Error`.
 fn bundle_error_name(_: &BundleError) -> &'static str {
     "Error"
 }

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Appending rows to a per-day JSONL master (jsonl-writer.ts) and reading
-//! them back (jsonl-reader.ts).
+//! Appending rows to a per-day JSONL master and reading them back.
 //!
 //! A device only ever appends to its own day files, so the writer takes no
 //! lock: the files are append-only and every row ends with a newline, so a

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The theme pack store, from the tests of
-//! src/main/__tests__/theme-pack-store.test.ts that cover what this crate
-//! does (the sync merge and the garbage collection are not here).
+//! The theme pack store (the sync merge and the garbage collection are not
+//! here).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

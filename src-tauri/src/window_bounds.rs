@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Geometry of the main window, in device-independent pixels (DIP, Tauri's
 //! logical pixels): the nominal minimum size, and fitting a window into a
-//! display's work area. Pure functions, the ones of
-//! src/main/window-bounds.ts; tests/fixtures/window-bounds.json records the
-//! TypeScript results they must match.
+//! display's work area. Pure functions; tests/fixtures/window-bounds.json
+//! records the golden results they must match.
 
-/// `MIN_WIDTH` / `MIN_HEIGHT` of src/main/app-config.ts: the minimum size of
-/// the window wherever the work area is large enough.
+/// The minimum size of the window wherever the work area is large enough.
 pub const MIN_SIZE: Size = Size { width: 1280.0, height: 1024.0 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -84,8 +82,7 @@ pub(crate) mod tests {
         Rect { x, y, width, height }
     }
 
-    /// tests/fixtures/window-bounds.json, written by
-    /// scripts/app-config-fixtures/record-window-bounds-fixtures.test.ts.
+    /// tests/fixtures/window-bounds.json, the recorded golden.
     pub(crate) fn fixture() -> serde_json::Value {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/window-bounds.json");
         serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
@@ -104,7 +101,7 @@ pub(crate) mod tests {
         Size { width: number(&value["width"]), height: number(&value["height"]) }
     }
 
-    /// Equal as the TypeScript result is: NaN matches NaN. JSON keeps no
+    /// Equal as the recorded result is: NaN matches NaN. JSON keeps no
     /// sign of zero, so -0 matches +0.
     fn same(a: f64, b: f64) -> bool {
         a == b || (a.is_nan() && b.is_nan())
@@ -119,7 +116,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_minimum_size_is_the_electron_one() {
+    fn the_minimum_size_is_the_recorded_one() {
         assert_eq!(MIN_SIZE, size_of(&fixture()["minSize"]));
     }
 

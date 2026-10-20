@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The entry points of the resumable sync password change
-//! (src/main/sync/sync-password-change.ts): start, resume, revert, abandon,
-//! the deletion of files neither password opens, the recovery at startup
-//! and the status for the renderer. The re-encryption is in
-//! [`super::switch`], the local state and keys in [`super::state`], the
-//! Drive lock in [`super::lock`].
+//! The entry points of the resumable sync password change: start, resume,
+//! revert, abandon, the deletion of files neither password opens, the recovery
+//! at startup and the status for the renderer. The re-encryption is in
+//! [`super::switch`], the local state and keys in [`super::state`], the Drive
+//! lock in [`super::lock`].
 //!
 //! Every operation holds the password-change run of the sync runtime (the
 //! sync lock, not waitable) until all of its work has ended, so no other

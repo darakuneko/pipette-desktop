@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Replays the store-directory scenarios recorded from the TypeScript body
-//! filename migration by
-//! scripts/entry-store-fixtures/record-body-migration-fixtures.test.ts:
-//! the same files in a temp directory, the same call, then the result and
+//! filename migration: the same files in a temp directory, the same call, then the result and
 //! every file left behind compared byte for byte.
 
 #![allow(clippy::unwrap_used)]

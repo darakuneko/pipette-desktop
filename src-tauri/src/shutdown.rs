@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The quit sequence: ordered asynchronous phases that run before the app
-//! exits, bounded by one overall deadline, the shape of the before-quit
-//! handler of src/main/sync/sync-flush.ts (password change → pre-sync
+//! exits, bounded by one overall deadline (password change → pre-sync
 //! finalizers → the running sync pass → the pending flush → the remaining
 //! finalizers, 30 s in all).
 //!
@@ -20,8 +19,7 @@ use pipette_fs::write_file_atomic;
 use serde::Serialize;
 use tokio::time::Instant;
 
-/// How long the quit sequence may run before the app exits anyway. Same
-/// value as `QUIT_SYNC_DEADLINE_MS` in src/main/sync/sync-flush.ts: a
+/// How long the quit sequence may run before the app exits anyway: a
 /// stalled request has no timeout of its own and must not keep the app
 /// from exiting.
 pub const QUIT_DEADLINE: Duration = Duration::from_secs(30);
@@ -103,12 +101,11 @@ struct GuardState {
     phase: Option<&'static str>,
 }
 
-/// The re-entry guard of the quit sequence. Every exit path (the tray, the
-/// last window closing, a signal, the exit the sequence itself requests)
-/// asks it what to do: the first request starts the sequence, a request
-/// while it runs ends the app at once (as the before-quit handler of
-/// src/main/sync/sync-flush.ts lets a second quit through), and the exit the
-/// sequence requests when it ends goes through.
+/// The re-entry guard of the quit sequence. Every exit path (the tray, the last
+/// window closing, a signal, the exit the sequence itself requests) asks it
+/// what to do: the first request starts the sequence, a request while it runs
+/// ends the app at once, and the exit the sequence requests when it ends goes
+/// through.
 ///
 /// It also decides who writes the pending marker (see [`State`]) and tracks
 /// the phase [`run_quit_sequence`] is running, for the marker an early exit

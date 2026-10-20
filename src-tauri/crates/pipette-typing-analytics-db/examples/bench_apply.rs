@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Apply + query timing of the Rust cache on the inputs the TypeScript
-//! generator timed (`pnpm run generate:analytics-db-fixtures` writes them and
-//! its own timings to src-tauri/target/tmp/pipette-typing-analytics-db).
+//! Apply + query timing of the Rust cache on the benchmark inputs and the
+//! TypeScript timings recorded with them in
+//! src-tauri/target/tmp/pipette-typing-analytics-db (never committed).
 //! Each input is applied into a fresh file-backed database once as a
 //! warm-up and then RUNS times; the medians are printed next to the
 //! TypeScript ones. heavy.jsonl is also checked against the tables and query
-//! results the TypeScript side recorded for it, and the Analyze reads the
-//! generator timed on it (`BENCH_CALLS`) are checked and timed too.
+//! results recorded for it, and the Analyze reads recorded on it
+//! (`BENCH_CALLS`) are checked and timed too.
 //!
-//! The generator records in UTC and one of the reads groups by local days,
+//! The inputs are recorded in UTC and one of the reads groups by local days,
 //! so this runs in UTC as well.
 //!
 //! Run: TZ=UTC cargo run --release -p pipette-typing-analytics-db --example bench_apply

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The checks of a run log about to be saved (`validateRunLog` of
-//! src/main/typing-run-log-store.ts): its shape, its size, and keystroke
+//! The checks of a run log about to be saved: its shape, its size, and keystroke
 //! times relative to the run's own start, done here whatever the renderer
 //! already checked, since the log is the data a typed text is most easily
 //! recovered from.

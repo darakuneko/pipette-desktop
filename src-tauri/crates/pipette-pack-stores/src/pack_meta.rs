@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The operations on a pack's meta that the language and theme packs do
-//! the same way (src/main/i18n-pack-store-crud.ts and
-//! src/main/theme-pack-store.ts): reading a live pack, choosing the id and
+//! the same way: reading a live pack, choosing the id and
 //! the name a save takes, renaming, linking to the Hub and deleting. Each
 //! write runs under the store's write lock and reports its sync units.
 

@@ -60,9 +60,8 @@ fn normalize_response(buf: &[u8]) -> Report {
     pad_report(buf)
 }
 
-/// Logs why a device could not be opened, in the words of `logOpenFailure`
-/// in src/main/hid-service.ts, so the cause is not lost behind the message
-/// the renderer shows.
+/// Logs why a device could not be opened, so the cause is not lost behind
+/// the message the renderer shows.
 fn log_open_failure(vendor_id: u16, product_id: u16, err: &HidError) {
     log::error!("Failed to open HID device 0x{vendor_id:04x}:0x{product_id:04x}: {err}");
 }
@@ -226,8 +225,7 @@ impl HidService {
     /// not empty, whose serial number is exactly that — as the probe handle,
     /// closing any probe handle open before. Returns the new handle's id.
     /// The virtual keyboard is never a candidate, and hardware is searched
-    /// even when the device list shows only the virtual keyboard: the
-    /// Electron main process probes over node-hid's own enumeration. One
+    /// even when the device list shows only the virtual keyboard. One
     /// attempt, nothing logged.
     ///
     /// The main connection's state stays locked from reading its path until
@@ -266,7 +264,7 @@ impl HidService {
 
     /// Sends one report (zero-padded to 32 bytes) over the probe handle `id`
     /// and reads the response once, waiting HID_TIMEOUT_MS; an empty read is
-    /// [`HidError::ProbeReadTimeout`], the Electron main process's message.
+    /// [`HidError::ProbeReadTimeout`].
     /// No retries and no packet logs; probe requests do not queue behind the
     /// main connection's.
     pub fn probe_send_receive(&self, id: u32, data: &[u8]) -> Result<Report, HidError> {

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The AppKit calls, on the main thread only (AppKit's windows are main
-//! thread objects). Electron's `setOpacity` sets the window's `alphaValue`;
-//! its `setAspectRatio` sets the `contentAspectRatio` of a window with a
-//! frame, which AppKit keeps while the user resizes the window, and
-//! releases the ratio with `resizeIncrements` of 1 × 1. AppKit keeps the
+//! thread objects). The opacity is the window's `alphaValue`; the aspect
+//! ratio is the `contentAspectRatio` of a window with a frame, which AppKit
+//! keeps while the user resizes the window, and is released with
+//! `resizeIncrements` of 1 × 1. AppKit keeps the
 //! window's and the content's ratio apart (the latest of `contentAspectRatio`
 //! and `contentResizeIncrements` wins, and so for `aspectRatio` and
 //! `resizeIncrements`), so the release here also sets the content's

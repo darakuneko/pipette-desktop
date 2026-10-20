@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The merges of the pack units (src/main/sync/pack-bundle-merge.ts): a
-//! roster (`i18n/index`, `themes/index`) merges per entry; a body
-//! (`…/packs/{id}`) is compared on the body clock it carries. The stores do
-//! the reads and writes under their own locks; this layer reports.
+//! The merges of the pack units: a roster (`i18n/index`, `themes/index`) merges
+//! per entry; a body (`…/packs/{id}`) is compared on the body clock it carries.
+//! The stores do the reads and writes under their own locks; this layer
+//! reports.
 
 use std::collections::HashSet;
 use std::sync::{Mutex, PoisonError};

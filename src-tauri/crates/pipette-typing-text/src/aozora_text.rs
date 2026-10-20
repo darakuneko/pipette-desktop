@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The text of a downloaded Aozora Bunko zip, the steps of
-//! `importAozoraWork` (src/main/aozora/aozora-import.ts) between the
-//! download and the save: the `.txt` entry, its Shift_JIS, the
+//! The text of a downloaded Aozora Bunko zip, the steps of the import
+//! between the download and the save: the `.txt` entry, its Shift_JIS, the
 //! replacement-character check and the cleaning.
 
 use crate::aozora_clean::{InvalidCodePoint, clean_aozora_text, has_content};

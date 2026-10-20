@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The merge of a downloaded bundle into the local files (`mergeSyncUnit`
-//! of src/main/sync/sync-merge-dispatch.ts), by the shape of its unit:
-//! the keyboard names, a keyboard's settings, a pack roster or body, or an
-//! index-based store. The typing-analytics day and deleted-ranges units
-//! have merges of their own ([`merge_analytics_unit`]), which wait for the
-//! cache's database thread.
+//! The merge of a downloaded bundle into the local files, by the shape of its
+//! unit: the keyboard names, a keyboard's settings, a pack roster or body, or
+//! an index-based store. The typing-analytics day and deleted-ranges units have
+//! merges of their own ([`merge_analytics_unit`]), which wait for the cache's
+//! database thread.
 //!
 //! Each merge runs under the store lock its unit's writes take, writes
 //! atomically, and reports `sync:unit-applied` (or the pack list change)

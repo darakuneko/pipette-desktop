@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing analytics of the Electron build's src/main/typing-analytics/
-//! above the SQLite layer (`pipette-typing-analytics-db`): who recorded
+//! The typing analytics above the SQLite layer
+//! (`pipette-typing-analytics-db`): who recorded
 //! the data ([`identity`], [`fingerprint`]), the sync bookkeeping file
 //! ([`sync_state`]), when the cache is rebuilt ([`cache_rebuild`]), the
 //! database thread ([`db_actor`]), startup ([`service`]), the lock the

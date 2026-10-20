@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Why a password-change operation stopped. The message is what the
-//! renderer shows: an i18n key, or the text of a Drive or storage failure
-//! (`PasswordChangeError` of src/main/sync/sync-password-switch.ts and the
-//! other errors the operations throw).
+//! Why a password-change operation stopped. The message is what the renderer
+//! shows: an i18n key, or the text of a Drive or storage failure.
 
 use pipette_drive::retry::DriveFailure;
 
@@ -100,7 +98,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_messages_are_the_keys_of_the_electron_build() {
+    fn the_messages_are_the_i18n_keys() {
         assert_eq!(
             PasswordChangeError::from(ChangeErrorKey::LockLost).to_string(),
             "sync.passwordChange.lockLost"

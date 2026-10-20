@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript language store by
-//! scripts/typing-dataset-fixtures/record-language-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the language store:
 //! the same userData files and HTTP replies, the same calls, then each
 //! response, the URLs asked and every file left behind compared byte for
 //! byte. Error texts that are the OS's or the JSON parser's are compared as

@@ -53,8 +53,7 @@ pub fn sync_has_pending_changes(store: State<'_, PendingStore>) -> bool {
 }
 
 /// Writes the pending state once the quit sequence has ended, however it
-/// ended, as the before-quit handler of src/main/sync/sync-flush.ts does
-/// after its phases and after its deadline alike: a deadline that cut the
+/// ended, after its phases and after its deadline alike: a deadline that cut the
 /// sequence short cuts the flushPending phase off, and the units the phases
 /// before it recorded would otherwise wait for a delayed write the exit
 /// never runs. A file system that stalls the write is given up on after

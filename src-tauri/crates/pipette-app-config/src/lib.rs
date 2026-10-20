@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The app config, `<userData>/config.json`, kept as the Electron build's
-//! electron-store 11 (conf 15) keeps it, so either build reads what the
-//! other wrote and writes it back byte for byte the same: JSON with tab
+//! The app config, `<userData>/config.json`, kept as the 0.4 build's conf 15
+//! keeps it, so the file the 0.4 build wrote is read and written back byte
+//! for byte the same: JSON with tab
 //! indentation and no final newline, JavaScript's number formatting and key
 //! order (pipette-js-json), unknown keys and conf's `__internal__` kept.
-//! The goldens in tests/fixtures are recorded from the real electron-store
-//! by scripts/app-config-fixtures/.
+//! The goldens in tests/fixtures are recorded from the real conf.
 //!
 //! Tauri-free; the app wires the IPC commands and the change listeners.
 
@@ -20,7 +19,7 @@ pub use pipette_js_json::{JsString, Object, Value};
 pub use store::{AppConfigStore, CONFIG_FILE_NAME};
 
 /// Why a config operation failed. The messages of the value and key checks
-/// are conf's, which the renderer saw from the Electron build.
+/// are conf's.
 #[derive(Debug, thiserror::Error)]
 pub enum AppConfigError {
     #[error("{0}")]

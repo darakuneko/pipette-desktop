@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the entry merges recorded from src/main/sync/entry-merge.ts by
-//! scripts/sync-fixtures/record-entry-merge-fixtures.test.ts and compares
+//! Replays the recorded entry merges of the TypeScript merge and compares
 //! every result byte for byte.
 
 #![allow(clippy::unwrap_used)]

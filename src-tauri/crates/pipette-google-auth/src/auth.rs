@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sign-in and the tokens of the sync (src/main/sync/google-auth.ts).
+//! The sign-in and the tokens of the sync.
 //!
 //! A sign-in takes an attempt generation when it starts. A sign-out, or a
 //! sign-in started after it, advances the generation, and the earlier
 //! attempt then drops what it has (the wait for the browser, the code
 //! exchange, its tokens when their turn to be written comes) and fails. A
 //! write already under way finishes; a sign-out still removes what it
-//! wrote, and a later sign-in replaces it. Electron advances its session
-//! only when it stores the tokens, so a sign-out during the exchange can be
-//! followed by the sign-in it meant to cancel; here it cannot.
+//! wrote, and a later sign-in replaces it. A sign-out during the exchange
+//! is therefore never followed by the sign-in it meant to cancel.
 
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -61,8 +60,8 @@ pub struct AuthConfig {
     pub timing: AuthTiming,
     /// `Date.now()`.
     pub now_ms: Arc<dyn Fn() -> i64 + Send + Sync>,
-    /// The Hub test account (`getHubTestAccount` of src/main/hub/hub-base.ts),
-    /// read on every call; see [`crate::hub_test_account`].
+    /// The Hub test account, read on every call; see
+    /// [`crate::hub_test_account`].
     pub hub_test_account: Arc<dyn Fn() -> Option<String> + Send + Sync>,
 }
 
@@ -223,8 +222,7 @@ impl GoogleAuth {
     }
 
     /// Signs out (`signOut`): cancels a sign-in under way, forgets the
-    /// tokens and removes their file. The tokens are not revoked, as in
-    /// Electron.
+    /// tokens and removes their file. The tokens are not revoked.
     pub async fn sign_out(&self) {
         self.attempts.send_modify(|current| *current += 1);
         self.tokens.clear().await;
@@ -251,8 +249,8 @@ impl GoogleAuth {
     /// keeping the stored id_token when the response has none
     /// (`refreshAccessToken`). The new tokens are stored only while the
     /// stamp of `loaded` is the current one. Tokens without a refresh
-    /// token (none, or an empty one) are not refreshed: Electron sends the
-    /// request anyway, which the token endpoint cannot accept.
+    /// token (none, or an empty one) are not refreshed: the token endpoint
+    /// cannot accept such a request.
     async fn refresh(&self, loaded: &Loaded) -> Result<Zeroizing<String>, AuthError> {
         let Some(refresh_token) = loaded.tokens.refresh_token.as_deref().filter(|token| !token.is_empty())
         else {

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The locks a sync of one unit holds across its awaits (`withWriteLock`
-//! of src/main/per-uid-write-lock.ts, as src/main/sync/sync-merge-dispatch.ts
-//! takes it with the `sync:` key, and with the `upload:` key around an
-//! upload). The store locks
-//! (`pipette_entry_store::WriteLocks`) are held only around a read or a
-//! write of the files; these are held while a task downloads, merges and
-//! uploads. Tasks of one key run one at a time in the order they asked;
-//! different keys run in parallel. A key is not reentrant: a task that
-//! takes the key it already holds waits forever.
+//! The locks a sync of one unit holds across its awaits (the `sync:` key, and
+//! the `upload:` key around an upload). The store locks
+//! (`pipette_entry_store::WriteLocks`) are held only around a read or a write
+//! of the files; these are held while a task downloads, merges and uploads.
+//! Tasks of one key run one at a time in the order they asked; different keys
+//! run in parallel. A key is not reentrant: a task that takes the key it
+//! already holds waits forever.
 
 use std::collections::HashMap;
 use std::future::Future;

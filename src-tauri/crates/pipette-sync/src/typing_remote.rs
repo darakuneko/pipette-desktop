@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing day files on Drive (src/main/sync/sync-typing-remote.ts):
-//! finding a device's days in a listing; reconciling this device's days
-//! with the local day files and the upload bookkeeping of
-//! `sync_state.json` before an upload pass collects its units; and the Data
-//! modal's reads of other devices' days ([`RemoteTyping`]).
+//! The typing day files on Drive: finding a device's days in a listing;
+//! reconciling this device's days with the local day files and the upload
+//! bookkeeping of `sync_state.json` before an upload pass collects its units;
+//! and the Data modal's reads of other devices' days ([`RemoteTyping`]).
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io;
@@ -83,9 +82,8 @@ pub(crate) fn pointer_key(uid: &str, hash: &str) -> String {
     format!("{uid}|{hash}")
 }
 
-/// The days `uploaded` lists under `key`. The record may be an array,
-/// which the Electron build reads too: none of its keys holds a `|`, so it
-/// lists nothing.
+/// The days `uploaded` lists under `key`. The record may be an array: none of
+/// its keys holds a `|`, so it lists nothing.
 pub(crate) fn uploaded_days(uploaded: &Value, key: &str) -> IndexSet<String> {
     match uploaded.as_object().and_then(|record| record.get(key)) {
         Some(Value::Array(days)) => days.iter().filter_map(|day| day.as_str().map(str::to_owned)).collect(),
@@ -428,10 +426,9 @@ impl RemoteTyping {
         Ok(true)
     }
 
-    /// `listRemoteFileNames` (src/main/sync/sync-scan.ts): the names of the
-    /// data files on Drive, which the typing data import checks a file
-    /// against; `None` when Drive is not consulted (no credentials, the
-    /// guard blocks).
+    /// The names of the data files on Drive, which the typing data import
+    /// checks a file against; `None` when Drive is not consulted (no
+    /// credentials, the guard blocks).
     pub async fn remote_data_file_names(&self) -> Result<Option<HashSet<String>>, PreflightError> {
         if self.signed_in_with_password().await.is_none() {
             return Ok(None);

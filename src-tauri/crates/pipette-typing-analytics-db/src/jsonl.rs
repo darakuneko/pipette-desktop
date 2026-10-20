@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading a per-day JSONL master (jsonl-reader.ts) and validating each line
-//! (`parseRow`, jsonl-row.ts). A line that fails validation is dropped, not
-//! an error, so rows of a newer build's kinds never stop a replay.
+//! Reading a per-day JSONL master and validating each line. A line that fails
+//! validation is dropped, not an error, so rows of a newer build's kinds never
+//! stop a replay.
 //!
 //! Lines are read with `pipette_js_json`, as `JSON.parse` reads them: a
 //! repeated key takes its last value, and a string may hold a lone
@@ -17,7 +17,7 @@
 
 use pipette_js_json::{JsString, Object, Value};
 
-/// `BIGRAM_HIST_BUCKETS` (jsonl-row.ts).
+/// The number of buckets of a row's histograms.
 pub const HIST_BUCKETS: usize = 8;
 
 #[derive(Debug, Clone, PartialEq)]

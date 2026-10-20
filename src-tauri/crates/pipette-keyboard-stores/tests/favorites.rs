@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The favorite store's behaviour, from the specs of the TypeScript store
-//! (src/main/__tests__/favorite-store*.test.ts).
+//! The favorite store's behaviour.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

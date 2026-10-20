@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The deleted-ranges store, the clip to a UTC day, the applied record and
 //! the ranges of local days against what the TypeScript code did
-//! (tests/fixtures/deleted_ranges.json and deleted_ranges_local_days/, written
-//! by `pnpm run generate:analytics-db-fixtures`). The local days run once
+//! (the recorded goldens tests/fixtures/deleted_ranges.json and
+//! deleted_ranges_local_days/). The local days run once
 //! per recorded time zone, each in a process of its own.
 
 // Helpers outside #[test] functions unwrap fixture data too.

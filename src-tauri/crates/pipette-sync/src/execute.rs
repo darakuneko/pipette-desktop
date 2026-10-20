@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `executeSync` (src/main/sync/sync-execute.ts): the full pass of the
-//! Settings Sync button, the connect-time download, the Data modal's
-//! download of a remote-only keyboard and the pack pull. One direction and
-//! one scope ([`SyncScope`]) per pass.
+//! The full pass of the Settings Sync button, the connect-time download, the
+//! Data modal's download of a remote-only keyboard and the pack pull. One
+//! direction and one scope ([`SyncScope`]) per pass.
 //!
 //! A pass takes the sync lock. When another pass holds it, the pass waits
 //! for a holder that ends on its own (the polling, a reset) and answers

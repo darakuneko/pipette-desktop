@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Keyboard definition decompression for the vialAPI shim's getDefinition,
-//! with the same formats, limits and results as the Electron main process
-//! (src/main/lzma.ts): XZ when the input starts with the XZ magic bytes,
-//! LZMA-alone otherwise; `None` for empty, oversized or corrupt input. One
-//! difference: lzma-js returns garbage for a truncated LZMA-alone stream,
-//! which is `None` here.
+//! Keyboard definition decompression for the vialAPI shim's getDefinition:
+//! XZ when the input starts with the XZ magic bytes, LZMA-alone otherwise;
+//! `None` for empty, oversized, corrupt or truncated input.
 
 use std::io::{self, Read, Write};
 
@@ -14,12 +11,10 @@ use xz4rust::{XzDecoder, XzReader};
 
 use crate::command_error::CommandError;
 
-/// Largest compressed definition accepted (`MAX_COMPRESSED_SIZE` in
-/// src/main/lzma.ts).
+/// Largest compressed definition accepted.
 const MAX_COMPRESSED_SIZE: usize = 1024 * 1024;
 
-/// Largest decompressed definition accepted (`MAX_DECOMPRESSED_SIZE` in
-/// src/main/lzma.ts).
+/// Largest decompressed definition accepted.
 const MAX_DECOMPRESSED_SIZE: usize = 10 * 1024 * 1024;
 
 /// Largest XZ dictionary accepted: 64 MiB, the dictionary of xz's highest
@@ -57,7 +52,7 @@ fn decompress_xz(data: &[u8]) -> Option<String> {
 }
 
 /// The limit applies to the UTF-8 length of the text after invalid bytes
-/// are replaced, as in src/main/lzma.ts. A replacement is never shorter
+/// are replaced. A replacement is never shorter
 /// than the bytes it replaces, so raw output past the limit can be dropped
 /// while decoding.
 fn decompress_lzma(data: &[u8]) -> Option<String> {
@@ -123,9 +118,7 @@ mod tests {
 
     use super::*;
 
-    /// One input with the result of the LZMA_DECOMPRESS handler in
-    /// src/main/lzma.ts, recorded by
-    /// scripts/definition-fixtures/record-definition-fixtures.test.ts.
+    /// One input with its recorded golden result.
     #[derive(Deserialize)]
     struct Case {
         name: String,
@@ -140,11 +133,11 @@ mod tests {
         sha256: String,
     }
 
-    /// Inputs the Electron handler decodes to a text this module rejects.
-    /// lzma-js keeps decoding past the end of a truncated LZMA-alone stream
-    /// and returns as many bytes as the header announces, most of them
-    /// garbage; here a truncated stream is an error.
-    const NONE_WHERE_ELECTRON_RETURNS_GARBAGE: &[&str] = &["lzma-alone-truncated"];
+    /// Inputs whose recorded result is a text this module rejects. The
+    /// recorded decoder (lzma-js) keeps decoding past the end of a truncated
+    /// LZMA-alone stream and returns as many bytes as the header announces,
+    /// most of them garbage; here a truncated stream is an error.
+    const NONE_WHERE_THE_GOLDEN_HAS_GARBAGE: &[&str] = &["lzma-alone-truncated"];
 
     fn fixture_dir() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/definition")
@@ -155,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn matches_the_electron_main_process_on_the_recorded_inputs() {
+    fn decodes_the_recorded_inputs_to_the_recorded_texts() {
         let manifest = std::fs::read_to_string(fixture_dir().join("cases.json")).unwrap();
         let cases: Vec<Case> = serde_json::from_str(&manifest).unwrap();
         assert!(cases.iter().any(|c| c.name.starts_with("xz-") && c.expected.is_some()));
@@ -163,8 +156,8 @@ mod tests {
         for case in cases {
             let input = std::fs::read(fixture_dir().join(&case.input)).unwrap();
             let actual = decompress(&input);
-            if NONE_WHERE_ELECTRON_RETURNS_GARBAGE.contains(&case.name.as_str()) {
-                assert!(case.expected.is_some(), "{}: Electron no longer returns a text", case.name);
+            if NONE_WHERE_THE_GOLDEN_HAS_GARBAGE.contains(&case.name.as_str()) {
+                assert!(case.expected.is_some(), "{}: the golden has no text", case.name);
                 assert_eq!(actual, None, "{}", case.name);
                 continue;
             }

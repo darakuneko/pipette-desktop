@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The preparation of an Analyze post's export, shared by the upload, the
-//! update, the private upload and the preview
-//! (src/main/hub/hub-ipc-analytics-prepare.ts): the saved filter condition
+//! update, the private upload and the preview: the saved filter condition
 //! read and checked, the keymap snapshot of its window, its filters
 //! projected for the Hub, and the export built on the typing analytics
 //! cache.
@@ -273,7 +272,7 @@ fn project_filters_for_hub(filters: Option<&Value>, finger_overrides: &Value) ->
     out.into()
 }
 
-/// The preview of hub-ipc-analytics.ts for what the preparation gave:
+/// The preview of what the preparation gave:
 /// `{ totalKeystrokes, rangeMs, estimatedBytes, validation }`. A failed
 /// preparation is a failed validation with its reason and no size.
 pub fn preview(prepared: &Prepared) -> Value {

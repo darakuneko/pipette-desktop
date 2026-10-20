@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Hub JWT of `src/main/hub/hub-ipc-token.ts`: its cache in memory only,
-//! the one request concurrent callers share, `withTokenRetry` and the
-//! sentinels its failures become.
+//! The Hub JWT: its cache in memory only, the one request concurrent
+//! callers share, the retry after a 401 and the sentinels its failures
+//! become.
 //!
 //! The JWT is kept for its own 24 hours (`HUB_JWT_TTL_MS`), never by the
 //! JWT's `exp`; a 401 within that time takes a new one. It is never written
 //! to disk or to the key store, and neither it nor the Google id_token is
 //! logged or handed to the page.
 //!
-//! The cache keeps the TS's behavior to the letter:
+//! The cache:
 //! - a token request is cached only when the generation has not changed
 //!   while it ran; [`HubToken::clear`] (a sign-in or sign-out) bumps the
 //!   generation, so a request it overtook returns its token to its callers
@@ -17,8 +17,8 @@
 //!   shared request but keeps the generation, so a request already running
 //!   still caches its token when it ends;
 //! - the end of a token request forgets the shared request whichever one is
-//!   shared by then (the TS's `finally`), so a request started after a
-//!   display name was set is no longer shared once the earlier one ends.
+//!   shared by then, so a request started after a display name was set is
+//!   no longer shared once the earlier one ends.
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -43,7 +43,7 @@ pub const HUB_ERROR_RATE_LIMITED: &str = "RATE_LIMITED";
 /// `HUB_ERROR_NOT_AUTHENTICATED`.
 pub const HUB_ERROR_NOT_AUTHENTICATED: &str = "Not authenticated with Google. Please sign in again.";
 
-/// What a Hub handler failed with: the message the TS's error carries, and
+/// What a Hub handler failed with: the error's message, and
 /// the class of the Hub error it is (`instanceof Hub409Error` …), `None` for
 /// a plain `Error` (the sentinels, the input checks, the failures without
 /// a status).

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The specs of src/main/sync/__tests__/sync-pending-store.test.ts on the
-//! upload side and the accounts: the settle, the cancel and putting it
-//! back, and the hand-over of the units to the signed-in account. The
-//! sign-in and sign-out around them are pipette-sync's (tests/account.rs).
+//! The pending store's specs on the upload side and the accounts: the settle,
+//! the cancel and putting it back, and the hand-over of the units to the
+//! signed-in account. The sign-in and sign-out around them are pipette-sync's
+//! (tests/account.rs).
 
 #![allow(clippy::unwrap_used)]
 

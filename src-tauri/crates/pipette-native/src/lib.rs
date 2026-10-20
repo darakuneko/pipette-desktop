@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The window calls Tauri and tao do not make on Windows and macOS, made as
-//! Electron's `BrowserWindow` makes them there:
+//! The window calls Tauri and tao do not make on Windows and macOS:
 //!
-//! - [`set_opacity`]: `setOpacity`. Windows: the window becomes a layered
-//!   window (`WS_EX_LAYERED`) with `SetLayeredWindowAttributes`' alpha;
-//!   macOS: `NSWindow.alphaValue`.
-//! - [`set_outer_frame`] (macOS): `setBounds`, the frame set at once.
-//! - [`frame_size`] (macOS): the outer size less the content size, as
-//!   `getBounds` and `getContentBounds` differ.
-//! - [`set_content_aspect_ratio`]: `setAspectRatio(ratio, extraSize)` with
-//!   the frame (outer minus content size) as `extraSize`, so the content
-//!   keeps the ratio while the user resizes the window; the app's own
-//!   resizes are not bent to it. Windows: a subclass procedure fits each
-//!   `WM_SIZING` rectangle (aspect.rs); macOS: `NSWindow.contentAspectRatio`.
+//! - [`set_opacity`]: Windows: the window becomes a layered window
+//!   (`WS_EX_LAYERED`) with `SetLayeredWindowAttributes`' alpha; macOS:
+//!   `NSWindow.alphaValue`.
+//! - [`set_outer_frame`] (macOS): the frame set at once.
+//! - [`frame_size`] (macOS): the outer size less the content size.
+//! - [`set_content_aspect_ratio`]: an aspect ratio with the frame (outer
+//!   minus content size) left out of it, so the content keeps the ratio while
+//!   the user resizes the window; the app's own resizes are not bent to it.
+//!   Windows: a subclass procedure fits each `WM_SIZING` rectangle (aspect.rs);
+//!   macOS: `NSWindow.contentAspectRatio`.
 //!
 //! And [`active_window`], the application and title of the window in front,
-//! as the Electron build's `@paymoapp/active-window` reads them (Windows:
+//! as the 0.4 build's `@paymoapp/active-window` read them (Windows:
 //! windows_active_window.rs and app_name.rs, macOS: macos_active_window.rs).
 //!
 //! This is the one crate of the workspace with unsafe code, and only its
@@ -61,8 +59,8 @@ pub enum Error {
     Os { call: &'static str, code: u32 },
 }
 
-/// Sets the opacity of `window` to `opacity`, clamped to 0..=1 as Electron
-/// clamps it (anything but a number is 1). Must run on the window's thread.
+/// Sets the opacity of `window` to `opacity`, clamped to 0..=1 (anything
+/// but a number is 1). Must run on the window's thread.
 #[cfg_attr(not(any(windows, target_os = "macos")), allow(unused_variables))]
 pub fn set_opacity(window: &impl HasWindowHandle, opacity: f64) -> Result<(), Error> {
     let opacity = clamp_opacity(opacity);
@@ -169,9 +167,8 @@ fn clamp_opacity(opacity: f64) -> f64 {
     if opacity.is_nan() { 1.0 } else { opacity.clamp(0.0, 1.0) }
 }
 
-/// The alpha byte of a layered window at `opacity` (0..=1): Electron passes
-/// `opacity * 255` to the `BYTE` parameter of `SetLayeredWindowAttributes`,
-/// a conversion that drops the fraction.
+/// The alpha byte of a layered window at `opacity` (0..=1): `opacity * 255`
+/// with the fraction dropped.
 #[cfg_attr(not(windows), allow(dead_code))]
 fn alpha_byte(opacity: f64) -> u8 {
     (opacity * 255.0) as u8

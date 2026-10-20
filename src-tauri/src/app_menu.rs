@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The macOS application menu: the app menu (About, Hide, Hide Others, Show
-//! All, Quit) and an Edit menu (Undo, Redo, Cut, Copy, Paste, Select All).
-//! The Electron build sets no menu; this one gives macOS its standard
-//! shortcuts, which the WebView's text fields need for ⌘C / ⌘V / ⌘Z, and ⌘Q.
-//! Windows and Linux get no menu.
+//! All, Quit) and an Edit menu (Undo, Redo, Cut, Copy, Paste, Select All). It
+//! gives macOS its standard shortcuts, which the WebView's text fields need for
+//! ⌘C / ⌘V / ⌘Z, and ⌘Q. Windows and Linux get no menu.
 //!
 //! Every item except Quit is a predefined item: AppKit sends its action
 //! (`hide:`, `copy:`, `undo:` …) to the first responder or the application.

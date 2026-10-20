@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze sync (`AnalyticsSync`) and the lazy fetch of another
-//! device's day (`RemoteTyping`) on the in-memory Drive: the
-//! `executeAnalyticsSync` and `fetchRemoteTypingDay` cases of
-//! src/main/__tests__/sync-service.test.ts. Neither takes the sync lock:
-//! what keeps them from a reset, a password change and a switch of
-//! accounts, and what they share with a pass (the locks of a unit and the
-//! files remembered as created).
+//! The Analyze sync (`AnalyticsSync`) and the lazy fetch of another device's
+//! day (`RemoteTyping`) on the in-memory Drive. Neither takes the sync lock:
+//! what keeps them from a reset, a password change and a switch of accounts,
+//! and what they share with a pass (the locks of a unit and the files
+//! remembered as created).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

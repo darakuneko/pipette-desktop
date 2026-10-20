@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading the fixtures the TypeScript generators recorded
-//! (scripts/analytics-db-fixtures): values with the parts JSON cannot carry
-//! (tagged.ts), userData trees, path → content
-//! (scripts/keyboard-store-fixtures/fixture-tree.ts), and the cache tables
-//! in the canonical text of canonical.ts; and the flush timer the
-//! recording scenarios drive.
+//! Reading the recorded golden fixtures: values with the parts JSON cannot
+//! carry (tagged), userData trees (path → content), and the cache tables in
+//! their canonical text; and the flush timer the recording scenarios drive.
 
 #![allow(dead_code, clippy::unwrap_used, clippy::panic)]
 
@@ -54,7 +51,7 @@ pub fn number(value: &Value) -> f64 {
     }
 }
 
-/// The value tagged.ts recorded: `{ "$n": … }` back to the number,
+/// A tagged recorded value: `{ "$n": … }` back to the number,
 /// `{ "$u": true }` (undefined) to `None`, left out of an object and null
 /// in an array, as `JSON.stringify` writes it.
 pub fn untag(value: &Value) -> Option<Value> {
@@ -198,7 +195,7 @@ fn cell(value: ValueRef<'_>) -> String {
 }
 
 /// The rows of `table` ordered by its primary key, in the canonical text
-/// of canonical.ts.
+/// of the recorded fixtures.
 pub fn table_rows(conn: &rusqlite::Connection, table: &str) -> Vec<String> {
     let mut info = conn.prepare(&format!("PRAGMA table_info({table})")).unwrap();
     let mut columns: Vec<(String, i64)> =

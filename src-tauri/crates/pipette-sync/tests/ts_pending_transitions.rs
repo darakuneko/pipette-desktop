@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the pending transitions recorded from the TypeScript sync by
-//! scripts/sync-pending-fixtures/record-sync-pending-transitions.test.ts:
-//! the same launch, the same settles, cancels, hand-overs, sign-ins and
-//! sign-outs, then after each step the pending state (owner, units with
-//! their generations, held units), the file's text and the statuses told
-//! to the renderer, compared with what TypeScript left.
+//! Replays the recorded golden pending transitions: the same launch, the same
+//! settles, cancels, hand-overs, sign-ins and sign-outs, then after each step
+//! the pending state (owner, units with their generations, held units), the
+//! file's text and the statuses told to the renderer, compared with the
+//! recording.
 
 #![allow(clippy::unwrap_used)]
 
@@ -109,7 +108,7 @@ fn recorded_state(step: &Value) -> State {
 }
 
 #[tokio::test]
-async fn the_transitions_match_the_typescript_sync() {
+async fn the_transitions_match_the_recorded_golden() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ts_pending_transitions.json");
     let fixture: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let scenarios = fixture.as_array().unwrap();

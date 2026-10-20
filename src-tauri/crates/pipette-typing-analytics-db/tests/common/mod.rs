@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The canonical text of SQLite values shared with the TypeScript fixture
-//! generator (scripts/analytics-db-fixtures/canonical.ts): `n`, `i:<dec>`,
+//! The canonical text of SQLite values in the recorded fixtures: `n`, `i:<dec>`,
 //! `r:<16 hex of the IEEE-754 bits>`, `t:<hex of UTF-8>`, `b:<hex>`; cells
 //! joined by `|`, rows by `\n`.
 
@@ -24,11 +23,9 @@ pub fn fixtures_dir() -> PathBuf {
 }
 
 /// Never committed: the benchmark input and the TypeScript timings, in
-/// `<target>/tmp/pipette-typing-analytics-db`. The generator writes them to
-/// the directory `BENCH_DIR` names (scripts/analytics-db-fixtures/paths.ts,
-/// via `cargoTargetTmpDir` in scripts/fixture-files.ts) and both resolve
-/// `<target>` the same way: `CARGO_TARGET_DIR` taken from the current
-/// directory when set, otherwise the workspace's `target`. Read at run time
+/// `<target>/tmp/pipette-typing-analytics-db`, where `<target>` is
+/// `CARGO_TARGET_DIR` taken from the current directory when set, otherwise
+/// the workspace's `target`. Read at run time
 /// because the example that uses it gets no `CARGO_TARGET_TMPDIR`.
 pub fn bench_dir() -> PathBuf {
     let target = match std::env::var_os("CARGO_TARGET_DIR") {
@@ -147,7 +144,7 @@ pub fn object(value: &Value) -> &Map<String, Value> {
 }
 
 /// A returned JavaScript value in the canonical form of the method
-/// fixtures (scripts/analytics-db-fixtures/db-methods.ts): a number as
+/// fixtures: a number as
 /// `r:<bits>`, a string as `s:<text>`.
 pub fn canonical(value: &JsValue) -> Value {
     match value {

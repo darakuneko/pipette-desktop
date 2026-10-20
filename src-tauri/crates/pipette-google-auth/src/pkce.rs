@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The authorization request of `generateAuthUrl`
-//! (src/main/sync/google-auth.ts): a PKCE code verifier of 32 random bytes
-//! in base64url, its S256 challenge, a state of 16 random bytes in hex, and
-//! the URL with the parameters in the same order and encoding
-//! (URLSearchParams).
+//! The authorization request of the sign-in: a PKCE code verifier of 32
+//! random bytes in base64url, its S256 challenge, a state of 16 random
+//! bytes in hex, and the URL with the parameters in the recorded order and
+//! encoding (URLSearchParams).
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -72,7 +71,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_verifier_and_state_have_the_electron_lengths() {
+    fn the_verifier_and_state_have_the_recorded_lengths() {
         let request = new_auth_request("https://example.invalid/auth", 8080).unwrap();
         assert_eq!(request.code_verifier.len(), 43);
         assert!(request.code_verifier.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'));

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What the tray shows for the status the renderer reports
-//! (`trayStatusUpdate`): the shape check of `isValidTrayStatus`
-//! (src/main/index.ts), and the tooltip, the menu rows and the number format
-//! of src/main/app-behavior.ts.
+//! (`trayStatusUpdate`): its shape check, and the tooltip, the menu rows and
+//! the number format.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -27,8 +26,8 @@ pub struct TrayStatus {
 }
 
 impl TrayStatus {
-    /// The status in `value`, or None when it fails `isValidTrayStatus`:
-    /// an object whose `keyboardName` is null or a string, `recording` a
+    /// The status in `value`, or None when it fails the shape check: an
+    /// object whose `keyboardName` is null or a string, `recording` a
     /// boolean, and `count` and `kpm` numbers. Other fields are ignored.
     pub fn parse(value: &Value) -> Option<Self> {
         let object = value.as_object()?;
@@ -45,8 +44,7 @@ impl TrayStatus {
         })
     }
 
-    /// The keyboard name the tray shows: none for an empty one too, as
-    /// app-behavior.ts tests `!status.keyboardName`.
+    /// The keyboard name the tray shows: none for an empty one too.
     fn shown_name(&self) -> Option<&str> {
         self.keyboard_name.as_deref().filter(|name| !name.is_empty())
     }
@@ -79,9 +77,9 @@ impl TrayStatus {
         format!("KPM: {}", format_count(self.kpm))
     }
 
-    /// The menu of `buildTrayMenu`: Show, a separator, the disabled info rows
-    /// of `buildInfoRows` and a separator after them when there are any,
-    /// then Quit. The labels are fixed English, as in the Electron tray.
+    /// The tray menu: Show, a separator, the disabled info rows and a
+    /// separator after them when there are any, then Quit. The labels are
+    /// fixed English.
     pub fn menu_rows(&self) -> Vec<MenuRow> {
         let mut rows = vec![MenuRow::item(SHOW, "Show", true), MenuRow::separator()];
         let mut info = Vec::new();
@@ -301,8 +299,8 @@ mod tests {
     }
 
     /// Plays the golden's tray scenarios on the cache and the tray's
-    /// existence, as tray.rs keeps them: every tooltip and menu the Electron
-    /// tray was given is the one this status gives, and a dropped status
+    /// existence, as tray.rs keeps them: every tooltip and menu the golden
+    /// records is the one this status gives, and a dropped status
     /// leaves both alone.
     #[test]
     fn the_tray_scenarios_give_the_golden_tooltips_and_menus() {

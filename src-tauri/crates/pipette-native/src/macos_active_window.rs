@@ -5,8 +5,8 @@
 //!
 //! The title is always empty. The binding reads it with
 //! `CGWindowListCopyWindowInfo` only after its `requestPermissions` has found
-//! the screen recording permission granted, and the Electron build never
-//! calls `requestPermissions`, so its titles on macOS are empty too.
+//! the screen recording permission granted, and the 0.4 build never called
+//! `requestPermissions`, so its titles on macOS were empty too.
 //!
 //! `NSWorkspace` and `NSRunningApplication` are safe to read from any
 //! thread, but the frontmost application only changes while the main run

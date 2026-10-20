@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! TypeScript → Rust, method by method: the calls and write scenarios of
 //! tests/fixtures/methods.json and methods_tz/, which the real TypeScript
-//! DB layer on better-sqlite3 answered on the same seed
-//! (scripts/analytics-db-fixtures/db-methods.ts, written by
-//! `pnpm run generate:analytics-db-fixtures`). Every answer must be equal
+//! DB layer on better-sqlite3 answered on the same seed, recorded as
+//! goldens. Every answer must be equal
 //! to the bit in canonical form, and after each write scenario every table
 //! cell by cell. The calls that group by local days run once per time zone
 //! they were recorded in, each in a process of its own.

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The language pack commands on a mock app with scripted dialogs and a
-//! temp userData directory. The dialog titles and filters are those of
-//! src/main/i18n-pack-ipc.ts and src/main/i18n-pack-store-crud.ts.
+//! temp userData directory.
 
 use pipette_sync_pending::PendingStore;
 use serde_json::json;

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The snapshot store, as specified by the TypeScript tests of
-//! src/main/__tests__/layout-store.test.ts, snapshot-store-limit.test.ts and
-//! the snapshot part of entry-store-clocks.test.ts, with the write
-//! serialization and the files this build cannot read on top.
+//! The snapshot store (its limit and its clocks among the rest), with the
+//! write serialization and the files this build cannot read on top.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The loopback redirect of the sign-in (the server of `startOAuthFlow`,
-//! src/main/sync/google-auth.ts): a listener on 127.0.0.1 that waits for the
-//! browser to come back with the authorization code.
+//! The loopback redirect of the sign-in: a listener on 127.0.0.1 that
+//! waits for the browser to come back with the authorization code.
 //!
 //! Each connection gets [`READ_TIMEOUT`] to send its request head, at most
 //! [`MAX_HEAD_BYTES`]; only the request line is read. The first request
 //! whose `state` matches and that carries a `code` or an `error` is taken
-//! and answered with the page Electron shows; every other request is
-//! answered 400 and the wait goes on. Unlike Electron, a request with an
-//! `error` must carry the state too, so an unrelated request cannot end
-//! the sign-in. The listener closes once a request is taken.
+//! and answered with a page for the browser; every other request is
+//! answered 400 and the wait goes on. A request with an `error` must carry
+//! the state too, so an unrelated request cannot end the sign-in. The
+//! listener closes once a request is taken.
 
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -215,10 +214,10 @@ mod tests {
             take(&head("/?error=access_denied&state=s1"), "s1"),
             Some(Callback::Error("access_denied".into()))
         );
-        // Electron fails on any `error`; here one without the state is refused.
+        // An error without the expected state is refused.
         assert_eq!(take(&head("/?error=access_denied"), "s1"), None);
         assert_eq!(take(&head("/?error=access_denied&state=other"), "s1"), None);
-        // An error wins over a code, as in Electron.
+        // An error wins over a code.
         assert_eq!(take(&head("/?code=abc&error=x&state=s1"), "s1"), Some(Callback::Error("x".into())));
     }
 

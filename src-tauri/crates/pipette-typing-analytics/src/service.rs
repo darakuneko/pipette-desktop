@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Startup of the typing analytics (`setupTypingAnalytics`,
-//! src/main/typing-analytics/typing-analytics-service.ts), in the same
-//! order: the machine hash, then the database (its schema brought up to
-//! date), then the cache freshness check, rebuilding it when the schema
-//! migration dropped tables or `sync_state.json` asks for it.
+//! Startup of the typing analytics, in this order: the machine hash, then the
+//! database (its schema brought up to date), then the cache freshness check,
+//! rebuilding it when the schema migration dropped tables or `sync_state.json`
+//! asks for it.
 //!
 //! The commands wait for [`TypingAnalytics::ready`]. One initialization
 //! runs at a time and every caller waiting for it gets its outcome; after
@@ -194,10 +193,9 @@ impl TypingAnalytics {
 
     /// `ensureCacheIsFresh(…, { force: true })` on the initialized
     /// analytics: rebuilds the cache and writes a new `sync_state.json`.
-    /// The state the flush keeps in memory is left as it is, as the
-    /// Electron import leaves `taState.syncState`, so the next flush writes
-    /// it back with its `last_synced_at`. Blocks; the queries and the flush
-    /// go on between the days it replays.
+    /// The state the flush keeps in memory is left as it is, so the next
+    /// flush writes it back with its `last_synced_at`. Blocks; the queries
+    /// and the flush go on between the days it replays.
     pub fn rebuild_now(&self, ready: &Ready) -> Result<(), Error> {
         ensure_cache_is_fresh(&self.user_data, &ready.machine_hash, true, self.clock.as_ref(), || {
             (self.rebuild)(&ready.db, &self.user_data, &ready.machine_hash)

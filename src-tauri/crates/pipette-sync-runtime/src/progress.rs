@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Where the sync passes report their progress (`setProgressCallback` and
-//! `emitProgress` of src/main/sync/sync-runtime-state.ts), and the report
-//! (`SyncProgress` of src/shared/types/sync.ts).
+//! Where the sync passes report their progress, and the report (`SyncProgress`
+//! of src/shared/types/sync.ts).
 
 use std::sync::{Arc, Mutex};
 

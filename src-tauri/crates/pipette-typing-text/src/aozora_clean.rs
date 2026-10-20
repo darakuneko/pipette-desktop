@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `cleanAozoraText` of src/main/aozora/aozora-clean.ts: a decoded Aozora
-//! Bunko text to plain text for the Typing Test. Each step matches the
-//! regular expression of the TypeScript step by step, written out by hand
+//! A decoded Aozora Bunko text to plain text for the Typing Test. Each step
+//! matches a JavaScript regular expression, written out by hand
 //! over UTF-16 code units (no regex engine, whose `\s`, `.` and `^` differ
 //! from JavaScript's).
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Aozora Bunko import of src/main/aozora/aozora-import.ts and its
-//! handler (aozora-ipc.ts): one work of the aozora catalog, named by its
-//! manifest `name` (the work id, a zip path under the dataset's
+//! The Aozora Bunko import and its handler: one work of the aozora catalog,
+//! named by its manifest `name` (the work id, a zip path under the dataset's
 //! `downloadUrlBase`), downloaded, unzipped, decoded from Shift_JIS, cleaned
 //! and saved as a typing test text with the catalog as its `source`.
 //!

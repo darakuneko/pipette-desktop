@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The registrations against tests/fixtures/autostart.json, recorded from
-//! the Electron build (scripts/resident-fixtures/record-autostart-fixtures.test.ts):
-//! each scenario's launch and `autoLaunch` changes, run on a temporary
+//! the 0.4 build: each scenario's launch and `autoLaunch` changes, run on a temporary
 //! HOME standing in for the user's. What is compared: the login-item calls, the log lines (only the
 //! start of a message that carries the system's error text) and the files
 //! of `$HOME/.config/autostart` (and of `XDG_CONFIG_HOME`) after each step.
@@ -152,7 +151,7 @@ fn check_logs(name: &str, step: usize, expected: &[Log], got: &[(log::Level, Str
 }
 
 #[test]
-fn every_scenario_registers_as_the_electron_build_does() {
+fn every_scenario_registers_as_recorded() {
     let fixture: Fixture =
         serde_json::from_str(&fs::read_to_string(FIXTURE).expect("read the fixture")).expect("parse");
     assert_eq!(fixture.autostart_path, "$HOME/.config/autostart/pipette.desktop");

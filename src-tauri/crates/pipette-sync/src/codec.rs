@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The content of a unit's Drive file: its bundle's text in an encrypted
-//! envelope (`encrypt` and `decrypt` of src/main/sync/sync-crypto.ts, and
-//! the `JSON.stringify` / `JSON.parse` of the envelope around
-//! `uploadFile` / `downloadFile` of google-drive.ts).
+//! envelope, written as JSON text.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -24,7 +22,7 @@ pub trait EnvelopeCodec: Send + Sync {
     fn open(&self, content: Vec<u8>, password: Zeroizing<String>) -> CodecFuture;
 }
 
-/// The envelope encryption of the Electron build: a fresh salt and key per
+/// The envelope encryption of the sync format: a fresh salt and key per
 /// envelope, derived on the blocking threads.
 pub struct EnvelopeCrypto;
 

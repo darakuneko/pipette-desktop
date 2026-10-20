@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The groundwork the index-based entry stores (favorites, snapshots,
 //! analyze filters, key labels, typing-test texts, run logs, i18n and theme
-//! packs) share with the Electron build, which keeps the same files:
+//! packs) share, on the same files the 0.4 build kept:
 //!
 //! - the field groups of each store and their clocks (sync format v2):
 //!   reading v1 / v2 entries ([`normalize_entry`]) and the clock writers

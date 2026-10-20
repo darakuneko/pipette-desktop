@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Pipette Hub client of src/main/hub/*.ts: the HTTP layer
+//! The Pipette Hub client: the HTTP layer
 //! ([`HubHttp`], the endpoint table [`Endpoint`], the errors and the 429
 //! retry), the multipart bodies ([`multipart`]), the input checks
 //! ([`validate`]) and where the requests may go ([`HubDestination`]).
-//! The handlers live in one module per group of the TS handlers
-//! ([`token`], [`account`], [`posts`], [`private`], [`favorite`],
-//! [`analytics`], [`packs`], [`key_labels`], [`startup_sync`]). What it
-//! takes from the rest of the app comes through the traits of [`sources`].
-//! With the `test-util` feature, [`fake::FakeHub`] answers as the Hub
-//! does, in memory.
+//! The handlers live in one module per group ([`token`], [`account`],
+//! [`posts`], [`private`], [`favorite`], [`analytics`], [`packs`],
+//! [`key_labels`], [`startup_sync`]). What it takes from the rest of the
+//! app comes through the traits of [`sources`]. With the `test-util`
+//! feature, [`fake::FakeHub`] answers as the Hub does, in memory.
 //!
 //! The Hub's JWT and the Google id_token never leave the backend, and no
 //! request's headers, body or query is logged.

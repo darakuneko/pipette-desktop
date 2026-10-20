@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The behaviour of each DB method, case by case, as the TypeScript DB
-//! layer's own tests (src/main/typing-analytics/db/__tests__/
-//! typing-analytics-db.test.ts) pin it. The sync export selects and the
-//! per-scope listers those tests also cover have no Rust counterpart.
+//! The behaviour of each DB method, case by case.
 //!
 //! The merges go through JSONL rows, the only way this crate applies them.
 //! The tables are read back through a second, read-only connection.

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The startup update of the Hub-linked language packs
-//! (`src/main/hub/i18n-startup-sync.ts`).
+//! The startup update of the Hub-linked language packs.
 //!
 //! Every live pack with a Hub post id is checked against the Hub's
 //! timestamps (in batches of 100, sent at once); a pack whose Hub time
@@ -71,7 +70,7 @@ pub struct StartupSyncResult {
     pub errors: Vec<SyncError>,
 }
 
-/// One line of the pass's log, as Electron's `log(level, message)`.
+/// One line of the pass's log: its level and message.
 pub type LogLine = (Level, String);
 
 /// What a pass did.
@@ -122,7 +121,7 @@ impl StartupSyncOutcome {
     }
 }
 
-/// The first line of the stack of the error the TS throws:
+/// The first line of the stack of the error:
 /// `<class name>: <message>`. A request that got no response is the
 /// `TypeError` of `fetch`, a body that is not JSON the `SyntaxError` of
 /// `response.json()`; their messages are this build's own.

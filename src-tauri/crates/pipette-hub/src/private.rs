@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The private (unlisted) keymap post handlers of
-//! `src/main/hub/hub-ipc-private.ts`: the upload, which answers the share
-//! URL and the expiry for the page to keep on its entry, and the delete
-//! that Remove and the switch to public share.
+//! The private (unlisted) keymap post handlers: the upload, which answers
+//! the share URL and the expiry for the page to keep on its entry, and the
+//! delete that Remove and the switch to public share.
 //!
 //! The upload checks and sends a keymap post as [`crate::posts`] does, to
 //! `/api/private/files`, with `expires_in_days` last when there is an

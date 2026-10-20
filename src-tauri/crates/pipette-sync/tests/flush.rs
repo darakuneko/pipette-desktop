@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trigger A and the sync's part of the quit (flush.rs, triggers.rs), the
-//! flush cases of src/main/__tests__/sync-service.test.ts on the in-memory
-//! Drive. Time is paused once the world is built, so each timer is checked
-//! to the millisecond.
+//! Trigger A and the sync's part of the quit (flush.rs, triggers.rs) on the
+//! in-memory Drive. Time is paused once the world is built, so each timer is
+//! checked to the millisecond.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

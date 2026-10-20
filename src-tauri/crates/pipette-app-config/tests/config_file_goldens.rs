@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the real electron-store by
-//! scripts/app-config-fixtures/ (tests/fixtures/scenarios.json) on the Rust
-//! store: after every step config.json must hold the same bytes, and the
-//! step must return, fail and notify as it did there. The one intended
-//! difference: where electron-store throws on a config.json that is not
-//! JSON at start, the Rust store moves the file aside and starts from the
-//! defaults.
+//! Replays the scenarios recorded from the real conf
+//! (tests/fixtures/scenarios.json) on the Rust store: after every step
+//! config.json must hold the same bytes, and the step must return, fail and
+//! notify as it did there. The one intended difference: where conf throws
+//! on a config.json that is not JSON at start, the Rust store moves the
+//! file aside and starts from the defaults.
 
 // Test helpers outside #[test] functions panic on a broken fixture.
 #![allow(clippy::unwrap_used)]
@@ -141,7 +140,7 @@ impl Replay {
         self.store()
             .subscribe(move |key, value| notified.lock().unwrap().push((key.to_owned(), stringify(value))));
         if let Some(error) = &step.error {
-            // electron-store throws here; the Rust store sets the file aside.
+            // conf throws here; the Rust store sets the file aside.
             assert_eq!(error.name, "SyntaxError");
             let aside: Vec<_> = std::fs::read_dir(&self.dir)
                 .unwrap()
@@ -188,7 +187,7 @@ fn compare_outcome(step: &Step, outcome: Result<Option<String>, String>) -> Resu
 }
 
 #[test]
-fn scenarios_match_electron_store() {
+fn scenarios_match_the_recorded_config_files() {
     let scenarios: Vec<Scenario> = fixture("scenarios.json");
     let fresh = fresh_file(&scenarios);
     let mut failures = Vec::new();

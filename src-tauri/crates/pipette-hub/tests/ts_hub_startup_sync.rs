@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The startup update of the Hub-linked language packs against Electron's
-//! (the scenarios of ts_hub_handlers_startup_sync.json): the recorded
+//! The startup update of the Hub-linked language packs against the recorded
+//! golden scenarios of ts_hub_handlers_startup_sync.json: the recorded
 //! userData is seeded, the scripted Hub answers the Rust pass, which must
 //! send the same requests, wait the same waits, report the same sync units,
 //! log the same lines, broadcast the same event and leave the same

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! `new TextDecoder('shift_jis').decode(bytes)` as Electron's main process
-//! runs it (Chromium's ICU): the WHATWG Shift_JIS decoder, an invalid
+//! `new TextDecoder('shift_jis').decode(bytes)` as Chromium runs it (its
+//! ICU): the WHATWG Shift_JIS decoder, an invalid
 //! sequence written as U+FFFD, no BOM handling, with two differences from
-//! the WHATWG standard that the fixtures recorded in Electron show:
+//! the WHATWG standard that the recorded fixtures show:
 //!
 //! - the user-defined area ends with lead byte 0xF8 (U+E000..U+E69B); a
 //!   0xF9 lead byte is not mapped, where the standard maps it to
@@ -21,9 +21,9 @@ use crate::units::REPLACEMENT_CHARACTER;
 /// The pointers of the user-defined area (lead bytes 0xF0..=0xF9), which
 /// map to U+E000 onwards.
 const USER_DEFINED: std::ops::RangeInclusive<usize> = 8836..=10715;
-/// The last of them Electron maps (lead byte 0xF8).
+/// The last of them that is mapped (lead byte 0xF8).
 const USER_DEFINED_MAPPED_END: usize = 10527;
-/// The pair Electron decodes to U+FFFD as a whole.
+/// The pair decoded to U+FFFD as a whole.
 const SWALLOWED_PAIR: (u8, u8) = (0x87, 0x5e);
 const POINTERS: usize = 11280;
 
@@ -123,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn maps_the_user_defined_area_as_electron_does() {
+    fn maps_the_user_defined_area_up_to_lead_byte_0xf8() {
         assert_eq!(decode_shift_jis(&[0xf0, 0x40]), [0xe000]);
         assert_eq!(decode_shift_jis(&[0xf8, 0xfc]), [0xe69b]);
         assert_eq!(decode_shift_jis(&[0xf9, 0x40]), [0xfffd, 0x40]);
@@ -131,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn swallows_0x87_0x5e_as_electron_does() {
+    fn swallows_0x87_0x5e() {
         assert_eq!(decode_shift_jis(&[0x87, 0x5e, b'a']), [0xfffd, 0x61]);
         assert_eq!(decode_shift_jis(&[0x87, 0x40]), [0x2460]);
     }

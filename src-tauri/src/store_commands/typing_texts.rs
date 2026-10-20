@@ -7,10 +7,8 @@
 //! Each answers the handler's `{success, data?, errorCode?, error?}` object
 //! as JSON text written by `pipette_js_json`, so the entries' fields this
 //! build does not know reach the renderer as `JSON.stringify` writes them.
-//! The arguments are taken as any JSON value and checked as the handlers of
-//! src/main/typing-test-text-ipc.ts check them, answering their `Invalid …`
-//! failures. The import dialog has the title and filter of
-//! src/main/typing-test-text-store.ts: one file of any name.
+//! The arguments are taken as any JSON value and checked, answering
+//! `Invalid …` failures. The import dialog picks one file of any name.
 
 use std::convert::Infallible;
 

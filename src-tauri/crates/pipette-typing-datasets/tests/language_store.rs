@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language store's behaviour, ported from the tests of the TypeScript
-//! store (src/main/__tests__/language-store.test.ts and
-//! typing-dataset-sync.test.ts), plus what only this build has: the body
-//! size limit of the HTTP client and concurrent updates.
+//! The language store's behaviour, with the dataset sync, the body size
+//! limit of the HTTP client and concurrent updates.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -103,7 +101,7 @@ fn a_download_fails_without_writing() {
     assert_eq!(download("german").unwrap_err(), "HTTP 404");
     h.ok(&padded(r#"{"name":"bad"}"#, size));
     assert_eq!(download("german").unwrap_err(), "Invalid language data");
-    // Past the client's body limit: a size mismatch, as Electron would see.
+    // Past the client's body limit: a size mismatch.
     h.reply(Err(HttpError::TooLarge { limit: 64 }));
     assert_eq!(
         download("german").unwrap_err(),

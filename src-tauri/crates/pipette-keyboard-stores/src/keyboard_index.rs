@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The index file of a keyboard's entry stores under
 //! `sync/keyboards/{uid}` (the snapshots, the Analyze filters and the run
-//! logs), read and written as their Electron stores do.
+//! logs), and how it is read and written.
 //!
 //! `index.json` is `{uid, entries}` written as `JSON.stringify(index, null,
 //! 2)`. An index that cannot be read, is not an object, names another uid

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Applying a remote body bundle to a pack (`applySyncedPackBody` of
-//! src/main/sync/pack-sync.ts).
+//! Applying a remote body bundle to a pack.
 
 use std::cmp::Ordering;
 

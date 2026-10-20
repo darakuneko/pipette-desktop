@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The import of a text file, as `importFromDialog` /
-//! `confirmImportOverwrite` of src/main/typing-test-text-store.ts do it once
-//! the dialog has answered: a file named like a live text is held until the
-//! user confirms the overwrite.
+//! The import of a text file once the dialog has answered: a file named like a
+//! live text is held until the user confirms the overwrite.
 
 use std::fs;
 use std::path::Path;

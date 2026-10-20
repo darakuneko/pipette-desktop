@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript pending store by
-//! scripts/sync-pending-fixtures/record-sync-pending-fixtures.test.ts: the
+//! Replays the scenarios recorded from the TypeScript pending store: the
 //! same userData files, the restore, the same changes and writes, then
 //! every file left behind compared byte for byte, after the restore and
 //! after the steps, with the generations of the units.

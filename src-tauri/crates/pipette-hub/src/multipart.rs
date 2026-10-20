@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The multipart bodies of the Hub uploads, byte for byte as
-//! src/main/hub/hub-client.ts (`MultipartBuilder` and its
-//! `build…MultipartBody` functions), hub-i18n.ts and hub-theme.ts write
-//! them: the boundary from the clock, the parts in the TS's order with the
-//! same header lines, field values with their line breaks as spaces, file
-//! names as they are, and the closing boundary followed by CRLF.
+//! The multipart bodies of the Hub uploads, byte for byte as the recorded
+//! goldens hold them: the boundary from the clock, the parts in a fixed
+//! order with fixed header lines, field values with their line breaks as
+//! spaces, file names as they are, and the closing boundary followed by
+//! CRLF.
 
 /// A finished body and its boundary.
 #[derive(Debug, Clone, PartialEq, Eq)]

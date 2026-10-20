@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The favorites of each type (tap dance, macro, combo, key override,
-//! alt repeat key): `sync/favorites/{type}`, the store of
-//! src/main/favorite-store.ts, synced as the unit `favorites/{type}`.
+//! alt repeat key): `sync/favorites/{type}`, synced as the unit
+//! `favorites/{type}`.
 //!
 //! `index.json` is `{type, entries}` written as `JSON.stringify(index,
 //! null, 2)`; each body (`{type}_{ts}_{id}.json`) is `{type, data}` as the

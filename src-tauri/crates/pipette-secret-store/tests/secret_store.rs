@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The secret files on a temporary userData with an in-memory key store:
-//! the status of each state of the file and the key store in the order of
-//! `retrieveSecretFile` (tests/fixtures/ts_secret_status.json, recorded
-//! from the Electron main process by
-//! scripts/sync-fixtures/record-secrets-auth.test.ts), the writes, and that
-//! Electron's `*.enc` files are neither read nor written.
+//! the status of each state of the file and the key store against the
+//! recorded golden (tests/fixtures/ts_secret_status.json), the writes, and
+//! that the 0.4 build's `*.enc` files are neither read nor written.
 
 #![allow(clippy::unwrap_used)]
 
@@ -60,7 +58,7 @@ async fn store_in_state(user_data: &Path, file: &str, available: bool) -> Secret
 }
 
 #[tokio::test]
-async fn reports_the_status_in_the_order_of_electron() {
+async fn reports_the_status_in_the_recorded_order() {
     let rows: Vec<StatusRow> = serde_json::from_str(include_str!("fixtures/ts_secret_status.json")).unwrap();
     assert_eq!(rows.len(), 5);
     for row in rows {
@@ -163,13 +161,13 @@ async fn clear_removes_the_file_and_a_missing_file_is_no_error() {
 }
 
 #[tokio::test]
-async fn never_reads_or_writes_the_electron_files() {
+async fn never_reads_or_writes_the_0_4_files() {
     let dir = tempfile::tempdir().unwrap();
     let auth = dir.path().join("local/auth");
     std::fs::create_dir_all(&auth).unwrap();
-    let electron = ["oauth-tokens.enc", "sync-password.enc", "sync-password-change-keys.enc"];
-    for name in electron {
-        std::fs::write(auth.join(name), format!("electron {name}")).unwrap();
+    let v04_files = ["oauth-tokens.enc", "sync-password.enc", "sync-password-change-keys.enc"];
+    for name in v04_files {
+        std::fs::write(auth.join(name), format!("0.4 {name}")).unwrap();
     }
     let keystore = Arc::new(MemoryKeystore::default());
     let store = store_on(dir.path(), &keystore);
@@ -178,8 +176,8 @@ async fn never_reads_or_writes_the_electron_files() {
         store.store(kind, b"tauri").await.unwrap();
         store.clear(kind).await.unwrap();
     }
-    for name in electron {
-        assert_eq!(std::fs::read_to_string(auth.join(name)).unwrap(), format!("electron {name}"));
+    for name in v04_files {
+        assert_eq!(std::fs::read_to_string(auth.join(name)).unwrap(), format!("0.4 {name}"));
     }
 }
 

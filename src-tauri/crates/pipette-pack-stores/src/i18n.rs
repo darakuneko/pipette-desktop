@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language packs: `sync/i18n`, the store of
-//! src/main/i18n-pack-store-{internal,crud}.ts, on the shared pack layer
+//! The language packs: the store of `sync/i18n`, on the shared pack layer
 //! ([`crate::PackStore`]).
 //!
 //! A pack body is the pack JSON as the page imported it (`{name, version,

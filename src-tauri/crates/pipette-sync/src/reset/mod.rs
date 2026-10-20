@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The resets and deletes of synced data (src/main/sync/sync-reset-ipc.ts):
-//! the delete of chosen Drive files, the reset of chosen targets on Drive,
-//! the reset of one keyboard's data, and the reset of this machine's data
-//! ([`local`]). Each holds the sync lock as a reset for its whole run
-//! (`SyncRuntime::with_reset_lock`), naming the keyboards whose data it
-//! removes, and is refused at once while a sync holds the lock or an
-//! analytics sync or remote day fetch of those keyboards runs.
+//! The resets and deletes of synced data: the delete of chosen Drive files, the
+//! reset of chosen targets on Drive, the reset of one keyboard's data, and the
+//! reset of this machine's data ([`local`]). Each holds the sync lock as a
+//! reset for its whole run (`SyncRuntime::with_reset_lock`), naming the
+//! keyboards whose data it removes, and is refused at once while a sync holds
+//! the lock or an analytics sync or remote day fetch of those keyboards runs.
 //!
-//! What a reset removes from Drive is removed from the pending units
-//! first: the first cancel always writes the pending file, so a disk
-//! failure stops the reset before anything is removed. No store lock is
-//! taken around a removal, as in the Electron build: the sync lock keeps
-//! the passes out, and the stores write under their own locks.
+//! What a reset removes from Drive is removed from the pending units first: the
+//! first cancel always writes the pending file, so a disk failure stops the
+//! reset before anything is removed. No store lock is taken around a removal:
+//! the sync lock keeps the passes out, and the stores write under their own
+//! locks.
 
 pub mod local;
 pub mod targets;

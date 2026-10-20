@@ -3,7 +3,7 @@
 //! src/shared/theme/validate.ts), with the same errors, warnings and
 //! header. The page runs that check before it calls the backend; the store
 //! runs this one too, so a pack that reaches the backend some other way is
-//! refused as the Electron store refuses it. The color values end up in
+//! refused. The color values end up in
 //! CSS custom properties, so only hex colors and `rgb()` / `hsl()` forms
 //! pass.
 //!

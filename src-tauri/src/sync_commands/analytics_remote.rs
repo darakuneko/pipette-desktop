@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing analytics on Drive (the `SYNC_ANALYTICS_NOW` and
-//! `TYPING_ANALYTICS_*_REMOTE*` handlers of src/main/sync/sync-ipc.ts): the
-//! Analyze panel's sync of one keyboard, and the Data modal's reads of
-//! other devices' days. They run on the process's one unit sync, so they
-//! share its locks with the passes.
+//! The typing analytics on Drive: the Analyze panel's sync of one keyboard, and
+//! the Data modal's reads of other devices' days. They run on the process's one
+//! unit sync, so they share its locks with the passes.
 //!
 //! An argument the handlers reject answers as they do (`false` or an empty
 //! list) before anything runs: a uid or machine hash that is not a string,

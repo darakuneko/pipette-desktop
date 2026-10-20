@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The keyboard names: `sync/meta/keyboard-names.json`, the uid → device
-//! name map of src/main/sync/keyboard-meta.ts, synced as the unit
-//! `meta/keyboard-names`.
+//! name map, synced as the unit `meta/keyboard-names`.
 //!
 //! The file is `{"type":"keyboard-meta","version":1,"entries":[…]}` written
 //! as `JSON.stringify(index, null, 2)`; each entry is

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! One run of a piece of work shared by every caller that asks for it while
-//! it is under way, as the promises the TypeScript keeps in flight
-//! (`syncFormatMarkerCreating`, `passwordCheckCreating`, `refreshing`).
-//! The work runs as its own task, so it finishes even when every caller
-//! stops waiting, and each caller gets a clone of its result.
+//! One run of a piece of work shared by every caller that asks for it while it
+//! is under way. The work runs as its own task, so it finishes even when every
+//! caller stops waiting, and each caller gets a clone of its result.
 
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};

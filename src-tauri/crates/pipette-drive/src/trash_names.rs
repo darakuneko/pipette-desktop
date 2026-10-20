@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Trash names for Drive data files the sync stops reading
-//! (src/main/sync/drive-trash.ts). A copy of a name that is not the chosen
-//! one ([`crate::canonical`]) is renamed to
+//! Trash names for Drive data files the sync stops reading. A copy of a
+//! name that is not the chosen one ([`crate::canonical`]) is renamed to
 //! `{name}.trash.{renamedAtMs}.{preModifiedMs}.{id}` instead of being
 //! deleted, so it can be renamed back while no other copy of the name is
 //! left. The name keeps every fact the later steps need, so nothing about
@@ -28,7 +27,7 @@ const TRASH_MARK: &str = ".trash.";
 /// `Number.MAX_SAFE_INTEGER`.
 const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
 
-/// `^(.+\.enc)\.trash\.(\d+)\.(\d+)\.([A-Za-z0-9_-]+)$` of drive-trash.ts,
+/// `^(.+\.enc)\.trash\.(\d+)\.(\d+)\.([A-Za-z0-9_-]+)$`,
 /// with JavaScript's `.` (any character but the four line terminators)
 /// and its ASCII-only `\d`.
 static TRASH_NAME: LazyLock<Regex> = LazyLock::new(|| {

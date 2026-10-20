@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The zip reading of fflate's `unzipSync` and the entry choice of
-//! `pickTextEntry` (src/main/aozora/aozora-import.ts), on archives built
-//! here byte by byte.
+//! The zip reading of fflate's `unzipSync` and the entry choice, on
+//! archives built here byte by byte.
 
 use super::*;
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Signing in and out without losing or misdirecting the pending units
-//! (src/main/sync/sync-pending-account.ts). The units themselves and their
-//! owner live in `pipette_sync_pending`; this module times the switch of
-//! tokens around them.
+//! Signing in and out without losing or misdirecting the pending units. The
+//! units themselves and their owner live in `pipette_sync_pending`; this module
+//! times the switch of tokens around them.
 //!
 //! A sign-in stores its tokens only once no pass holds the sync lock and no
 //! analytics sync or remote day fetch (the Drive writers that don't take
@@ -65,7 +64,7 @@ pub enum AccountSwitchError {
 }
 
 impl AccountSwitchError {
-    /// The `reason` the IPC result carries (`sync-ipc-wrap.ts`).
+    /// The `reason` the IPC result carries.
     pub fn reason(&self) -> Option<&'static str> {
         matches!(self, Self::Busy).then_some(SYNC_BUSY_REASON)
     }

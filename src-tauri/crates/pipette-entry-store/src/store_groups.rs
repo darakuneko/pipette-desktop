@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The field groups of each entry store, as STORE_GROUPS in
-//! src/main/sync/entry-clocks.ts. Every device must agree on them: the
+//! The field groups of each entry store. Every device must agree on them: the
 //! merge moves a field with the clock of its group.
 
 use crate::entry::MetaGroup;
@@ -224,8 +223,7 @@ impl EntryStore {
         }
     }
 
-    /// The store's name in the Electron build (`EntryStore` of
-    /// entry-clocks.ts).
+    /// The store's name.
     pub fn name(self) -> &'static str {
         match self {
             EntryStore::Favorites => "favorites",

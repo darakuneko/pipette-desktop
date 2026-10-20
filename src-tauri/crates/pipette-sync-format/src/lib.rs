@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Formats Pipette shares with other machines through Cloud Sync, in the
-//! exact shape the TypeScript implementation (`src/main/sync/`,
-//! `src/main/typing-analytics/machine-hash.ts`) reads and writes them:
+//! Formats Pipette shares with other machines through Cloud Sync, in the exact
+//! shape every device reads and writes them:
 //!
 //! - [`envelope`] / [`crypto`] — the encrypted envelope stored on Google
 //!   Drive (PBKDF2-HMAC-SHA256 key, AES-256-GCM, AAD bound to the sync unit).

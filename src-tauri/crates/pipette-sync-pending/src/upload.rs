@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the upload side and the resets do to the pending units
-//! (src/main/sync/sync-runtime-state.ts): a pass takes the generations
+//! What the upload side and the resets do to the pending units: a pass takes the generations
 //! before it uploads and settles each unit it sent only while its
 //! generation is still that one; a reset cancels the units of what it
 //! removes, writing first, and can put them back.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The recording against the TypeScript pipeline: each scenario of
-//! recording.json (record-analytics-recording-fixtures.test.ts) replayed on
+//! recording.json (a recorded golden) replayed on
 //! the [`Recorder`] must leave the same pending work and announced sync
 //! units after every step, the same bytes in every day file and in
 //! `sync_state.json`, and the same rows in every cache table.

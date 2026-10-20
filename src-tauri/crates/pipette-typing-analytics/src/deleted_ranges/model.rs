@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The deleted-ranges file of one (keyboard uid, machine hash)
-//! (deleted-ranges.ts): time ranges deleted from that device's typing data,
-//! written by another device (the Sync tab's delete) or by the owner itself
-//! (the Local tab's Delete All). Each entry removes the rows whose time
-//! (minute start, session start) is in `[startMs, endMs)` and at or before
-//! `cutoffMs`, the moment the delete was asked for, so typing recorded
-//! after the delete stays. Entries never change once written; devices
-//! combine their copies by taking the union of the ids.
+//! The deleted-ranges file of one (keyboard uid, machine hash): time ranges
+//! deleted from that device's typing data, written by another device (the Sync
+//! tab's delete) or by the owner itself (the Local tab's Delete All). Each
+//! entry removes the rows whose time (minute start, session start) is in
+//! `[startMs, endMs)` and at or before `cutoffMs`, the moment the delete was
+//! asked for, so typing recorded after the delete stays. Entries never change
+//! once written; devices combine their copies by taking the union of the ids.
 //!
 //! File: `{ "version": 1, "entries": [{ id, startMs, endMs, cutoffMs }] }`,
 //! two-space indented, the entries sorted by (`cutoffMs`, id) so every

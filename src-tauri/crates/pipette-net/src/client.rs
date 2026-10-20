@@ -15,10 +15,8 @@ use std::time::Duration;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HttpResponse {
     pub status: u16,
-    /// The body of a successful (2xx) response. The real client does not
-    /// read the body of any other response and leaves this empty: no caller
-    /// uses it (src/main/download-util.ts and the Hub dataset fetchers stop
-    /// at `!response.ok`).
+    /// The body of a successful (2xx) response. The real client does not read
+    /// the body of any other response and leaves this empty: no caller uses it.
     pub body: Vec<u8>,
 }
 
@@ -28,9 +26,7 @@ impl HttpResponse {
     }
 }
 
-/// Why a request got no response. Each is a rejected `net.fetch` for the
-/// Electron code these requests come from, except [`HttpError::TooLarge`],
-/// which a byte size check there reports.
+/// Why a request got no response.
 #[derive(Debug, thiserror::Error)]
 pub enum HttpError {
     #[error("the request timed out")]
@@ -198,9 +194,8 @@ impl Limits {
     /// 30 seconds to connect, 60 seconds without a byte, 30 minutes in all,
     /// 64 MiB. The largest word list of language-manifest.json is
     /// about 12.3 MB, which takes about 2 minutes at 0.8 Mbps and about 20
-    /// minutes at 80 kbps; Electron's `net.fetch` has no time limit, so a
-    /// slow line must not be what fails a download. 64 MiB stays far below
-    /// what would strain memory.
+    /// minutes at 80 kbps, so a slow line must not be what fails a
+    /// download. 64 MiB stays far below what would strain memory.
     pub const DEFAULT: Self = Self {
         connect_timeout: Duration::from_secs(30),
         read_timeout: Duration::from_secs(60),
@@ -209,9 +204,9 @@ impl Limits {
     };
 
     /// The Drive requests of the sync: 30 seconds to connect, 60 seconds
-    /// without a byte, 10 minutes in all, 256 MiB. Electron's Drive
-    /// requests have no time limit; a request that never ends would hold
-    /// the sync lock, so it ends here and the next pass tries again. A
+    /// without a byte, 10 minutes in all, 256 MiB. A request that never
+    /// ends would hold the sync lock, so it ends here and the next pass
+    /// tries again. A
     /// sync file is a whole store or a keyboard's day, far below the size
     /// limit.
     pub const DRIVE: Self = Self {

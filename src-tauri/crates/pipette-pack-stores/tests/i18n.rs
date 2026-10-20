@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language pack store, from the tests of src/main/__tests__/
-//! {i18n-pack-store,pack-sync-stores}.test.ts that cover what this crate
-//! does (the sync merge and the garbage collection are not here), and the
-//! unattended save of the Hub's update.
+//! The language pack store (the sync merge and the garbage collection are
+//! not here), and the unattended save of the Hub's update.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

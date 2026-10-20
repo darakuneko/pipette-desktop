@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze posts and their preview (src/main/hub/hub-ipc-analytics.ts
-//! and the private analytics upload of hub-ipc-private.ts), on
+//! The Analyze posts, their preview and the private analytics upload, on
 //! `pipette_hub::analytics::AnalyticsPosts`: the export is built from the
 //! saved filter and the typing analytics here, and sent with the JWT that
 //! stays here.
 //!
 //! `params` is the text of `JSON.stringify(params)`, read as `JSON.parse`
-//! would, so a field of an unexpected type gets Electron's answer for it;
-//! no text reads as `null`, and a text that is not JSON is answered
+//! would; no text reads as `null`, and a text that is not JSON is answered
 //! `{ success: false, error }` as a handler that throws is. The answers are
 //! the handlers' `{ success, … }` objects as JSON text.
 

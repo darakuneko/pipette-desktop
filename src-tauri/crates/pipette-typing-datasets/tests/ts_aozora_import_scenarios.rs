@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript Aozora Bunko import
-//! handler by scripts/typing-text-fixtures/record-aozora-import-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the Aozora Bunko import
+//! handler:
 //! the same userData files, HTTP replies, clock and new ids, the same
 //! calls, then each response, the URLs asked, the notified units and every
 //! file left behind compared byte for byte.

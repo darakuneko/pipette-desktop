@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The token tests of src/main/__tests__/google-auth.test.ts: the code
-//! exchange, the status, the sign-out, the refresh, the id_token and the
-//! `sub`, the races with a sign-out, the time limits and the Hub test
-//! account.
+//! The token tests: the code exchange, the status, the sign-out, the
+//! refresh, the id_token and the `sub`, the races with a sign-out, the time
+//! limits and the Hub test account.
 
 #![allow(clippy::unwrap_used)]
 

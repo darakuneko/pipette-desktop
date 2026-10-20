@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The query layer against the TypeScript IPC handlers, member call by
-//! member call (tests/fixtures/queries.json and queries_tz/, written by
-//! `pnpm run generate:analytics-db-fixtures`): on the same seed and
+//! member call (the recorded goldens tests/fixtures/queries.json and
+//! queries_tz/): on the same seed and
 //! userData tree, each answer must be the same JSON text, and a call the
 //! handler threw on must fail. The calls that go through local days run
 //! once per time zone they were recorded in, each in a process of its own.

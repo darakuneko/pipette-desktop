@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading a config value as the Electron main process does: whatever is
-//! stored, the same conversion, so a value the renderer wrote that is not
-//! the expected type has the same effect in both builds.
+//! Reading a config value: whatever is stored, converted to the expected
+//! type, so a value the renderer wrote that is not that type still reads as
+//! a usable one.
 
 use pipette_js_json::Value;
 

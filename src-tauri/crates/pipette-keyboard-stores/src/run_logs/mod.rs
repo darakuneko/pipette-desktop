@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The keystroke logs of a keyboard's Typing Test runs:
-//! `sync/keyboards/{uid}/runs`, the store of
-//! src/main/typing-run-log-store.ts, synced as the unit of the same name.
+//! `sync/keyboards/{uid}/runs`, synced as the unit of the same name.
 //!
 //! The index is the snapshots' (`{uid, entries}`, see keyboard_index.rs),
 //! with one entry per run keyed by its run id; each body

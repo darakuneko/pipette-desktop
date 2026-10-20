@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-autostart"
-description = "Starting the app at sign-in, as applyAutoLaunch of src/main/app-behavior.ts does"
+description = "Starting the app at sign-in, taking over the registration of the 0.4 build"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,9 +14,8 @@ log = "=0.4.34"
 # from the real entry.
 pipette-fs = { path = "../pipette-fs" }
 
-# The login item of macOS (SMAppService), Electron's
-# app.setLoginItemSettings. MIT. Linux writes the desktop entry itself
-# (src/linux.rs), byte for byte the one Electron writes.
+# The login item of macOS (SMAppService). MIT. Linux writes the desktop
+# entry itself (src/linux.rs), byte for byte the one the 0.4 build wrote.
 [target.'cfg(target_os = "macos")'.dependencies]
 auto-launch = { version = "=0.6.0", default-features = false }
 # The status of the login item, read only on macOS 13 and later (after
@@ -24,8 +23,8 @@ auto-launch = { version = "=0.6.0", default-features = false }
 # item that is not registered. The version auto-launch uses.
 smappservice-rs = "=0.1.3"
 
-# The Windows Run key (src/windows_run.rs), written as Electron writes it,
-# with the Electron build's values found by their data. MIT or Apache-2.0;
+# The Windows Run key (src/windows_run.rs), written as the 0.4 build wrote
+# it, with the 0.4 build's values found by their data. MIT or Apache-2.0;
 # the version the auto-launch crate also uses.
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-registry = "=0.6.1"

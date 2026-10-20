@@ -6,11 +6,10 @@
 //!
 //! Each command answers the handler's `{success, data | errorCode, error}`
 //! object as JSON text (store_commands/pack_commands.rs); the arguments are
-//! checked as the handlers of src/main/theme-pack-ipc.ts check them. The
-//! page checks a pack with `validateThemePack` before it calls
+//! checked here. The page checks a pack with `validateThemePack` before it calls
 //! `theme_pack_import_apply`, and the store checks it again. A successful rename, reorder, delete, Hub
 //! link or import sends `theme-pack:changed` to every page, the one that
-//! asked included, as Electron's `broadcastChanged` does.
+//! asked included.
 
 use std::convert::Infallible;
 

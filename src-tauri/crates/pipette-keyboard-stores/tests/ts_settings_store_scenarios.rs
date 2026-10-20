@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded by
-//! scripts/keyboard-store-fixtures/record-settings-store-fixtures.test.ts.
-//! There the TypeScript settings handlers and the Tauri shim's settings
-//! members ran on the same userData files and left the same files; here the
-//! commands the shim made run on the same files, and each answer, the
-//! notified units and every file left behind are compared byte for byte
-//! with the handlers' run.
+//! Replays the recorded golden scenarios of the settings handlers: the
+//! commands the shim makes run on the recorded userData files, and each
+//! answer, the notified units and every file left behind are compared byte
+//! for byte with the recorded run.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

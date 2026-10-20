@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Where each recorded key would have been pressed on another keyboard
-//! layout (src/main/typing-analytics/layout-resolver.ts, with the layout
-//! maps of src/shared/keymap/layout-parse.ts): a position's keycode on the
+//! layout (with the layout maps of src/shared/keymap/layout-parse.ts): a
+//! position's keycode on the
 //! snapshot's layer gives the character the source layout types there,
 //! the target layout gives the keycode that types that character, and the
 //! snapshot gives where that keycode sits, with its finger, hand and row.

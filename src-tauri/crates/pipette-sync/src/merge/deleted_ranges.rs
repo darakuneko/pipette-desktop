@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The merge of a downloaded deleted-ranges bundle
-//! (`keyboards/{uid}/devices/{hash}/deleted-ranges`) into the local file
-//! (src/main/sync/typing-deleted-ranges-merge.ts): the union of the
-//! entries by id, read, merged and written under the file's store lock.
-//! What follows runs after that lock is released, with the merged entries
+//! (`keyboards/{uid}/devices/{hash}/deleted-ranges`) into the local file: the
+//! union of the entries by id, read, merged and written under the file's store
+//! lock. What follows runs after that lock is released, with the merged entries
 //! from memory: the store lock is not reentrant, and the follow-up must not
 //! read the file under it again.
 //!

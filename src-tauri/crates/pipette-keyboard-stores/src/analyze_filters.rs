@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The saved Analyze filters of a keyboard:
-//! `sync/keyboards/{uid}/analyze_filters`, the store of
-//! src/main/analyze-filter-store.ts, synced as the unit of the same name.
+//! `sync/keyboards/{uid}/analyze_filters`, synced as the unit of the same
+//! name.
 //!
 //! The index is the snapshots' (`{uid, entries}`, see keyboard_index.rs);
 //! each body (`{ts}_{id}.json`) is the renderer's filter text as it is.

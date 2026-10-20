@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The favorite commands on a mock app with scripted dialogs and a temp
-//! userData directory. The dialog titles and filters are those of
-//! src/main/favorite-store.ts.
+//! userData directory.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

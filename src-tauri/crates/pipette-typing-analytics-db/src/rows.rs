@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The rows the reads answer, with the keys and key order of the objects
 //! the TypeScript DB layer returns (the `Typing*` row types of
-//! src/shared/types/typing-analytics.ts and the row types of
-//! typing-analytics-db-types.ts). Every number is an f64, as JavaScript
+//! src/shared/types/typing-analytics.ts and the cache's own row types).
+//! Every number is an f64, as JavaScript
 //! holds it, so a REAL in an INTEGER column reads the same. A value the
 //! TypeScript type calls a number but a statement can leave NULL is an
 //! `Option`.

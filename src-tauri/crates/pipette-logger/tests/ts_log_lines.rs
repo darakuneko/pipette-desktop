@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Log lines against the lines src/main/logger.ts appended for the same
-//! time, level and message.
-//!
-//! Regenerate the fixture with `pnpm run generate:fs-logger-fixtures`.
+//! Log lines against the recorded lines the 0.4 build's logger appended for
+//! the same time, level and message.
 
 use std::path::Path;
 

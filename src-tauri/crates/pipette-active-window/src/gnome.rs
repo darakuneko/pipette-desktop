@@ -64,7 +64,7 @@ impl GnomeFocusedWindow {
     }
 }
 
-/// The name in `gdbus`'s output, read as the Electron build reads it: trim,
+/// The name in `gdbus`'s output: trim,
 /// drop the first 2 and the last 3 UTF-16 code units (`('` and `',)`),
 /// `JSON.parse` the rest, and take the last `.`-separated part of a
 /// non-empty `wm_class` string. Anything else gives `None`, as does a reply

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The index file of the stores with error codes (the key labels and the
-//! typing test texts), read and written as their Electron stores do, and
-//! the name rules they share.
+//! typing test texts), how it is read and written, and the name rules
+//! they share.
 //!
 //! `index.json` is `{entries}` written as `JSON.stringify(index, null, 2)`.
 //! An index that cannot be read, is not an object or has no `entries` list

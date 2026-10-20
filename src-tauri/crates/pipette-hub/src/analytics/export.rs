@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze post's export (`buildAnalyticsExport`, `collectData` and
-//! `buildAppData` of src/main/hub/hub-analytics.ts): the
-//! `analytics-export-v1.json` the Hub takes, built from the typing
-//! analytics cache as the JavaScript values the Electron build serializes,
-//! so its JSON text is the same byte for byte.
+//! The Analyze post's export: the `analytics-export-v1.json` the Hub
+//! takes, built from the typing analytics cache as JavaScript values, so
+//! its JSON text is the recorded golden's byte for byte.
 //!
 //! The export holds derived data only: minute-level rows at the finest,
 //! and the bigram intervals as bucketed histograms.
@@ -127,9 +125,9 @@ impl AnalyticsExport {
     }
 }
 
-/// Why the export could not be built: what the Electron builder throws
-/// (a database error, a layout map entry the resolver cannot read, Layout
-/// Comparison inputs it cannot iterate). The text is the error's message.
+/// Why the export could not be built (a database error, a layout map entry
+/// the resolver cannot read, Layout Comparison inputs it cannot iterate).
+/// The text is the error's message.
 #[derive(Debug, thiserror::Error)]
 pub enum ExportError {
     #[error(transparent)]

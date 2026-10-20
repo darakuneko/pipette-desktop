@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The Hub account: the Hub origin, the display name of the next Hub token,
-//! and the account's own record (the account handlers of
-//! src/main/hub/hub-ipc-posts.ts, on `pipette_hub::account`). The answers
+//! and the account's own record (on `pipette_hub::account`). The answers
 //! carry the Hub's user object as the Hub sent it; the JWT stays here.
 
 use std::sync::Arc;
@@ -19,8 +18,7 @@ pub fn hub_get_origin(hub: State<'_, Arc<Hub>>) -> String {
     account::origin(hub.http())
 }
 
-/// A display name that is not a string clears it, as Electron's handler
-/// does.
+/// A display name that is not a string clears it.
 #[tauri::command]
 pub fn hub_set_auth_display_name(hub: State<'_, Arc<Hub>>, display_name: Option<Value>) {
     account::set_auth_display_name(hub.token(), display_name.as_ref().and_then(Value::as_str));

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-active-window"
-description = "The name of the active application for typing analytics, as the Electron build reads it: the native window lookup (X11 on Linux, the system's own on Windows and macOS), the GNOME Shell FocusedWindow query, and the name normalization"
+description = "The name of the active application for typing analytics: the native window lookup (X11 on Linux, the system's own on Windows and macOS), the GNOME Shell FocusedWindow query, and the name normalization"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

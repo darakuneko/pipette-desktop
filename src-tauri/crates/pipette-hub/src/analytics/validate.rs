@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The checks of an Analyze post's export before it is sent, and its size
-//! (`validateAnalyticsExport` and `estimateAnalyticsExportSizeBytes` of
-//! src/main/hub/hub-analytics.ts), with the limits the Hub's own validator
-//! applies.
+//! The checks of an Analyze post's export before it is sent, and its size,
+//! with the limits the Hub's own validator applies.
 
 use pipette_js_json::{Object, Value};
 

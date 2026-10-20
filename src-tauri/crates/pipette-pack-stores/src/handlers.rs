@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! What the handlers of the language and theme packs
-//! (src/main/{i18n,theme}-pack-ipc.ts) do the same way: reading their
+//! What the handlers of the language and theme packs do the same way:
+//! reading their
 //! arguments, and writing a pack where an export's save dialog answers.
 
 use std::path::PathBuf;

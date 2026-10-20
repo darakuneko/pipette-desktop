@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The theme packs: `sync/themes`, the store of
-//! src/main/theme-pack-store.ts, on the shared pack layer
+//! The theme packs: the store of `sync/themes`, on the shared pack layer
 //! ([`crate::PackStore`]).
 //!
 //! A pack body is the pack JSON as the page imported it (`{name, version,

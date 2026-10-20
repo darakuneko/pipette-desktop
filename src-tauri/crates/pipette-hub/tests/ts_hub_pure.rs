@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The input checks and helpers against the TS functions of
-//! src/main/hub/hub-ipc-shared.ts on the tables of tests/fixtures/
-//! ts_hub_pure.json (recorded by scripts/hub-fixtures/).
+//! The input checks and helpers against the recorded golden tables of
+//! tests/fixtures/ts_hub_pure.json.
 //!
-//! Inputs the Rust signatures cannot take are skipped and counted: a
-//! string with a lone surrogate (the IPC arguments are Rust strings), and a
-//! post id that is not a string (`validatePostId` coerces it, the command
-//! takes a string). For the text checks any value that is not a string is
-//! `None`, which they reject as the TS does. The tables of
-//! `isValidHubVialProtocol`, `validatePack` and `validateI18nExport` are for
-//! the favorite and language pack handlers and are read there.
+//! Inputs the Rust signatures cannot take are skipped and counted: a string
+//! with a lone surrogate (the IPC arguments are Rust strings), and a post
+//! id that is not a string (`validatePostId` coerces it, the command takes
+//! a string). For the text checks any value that is not a string is `None`,
+//! which they reject. The tables of `isValidHubVialProtocol`,
+//! `validatePack` and `validateI18nExport` are for the favorite and
+//! language pack handlers and are read there.
 
 #![allow(clippy::unwrap_used)]
 

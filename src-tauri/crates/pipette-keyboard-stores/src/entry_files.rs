@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What the index-based stores of this crate share: the body file an entry
-//! names, read as the Electron build reads it, the text of a clock error,
+//! names and how it is read, the text of a clock error,
 //! and the name comparison of `findActiveByName`.
 
 use std::fs;

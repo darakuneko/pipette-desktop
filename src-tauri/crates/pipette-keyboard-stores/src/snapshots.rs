@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The snapshots of a keyboard: `sync/keyboards/{uid}/snapshots`, the store
-//! of src/main/snapshot-store.ts, synced as the unit of the same name.
+//! The snapshots of a keyboard: `sync/keyboards/{uid}/snapshots`, synced
+//! as the unit of the same name.
 //!
 //! `index.json` is `{uid, entries}` written as `JSON.stringify(index, null,
 //! 2)`; each body (`{device}_{ts}_{id}.pipette`) is the renderer's text as

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The keymap snapshot handlers against what the TypeScript handlers did on
-//! the same userData directory, step by step (tests/fixtures/
-//! keymap_snapshots.json, written by `pnpm run
-//! generate:analytics-db-fixtures`): each answer as JSON text and the tree
+//! the same userData directory, step by step (the recorded golden
+//! tests/fixtures/keymap_snapshots.json): each answer as JSON text and the tree
 //! left at the end.
 
 // Helpers outside #[test] functions unwrap fixture data too.

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The check every sync entry point runs before it downloads, uploads or
-//! deletes anything on Drive (src/main/sync/sync-password-guard.ts): no
-//! sync while a sync password change is in progress, on this machine or on
-//! another one, and none while Drive needs a newer sync format.
+//! deletes anything on Drive: no sync while a sync password change is in
+//! progress, on this machine or on another one, and none while Drive needs a
+//! newer sync format.
 //!
 //! - This machine: a local password-change state file (any step, even an
 //!   unreadable one) blocks every entry point. Only the password-change

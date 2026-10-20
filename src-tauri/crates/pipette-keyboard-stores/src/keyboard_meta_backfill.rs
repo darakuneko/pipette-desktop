@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The local parts of the keyboard-name backfill of
-//! src/main/sync/keyboard-meta.ts (`backfillKeyboardMeta`), which names the
+//! The local parts of the keyboard-name backfill, which names the
 //! keyboards Drive has snapshots of and the names index lacks: the uids of
 //! Drive's snapshot files, the uids the index already has, and the device
 //! name a snapshot index gives a keyboard. The Drive side is the sync

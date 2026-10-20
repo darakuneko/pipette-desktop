@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The JSONL rows, files, UTC days and listings against what the TypeScript
-//! code did (tests/fixtures/jsonl_rows.json and jsonl_files.json, written by
-//! `pnpm run generate:analytics-db-fixtures`).
+//! code did (the recorded goldens tests/fixtures/jsonl_rows.json and
+//! jsonl_files.json).
 
 // Helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]

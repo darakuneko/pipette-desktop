@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The scripted Hub of the handler scenarios (scripts/hub-fixtures/
-//! hub-harness.ts `HubRule`), the requests as comparable lines, and the
-//! userData of a scenario: seeded from the recorded tree before, compared
-//! with the recorded tree after.
+//! The scripted Hub of the handler scenarios, the requests as comparable
+//! lines, and the userData of a scenario: seeded from the recorded tree
+//! before, compared with the recorded tree after.
 
 use std::collections::BTreeMap;
 use std::path::Path;

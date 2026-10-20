@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Compact mode of the Typing Test's view-only window and the minimum size
-//! and bounds around it: the WINDOW_SET_COMPACT_MODE handler of
-//! `setupWindowIpc`, `animateBounds`, `applyMinSizeIfChanged` and the
-//! `moved` / `display-metrics-changed` listeners of src/main/index.ts, as
+//! and bounds around it (the compact mode switch, its bounds animation, the
+//! minimum size, and what a move or a change of the displays does), as
 //! decisions over a [`WindowPort`]. The caller reads the window (its bounds,
 //! the display they are on) and runs the animation's ticks;
-//! tests/fixtures/resident/window_ops.json records the calls Electron makes,
+//! tests/fixtures/resident/window_ops.json records the golden window calls,
 //! which the tests below replay.
 //!
 //! Bounds are the window's outer bounds in DIP; `frame` is the outer minus
@@ -234,8 +233,7 @@ impl Controller {
         if animation.step < animation.steps {
             return Tick::Continue;
         }
-        // After the last bounds, as Electron's `onComplete` follows its last
-        // `setBounds`: a close in between saves the normal size.
+        // After the last bounds: a close in between saves the normal size.
         if let Finish::Leave { min_size } = animation.finish {
             self.apply_min_size(port, min_size);
             self.normal_size = None;
@@ -309,7 +307,7 @@ pub(crate) mod tests {
     }
 
     /// The harness's window: it records what is done to it at the fake
-    /// clock's time, as electron-mock.ts does.
+    /// clock's time.
     struct FakeWindow {
         now: Cell<u64>,
         bounds: Cell<Rect>,
@@ -591,7 +589,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn compact_mode_and_the_window_listeners_match_the_electron_calls() {
+    fn compact_mode_and_the_window_listeners_make_the_recorded_calls() {
         let fixture = fixture();
         let scenarios = fixture["scenarios"].as_array().unwrap();
         assert_eq!(scenarios.len(), 21);
@@ -614,7 +612,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_compact_minimum_size_is_the_electron_one() {
+    fn the_compact_minimum_size_is_the_recorded_one() {
         assert_eq!(COMPACT_MIN_SIZE, size_of(&fixture()["compactMinSize"]));
     }
 

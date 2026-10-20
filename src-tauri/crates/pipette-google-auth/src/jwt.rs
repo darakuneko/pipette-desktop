@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The claims the sync reads from an id_token, unverified as in
-//! src/main/sync/google-auth.ts: the token comes straight from Google's
-//! token endpoint over TLS, and only its `sub`, `exp` and `iat` are read.
+//! The claims the sync reads from an id_token, unverified: the token comes
+//! straight from Google's token endpoint over TLS, and only its `sub`,
+//! `exp` and `iat` are read.
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;

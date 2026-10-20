@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! TypeScript → Rust: the scenarios of `tests/fixtures/expected.json`, which
-//! the real TypeScript DB layer on better-sqlite3 produced from the same
-//! JSONL files (`pnpm run generate:analytics-db-fixtures`). Each scenario
+//! TypeScript → Rust: the recorded golden scenarios of
+//! `tests/fixtures/expected.json`, which the TypeScript DB layer on
+//! better-sqlite3 produced from the same JSONL files. Each scenario
 //! applies its steps to a fresh database and must end with every table
 //! identical cell by cell (storage class included) and every query row
 //! identical to the bit. The databases are files, so a second connection

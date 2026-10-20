@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Checks the crate against the TypeScript functions and Electron's
-//! Shift_JIS decoder as recorded by scripts/typing-text-fixtures/.
+//! Checks the crate against the recorded goldens of the TypeScript
+//! functions and Chromium's Shift_JIS decoder.
 
 // Test helpers outside #[test] functions panic on a broken fixture.
 #![allow(clippy::unwrap_used)]
@@ -118,7 +118,7 @@ fn clean_aozora_text_matches_typescript() {
 }
 
 #[test]
-fn shift_jis_matches_electron() {
+fn shift_jis_matches_the_recorded_decoder() {
     let fixture = fixture("shift_jis.json");
     let fixture = fixture.as_object().unwrap();
     let mut failures = Vec::new();

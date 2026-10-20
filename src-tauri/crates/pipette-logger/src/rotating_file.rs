@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The log files and their rotation, as in src/main/logger.ts: before each
+//! The log files and their rotation: before each
 //! write, a current file that has reached the size limit is rotated.
 //!
 //! The current file stays open, and its size is counted as lines are
 //! appended. Before each line the path is checked with one `stat`: when
 //! `pipette-0.log` was deleted, renamed or replaced, the next line goes to a
-//! new `pipette-0.log`, as it does with the per-line open of the TypeScript
-//! logger. Only one process writes a userData
+//! new `pipette-0.log`. Only one process writes a userData
 //! directory's logs: the app's single-instance check stops a second app
-//! process, and src/main.rs refuses to start while the Electron build holds
+//! process, and src/main.rs refuses to start while the 0.4 build holds
 //! the directory. Rotation still never loses a line to another writer: a
 //! rename that fails is skipped and the line goes to whatever
 //! `pipette-0.log` is then.

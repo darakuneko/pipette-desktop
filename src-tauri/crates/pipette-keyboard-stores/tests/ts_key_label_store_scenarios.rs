@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript key label handlers by
-//! scripts/keyboard-store-fixtures/record-key-label-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the key label handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the dialogs shown, the notified units and every file left
 //! behind compared byte for byte. The texts of a file-system error, of a

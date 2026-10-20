@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The account scenarios recorded from the Electron Hub handlers
+//! The recorded golden account scenarios of the Hub handlers
 //! (ts_hub_handlers_account.json): each scenario's scripted Hub answers the
 //! Rust handlers, which must give the same answers, send the same requests
 //! and wait the same 429 waits. The account handlers write nothing to the
@@ -21,7 +21,7 @@ use pipette_js_json::{Value, stringify};
 use pipette_net::{HttpError, HttpReply, HttpRequest};
 use zeroize::Zeroizing;
 
-/// A rule of the scripted Hub (hub-harness.ts `HubRule`).
+/// A rule of the scripted Hub.
 struct Rule {
     method: String,
     path: String,
