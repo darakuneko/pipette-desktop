@@ -52,6 +52,15 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "UPDATER-PUBLIC-KEY-PLACEHOLDER",
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "publisher": "darakuneko",

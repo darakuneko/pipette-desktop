@@ -54,6 +54,7 @@ mod tests {
             ("SYNC_UNIT_APPLIED", SYNC_UNIT_APPLIED),
             ("I18N_PACK_CHANGED", I18N_PACK_CHANGED),
             ("THEME_PACK_CHANGED", THEME_PACK_CHANGED),
+            ("UPDATE_PROGRESS", crate::updater::UPDATE_PROGRESS),
         ] {
             let line = format!("  {key}: '{event}',");
             assert!(channels.lines().any(|l| l == line), "channels.ts has no line {line:?}");

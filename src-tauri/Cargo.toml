@@ -101,6 +101,16 @@ rfd = { version = "=0.16.0", default-features = false, features = ["gtk3", "comm
 # DBUS_SESSION_BUS_ADDRESS makes the plugin panic at startup.
 tauri-plugin-single-instance = "=2.5.2"
 thiserror = "=2.0.21"
+# The in-app update (src/updater.rs): checks the manifest, downloads the
+# update, verifies its minisign signature and replaces the app. Used from
+# Rust only: the page is granted none of its commands. Without its default
+# "zip" feature (no update here is a zip archive); "rustls-tls" brings no
+# crypto provider of its own when pipette-net has installed one.
+tauri-plugin-updater = { version = "=2.13.3", default-features = false, features = ["rustls-tls", "system-proxy"] }
+# The versions the updater compares (src/updater.rs). Same version as Tauri's.
+semver = "=1.0.28"
+# The manifest address of the updater (src/updater.rs). Same version as Tauri's.
+url = "=2.5.8"
 
 # The WebKitGTK view behind the Linux window, for the window screenshots of
 # the development tools (src/dev_commands/tools.rs). Same versions as wry uses.

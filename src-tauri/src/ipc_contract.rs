@@ -358,6 +358,7 @@ fn commands_the_capabilities_do_not_grant_are_rejected() {
     for (command, args) in [
         ("no_such_command", json!({})),
         ("plugin:opener|open_url", json!({ "url": "https://example.com/" })),
+        ("plugin:updater|check", json!({})),
         // Registered by Tauri itself, but not granted.
         ("plugin:event|emit", json!({ "event": "e", "payload": null })),
     ] {

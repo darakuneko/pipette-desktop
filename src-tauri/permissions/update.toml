@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/updater.rs. The updater plugin's own commands are not
+# granted: the page reaches the updater through these only.
+
+[[set]]
+identifier = "update"
+description = "Checks for an update of the app, applies it, and reads the failure an update left."
+permissions = ["allow-update-check", "allow-update-install", "allow-update-take-failure"]

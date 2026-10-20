@@ -11,6 +11,7 @@
     "window",
     "tray",
     "notification",
+    "update",
     "sync-pending",
     "sync-auth",
     "sync-password",

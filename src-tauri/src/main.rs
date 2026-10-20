@@ -42,6 +42,7 @@ mod store_commands;
 mod sync_commands;
 mod tray;
 mod typing_dataset_commands;
+mod updater;
 mod window_bounds;
 mod window_commands;
 mod window_ops;
@@ -76,6 +77,9 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         app_config::app_config_get_all,
         app_config::app_config_set,
         shell::open_external,
+        updater::update_check,
+        updater::update_install,
+        updater::update_take_failure,
         window_commands::set_window_zoom,
         window_commands::window_show,
         window_commands::window_hide,
@@ -383,6 +387,8 @@ fn main() {
     let builder = tauri::Builder::default()
         .enable_macos_default_menu(false)
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
+        // Used from src/updater.rs only; no capability grants its commands.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             dev_commands::manage_dialogs(app.handle());
@@ -407,6 +413,7 @@ fn main() {
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
+            updater::manage(app.handle(), &app.state::<UserDataDir>().0);
             hub_commands::setup::start_background(app.handle());
             Ok(())
         })
