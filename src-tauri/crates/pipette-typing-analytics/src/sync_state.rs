@@ -37,7 +37,7 @@ pub fn sync_state_path(user_data: &Path) -> PathBuf {
 }
 
 impl TypingSyncState {
-    /// `emptySyncState`: nothing uploaded or reconciled, never synced.
+    /// Nothing uploaded or reconciled, never synced.
     pub fn empty(my_device_id: &str) -> Self {
         Self {
             my_device_id: my_device_id.into(),
@@ -110,16 +110,16 @@ fn is_reconciled_at_record(value: &Value) -> bool {
     })
 }
 
-/// `loadSyncState`: the state in `user_data`, or `None` when the file is
+/// The state in `user_data`, or `None` when the file is
 /// missing, cannot be read, is not JSON or is not a state.
 pub fn load_sync_state(user_data: &Path) -> Option<TypingSyncState> {
     let bytes = std::fs::read(sync_state_path(user_data)).ok()?;
-    // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD.
+    // Each invalid sequence reads as U+FFFD.
     let parsed = pipette_js_json::parse(&String::from_utf8_lossy(&bytes)).ok()?;
     TypingSyncState::from_value(&parsed)
 }
 
-/// `saveSyncState`: writes `state` through a temp file and a rename,
+/// Writes `state` through a temp file and a rename,
 /// creating the directory.
 pub fn save_sync_state(user_data: &Path, state: &TypingSyncState) -> std::io::Result<()> {
     let path = sync_state_path(user_data);

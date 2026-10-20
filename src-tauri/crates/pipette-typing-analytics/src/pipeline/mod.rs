@@ -45,7 +45,7 @@ use crate::session_detector::{FinalizedSession, SessionDetector};
 use crate::sync_state::save_sync_state;
 use crate::sync_units::typing_analytics_device_day_sync_unit;
 
-/// `FLUSH_DEBOUNCE_MS`: how long after an event the flush runs.
+/// How long after an event the flush runs.
 pub const FLUSH_DEBOUNCE: Duration = Duration::from_millis(1_000);
 
 /// How long after a failed initialization a debounced flush waits before
@@ -64,9 +64,9 @@ pub struct RecorderDeps {
     /// The OS of the fingerprints.
     pub os: OsInfo,
     pub timer: Arc<dyn FlushTimer>,
-    /// Records a changed sync unit (`notifyChange`).
+    /// Records a changed sync unit.
     pub notify: Arc<dyn Fn(&str) + Send + Sync>,
-    /// The application in focus (`getCurrentAppName`), or `None` when
+    /// The application in focus, or `None` when
     /// Monitor App is off or nothing is found. May block; it runs on a
     /// blocking-task thread.
     pub app_name: Arc<dyn Fn() -> Option<JsString> + Send + Sync>,
@@ -159,7 +159,7 @@ impl Recorder {
         &self.analytics
     }
 
-    /// Records a changed sync unit (`notifySyncUnits`).
+    /// Records a changed sync unit.
     pub fn notify(&self, unit: &str) {
         (self.deps.notify)(unit);
     }
@@ -186,7 +186,7 @@ impl Recorder {
         Ok(())
     }
 
-    /// `resolveScope`: the scope of the keyboard's first event, kept for
+    /// The scope of the keyboard's first event, kept for
     /// its later events.
     async fn resolve_scope(&self, keyboard: &KeyboardInfo) -> Result<ResolvedScope, Error> {
         if let Some(resolved) = self.state().scope_cache.get(&keyboard.uid) {
@@ -205,7 +205,7 @@ impl Recorder {
         Ok(resolved)
     }
 
-    /// `closeSessionsForUid`: queues the open sessions of `uid` whose start
+    /// Queues the open sessions of `uid` whose start
     /// `closes` accepts for the next flush.
     pub fn close_sessions_for_uid(&self, uid: &str, closes: impl Fn(f64) -> bool) {
         let mut state = self.state();
@@ -223,7 +223,7 @@ impl Recorder {
         self.flush_now(true)
     }
 
-    /// `hasTypingAnalyticsPendingWork`: anything buffered, queued or being
+    /// Anything buffered, queued or being
     /// written, so the quit waits even after a flush has drained the
     /// buffer.
     pub fn has_pending_work(&self) -> bool {
@@ -235,7 +235,7 @@ impl Recorder {
             || state.in_flight > 0
     }
 
-    /// `flushTypingAnalyticsBeforeQuit`: closes every session and writes
+    /// Closes every session and writes
     /// everything buffered, the minute being typed included.
     pub fn flush_before_quit(&self) -> impl Future<Output = ()> + Send + 'static {
         {
@@ -249,7 +249,7 @@ impl Recorder {
         self.flush_now(true)
     }
 
-    /// `flushNow`: a flush behind everything on the chain; `all` drains
+    /// A flush behind everything on the chain; `all` drains
     /// every minute, otherwise only the minutes past their grace.
     pub fn flush_now(&self, all: bool) -> impl Future<Output = ()> + Send + 'static {
         let this = self.this.clone();
@@ -260,7 +260,7 @@ impl Recorder {
         })
     }
 
-    /// `runOnFlushChain`: queues `task` behind everything already on the
+    /// Queues `task` behind everything already on the
     /// chain. It runs whether or not the returned future is awaited; the
     /// future ends when the task has.
     pub fn run_on_flush_chain(
@@ -277,7 +277,7 @@ impl Recorder {
         }
     }
 
-    /// `claimOwnRowUpdatedAt`: the `updated_at` of the next rows this
+    /// The `updated_at` of the next rows this
     /// device writes to its own day files, above every earlier one (the
     /// cache keeps a row only over an older one, so two flushes in one
     /// millisecond would lose the second) and above `above_ms`. A clock set
@@ -288,7 +288,7 @@ impl Recorder {
         claim_updated_at(&mut self.state(), now, above_ms)
     }
 
-    /// `dropBufferedTyping`: drops what `uid` has buffered whose time
+    /// Drops what `uid` has buffered whose time
     /// `drops` accepts, minutes by their start and unwritten sessions by
     /// theirs. For tasks on the flush chain.
     pub fn drop_buffered_typing(&self, uid: &str, drops: impl Fn(f64) -> bool) {
@@ -297,7 +297,7 @@ impl Recorder {
         state.pending_sessions.retain(|session| session.uid != uid || !drops(session.start_ms));
     }
 
-    /// `peekMatrixCountsForUid` of the buffer.
+    /// [`MinuteBuffer::peek_matrix_counts_for_uid`] of the buffer.
     pub fn peek_matrix_counts_for_uid(
         &self,
         uid: &str,
@@ -307,7 +307,7 @@ impl Recorder {
         self.state().buffer.peek_matrix_counts_for_uid(uid, machine_hash, layer)
     }
 
-    /// `scheduleFlush`: arms the debounce timer unless it is armed.
+    /// Arms the debounce timer unless it is armed.
     fn schedule_flush(&self, state: &mut State) {
         if state.timer.is_some() {
             return;
@@ -342,7 +342,7 @@ impl Recorder {
         }
     }
 
-    /// `doFlushPass`.
+    /// One flush pass; `all` drains every minute.
     async fn flush_pass(self: Arc<Self>, all: bool) {
         {
             let mut state = self.state();

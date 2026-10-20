@@ -29,8 +29,7 @@ async fn fetch_data(http: &dyn HttpClient, url: &str) -> Option<Value> {
     body.remove("data")
 }
 
-/// `fetchTypingDatasetVersion`: the Hub's current version of the provider's
-/// dataset.
+/// The Hub's current version of the provider's dataset.
 pub async fn fetch_dataset_version(
     http: &dyn HttpClient,
     hub_base: &str,
@@ -46,7 +45,7 @@ pub async fn fetch_dataset_version(
     }
 }
 
-/// `fetchTypingDataset`: the provider's full dataset, checked, as the
+/// The provider's full dataset, checked, as the
 /// object the overrides file stores for it: `provider`, `version`,
 /// `downloadUrlBase`, `model` (only when the Hub sent one) and `languages`
 /// (its entries as sent), in that order.

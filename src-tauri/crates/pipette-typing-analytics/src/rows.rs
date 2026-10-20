@@ -76,7 +76,7 @@ fn scope_row(scope_key: &str, fingerprint: &Fingerprint, updated_at: f64) -> Val
     row(scope_row_id(scope_key), "scope", updated_at, payload)
 }
 
-/// `toNgramEntries`: each pair's or triple's histogram, count, sum and sum
+/// Each pair's or triple's histogram, count, sum and sum
 /// of squares, and for a bigram with a known overlap its `oc` / `on`.
 fn ngram_entries(
     samples: &IndexMap<String, Vec<f64>>,
@@ -102,10 +102,10 @@ fn ngram_entries(
     entries.into()
 }
 
-/// `buildSnapshotRows`. A minute whose only events were releases (a key
-/// held across the minute's start) gets no minute-stats row, which would
-/// make a day appear that nothing was typed on; its cells' rows still
-/// carry the durations.
+/// The rows of one minute snapshot. A minute whose only events were
+/// releases (a key held across the minute's start) gets no minute-stats
+/// row, which would make a day appear that nothing was typed on; its
+/// cells' rows still carry the durations.
 fn snapshot_rows(snapshot: &MinuteSnapshot, updated_at: f64) -> Vec<Value> {
     let (scope, minute_ts, run_id) =
         (snapshot.scope_id.as_str(), snapshot.minute_ts, snapshot.run_id.as_str());
@@ -202,7 +202,7 @@ fn session_row(session: &FinalizedSession, scope_key: &str, updated_at: f64) -> 
     row(session_row_id(&session.id), "session", updated_at, payload)
 }
 
-/// `groupRowsByUidDay`: a minute's rows go to the UTC day of the minute, a
+/// A minute's rows go to the UTC day of the minute, a
 /// session's to the day it started on (a session across midnight stays
 /// whole), and each scope row to every day of this flush that has a row of
 /// that scope, after the day's other rows.

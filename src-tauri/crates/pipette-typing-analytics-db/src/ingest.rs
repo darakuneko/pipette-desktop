@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use crate::{Error, TypingAnalyticsDb, sql};
 
-/// `TypingScopeRow` as `upsertScope` takes it.
+/// A scope row to insert or replace ([`TypingAnalyticsDb::upsert_scope`]).
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScopeInput {
@@ -28,8 +28,8 @@ pub struct ScopeInput {
     pub updated_at: f64,
 }
 
-/// `MinuteStatsRow` as `writeMinute` takes it. Its tags are the minute's;
-/// a char or matrix row without its own tag takes the minute's.
+/// One minute's stats row ([`TypingAnalyticsDb::write_minute`]). Its tags are
+/// the minute's; a char or matrix row without its own tag takes the minute's.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MinuteStatsInput {
@@ -51,7 +51,7 @@ pub struct MinuteStatsInput {
     pub run_id: Option<String>,
 }
 
-/// `CharMinuteRow`.
+/// One minute's count of a typed character.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CharMinuteInput {
@@ -64,7 +64,7 @@ pub struct CharMinuteInput {
     pub run_id: Option<String>,
 }
 
-/// `MatrixMinuteRow`; an absent tap or hold count is 0.
+/// One minute's presses of a matrix cell; an absent tap or hold count is 0.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MatrixMinuteInput {
@@ -93,8 +93,7 @@ pub struct SessionInput {
 }
 
 impl TypingAnalyticsDb {
-    /// Insert a scope, or replace it when `updated_at` is newer, live again
-    /// (`upsertScope`).
+    /// Insert a scope, or replace it when `updated_at` is newer, live again.
     pub fn upsert_scope(&mut self, row: &ScopeInput) -> Result<(), Error> {
         self.conn.prepare_cached(sql::UPSERT_SCOPE)?.execute(named_params! {
             "@id": row.id, "@machineHash": row.machine_hash, "@osPlatform": row.os_platform,
@@ -105,8 +104,7 @@ impl TypingAnalyticsDb {
         Ok(())
     }
 
-    /// Add one minute's stats, chars and matrix cells (`writeMinute`), in
-    /// one transaction.
+    /// Add one minute's stats, chars and matrix cells, in one transaction.
     pub fn write_minute(
         &mut self,
         stats: &MinuteStatsInput,
@@ -155,7 +153,7 @@ impl TypingAnalyticsDb {
     }
 
     /// Insert a session, or replace it when `updated_at` is newer, live
-    /// again (`insertSession`).
+    /// again.
     pub fn insert_session(&mut self, row: &SessionInput, updated_at: f64) -> Result<(), Error> {
         self.conn.prepare_cached(sql::INSERT_SESSION)?.execute(named_params! {
             "@id": row.id, "@scopeId": row.scope_id, "@startMs": row.start_ms, "@endMs": row.end_ms,
@@ -165,8 +163,7 @@ impl TypingAnalyticsDb {
     }
 
     /// Delete the rows of `machine_hash` before `cutoff_ms`: minutes that
-    /// start before it and sessions that end before it (`retainOwnData`),
-    /// in one transaction.
+    /// start before it and sessions that end before it, in one transaction.
     pub fn retain_own_data(&mut self, machine_hash: &str, cutoff_ms: f64) -> Result<(), Error> {
         const STATEMENTS: [&str; 6] = [
             sql::DELETE_CHAR_MINUTE_BEFORE,

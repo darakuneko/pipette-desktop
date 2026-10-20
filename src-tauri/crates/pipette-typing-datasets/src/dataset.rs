@@ -16,7 +16,7 @@ pub enum Model {
     Catalog,
 }
 
-/// `isValidModel`: absent, `"pack"` or `"catalog"`. `Err` for anything else.
+/// The `model` field: absent, `"pack"` or `"catalog"`. `Err` for anything else.
 pub(crate) fn model_of(object: &Object) -> Result<Option<Model>, ()> {
     match object.get("model") {
         None => Ok(None),
@@ -36,7 +36,9 @@ fn is_number(value: Option<&Value>) -> bool {
     matches!(value, Some(Value::Number(_)))
 }
 
-/// `isManifestEntry`.
+/// A manifest entry: a string `name`, numbers `wordCount` and `fileSize`, a
+/// boolean `rightToLeft`, and `title`, `author` and `authorKana` absent or
+/// strings.
 pub(crate) fn is_manifest_entry(value: &Value) -> bool {
     let Value::Object(entry) = value else { return false };
     let optional_string = |key| entry.get(key).is_none() || is_string(entry.get(key));
@@ -129,7 +131,7 @@ pub(crate) fn override_of<'a>(overrides: &'a Value, provider: &str) -> Option<&'
     }
 }
 
-/// `getEffectiveDataset`: the provider's override when it has the dataset
+/// The dataset in effect: the provider's override when it has the dataset
 /// shape (its model falling back to the default's when absent), else the
 /// bundled default; `None` for a provider with neither.
 pub fn effective_dataset<'a>(overrides: &'a Value, provider: &str) -> Option<Dataset<'a>> {

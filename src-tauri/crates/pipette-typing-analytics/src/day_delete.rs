@@ -36,7 +36,7 @@ fn payload(row: &JsonlRow) -> Option<&Object> {
     row.value().as_object()?.get("payload")?.as_object()
 }
 
-/// `rowTimeMs`: the time a row belongs to, the one its day file is picked
+/// The time a row belongs to, the one its day file is picked
 /// by: the minute start, or a session's start. `None` for scope rows.
 fn row_time_ms(row: &JsonlRow) -> Option<f64> {
     let field = match row.kind() {
@@ -61,7 +61,7 @@ fn is_deleted(row: &JsonlRow) -> bool {
     matches!(row.value().as_object().and_then(|row| row.get("is_deleted")), Some(Value::Bool(true)))
 }
 
-/// `daysOverlapping`: the days of `days` whose UTC day file can hold a row
+/// The days of `days` whose UTC day file can hold a row
 /// one of `ranges` removes. Only existing files are walked, so a range from
 /// 0 does not visit every day since 1970.
 pub fn days_overlapping(days: &[String], ranges: &[DeleteRange]) -> Vec<String> {
@@ -74,7 +74,7 @@ pub fn days_overlapping(days: &[String], ranges: &[DeleteRange]) -> Vec<String> 
         .collect()
 }
 
-/// `cacheIdentity`: the cache row a JSONL row lands on, as the JSON text of
+/// The cache row a JSONL row lands on, as the JSON text of
 /// its primary key (an n-gram minute is one key; its pairs are its rows).
 /// The row id is not enough: rows written before run tagging share one id
 /// across the runs of a minute.
@@ -123,7 +123,7 @@ pub struct RowToMark {
     pub row: Object,
 }
 
-/// `collectRowsToMark`: the rows of one day file a delete must mark, one
+/// The rows of one day file a delete must mark, one
 /// per cache row. For most kinds that is the copy the LWW replay keeps (the
 /// highest `updated_at`, the first one on a tie), skipped when that copy is
 /// already deleted. The cache keeps an n-gram minute as one row per pair,
@@ -212,7 +212,7 @@ fn count_mark(result: &mut TombstoneResult, kind: RowKind) {
     }
 }
 
-/// `markOwnTypingInRangesOnChain`: deletes `uid`'s own typing in `ranges`.
+/// Deletes `uid`'s own typing in `ranges`.
 /// Must run inside a flush chain task, so no flush writes in between: it
 /// closes the active sessions that started in the ranges, drops the
 /// buffered data of the ranges, then appends the delete marks to each
@@ -284,7 +284,7 @@ fn mark_day_files(
 }
 
 impl DataOps {
-    /// `deleteTypingDailySummaries`: deletes this device's typing of the
+    /// Deletes this device's typing of the
     /// local calendar `dates` (in this process's time zone), as one flush
     /// chain task. `cutoff_ms` is when the user asked for the delete: what
     /// was typed later stays. A text that is not a date is skipped.

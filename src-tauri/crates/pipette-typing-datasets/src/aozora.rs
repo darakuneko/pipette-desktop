@@ -20,8 +20,8 @@ const AOZORA_PROVIDER: &str = "aozora";
 
 const NOT_IN_CATALOG: &str = "NOT_IN_CATALOG";
 
-/// Why an import fails instead of answering, as `importAozoraWork` throws
-/// (the IPC call rejects with the message).
+/// Why an import fails instead of answering (the IPC call rejects with the
+/// message).
 #[derive(Debug, thiserror::Error)]
 pub enum AozoraImportError {
     /// The overrides could not be read, or a blocking task did not finish.
@@ -144,7 +144,7 @@ async fn import(
     Ok(meta.into())
 }
 
-/// `AOZORA_IMPORT`: imports the catalog work `work_id` (a non-empty string,
+/// The `aozora_import` command: imports the catalog work `work_id` (a non-empty string,
 /// else the handler's `Invalid work id`) and answers the handler's
 /// `{success: true, meta}` or `{success: false, errorCode, error}` as JSON
 /// text.

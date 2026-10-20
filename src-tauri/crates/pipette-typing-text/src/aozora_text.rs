@@ -12,8 +12,8 @@ use crate::zip::{ZipError, largest_text_entry};
 /// counts as failed: a typing test cannot get through a run of them.
 const REPLACEMENT_RATIO_THRESHOLD: f64 = 0.005;
 
-/// Why a zip gave no text. The messages are the `error` strings of
-/// `importAozoraWork`.
+/// Why a zip gave no text. The messages are the `error` strings of the
+/// import's failure result.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum AozoraTextError {
     /// `String(err)` of fflate's `Error` after the prefix.
@@ -25,15 +25,15 @@ pub enum AozoraTextError {
     DecodeFailed,
     #[error("Cleaned text is empty")]
     EmptyText,
-    /// `importAozoraWork` throws here (the IPC call rejects) instead of
-    /// returning an error code.
+    /// The import fails here (the IPC call rejects) instead of returning an
+    /// error code.
     #[error(transparent)]
     InvalidCodePoint(InvalidCodePoint),
 }
 
 impl AozoraTextError {
-    /// The `errorCode` of the failure result; `None` for the error
-    /// `importAozoraWork` throws.
+    /// The `errorCode` of the failure result; `None` for the error the
+    /// import rejects with.
     pub fn error_code(&self) -> Option<&'static str> {
         match self {
             Self::Unzip(_) | Self::NoTextEntry => Some("NO_TEXT_ENTRY"),

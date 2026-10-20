@@ -51,7 +51,7 @@ impl CacheRebuildResult {
     }
 }
 
-/// The text of a day file as `readRows` reads it: a file that cannot be
+/// The text of a day file: a file that cannot be
 /// opened has none (`None`), an error while reading an opened one fails.
 fn read_day_text(path: &Path) -> io::Result<Option<String>> {
     let Ok(mut file) = File::open(path) else { return Ok(None) };
@@ -60,7 +60,7 @@ fn read_day_text(path: &Path) -> io::Result<Option<String>> {
     Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
 }
 
-/// `rebuildCacheFromMasterFiles`: empties the data tables of the cache and
+/// Empties the data tables of the cache and
 /// replays every day file of every keyboard and device, the files of a
 /// hash other than `own_hash` with that hash's deleted ranges hidden at
 /// the clock's time. A file without rows is skipped without reading its

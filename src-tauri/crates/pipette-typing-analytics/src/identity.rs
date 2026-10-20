@@ -29,7 +29,7 @@ pub fn installation_id_path(user_data: &Path) -> PathBuf {
     user_data.join("local").join("installation-id")
 }
 
-/// `INSTALLATION_ID_PATTERN`: a lowercase hyphenated UUID.
+/// Whether `text` is a lowercase hyphenated UUID.
 fn is_installation_id(text: &str) -> bool {
     let bytes = text.as_bytes();
     bytes.len() == 36
@@ -48,8 +48,7 @@ pub fn load_or_create_installation_id(user_data: &Path, ids: &dyn IdGen) -> std:
     let path = installation_id_path(user_data);
     match std::fs::read(&path) {
         Ok(bytes) => {
-            // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD,
-            // which no id has.
+            // Each invalid sequence reads as U+FFFD, which no id has.
             let text = String::from_utf8_lossy(&bytes);
             let trimmed =
                 text.trim_matches(|c: char| u16::try_from(u32::from(c)).is_ok_and(is_js_whitespace));
@@ -99,7 +98,7 @@ impl MachineIdentity {
         Self { user_data: user_data.to_path_buf(), ids, machine_id, cached: Mutex::new(Cached::default()) }
     }
 
-    /// `getMachineHash`: the SHA-256 of the machine id followed by the
+    /// The SHA-256 of the machine id followed by the
     /// installation id. Blocks on file I/O and, on Windows and macOS, on
     /// the command that reads the machine id. Concurrent callers wait for
     /// one another, so the file is read or created once.

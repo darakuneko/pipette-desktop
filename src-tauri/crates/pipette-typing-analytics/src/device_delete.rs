@@ -26,7 +26,7 @@ pub enum DeviceDays {
 }
 
 impl DataOps {
-    /// `deleteDeviceTypingData`: deletes `machine_hash`'s typing of `uid` on
+    /// Deletes `machine_hash`'s typing of `uid` on
     /// `days`, limited to what was recorded at or before `cutoff_ms`. Works
     /// offline. Refuses this device's own hash ([`Error::OwnDeviceDelete`]):
     /// its days are deleted from the Local tab.

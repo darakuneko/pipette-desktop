@@ -64,7 +64,7 @@ fn uid_arg(uid: &Arg) -> Result<&str, Failed> {
     safe_key_arg(uid, "uid")
 }
 
-/// `validDays`: an array of `YYYY-MM-DD` days of the calendar.
+/// An array of `YYYY-MM-DD` days of the calendar.
 fn days_arg(dates: &Arg) -> Result<Vec<String>, Failed> {
     let days: Option<Vec<String>> = match dates {
         Some(serde_json::Value::Array(items)) => {

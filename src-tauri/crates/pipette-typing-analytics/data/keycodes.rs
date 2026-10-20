@@ -4,7 +4,7 @@
 // The keycode registry of src/shared/keycodes/keycodes.ts, recorded.
 // Included by src/layout_resolver/keycodes.rs.
 
-/// `maskedKeycodes`.
+/// `maskedKeycodes` of src/shared/keycodes/keycodes.ts.
 pub const MASKED_KEYCODES: &[&str] = &[
     "LSFT",
     "LCTL",

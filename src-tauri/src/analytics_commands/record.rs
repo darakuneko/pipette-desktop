@@ -81,11 +81,11 @@ pub(super) fn recorder<R: Runtime>(
 }
 
 /// The quit sequence's preSyncFinalizers phase: when anything is buffered,
-/// queued or being written, closes every session and writes everything
-/// (`flushTypingAnalyticsBeforeQuit`), before the pending sync units are
-/// written so the days it announces go with them. The flush is queued on
-/// the recorder's chain, so a deadline that drops this phase does not cut
-/// it short. `then` is how long the phase waits afterwards.
+/// queued or being written, closes every session and writes everything,
+/// before the pending sync units are written so the days it announces go
+/// with them. The flush is queued on the recorder's chain, so a deadline
+/// that drops this phase does not cut it short. `then` is how long the
+/// phase waits afterwards.
 pub fn quit_phase(recorder: Arc<Recorder>, name: &'static str, then: Duration) -> QuitPhase {
     QuitPhase::new(name, async move {
         if recorder.has_pending_work() {

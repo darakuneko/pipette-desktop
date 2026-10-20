@@ -10,11 +10,9 @@
 //! are savepoints, so the calls also run inside the migration that
 //! [`TypingAnalyticsDb::open`] leaves open for the cache rebuild.
 //!
-//! - [`TypingAnalyticsDb::apply_day_jsonl`] — one day file
-//!   (`applyRowsToCache`).
+//! - [`TypingAnalyticsDb::apply_day_jsonl`] — one day file.
 //! - [`TypingAnalyticsDb::apply_day_jsonl_hiding_ranges`] — one day file of
-//!   another device plus the tombstones of that device's deleted ranges
-//!   (`replayDayRowsHidingDeletedRanges`).
+//!   another device plus the tombstones of that device's deleted ranges.
 //! - tombstone.rs, ingest.rs — the other writes; summary.rs, range.rs,
 //!   ngram.rs, scopes.rs — the reads, whose rows (rows.rs) give the objects
 //!   as JavaScript values ([`ToJs`]).
@@ -228,9 +226,8 @@ pub struct PragmaReport {
     pub synchronous: i64,
 }
 
-/// The rows of one day file, read as `readRows` reads it (blank, invalid
-/// and crash-truncated lines dropped), for a caller that looks at them
-/// before applying them.
+/// The rows of one day file (blank, invalid and crash-truncated lines
+/// dropped), for a caller that looks at them before applying them.
 #[derive(Debug, Clone, Default)]
 pub struct DayRows(Vec<jsonl::JsonlRow>);
 

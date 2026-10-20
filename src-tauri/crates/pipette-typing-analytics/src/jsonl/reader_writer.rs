@@ -14,7 +14,7 @@ use pipette_js_json::{JsString, Value};
 
 use super::row::{JsonlRow, serialize_row};
 
-/// `appendRowsToFile(path, rows)`: creates the parent directories and the
+/// Appends `rows` to the file at `path`: creates the parent directories and the
 /// file as needed and appends each row's line in one write in append mode.
 /// When the file ends without a newline (a line cut short), a newline goes
 /// first so the first new row does not join the fragment. No rows is a
@@ -57,10 +57,10 @@ pub struct ReadResult {
     pub partial_line_skipped: bool,
 }
 
-/// `readRows(path, { afterId, mustExist })`: the rows of the file, or only
+/// The rows of the file, or only
 /// the rows after the first row whose id is `after_id` (none when no row
 /// has it). Lines end at `\n`, `\r\n` or a lone `\r`, as Node's readline
-/// splits them; invalid lines and those `parseRow` rejects are dropped;
+/// splits them; invalid lines and those [`JsonlRow::parse`] rejects are dropped;
 /// the bytes are read as UTF-8 with U+FFFD for an invalid sequence.
 ///
 /// A file that cannot be opened reads as empty unless `must_exist` is set,

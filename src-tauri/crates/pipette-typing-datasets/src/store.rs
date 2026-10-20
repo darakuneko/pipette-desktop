@@ -53,7 +53,7 @@ pub struct UpdateCheck {
     pub update_available: bool,
 }
 
-/// The answer of a dataset update (`TypingDatasetSyncResult`).
+/// The answer of a dataset update.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatasetUpdate {
     pub provider: String,
@@ -101,7 +101,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// `isSafeName`: not empty, and no `/` or `\`.
+/// A name that is not empty and holds no `/` or `\`.
 fn is_safe_name(name: &str) -> bool {
     !name.is_empty() && !name.contains(['/', '\\'])
 }
@@ -119,7 +119,7 @@ pub(crate) fn is_one_segment(segment: &str) -> bool {
         && matches!(Path::new(segment).components().collect::<Vec<_>>().as_slice(), [Component::Normal(_)])
 }
 
-/// A word list name the handlers accept (`isSafeName`) whose file name
+/// A word list name the handlers accept ([`is_safe_name`]) whose file name
 /// is also one path segment ([`is_one_segment`]).
 fn is_valid_name(name: &str) -> bool {
     is_safe_name(name) && is_one_segment(&language_file_name(name))
@@ -129,7 +129,7 @@ fn language_file_name(name: &str) -> String {
     format!("{name}.json")
 }
 
-/// `resolveProvider`: a registered provider, else the default one.
+/// A registered provider, else the default one.
 fn resolve_provider(provider: Option<&str>) -> String {
     provider.filter(|p| is_registered(p)).unwrap_or(DEFAULT_PROVIDER).to_owned()
 }
@@ -139,7 +139,7 @@ fn dataset_provider(provider: Option<&str>) -> String {
     provider.filter(|p| !p.is_empty()).unwrap_or(DEFAULT_PROVIDER).to_owned()
 }
 
-/// `getStatus`.
+/// The status of a word list: `bundled`, `downloaded` or `not-downloaded`.
 fn status(name: Option<&str>, provider: &str, downloaded: &HashSet<String>) -> &'static str {
     match name {
         Some(name) if is_bundled(provider, name) => "bundled",
@@ -148,8 +148,8 @@ fn status(name: Option<&str>, provider: &str, downloaded: &HashSet<String>) -> &
     }
 }
 
-/// `validateLanguageData`: an object with a string `name` and a non-empty
-/// list of string `words`.
+/// Whether `value` is word list data: an object with a string `name` and a
+/// non-empty list of string `words`.
 fn is_language_data(value: &Value) -> bool {
     let Value::Object(data) = value else { return false };
     matches!(data.get("name"), Some(Value::String(_)))
@@ -157,7 +157,7 @@ fn is_language_data(value: &Value) -> bool {
             if !words.is_empty() && words.iter().all(|w| matches!(w, Value::String(_))))
 }
 
-/// `getDownloadedSet`: the names of the `.json` entries in `dir`.
+/// The names of the `.json` entries in `dir`.
 fn downloaded_set(dir: &Path) -> HashSet<String> {
     let Ok(entries) = fs::read_dir(dir) else { return HashSet::new() };
     entries
@@ -166,7 +166,7 @@ fn downloaded_set(dir: &Path) -> HashSet<String> {
         .collect()
 }
 
-/// `clearDownloadedLanguages`: removes every `.json` file in `dir`,
+/// Removes every `.json` file in `dir`,
 /// ignoring the ones that cannot be removed.
 fn clear_downloaded(dir: &Path) {
     let Ok(entries) = fs::read_dir(dir) else { return };
@@ -177,7 +177,7 @@ fn clear_downloaded(dir: &Path) {
     }
 }
 
-/// `migrateLegacyDownloads`: moves the `.json` files directly in `root`
+/// Moves the `.json` files directly in `root`
 /// (from before the per-provider directories) into the default provider's
 /// directory. Best effort: a file that cannot be moved stays.
 fn migrate_legacy_downloads(root: &Path) {
@@ -250,7 +250,7 @@ impl Inner {
         self.user_data.join("local").join("typing-test-dataset.json")
     }
 
-    /// `loadOverrides`: the file's object or array, else an empty object
+    /// The file's object or array, else an empty object
     /// (no file, not JSON, any other value). Read once, then cached.
     fn overrides(&self) -> Result<Arc<Value>, DatasetError> {
         let mut cache = lock(&self.overrides);
@@ -350,7 +350,7 @@ impl LanguageStore {
             .await;
     }
 
-    /// `LANG_LIST`: the manifest entries of the provider's dataset, each
+    /// The `lang_list` command: the manifest entries of the provider's dataset, each
     /// with its `status`.
     pub async fn list(&self, provider: Option<&str>) -> Result<Vec<Value>, DatasetError> {
         self.migrated().await;
@@ -376,7 +376,7 @@ impl LanguageStore {
         .await
     }
 
-    /// `LANG_GET`: the downloaded word list as JSON text (the file's text),
+    /// The `lang_get` command: the downloaded word list as JSON text (the file's text),
     /// or `None` for a bundled language, a catalog dataset, or a missing or
     /// invalid file.
     pub async fn get(&self, name: &str, provider: Option<&str>) -> Result<Option<String>, DatasetError> {
@@ -402,7 +402,7 @@ impl LanguageStore {
         .await
     }
 
-    /// `LANG_DOWNLOAD`: fetches `{downloadUrlBase}/{name}.json`, checks its
+    /// The `lang_download` command: fetches `{downloadUrlBase}/{name}.json`, checks its
     /// size and content, and writes the text. `Err` is the handler's error.
     pub async fn download(&self, name: &str, provider: Option<&str>) -> Result<(), String> {
         if !is_valid_name(name) {
@@ -449,7 +449,7 @@ impl LanguageStore {
             .map_err(|err| format!("Error: {err}"))?
     }
 
-    /// `LANG_DELETE`: removes the downloaded word list. `Err` is the
+    /// The `lang_delete` command: removes the downloaded word list. `Err` is the
     /// handler's error.
     pub async fn delete(&self, name: &str, provider: Option<&str>) -> Result<(), String> {
         if !is_valid_name(name) {
@@ -480,7 +480,7 @@ impl LanguageStore {
         .map_err(|err| format!("Error: {err}"))?
     }
 
-    /// `TYPING_DATASET_CHECK`: whether the Hub has another version of the
+    /// The `typing_dataset_check` command: whether the Hub has another version of the
     /// provider's dataset. The first answer of each provider is kept for
     /// the session; a Hub that cannot be asked answers `false` without it.
     pub async fn check(&self, provider: Option<&str>) -> Result<UpdateCheck, DatasetError> {
@@ -498,7 +498,7 @@ impl LanguageStore {
         Ok(UpdateCheck { provider, update_available })
     }
 
-    /// `TYPING_DATASET_UPDATE`: when the Hub has another version, fetches
+    /// The `typing_dataset_update` command: when the Hub has another version, fetches
     /// the dataset, stores it as the provider's override and removes the
     /// provider's downloads (fetched from the old version's URLs).
     pub async fn update(&self, provider: Option<&str>) -> Result<DatasetUpdate, DatasetError> {
@@ -539,7 +539,7 @@ impl LanguageStore {
     }
 
     /// Runs `f` on the dataset in effect for `provider`, on the blocking
-    /// pool (`getEffectiveDataset`).
+    /// pool.
     pub(crate) async fn read_dataset<T: Send + 'static>(
         &self,
         provider: &'static str,

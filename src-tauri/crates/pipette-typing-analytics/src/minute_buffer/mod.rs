@@ -274,7 +274,7 @@ impl MinuteBuffer {
         Self::default()
     }
 
-    /// `addEvent`: adds `event` to the entry of its scope, minute (by the
+    /// Adds `event` to the entry of its scope, minute (by the
     /// event's own time) and run. `now_ms` only decides whether an event
     /// for a minute with no entry is new or too late: past [`RETENTION_MS`]
     /// it is dropped, since a fresh partial entry for a minute already sent
@@ -373,7 +373,7 @@ impl MinuteBuffer {
         }
     }
 
-    /// `recordNgramChain`: advances the chain by one press and records the
+    /// Advances the chain by one press and records the
     /// pair (and triple) it closes.
     ///
     /// The `k2 → curr` interval is eligible when `0 < iki <=`
@@ -429,7 +429,7 @@ impl MinuteBuffer {
         chain.k2 = Some((keycode, ts));
     }
 
-    /// `markAppName`: tags every entry never drained with the application
+    /// Tags every entry never drained with the application
     /// in focus. Entries already sent keep the application of the minute
     /// they describe.
     pub fn mark_app_name(&mut self, app_name: &JsString) {
@@ -438,7 +438,7 @@ impl MinuteBuffer {
         }
     }
 
-    /// `drainClosed`: snapshots every entry needing a drain whose minute
+    /// Snapshots every entry needing a drain whose minute
     /// ended [`DRAIN_CLOSE_GRACE_MS`] before `now_ms`, then drops every
     /// entry whose minute ended [`RETENTION_MS`] before it (after its last
     /// chance to be sent). Snapshotted entries stay, retained.
@@ -461,7 +461,7 @@ impl MinuteBuffer {
         closed
     }
 
-    /// `drainAll`: snapshots every entry needing a drain (the explicit
+    /// Snapshots every entry needing a drain (the explicit
     /// flush, the end of a test, the quit). They stay, retained; only
     /// [`Self::drain_closed`] drops entries.
     pub fn drain_all(&mut self) -> Vec<MinuteSnapshot> {
@@ -478,7 +478,7 @@ impl MinuteBuffer {
         all
     }
 
-    /// `reopenAll`: after a flush failed to write what it drained, marks
+    /// After a flush failed to write what it drained, marks
     /// every retained entry for another drain. Reopening one the failed
     /// flush did not drain only sends it once more. An entry drained and
     /// dropped by that same flush is gone and cannot be reopened.
@@ -488,7 +488,7 @@ impl MinuteBuffer {
         }
     }
 
-    /// `discardForUid`: drops the entries of `uid` whose minute `drops`
+    /// Drops the entries of `uid` whose minute `drops`
     /// accepts, in any state, and starts the chain over when it is that
     /// keyboard's. A kept entry would bring deleted counts back with its
     /// next drain.
@@ -499,12 +499,12 @@ impl MinuteBuffer {
         }
     }
 
-    /// `isEmpty`: nothing needs a drain (every entry is retained).
+    /// Nothing needs a drain (every entry is retained).
     pub fn is_empty(&self) -> bool {
         self.buffers.values().all(|entry| entry.state == State::Retained)
     }
 
-    /// `peekMatrixCountsForUid`: the press counts of the never-drained
+    /// The press counts of the never-drained
     /// entries of `uid` on this device for `layer`, summed per `row,col`,
     /// for the heatmap to add to what the cache holds. A reopened entry's
     /// counts include what was already sent, so it is left out until its

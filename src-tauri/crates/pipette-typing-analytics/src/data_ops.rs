@@ -77,7 +77,7 @@ impl DataOps {
         blocking(move || analytics.machine_hash()).await
     }
 
-    /// `runOnFlushChain` for a task with an answer: runs `task` behind
+    /// [`Recorder::run_on_flush_chain`] for a task with an answer: runs `task` behind
     /// everything already on the chain and returns what it returned.
     pub(crate) async fn on_chain<T: Send + 'static>(
         &self,

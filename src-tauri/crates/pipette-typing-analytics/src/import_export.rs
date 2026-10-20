@@ -61,7 +61,7 @@ fn day_suffix(text: &str) -> Option<&str> {
     shape.then_some(day)
 }
 
-/// `parseExportFileName`: the base name of `name` against
+/// The base name of `name` against
 /// `/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.jsonl$/`, the
 /// lazy groups taking the shortest text that lets the rest match.
 pub fn parse_export_file_name(name: &Path) -> Option<ExportFileRef> {
@@ -90,11 +90,10 @@ pub fn parse_export_file_name(name: &Path) -> Option<ExportFileRef> {
     None
 }
 
-/// `exportTypingDataForKeyboard`: copies the day files of (`uid`,
+/// Copies the day files of (`uid`,
 /// `own_hash`) whose day is in `days` into `destination`, creating it, and
 /// returns how many it wrote. A day that vanished since the listing (a
-/// delete running at the same time) is skipped. The text is copied as
-/// UTF-8 text, as `readFile`/`writeFile` with `'utf-8'` copy it.
+/// delete running at the same time) is skipped. The text is copied as UTF-8 text.
 pub fn export_typing_data_for_keyboard(
     user_data: &Path,
     uid: &str,
@@ -118,7 +117,7 @@ pub fn export_typing_data_for_keyboard(
     Ok(written)
 }
 
-/// Why the import refused a file (`ImportRejectReason`).
+/// Why the import refused a file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RejectReason {
     InvalidFilename,
@@ -173,7 +172,7 @@ impl ImportResult {
     }
 }
 
-/// Whether the cloud holds a file of the export name (`cloudHasFile`).
+/// Whether the cloud holds a file of the export name.
 pub type CloudHasFile = Arc<dyn Fn(&str) -> bool + Send + Sync>;
 
 /// The time of a row the day check reads: the minute start, a session's
@@ -190,7 +189,7 @@ fn row_timestamp(row: &JsonlRow) -> Option<f64> {
     }
 }
 
-/// `parseRowsFromBody`: every non-empty line parsed, or `None` when there
+/// Every non-empty line parsed, or `None` when there
 /// is none or one fails: a silent partial overwrite of a day file is the
 /// worst outcome here.
 fn parse_rows_from_body(body: &str) -> Option<Vec<JsonlRow>> {
@@ -210,7 +209,7 @@ fn js_trim(line: &str) -> &str {
     line.trim_matches(|c: char| u16::try_from(u32::from(c)).is_ok_and(is_js_whitespace))
 }
 
-/// `readDeleteMarkLines`: the lines of the file at `path` that are delete
+/// The lines of the file at `path` that are delete
 /// marks, verbatim; none when the file does not exist.
 fn read_delete_mark_lines(path: &Path) -> io::Result<Vec<String>> {
     let content = match std::fs::read(path) {
@@ -229,7 +228,7 @@ fn read_delete_mark_lines(path: &Path) -> io::Result<Vec<String>> {
         .collect())
 }
 
-/// `withLocalDeleteMarks`: `body` followed by the kept mark lines it does
+/// `body` followed by the kept mark lines it does
 /// not already hold (compared trimmed, so repeated imports do not pile up
 /// copies), always ending with a newline: the reader drops a last line
 /// without one as cut short by a crash.

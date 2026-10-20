@@ -47,7 +47,7 @@ fn touched(result: &TombstoneResult) -> u64 {
 }
 
 impl DataOps {
-    /// `deleteAllTypingForKeyboard`: see the module documentation.
+    /// See the module documentation.
     /// `cutoff_ms` is when the user asked for the delete; what was typed in
     /// later minutes stays buffered and is written afterwards.
     pub async fn delete_all_for_keyboard(

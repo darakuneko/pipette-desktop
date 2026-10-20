@@ -27,17 +27,17 @@ fn bucketize(values: &[f64], bounds: &[f64; HIST_BUCKETS]) -> [u32; HIST_BUCKETS
     buckets
 }
 
-/// `bucketizeIki`.
+/// The histogram of inter-key intervals.
 pub fn bucketize_iki(ikis: &[f64]) -> [u32; HIST_BUCKETS] {
     bucketize(ikis, &BIGRAM_BUCKET_UPPER_BOUNDS_MS)
 }
 
-/// `bucketizeDurations`.
+/// The histogram of keypress durations.
 pub fn bucketize_durations(durations_ms: &[f64]) -> [u32; HIST_BUCKETS] {
     bucketize(durations_ms, &DURATION_BUCKET_UPPER_BOUNDS_MS)
 }
 
-/// `sumAndSumSquares`: summed in order, as the JavaScript loop sums them.
+/// The sum and the sum of squares, summed in order.
 pub fn sum_and_sum_squares(values: &[f64]) -> (f64, f64) {
     values.iter().fold((0.0, 0.0), |(sum, sum_sq), &v| (sum + v, sum_sq + v * v))
 }

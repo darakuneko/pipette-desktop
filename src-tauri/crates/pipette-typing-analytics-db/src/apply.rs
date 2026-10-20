@@ -111,8 +111,8 @@ fn deleted(common: &RowCommon) -> i64 {
     i64::from(common.is_deleted)
 }
 
-/// One upsert per id of the minute (`mergeBigramMinute` /
-/// `mergeTrigramMinute`). Only the bigram table has the overlap columns.
+/// One upsert per id of the minute. Only the bigram table has the overlap
+/// columns.
 fn merge_ngrams(
     stmt: &mut CachedStatement<'_>,
     with_overlap: bool,

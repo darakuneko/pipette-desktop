@@ -98,7 +98,7 @@ fn date_parts(date: &str) -> Option<(i64, i64, i64)> {
     Some((number(0..4)?, number(5..7)?, number(8..10)?))
 }
 
-/// `isUtcDay(text)`: `YYYY-MM-DD` naming a day of the Gregorian calendar
+/// Whether `text` is `YYYY-MM-DD` naming a day of the Gregorian calendar
 /// whose year has four digits as `Date.UTC` reads it, so the years 0000 to
 /// 0099 (read as 1900 to 1999) are not days.
 pub fn is_utc_day(text: &str) -> bool {

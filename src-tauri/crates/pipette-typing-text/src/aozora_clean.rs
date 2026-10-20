@@ -41,7 +41,7 @@ const REPEAT: [u16; 2] = bmp("／＼");
 const REPEAT_TO: [u16; 2] = bmp("〳〵");
 const RULE_CHARS: [u16; 4] = bmp("-＝=―");
 
-/// The pipeline of `cleanAozoraText`, step by step.
+/// Cleans an Aozora Bunko text, step by step.
 pub fn clean_aozora_text(raw: &[u16]) -> Result<Vec<u16>, InvalidCodePoint> {
     let text = normalize_newlines(raw);
     let text = remove_header(&text);
@@ -64,7 +64,7 @@ fn is_dash_rule(line: &[u16]) -> bool {
     line.len() >= 30 && line.iter().all(|&unit| unit == DASH)
 }
 
-/// `removeHeader`: drops the lines before the first blank one (the title
+/// Drops the lines before the first blank one (the title
 /// and author), then the legend block between two dashed rules when the
 /// opening one starts within [`HEADER_SCAN_LIMIT`] lines of the file.
 fn remove_header(text: &[u16]) -> Vec<u16> {
@@ -94,10 +94,9 @@ fn is_colophon_line(line: &[u16]) -> bool {
     rest.starts_with(&COLOPHON) && rest.get(COLOPHON.len()).is_some_and(|unit| COLONS.contains(unit))
 }
 
-/// `removeFooter`: cuts the text at the first line that is the colophon
-/// (`底本：`) or holds the end-of-body marker. Both searches match at a
-/// line start, so the earlier of the two is the
-/// first line that satisfies either.
+/// Cuts the text at the first line that is the colophon (`底本：`) or holds
+/// the end-of-body marker. Both searches match at a line start, so the
+/// earlier of the two is the first line that satisfies either.
 fn remove_footer(mut text: Vec<u16>) -> Vec<u16> {
     let mut start = 0;
     loop {
@@ -117,8 +116,8 @@ fn remove_footer(mut text: Vec<u16>) -> Vec<u16> {
     }
 }
 
-/// `resolveWarichu`: `［＃割り注］X［＃割り注終わり］` becomes `（X）`, or X
-/// when it already is in full-width parentheses.
+/// `［＃割り注］X［＃割り注終わり］` becomes `（X）`, or X when it already is
+/// in full-width parentheses.
 fn resolve_warichu(text: Vec<u16>) -> Vec<u16> {
     let mut out = Vec::with_capacity(text.len());
     let mut i = 0;
@@ -147,7 +146,7 @@ fn resolve_warichu(text: Vec<u16>) -> Vec<u16> {
     out
 }
 
-/// `removeRuby`: drops `《…》` spans and every `｜`.
+/// Drops `《…》` spans and every `｜`.
 fn remove_ruby(text: &[u16]) -> Vec<u16> {
     let mut out = Vec::with_capacity(text.len());
     // Once no `》` follows some `《`, none follows a later one.
@@ -192,8 +191,8 @@ fn gaiji_code_point(content: &[u16]) -> Option<u32> {
     None
 }
 
-/// `resolveGaiji`: `※［＃…］` becomes the code point its `U+XXXX` names, or
-/// nothing when it has none (a menkuten reference only).
+/// `※［＃…］` becomes the code point its `U+XXXX` names, or nothing when it
+/// has none (a menkuten reference only).
 fn resolve_gaiji(text: Vec<u16>) -> Result<Vec<u16>, InvalidCodePoint> {
     let mut out = Vec::new();
     let mut i = 0;
@@ -254,8 +253,8 @@ fn remove_innermost_annotations(text: &[u16]) -> Option<Vec<u16>> {
     matched.then_some(out)
 }
 
-/// `removeAnnotations`: strips `［＃…］` from the innermost out until none
-/// is left; `［…］` without `＃` stays.
+/// Strips `［＃…］` from the innermost out until none is left; `［…］`
+/// without `＃` stays.
 fn remove_annotations(mut text: Vec<u16>) -> Vec<u16> {
     while let Some(next) = remove_innermost_annotations(&text) {
         text = next;
@@ -269,8 +268,7 @@ fn is_rule_line(line: &[u16]) -> bool {
     !trimmed.is_empty() && trimmed.iter().all(|unit| RULE_CHARS.contains(unit))
 }
 
-/// `trimEdges`: drops the rule-only lines, then the blank lines at either
-/// end.
+/// Drops the rule-only lines, then the blank lines at either end.
 fn trim_edges(text: &[u16]) -> Vec<u16> {
     let lines: Vec<&[u16]> = text.split(|&unit| unit == LF).filter(|line| !is_rule_line(line)).collect();
     let start = lines.iter().position(|line| !is_blank(line)).unwrap_or(lines.len());

@@ -19,15 +19,13 @@ use crate::{Error, TypingAnalyticsDb, sql};
 /// reads every device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppAggregate {
-    /// The app names of single-app minutes (`listAppsForUidInRange`).
+    /// The app names of single-app minutes.
     Apps,
-    /// The typing-test labels (`listTypingTestsForUidInRange`).
+    /// The typing-test labels.
     TypingTests,
-    /// Every app with an unknown bucket for mixed or unknown minutes
-    /// (`getAppUsageForUidInRange`).
+    /// Every app with an unknown bucket for mixed or unknown minutes.
     AppUsage,
-    /// The apps of single-app minutes with active time
-    /// (`getWpmByAppForUidInRange`).
+    /// The apps of single-app minutes with active time.
     WpmByApp,
 }
 
@@ -65,8 +63,7 @@ impl TypingAnalyticsDb {
         all(&self.conn, sql, &params, MinuteStatsRow::from_row)
     }
 
-    /// The bigram overlap sums per minute, oldest first
-    /// (`listRolloverMinutesInRange`).
+    /// The bigram overlap sums per minute, oldest first.
     pub fn rollover_minutes(
         &self,
         uid: &str,
@@ -105,7 +102,7 @@ impl TypingAnalyticsDb {
     }
 
     /// The typing-test runs, latest start first, of the given labels (every
-    /// label when empty) (`listTypingTestRunsForUidInRange`).
+    /// label when empty).
     pub fn typing_test_runs(
         &self,
         uid: &str,

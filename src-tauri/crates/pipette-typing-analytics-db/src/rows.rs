@@ -3,9 +3,8 @@
 //! goldens (the `Typing*` row types of src/shared/types/typing-analytics.ts
 //! and the cache's own row types).
 //! Every number is an f64, as JavaScript
-//! holds it, so a REAL in an INTEGER column reads the same. A value the
-//! TypeScript row type calls a number but a statement can leave NULL is an
-//! `Option`.
+//! holds it, so a REAL in an INTEGER column reads the same. A value its row
+//! type gives as a number but a statement can leave NULL is an `Option`.
 
 use rusqlite::Row;
 

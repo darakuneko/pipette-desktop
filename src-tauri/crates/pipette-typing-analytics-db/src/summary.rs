@@ -16,8 +16,7 @@ use crate::rows::{
 use crate::{Error, TypingAnalyticsDb, sql};
 
 impl TypingAnalyticsDb {
-    /// Per-cell totals of one device and layer from `since_minute_ms` on
-    /// (`aggregateMatrixCountsForUid`).
+    /// Per-cell totals of one device and layer from `since_minute_ms` on.
     pub fn matrix_counts_since(
         &self,
         uid: &str,
@@ -34,8 +33,7 @@ impl TypingAnalyticsDb {
         all(&self.conn, sql::SELECT_MATRIX_HEATMAP, &params, MatrixCounts::from_row)
     }
 
-    /// Per-cell totals of one layer in `[since_ms, until_ms)`
-    /// (`aggregateMatrixCountsForUidInRange`).
+    /// Per-cell totals of one layer in `[since_ms, until_ms)`.
     pub fn matrix_counts_in_range(
         &self,
         uid: &str,
@@ -59,7 +57,7 @@ impl TypingAnalyticsDb {
     }
 
     /// The keyboards with at least one live minute-stats row, by product
-    /// name (`listKeyboardsWithTypingData`).
+    /// name.
     pub fn keyboards_with_typing_data(&self) -> Result<Vec<KeyboardSummary>, Error> {
         all(&self.conn, sql::SELECT_KEYBOARDS_WITH_TYPING_DATA, &[], KeyboardSummary::from_row)
     }

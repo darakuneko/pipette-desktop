@@ -76,7 +76,7 @@ fn index(object: &Object, key: &str) -> Option<f64> {
     finite(object, key).filter(|n| n.fract() == 0.0 && *n >= 0.0)
 }
 
-/// `isValidKeyboard`.
+/// The keyboard of a payload: `None` when it is malformed.
 fn keyboard(value: &Value) -> Option<KeyboardInfo> {
     let object = value.as_object()?;
     let uid = text(object, "uid").filter(|uid| !uid.is_empty())?;
@@ -88,8 +88,7 @@ fn keyboard(value: &Value) -> Option<KeyboardInfo> {
     })
 }
 
-/// `isValidMatrixCommon`: row, col and layer non-negative integers, any
-/// finite keycode.
+/// Row, col and layer non-negative integers, any finite keycode.
 fn matrix_key(object: &Object) -> Option<MatrixKey> {
     Some(MatrixKey {
         row: index(object, "row")?,
@@ -100,8 +99,8 @@ fn matrix_key(object: &Object) -> Option<MatrixKey> {
 }
 
 impl TypingEvent {
-    /// The event of a payload `isValidEvent` accepts, with the optional
-    /// press fields `sanitizeMatrixAuxFields` would delete left out.
+    /// The event of a valid payload; an optional press field (`action`,
+    /// `overlap`, `pollGapMs`) with an invalid value is left out.
     pub fn parse(value: &Value) -> Option<Self> {
         let object = value.as_object()?;
         let ts = finite(object, "ts")?;

@@ -31,9 +31,8 @@ pub enum DeletedRangesError {
     Unreadable(PathBuf),
 }
 
-/// The file's text read as `readFile(path, 'utf-8')` reads it: U+FFFD for
-/// an invalid UTF-8 sequence, a byte order mark kept (so it fails to
-/// parse).
+/// The file's text read with U+FFFD for an invalid UTF-8 sequence, a byte
+/// order mark kept (so it fails to parse).
 fn parse_raw(bytes: &[u8], path: &Path) -> Result<Vec<DeletedRangeEntry>, DeletedRangesError> {
     pipette_js_json::parse(&String::from_utf8_lossy(bytes))
         .ok()
@@ -49,7 +48,7 @@ fn read_entries(path: &Path) -> Result<Vec<DeletedRangeEntry>, DeletedRangesErro
     }
 }
 
-/// `readDeletedRanges`: the valid entries, none for a missing file; an
+/// The valid entries, none for a missing file; an
 /// error when the file exists but cannot be read or parsed.
 pub fn read_deleted_ranges(
     user_data: &Path,
@@ -59,7 +58,7 @@ pub fn read_deleted_ranges(
     read_entries(&deleted_ranges_path(user_data, uid, machine_hash))
 }
 
-/// `readDeletedRangesSync`: for a cache replay, which reads the ranges and
+/// For a cache replay, which reads the ranges and
 /// uses them in one step. A file that cannot be read or parsed counts as
 /// no entries, logged, so one bad file does not stop the replay.
 pub fn read_deleted_ranges_lenient(
@@ -83,7 +82,7 @@ pub fn read_deleted_ranges_lenient(
     })
 }
 
-/// `updateDeletedRanges`: under the file's lock, reads the local entries,
+/// Under the file's lock, reads the local entries,
 /// passes them to `combine` and writes its result when `local_changed`,
 /// creating the directories. A local file that cannot be read fails before
 /// `combine` runs and is left as it is.
@@ -107,7 +106,7 @@ pub fn update_deleted_ranges(
     })
 }
 
-/// `bundleDeletedRanges`: under the file's lock, the file text to upload,
+/// Under the file's lock, the file text to upload,
 /// rebuilt from its valid entries; `None` when the file is missing or
 /// cannot be read (logged unless missing).
 pub fn bundle_deleted_ranges(

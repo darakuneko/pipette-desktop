@@ -7,9 +7,8 @@
 //! The commands wait for [`TypingAnalytics::ready`]. One initialization
 //! runs at a time and every caller waiting for it gets its outcome; after
 //! a failure the next call starts again. Each initialization that succeeds
-//! runs the hook of [`TypingAnalytics::on_initialized`], which starts what
-//! `setupTypingAnalytics` starts without waiting for it (the apply of this
-//! device's own deleted ranges).
+//! runs the hook of [`TypingAnalytics::on_initialized`], which starts the
+//! apply of this device's own deleted ranges without waiting for it.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
@@ -90,7 +89,7 @@ impl TypingAnalytics {
         &self.user_data
     }
 
-    /// `getMachineHash`, without waiting for the initialization: the keymap
+    /// The machine hash, without waiting for the initialization: the keymap
     /// snapshot handlers need the hash and nothing else. Blocks on file I/O
     /// the first time.
     pub fn machine_hash(&self) -> Result<String, IdentityError> {
@@ -191,7 +190,7 @@ impl TypingAnalytics {
         Ok(Ready { machine_hash, db, sync_state: Mutex::new(freshness.state) })
     }
 
-    /// `ensureCacheIsFresh(…, { force: true })` on the initialized
+    /// [`ensure_cache_is_fresh`], forced, on the initialized
     /// analytics: rebuilds the cache and writes a new `sync_state.json`.
     /// The state the flush keeps in memory is left as it is, so the next
     /// flush writes it back with its `last_synced_at`. Blocks; the queries

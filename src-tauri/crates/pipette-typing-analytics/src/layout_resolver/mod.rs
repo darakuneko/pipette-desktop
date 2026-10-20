@@ -26,7 +26,7 @@ pub enum Skip {
     NoTargetPosition,
 }
 
-/// Where an event lands on the target layout (`ResolveResult`).
+/// Where an event lands on the target layout.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resolved {
     Skipped(Skip),
@@ -165,8 +165,8 @@ impl SnapshotKeys {
     }
 }
 
-/// Every position's result from `source` to `target` (`buildLayoutResolver`),
-/// by `posKey`; a position without one is `UnmappedKeycode`.
+/// Every position's result from `source` to `target`, by `posKey`; a
+/// position without one is `UnmappedKeycode`.
 pub struct Resolver {
     results: HashMap<String, Resolved>,
 }

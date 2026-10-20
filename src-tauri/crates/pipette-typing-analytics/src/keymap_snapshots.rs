@@ -42,8 +42,7 @@ pub enum KeymapSnapshotError {
     Io(#[from] io::Error),
     #[error(transparent)]
     Identity(#[from] IdentityError),
-    /// The newest snapshot has the same `layers` but no `matrix` object to
-    /// compare (`isSameContent` throws a TypeError).
+    /// The newest snapshot has the same `layers` but no `matrix` object to compare.
     #[error("TypeError: Cannot read properties of the newest snapshot's matrix")]
     NoMatrix,
 }
@@ -110,7 +109,7 @@ fn same_json(a: Option<&Value>, b: Option<&Value>) -> bool {
     a.map(pipette_js_json::stringify) == b.map(pipette_js_json::stringify)
 }
 
-/// `isSameContent(latest, snapshot)`: the parts a key heatmap depends on
+/// Whether `latest` and `snapshot` agree on the parts a key heatmap depends on
 /// (`layers`, the matrix size, `keymap`, `layout`); `productName` and
 /// `savedAt` do not count, so a cosmetic refresh does not cut a snapshot.
 fn is_same_content(latest: &Value, snapshot: &Object) -> Result<bool, KeymapSnapshotError> {
@@ -145,7 +144,7 @@ impl SaveSnapshotResult {
     }
 }
 
-/// `saveKeymapSnapshotIfChanged`: writes `snapshot` (as the handler builds
+/// Writes `snapshot` (as the handler builds
 /// it, with a string `uid` and `machineHash` and a number `savedAt`) as
 /// `{savedAt}.json` unless the newest snapshot of its directory has the
 /// same content; then it answers that snapshot's `savedAt`.
@@ -175,7 +174,7 @@ pub fn save_keymap_snapshot_if_changed(
     Ok(SaveSnapshotResult { saved: true, saved_at: Some(saved_at) })
 }
 
-/// `getKeymapSnapshotForRange`: the newest snapshot saved inside
+/// The newest snapshot saved inside
 /// `[from_ms, to_ms)`, else the newest saved at or before `from_ms`, as
 /// the JSON value its file holds; null when there is none or the picked
 /// file cannot be read.
@@ -198,7 +197,7 @@ pub fn get_keymap_snapshot_for_range(
 
 const SUMMARY_KEYS: [&str; 6] = ["uid", "machineHash", "productName", "savedAt", "layers", "matrix"];
 
-/// `listKeymapSnapshotSummaries`: each readable snapshot without its
+/// Each readable snapshot without its
 /// `keymap` and `layout`, ascending by `savedAt`. A file that cannot be
 /// read, is not JSON or holds a falsy value is skipped; a field the file
 /// lacks is left out.

@@ -172,7 +172,7 @@ fn entry_name(bytes: &[u8], flags: u32) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// `pickTextEntry`'s filter: a path ending in `.txt` (any case) outside
+/// The text entry filter: a path ending in `.txt` (any case) outside
 /// `__MACOSX`.
 fn is_text_entry(name: &str) -> bool {
     let lower_end = name.len() >= 4 && name.as_bytes()[name.len() - 4..].eq_ignore_ascii_case(b".txt");

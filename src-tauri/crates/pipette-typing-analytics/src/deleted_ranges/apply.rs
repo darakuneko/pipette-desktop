@@ -19,7 +19,7 @@ use crate::data_ops::{DataOps, blocking};
 use crate::day_delete::mark_own_typing_in_ranges_on_chain;
 use crate::jsonl::paths::{deleted_ranges_applied_path, keyboards_root};
 
-/// Whether a reset holds a keyboard (`resetHoldsKeyboard`): nothing is
+/// Whether a reset holds a keyboard: nothing is
 /// applied to a keyboard whose data a reset is removing.
 pub type ResetHolds = Arc<dyn Fn(&str) -> bool + Send + Sync>;
 
@@ -42,7 +42,7 @@ impl Reapply {
 }
 
 impl DataOps {
-    /// `applyOwnDeletedRanges`: applies the entries of `uid` not yet in the
+    /// Applies the entries of `uid` not yet in the
     /// record, as one flush chain task, and adds their ids to the record
     /// once that task has run without failing. Does nothing while `holds`
     /// says a reset holds `uid` (checked before queuing, when the task
@@ -87,7 +87,7 @@ impl DataOps {
         .await
     }
 
-    /// `recordOwnDeletedRangeApplied`: adds `id` to `uid`'s applied record,
+    /// Adds `id` to `uid`'s applied record,
     /// as one flush chain task (the apply reads and writes the record on
     /// the same chain), for a range whose rows this device has removed
     /// itself. Like the apply, it writes into the existing directory.
@@ -109,7 +109,7 @@ impl DataOps {
         .await
     }
 
-    /// `prepareOwnDeletedRangesReapply`: for an import about to replace the
+    /// For an import about to replace the
     /// day file of (`uid`, `machine_hash`, `utc_day`), inside its flush
     /// chain task: reads this device's own deleted ranges of `uid` (fails
     /// when they cannot be read, so the file is left as it is) and returns
@@ -141,7 +141,7 @@ impl DataOps {
         Ok(reapply)
     }
 
-    /// `applyOwnDeletedRangesForAllKeyboards`: applies this device's own
+    /// Applies this device's own
     /// deleted-ranges file of every keyboard directory that has one (a
     /// missing file has no entries), at startup and after each sync pass.
     /// A keyboard whose file cannot be read or applied is logged and

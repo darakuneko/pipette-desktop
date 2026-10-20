@@ -121,8 +121,8 @@ pub(crate) fn tombstone_ranges(
 }
 
 impl TypingAnalyticsDb {
-    /// Tombstone the rows of one device inside its deleted ranges
-    /// (`tombstoneRowsForUidHashInRanges`), in one transaction.
+    /// Tombstone the rows of one device inside its deleted ranges, in one
+    /// transaction.
     pub fn tombstone_ranges_for_uid_hash(
         &mut self,
         uid: &str,
@@ -136,8 +136,7 @@ impl TypingAnalyticsDb {
         Ok(result)
     }
 
-    /// Tombstone every live row of a keyboard (`tombstoneAllRowsForUid`), in
-    /// one transaction.
+    /// Tombstone every live row of a keyboard, in one transaction.
     pub fn tombstone_all_for_uid(&mut self, uid: &str, updated_at: i64) -> Result<TombstoneResult, Error> {
         let tx = self.conn.savepoint()?;
         let mut result = TombstoneResult::default();
@@ -146,8 +145,8 @@ impl TypingAnalyticsDb {
         Ok(result)
     }
 
-    /// Tombstone every live row one device recorded for a keyboard
-    /// (`tombstoneAllRowsForUidHash`), in one transaction.
+    /// Tombstone every live row one device recorded for a keyboard, in one
+    /// transaction.
     pub fn tombstone_all_for_uid_hash(
         &mut self,
         uid: &str,
