@@ -22,19 +22,6 @@ pub fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
 }
 
-/// Never committed: the benchmark input and the TypeScript timings, in
-/// `<target>/tmp/pipette-typing-analytics-db`, where `<target>` is
-/// `CARGO_TARGET_DIR` taken from the current directory when set, otherwise
-/// the workspace's `target`. Read at run time
-/// because the example that uses it gets no `CARGO_TARGET_TMPDIR`.
-pub fn bench_dir() -> PathBuf {
-    let target = match std::env::var_os("CARGO_TARGET_DIR") {
-        Some(dir) => std::env::current_dir().unwrap().join(dir),
-        None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target"),
-    };
-    target.join("tmp/pipette-typing-analytics-db")
-}
-
 /// A second, read-only connection to a database file, for dumping its
 /// tables while the crate's own connection stays open.
 pub fn open_read_only(path: &Path) -> Connection {
