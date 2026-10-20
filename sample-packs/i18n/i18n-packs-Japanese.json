@@ -1,5 +1,5 @@
 {
-  "version": "0.1.122",
+  "version": "0.1.123",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -2089,8 +2089,8 @@
       "disabled": "この Pipette は自動でアップデートしません。",
       "upToDate": "Pipette は最新です。",
       "available": "Pipette {{version}} が利用できます。",
-      "availableSkipped": "Pipette {{version}} が利用できます（スキップ済み）。",
-      "open": "アップデートを表示"
+      "availableSkipped": "Pipette {{version}} があります。起動時にスキップしましたが、ここから更新できます。",
+      "open": "{{version}} に更新…"
     }
   },
   "favoriteStore": {
