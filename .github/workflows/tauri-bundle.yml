@@ -3,22 +3,16 @@ name: Tauri bundle (Windows, macOS)
 # Builds the Tauri app on Windows and macOS, which no other job compiles:
 # clippy over the whole workspace in the debug build with the development
 # tools and in the release build, the workspace's tests, and an unsigned
-# bundle of each as an artifact, each in a job of its own. Run by hand. GitHub dispatches only a
-# workflow it knows, and it learns of one on a branch other than the
-# default from a push that runs it, so a push that changes this file runs
-# it too.
-#
-# Dispatch it on feat/tauri-migration: a run reads only the Cargo caches of
-# its own ref and of the default branch, so a run on a branch no earlier
-# run built on starts cold.
+# bundle of each as an artifact, each in a job of its own. Runs weekly on the
+# default branch (a schedule runs only there) and by hand on any branch. A
+# run reads only the Cargo caches of its own ref and of the default branch,
+# so a run by hand on a branch no earlier run built on starts from the
+# default branch's.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/tauri-migration
-      - "feat/tauri-*"
-    paths:
-      - .github/workflows/tauri-bundle.yml
+  schedule:
+    # Sundays at 18:00 UTC.
+    - cron: "0 18 * * 0"
 
 permissions:
   contents: read
@@ -105,8 +99,7 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
-      # The tests start the Node fakes; the install scripts only serve the
-      # Electron build.
+      # The tests start the Node fakes.
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Install the Rust toolchain
@@ -134,8 +127,8 @@ jobs:
       # than Linux runs too, every test binary even after one fails. The
       # Linux-only tests are not built here, the Node fakes listen on the
       # loopback interface only, the OS's key store test skips without
-      # PIPETTE_KEYSTORE_IT (the keystore job of tauri-migration.yml runs it
-      # on purpose), and no test reaches the OS's login item
+      # PIPETTE_KEYSTORE_IT (the keystore job of ci.yml runs it on
+      # purpose), and no test reaches the OS's login item
       # (pipette-autostart panics in a test that would).
       - name: Test
         working-directory: src-tauri
@@ -172,8 +165,6 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
-      # The install scripts only serve the Electron build; the Tauri CLI
-      # and the frontend build need none.
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Install the Rust toolchain
