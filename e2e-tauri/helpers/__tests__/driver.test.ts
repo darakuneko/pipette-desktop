@@ -22,6 +22,10 @@ import {
 } from '../driver'
 
 describe('appEnv', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('points the Hub at the loopback interface and marks the run', () => {
     const env = appEnv('/tmp/user-data', {})
     expect(env.PIPETTE_HUB_URL).toBe(E2E_HUB_URL)
@@ -35,14 +39,10 @@ describe('appEnv', () => {
     const proxies = Object.fromEntries(PROXY_VARIABLES.map((name) => [name, 'http://proxy.example:3128']))
     vi.stubEnv('HTTPS_PROXY', 'http://proxy.example:3128')
     vi.stubEnv('NO_PROXY', 'example.com')
-    try {
-      const env = appEnv('/tmp/u', proxies)
-      for (const name of PROXY_VARIABLES) expect(env, name).not.toHaveProperty(name)
-      expect(env.NO_PROXY).toBe(LOOPBACK_NO_PROXY)
-      expect(env.no_proxy).toBe(LOOPBACK_NO_PROXY)
-    } finally {
-      vi.unstubAllEnvs()
-    }
+    const env = appEnv('/tmp/u', proxies)
+    for (const name of PROXY_VARIABLES) expect(env, name).not.toHaveProperty(name)
+    expect(env.NO_PROXY).toBe(LOOPBACK_NO_PROXY)
+    expect(env.no_proxy).toBe(LOOPBACK_NO_PROXY)
   })
 
   it('takes a session Hub on the loopback interface', () => {
