@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The range aggregates of the Analyze Bigrams view and the keypress
-//! duration chart (src/main/typing-analytics/bigram-aggregate.ts): the
+//! duration chart: the
 //! per-minute n-gram rows summed per n-gram id, ranked by count or by
 //! average interval, and the per-minute duration rows summed per cell.
 //!
@@ -17,8 +17,7 @@ use std::collections::HashMap;
 use pipette_js_json::{Object, Value};
 use pipette_typing_analytics_db::{HIST_BUCKETS, MatrixDurationCellRow, NgramMinuteCellRow};
 
-/// Exclusive upper bound of each interval bucket in ms
-/// (`BIGRAM_BUCKET_UPPER_BOUNDS_MS`, bigram-bucket.ts).
+/// Exclusive upper bound of each interval bucket in ms.
 const BUCKET_UPPER_BOUNDS_MS: [f64; HIST_BUCKETS] =
     [60.0, 100.0, 150.0, 200.0, 300.0, 500.0, 1000.0, f64::INFINITY];
 

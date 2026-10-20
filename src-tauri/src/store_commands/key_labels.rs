@@ -6,10 +6,8 @@
 //! Each answers the handler's `{success, data?, errorCode?, error?}` object
 //! as JSON text written by `pipette_js_json`, so the entries' fields this
 //! build does not know reach the renderer as `JSON.stringify` writes them.
-//! The arguments are taken as any JSON value and checked as the handlers of
-//! src/main/key-label-ipc.ts check them, answering their `Invalid …`
-//! failures. The import and export dialogs have the titles and filters of
-//! src/main/key-label-store.ts; the import picks several files.
+//! The arguments are taken as any JSON value and checked, answering
+//! `Invalid …` failures. The import picks several files.
 
 use std::convert::Infallible;
 use std::path::PathBuf;

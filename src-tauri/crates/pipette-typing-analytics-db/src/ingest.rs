@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The additive writes (ingest-statements.ts and `upsertScope`,
-//! `writeMinute`, `insertSession` and `retainOwnData` of
-//! typing-analytics-db-writes.ts). Unlike the JSONL apply, a minute written
-//! twice adds up, and a tag that differs between two writes of a minute
-//! becomes null (a mixed minute).
+//! The additive writes (the scope upsert, the minute write, the session insert
+//! and the retention of this device's own data). Unlike the JSONL apply, a
+//! minute written twice adds up, and a tag that differs between two writes of a
+//! minute becomes null (a mixed minute).
 //!
 //! The inputs deserialize from the TypeScript row shapes (camelCase keys,
 //! an optional field absent or null).

@@ -4,8 +4,7 @@
 //! goes through (src/shutdown.rs).
 //!
 //! Closing the last window does not end the app on macOS, nor anywhere while
-//! the tray is active, as the 'window-all-closed' handler of
-//! src/main/index.ts decides; a launch of the app or a click on its Dock icon
+//! the tray is active; a launch of the app or a click on its Dock icon
 //! then opens the window again.
 //!
 //! Exit paths and how each reaches the quit sequence:
@@ -33,9 +32,8 @@
 //! at most `MARKER_TIMEOUT`, and writes nothing. The exit the sequence
 //! requests when it ends goes through.
 //!
-//! Every exit that goes through saves the main window's state first, as the
-//! Electron window's close handler does when the app quits; closing the
-//! window saves it too.
+//! Every exit that goes through saves the main window's state first;
+//! closing the window saves it too.
 //!
 //! An update (src/updater.rs) quits through [`quit_for_update`], which only
 //! starts a quit that has not started yet, and says what follows the
@@ -91,9 +89,8 @@ const FLUSH_PENDING_PHASE: usize = 3;
 /// The phase `PIPETTE_DEV_QUIT_DELAY_MS` delays: flushPending.
 const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 
-/// The phases of the before-quit handler in src/main/sync/sync-flush.ts, in
-/// its order. extraFinalizers has nothing to run in this build and only
-/// waits for its configured time.
+/// The phases of the quit sequence, in order. extraFinalizers has nothing to
+/// run in this build and only waits for its configured time.
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
@@ -200,8 +197,8 @@ pub fn show_main_window(app: &AppHandle<Wry>) {
 }
 
 /// Shows the main window, or opens it again when the last window was
-/// closed, as `revealApp` of src/main/index.ts does for a launch of the app
-/// while it runs and for a click on its Dock icon. The window is opened on
+/// closed, for a launch of the app while it runs and for a click on its
+/// Dock icon. The window is opened on
 /// the main thread.
 fn reveal_app(app: &AppHandle<Wry>) {
     if main_window::main_window(app).is_some() {
@@ -225,8 +222,7 @@ fn reveal_app(app: &AppHandle<Wry>) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SecondLaunch {
     Revealed,
-    /// Setup has not run yet: the startup is about to open the window anyway,
-    /// as the Electron build ignores a relaunch before 'ready'.
+    /// Setup has not run yet: the startup is about to open the window anyway.
     IgnoredWhileStarting,
     /// The quit sequence has started; showing the window would not stop it.
     IgnoredWhileQuitting,
@@ -234,16 +230,14 @@ enum SecondLaunch {
 
 /// Called by the single-instance plugin when the app is launched again while
 /// this instance runs: the other process exits with 0, and this one shows
-/// its main window, as the 'second-instance' handler of src/main/index.ts
-/// does. Runs on the plugin's D-Bus thread on Linux.
+/// its main window. Runs on the plugin's D-Bus thread on Linux.
 pub fn on_second_launch(app: &AppHandle<Wry>) {
     let outcome = respond_to_second_launch(app, reveal_app);
     log::info!("[app] the app was launched again: {outcome:?}");
 }
 
 /// A click on the Dock icon of the running app (macOS), handled as a launch
-/// of the app is: the 'activate' handler of src/main/index.ts runs the same
-/// `revealApp`.
+/// of the app is.
 #[cfg(target_os = "macos")]
 fn on_reopen(app: &AppHandle<Wry>) {
     let outcome = respond_to_second_launch(app, reveal_app);
@@ -252,8 +246,7 @@ fn on_reopen(app: &AppHandle<Wry>) {
 
 /// Whether an exit request leaves the app running: one raised by the last
 /// window closing (no `code`), before any quit, on macOS or while the tray
-/// is active. The 'window-all-closed' handler of src/main/index.ts quits
-/// only on other systems with no tray.
+/// is active.
 fn keeps_running_without_windows(code: Option<i32>, quitting: bool, macos: bool, tray_active: bool) -> bool {
     code.is_none() && !quitting && (macos || tray_active)
 }
@@ -507,7 +500,7 @@ fn quit_sequence(
     }
 }
 
-/// The phases of the before-quit handler: passwordChange stops the running
+/// The phases of the quit sequence: passwordChange stops the running
 /// password change and waits for it, the typing analytics are written, then
 /// inFlightSync and flushPending wait for the running pass and flush what is
 /// pending (neither when the sync is not managed). extraFinalizers has

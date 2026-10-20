@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The summary reads (summary-query-statements.ts and their methods in
-//! typing-analytics-db-reads.ts): the heatmaps, the keyboards with data,
+//! The summary reads: the heatmaps, the keyboards with data,
 //! the daily and interval summaries, the activity grid, the layer usage
 //! and the per-cell totals. `machine_hash` narrows a read to one device;
 //! `None` reads every device of the keyboard.

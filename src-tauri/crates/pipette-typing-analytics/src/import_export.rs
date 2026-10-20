@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Plain-text export and import of the per-day JSONL files
-//! (src/main/typing-analytics/import-export.ts, and the import flow of
-//! src/main/sync/sync-ipc.ts).
+//! Plain-text export and import of the per-day JSONL files.
 //!
 //! The export copies the day files this device owns for a keyboard into
 //! files named after their cloud sync unit
@@ -258,8 +256,8 @@ struct Accepted {
 }
 
 impl DataOps {
-    /// `importTypingDataFiles`, then the rebuild of `importTypingFiles`
-    /// (sync-ipc.ts): checks each of `paths` on its own, so one bad file
+    /// The import of typing data files, then the rebuild: checks each of
+    /// `paths` on its own, so one bad file
     /// does not stop the rest, replaces the accepted ones and rebuilds the
     /// cache when any was imported (a failed rebuild is logged). A failure
     /// while replacing a file fails the whole import, as there.

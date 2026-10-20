@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading the fixtures recorded by scripts/entry-store-fixtures/. They are
+//! Reading the recorded fixtures. They are
 //! read with pipette-js-json, which keeps the lone surrogates the
 //! JavaScript values carry.
 

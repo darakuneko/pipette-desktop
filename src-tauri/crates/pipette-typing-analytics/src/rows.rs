@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The JSONL rows a flush writes (typing-analytics-rows.ts): the drained
+//! The JSONL rows a flush writes: the drained
 //! minutes, the closed sessions and their scopes, split by keyboard and
 //! UTC day. Every row of one flush has the same `updated_at`. The rows are
 //! built as the objects the TypeScript code builds, key order included, so

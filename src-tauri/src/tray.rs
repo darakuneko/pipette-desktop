@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The tray icon of src/main/app-behavior.ts: created when the config's
+//! The tray icon: created when the config's
 //! `trayResident` is on, added and removed as the renderer changes it, and
 //! its menu (Show, the connected keyboard and the REC counters the renderer
 //! reports, Quit). [`TrayState`] keeps the last status and tells whether the
@@ -78,7 +78,7 @@ pub fn is_tray_active<R: Runtime, M: Manager<R>>(manager: &M) -> bool {
 }
 
 /// Creates the tray when the config's `trayResident` is on (`Boolean()` of
-/// it, as the Electron build reads it). Called from the app's setup hook,
+/// it). Called from the app's setup hook,
 /// before the main window opens, which looks at whether the icon exists.
 pub fn setup(app: &mut App<Wry>) {
     app.manage(TrayState::default());
@@ -97,9 +97,8 @@ pub fn setup(app: &mut App<Wry>) {
     }
 }
 
-/// Adds the tray (`on`) or removes it, on the main thread, as `setupTray` /
-/// `destroyTray` of src/main/app-behavior.ts do when the renderer changes
-/// `trayResident`; nothing happens when the tray already is that way. Called
+/// Adds the tray (`on`) or removes it, on the main thread, when the renderer
+/// changes `trayResident`; nothing happens when the tray already is that way. Called
 /// off the main thread, it queues the change there and returns without
 /// waiting for it.
 pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
@@ -149,10 +148,8 @@ impl Inner {
 }
 
 /// Whether the main window opens hidden: with the config's `startInTray`
-/// and `trayResident` on (as `createWindow` of src/main/index.ts decides) and
-/// the tray icon created, so the window can be shown again. The Electron
-/// build does not check the icon: a `Tray` it cannot create fails its
-/// startup instead.
+/// and `trayResident` on and the tray icon created, so the window can be
+/// shown again.
 pub fn window_starts_hidden<R: Runtime, M: Manager<R>>(
     manager: &M,
     start_in_tray: bool,
@@ -186,15 +183,15 @@ fn remove_tray(app: &AppHandle<Wry>) {
 }
 
 /// Whether a left click on the icon opens the menu rather than showing the
-/// window. As with the Electron tray, macOS opens the menu on any click,
+/// window. macOS opens the menu on any click,
 /// and on Windows a left click shows the window and a right click opens the
 /// menu. Linux (AppIndicator) reports no clicks: the menu is the only way
 /// there.
 const MENU_ON_LEFT_CLICK: bool = cfg!(target_os = "macos");
 
 /// The longest tooltip a Windows tray icon takes, in UTF-16 units: its
-/// buffer holds 128 with the terminating NUL. The Electron tray cuts a
-/// longer one to this; Tauri would fill the buffer and leave out the NUL.
+/// buffer holds 128 with the terminating NUL. A longer one is cut to this;
+/// Tauri would fill the buffer and leave out the NUL.
 const WINDOWS_TOOLTIP_UNITS: usize = 127;
 
 /// The macOS menu-bar icon: a black eyedropper on a transparent canvas,
@@ -277,8 +274,8 @@ impl LiveTray {
 
 /// The tray menu and the rows whose text follows the status.
 ///
-/// The Electron tray builds a new menu for every status, up to once a
-/// second while REC runs. Here a status with the same [`Layout`] only
+/// The renderer reports a status up to once a second while REC runs. A
+/// status with the same [`Layout`] only
 /// changes the text of the rows, and the menu is replaced only when rows
 /// come or go: replacing an AppIndicator menu closes it if it is open.
 struct TrayMenu<R: Runtime> {
@@ -357,7 +354,7 @@ impl<R: Runtime> TrayMenu<R> {
     }
 }
 
-/// `TRAY_STATUS_UPDATE` of src/main/index.ts: the connected keyboard's name
+/// The connected keyboard's name
 /// and the REC counters the renderer reports for the tray. A status that
 /// fails the shape check is dropped and the last one stays.
 #[tauri::command]
@@ -487,7 +484,7 @@ mod tests {
     }
 
     /// The golden's first scenario on one menu: every status leaves the
-    /// menu as the Electron tray's, and only a status that adds or removes
+    /// menu as the golden records it, and only a status that adds or removes
     /// rows replaces it.
     #[test]
     #[cfg_attr(

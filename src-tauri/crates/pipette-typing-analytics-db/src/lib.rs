@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing-analytics SQLite cache (src/main/typing-analytics/db/ on the
-//! TypeScript side): a rebuildable index over the per-day JSONL masters,
-//! with every read the Analyze view and the Data modal make of it.
+//! The typing-analytics SQLite cache: a rebuildable index over the per-day
+//! JSONL masters, with every read the Analyze view and the Data modal make
+//! of it.
 //!
 //! Each call that writes is one unit of work and owns its transaction, so a
-//! caller can never leave half of it applied. Where the TypeScript side
-//! nests one write inside another's transaction (the replay that hides a
-//! device's deleted ranges), the inner write here is a function that takes
-//! the outer transaction. The transactions are savepoints, so the calls
-//! also run inside the migration that [`TypingAnalyticsDb::open`] leaves
-//! open for the cache rebuild.
+//! caller can never leave half of it applied. Where one write runs inside
+//! another's transaction (the replay that hides a device's deleted ranges), the
+//! inner write is a function that takes the outer transaction. The transactions
+//! are savepoints, so the calls also run inside the migration that
+//! [`TypingAnalyticsDb::open`] leaves open for the cache rebuild.
 //!
 //! - [`TypingAnalyticsDb::apply_day_jsonl`] — one day file
 //!   (`applyRowsToCache`).
@@ -91,7 +90,7 @@ impl TypingAnalyticsDb {
     /// [`Self::commit_migration`], after the rebuild refilled the tables.
     /// Closing the database without it (or [`Self::rollback_migration`])
     /// leaves the file at its old version, so the next open migrates and
-    /// asks for the rebuild again, in this build and in the Electron build.
+    /// asks for the rebuild again.
     pub fn open(path: &Path) -> Result<Self, Error> {
         Self::with_connection(Connection::open(path)?)
     }
@@ -102,17 +101,14 @@ impl TypingAnalyticsDb {
 
     fn with_connection(conn: Connection) -> Result<Self, Error> {
         conn.set_prepared_statement_cache_capacity(STATEMENT_CACHE_CAPACITY);
-        // better-sqlite3 builds SQLite with SQLITE_DEFAULT_WAL_SYNCHRONOUS=1,
-        // so the Electron app runs its WAL database at NORMAL; SQLite's own
-        // default (this bundled build) is FULL. NORMAL can lose the last
+        // The WAL database runs at NORMAL; SQLite's own default (this bundled
+        // build) is FULL. NORMAL can lose the last
         // commits on power loss but never corrupts, and the cache is
         // rebuildable from the JSONL masters.
         conn.pragma_update(None, "synchronous", "NORMAL")?;
-        // The rest of better-sqlite3's build options (deps/defines.gypi of
-        // better-sqlite3) that change how this layer's SQL behaves: a 16 MB
-        // page cache (SQLITE_DEFAULT_CACHE_SIZE=-16000) and double-quoted
-        // strings read only as identifiers (SQLITE_DQS=0), so SQL that the
-        // app rejects is rejected here too.
+        // Two more settings that change how this layer's SQL behaves: a
+        // 16 MB page cache (SQLITE_DEFAULT_CACHE_SIZE=-16000) and
+        // double-quoted strings read only as identifiers (SQLITE_DQS=0).
         conn.pragma_update(None, "cache_size", -16000)?;
         conn.set_db_config(DbConfig::SQLITE_DBCONFIG_DQS_DML, false)?;
         conn.set_db_config(DbConfig::SQLITE_DBCONFIG_DQS_DDL, false)?;
@@ -202,7 +198,7 @@ impl TypingAnalyticsDb {
     }
 
     /// Delete every row of the data tables, keeping the schema and the meta
-    /// table (`truncateCache`, cache-rebuild.ts), in one transaction.
+    /// table, in one transaction.
     pub fn truncate_cache(&mut self) -> Result<(), Error> {
         let tx = self.conn.savepoint()?;
         for table in DATA_TABLE_NAMES {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The per-day JSONL masters of the typing analytics
-//! (src/main/typing-analytics/jsonl/): one line per row ([`row`]), appended
-//! by this device to its own day files and read back ([`reader_writer`]),
-//! under `sync/keyboards/{uid}/devices/{machineHash}/` ([`paths`]).
+//! The per-day JSONL masters of the typing analytics: one line per row
+//! ([`row`]), appended by this device to its own day files and read back
+//! ([`reader_writer`]), under `sync/keyboards/{uid}/devices/{machineHash}/`
+//! ([`paths`]).
 
 pub mod paths;
 pub mod reader_writer;

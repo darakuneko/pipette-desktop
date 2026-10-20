@@ -28,11 +28,10 @@ pub fn safe_filename(name: &str, fallback: &str) -> String {
     if trimmed.is_empty() { fallback.to_owned() } else { trimmed.to_owned() }
 }
 
-/// `name` as a file name the way the Electron main process cleans a device
-/// or export name (`sanitizeFilename` of src/main/file-io.ts and
-/// src/main/snapshot-store.ts): each of `/ \ : * ? " < > |` becomes `_`,
-/// the C0 control characters go, then the trailing run of `.`, then
-/// JavaScript whitespace at both ends; `keyboard` when nothing is left.
+/// `name` as a file name, as a device or export name is cleaned: each of
+/// `/ \ : * ? " < > |` becomes `_`, the C0 control characters go, then the
+/// trailing run of `.`, then JavaScript whitespace at both ends; `keyboard`
+/// when nothing is left.
 pub fn sanitize_filename(name: &str) -> String {
     let cleaned: String = name
         .chars()
@@ -131,8 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_filename_cleans_names_as_the_electron_main_process() {
-        // Expected values from sanitizeFilename of src/main/file-io.ts.
+    fn sanitize_filename_cleans_device_and_export_names() {
         for (name, expected) in [
             ("My Board", "My Board"),
             ("a/b\\c:d*e?f\"g<h>i|j", "a_b_c_d_e_f_g_h_i_j"),

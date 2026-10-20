@@ -31,9 +31,9 @@ impl ErrorCode {
 }
 
 /// A failed operation: its code and the text the handler answers as
-/// `error`. The handlers' own messages are Electron's; the text of a thrown
-/// error is `String(err)` there, which this build matches for the errors
-/// JavaScript itself throws and not for the OS's or `JSON.parse`'s.
+/// `error`. The handlers' own messages are the recorded ones; the text of a
+/// thrown error matches JavaScript's `String(err)` for the errors JavaScript
+/// itself throws, not for the OS's or `JSON.parse`'s.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PackError {
     pub code: ErrorCode,

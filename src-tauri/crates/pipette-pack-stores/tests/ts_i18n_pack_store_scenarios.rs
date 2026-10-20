@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the language pack scenarios recorded from the real handlers of
-//! src/main/i18n-pack-ipc.ts (scripts/pack-store-fixtures/
-//! record-i18n-pack-store-fixtures.test.ts) through the handlers of this
-//! crate (common/replay.rs).
+//! Replays the recorded language pack scenarios through the handlers of
+//! this crate (common/replay.rs).
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

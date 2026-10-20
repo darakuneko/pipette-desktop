@@ -10,7 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 # The JIS X 0208 index behind the Shift_JIS decoder of src/shift_jis.rs,
-# which follows Electron's TextDecoder('shift_jis') (see the fixtures).
+# which follows Chromium's TextDecoder('shift_jis') (see the fixtures).
 encoding_rs = "=0.8.35"
 # Raw DEFLATE for the zip entries; the zip container itself is read here.
 miniz_oxide = { version = "=0.8.9", features = ["with-alloc"] }

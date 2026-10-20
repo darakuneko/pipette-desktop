@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Record-start keymap snapshots (keymap-snapshots.ts) and the three IPC
-//! handlers that save, pick and list them (typing-analytics-ipc-analyze.ts).
+//! Record-start keymap snapshots and the three handlers that save, pick and
+//! list them.
 //!
 //! Each (keyboard uid, machine hash) has a directory of `{savedAt}.json`
 //! files under `userData/typing-analytics/keymaps/`, written unindented. A
@@ -12,11 +12,10 @@
 //! and handed back as such, as the TypeScript code does with what
 //! `JSON.parse` gives.
 //!
-//! Where it differs from the Electron build: a uid that is not a single
-//! path segment (empty, `.`, `..`, or with `/` or `\`) has no snapshot
-//! directory, so nothing is saved, picked or listed for it; Node's
-//! `path.join` would resolve it to a directory elsewhere. A uid with a lone
-//! surrogate counts as no uid.
+//! A uid that is not a single path segment (empty, `.`, `..`, or with `/` or
+//! `\`) has no snapshot directory, so nothing is saved, picked or listed for
+//! it; joined to a path it would resolve to a directory elsewhere. A uid with a
+//! lone surrogate counts as no uid.
 
 use std::io;
 use std::path::{Path, PathBuf};

@@ -3,10 +3,9 @@
 //! crash leaves either the old content or the new one.
 //!
 //! The temp file is `<path>.<pid>.<12 hex digits>.tmp` in the target's
-//! directory, the name src/main/utils/write-file-atomic.ts uses, so the
-//! orphan sweep of src/main/utils/sweep-orphan-pack-bodies.ts recognises
-//! temp files left by either build. Keep the two formats in step;
-//! tests/ts_temp_names.rs checks them against names the TypeScript writer
+//! directory, the name the 0.4 build's writer used, so the orphan sweep of
+//! the pack stores recognises temp files left by either build;
+//! tests/ts_temp_names.rs checks them against recorded names that writer
 //! built. A target name long enough to push the temp name past 255 bytes is
 //! cut short in the temp name, as there.
 //!
@@ -35,7 +34,7 @@ pub fn write_file_atomic_private(path: &Path, content: &[u8]) -> std::io::Result
 }
 
 /// [`write_file_atomic`] that also tries to give the new file the owner of
-/// the one it replaces, as the `atomically` package does for electron-store:
+/// the one it replaces, as the `atomically` package of the 0.4 build does:
 /// when an existing `path` belongs to another user or group than this
 /// process, the temp file is handed to them before the rename. A failure to
 /// do so (only a privileged process may give a file away) is ignored.

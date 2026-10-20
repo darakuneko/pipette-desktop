@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze filter store, as specified by the TypeScript tests of
-//! src/main/__tests__/analyze-filter-store-hub-post-id.test.ts, with the
+//! The Analyze filter store (its Hub post ids among the rest), with the
 //! write serialization on top.
 
 #![allow(clippy::unwrap_used, clippy::panic)]

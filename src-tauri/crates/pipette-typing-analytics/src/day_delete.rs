@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Deleting part of this device's own typing data
-//! (src/main/typing-analytics/typing-analytics-day-delete.ts): the Data
-//! modal's Local tab deleting local calendar days, and the ranges another
-//! device deleted from this device's data (deleted_ranges/apply.rs).
+//! Deleting part of this device's own typing data: the Data modal's Local tab
+//! deleting local calendar days, and the ranges another device deleted from
+//! this device's data (deleted_ranges/apply.rs).
 //!
 //! A local day overlaps one or two UTC day files, so whole files cannot be
 //! removed. The rows inside the deleted ranges are appended again to the

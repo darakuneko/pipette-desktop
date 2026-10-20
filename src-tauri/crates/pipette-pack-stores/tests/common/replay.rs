@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios a pack store's fixture generator recorded from the
-//! real handlers of the TypeScript build
-//! (scripts/pack-store-fixtures/record-*-pack-store-fixtures.test.ts)
-//! through the handlers of this crate, comparing each step's response, the
+//! Replays the scenarios recorded from the real handlers of the TypeScript
+//! build through the handlers of this crate, comparing each step's response, the
 //! default file name of each export, the notified sync units and the
 //! userData tree left behind.
 //!

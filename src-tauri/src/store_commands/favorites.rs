@@ -15,8 +15,8 @@
 //! `favorite_store_save_export` saves the file the worker built;
 //! `favorite_store_open_import` reads the file the user picks and
 //! `favorite_store_import_batch` stores one type's converted favorites.
-//! The dialogs have the title and the filters of src/main/favorite-store.ts;
-//! the page passes only the default file name, cleaned here.
+//! The dialogs have a fixed title and filters; the page passes only the
+//! default file name, cleaned here.
 
 use pipette_entry_store::sanitize_filename;
 use pipette_js_json::{Object, Value};

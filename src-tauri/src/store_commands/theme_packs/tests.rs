@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The theme pack commands on a mock app with scripted dialogs and a temp
-//! userData directory. The dialog titles and filters are those of
-//! src/main/theme-pack-ipc.ts and src/main/theme-pack-store.ts.
+//! userData directory.
 
 use std::sync::{Arc, Mutex};
 

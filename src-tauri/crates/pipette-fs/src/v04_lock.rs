@@ -33,10 +33,10 @@ pub const V04_LOCK_FILE: &str = "SingletonLock";
 #[cfg(unix)]
 const V04_SOCKET_LINK: &str = "SingletonSocket";
 
-/// The executable names of the 0.4 build: electron-builder names the
-/// Linux executable after the package (`pipette-desktop`) and the macOS one
-/// after the product (`Pipette`); a development run is the Electron
-/// runtime's own (`electron`, `Electron`).
+/// The executable names of the 0.4 build: its packager names the Linux
+/// executable after the package (`pipette-desktop`) and the macOS one after
+/// the product (`Pipette`); a development run of the 0.4 build is its
+/// runtime's own executable (`electron`, `Electron`).
 const V04_EXECUTABLES: &[&str] = &["pipette-desktop", "Pipette", "electron", "Electron"];
 
 /// What the lock link names.

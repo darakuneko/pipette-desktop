@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading the files chosen in a pack import dialog
-//! (`readSelectedImportFiles` of src/main/pack-import-dialog.ts, shared by
-//! the language and theme packs). Each file is read on its own, so one
+//! Reading the files chosen in a pack import dialog (shared by the language
+//! and theme packs). Each file is read on its own, so one
 //! that cannot be read never stops the others. The text is handed to the
 //! page, which parses it with its own `JSON.parse` (the shim builds
 //! `{filePath, raw, fileSizeBytes}` or `{…, parseError}` of it).

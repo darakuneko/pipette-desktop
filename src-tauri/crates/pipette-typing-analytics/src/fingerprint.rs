@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Who recorded a minute (fingerprint.ts and `canonicalScopeKey` of
+//! Who recorded a minute (with `canonicalScopeKey` of
 //! src/shared/types/typing-analytics.ts): this device's machine hash, its
 //! OS as Node's `os` module names it, and the keyboard.
 

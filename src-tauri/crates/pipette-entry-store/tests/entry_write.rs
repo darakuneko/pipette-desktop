@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The specs of src/main/sync/__tests__/entry-write.test.ts.
+//! The specs of the entry write helpers.
 
 #![allow(clippy::unwrap_used)]
 

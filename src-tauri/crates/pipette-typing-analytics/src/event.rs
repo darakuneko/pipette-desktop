@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The events the renderer sends while recording (`TypingAnalyticsEvent`)
-//! and the checks the Electron build's event handler makes before taking
-//! one (`isValidEvent` and `sanitizeMatrixAuxFields`,
-//! typing-analytics-pipeline.ts).
+//! and the checks made before taking one.
 //!
 //! A core field that fails its check (the time, the keyboard, the matrix
 //! position, the key) drops the whole event. The optional classification

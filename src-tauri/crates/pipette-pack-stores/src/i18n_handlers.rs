@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The language pack handlers of src/main/i18n-pack-ipc.ts: each checks its
-//! arguments as the handler does, then runs the store operation and answers
+//! The language pack handlers: each checks its arguments, then runs the store operation and answers
 //! its `data`. An argument is a JSON value, `None` for `undefined`.
 
 use std::path::PathBuf;

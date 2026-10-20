@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The range aggregates (typing-analytics-ipc-range.ts): the Monitor App
+//! The range aggregates: the Monitor App
 //! lists, the key heatmap, the bigram ranking, the rollover trend, the
 //! keypress durations and the Layout Comparison, each over a window and a
 //! [`DeviceScope`] the handler resolves itself.

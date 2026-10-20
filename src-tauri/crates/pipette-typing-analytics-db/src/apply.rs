@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Applying JSONL rows to the cache with the authoritative LWW merges
-//! (`applyRowsToCache`, apply-to-cache.ts, and the `merge*` methods of
-//! typing-analytics-db-writes.ts): a row replaces the cached one only when
+//! Applying JSONL rows to the cache with the authoritative LWW merges: a
+//! row replaces the cached one only when
 //! its `updated_at` is newer, tombstone flag included. Every function here
 //! runs inside the transaction of its caller.
 

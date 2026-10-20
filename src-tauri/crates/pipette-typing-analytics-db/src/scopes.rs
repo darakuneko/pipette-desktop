@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The reads over the scopes (the scope listers of sync-statements.ts):
+//! The reads over the scopes:
 //! the keyboards this device recorded and the other devices of a keyboard.
 
 use crate::query::{Params, all, column};

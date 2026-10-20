@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The theme pack handlers of src/main/theme-pack-ipc.ts: each checks its
-//! arguments as the handler does, then runs the store operation and answers
-//! its `data`. An argument is a JSON value, `None` for `undefined`.
+//! The theme pack handlers: each checks its arguments, then runs the store
+//! operation and answers its `data`. An argument is a JSON value, `None`
+//! for `undefined`.
 //!
-//! The handlers whose success Electron broadcasts as `theme-pack:changed`
+//! The handlers whose success is broadcast as `theme-pack:changed`
 //! (rename, reorder, delete, the Hub link and the import) answer a
 //! [`Changing`], which tells the commands to send that event.
 

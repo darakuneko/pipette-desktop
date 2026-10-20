@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Layout Comparison metrics (src/main/typing-analytics/
-//! compute-layout-comparison.ts) and the check of their options
-//! (`parseLayoutComparisonOptions`, typing-analytics-ipc-range.ts): each
+//! The Layout Comparison metrics and the check of their options: each
 //! recorded cell's count placed on every target layout, then summed per
 //! finger, hand and row and divided by the placed events.
 //!

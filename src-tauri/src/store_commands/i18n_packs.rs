@@ -6,10 +6,10 @@
 //!
 //! Each command answers the handler's `{success, data | errorCode, error}`
 //! object as JSON text (store_commands/pack_commands.rs); the arguments are
-//! checked as the handlers of src/main/i18n-pack-ipc.ts check them. The pack JSON and the import
-//! options cross as the text of `JSON.stringify`, so they keep their key
-//! order. The import dialog answers the text of each file
-//! (store_commands/pack_import.rs) and the shim parses it.
+//! checked here. The pack JSON and the import options cross as the text of
+//! `JSON.stringify`, so they keep their key order. The import dialog answers
+//! the text of each file (store_commands/pack_import.rs) and the shim parses
+//! it.
 
 use pipette_keyboard_stores::StoreContext;
 use pipette_pack_stores::i18n_handlers as handlers;

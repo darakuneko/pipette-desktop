@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The pipette settings of a keyboard: `sync/keyboards/{uid}/pipette_settings.json`,
-//! the file of src/main/pipette-settings-store.ts, synced as the unit
-//! `keyboards/{uid}/settings`.
+//! synced as the unit `keyboards/{uid}/settings`.
 //!
 //! This is storage only. What a valid file is, which fields a read keeps, how
 //! a patch merges and the text a write stores are the rules of

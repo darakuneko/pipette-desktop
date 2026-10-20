@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Win32 calls. Electron's `setOpacity` makes the window a layered
-//! window once and sets its alpha; its `setAspectRatio` fits the rectangle
-//! of every `WM_SIZING` (the user's drags only) to the ratio. Both live in
-//! subclass procedures here (comctl32's `SetWindowSubclass`), installed on
-//! the window's own thread and removed when the window goes
-//! (`WM_NCDESTROY`):
+//! The Win32 calls. The opacity makes the window a layered window once and
+//! sets its alpha; the aspect ratio fits the rectangle of every `WM_SIZING`
+//! (the user's drags only) to it. Both live in subclass procedures
+//! (comctl32's `SetWindowSubclass`), installed on the window's own thread
+//! and removed when the window goes (`WM_NCDESTROY`):
 //!
 //! - the layered one adds `WS_EX_LAYERED` back to every new extended style:
 //!   tao rewrites the extended style from its own flags whenever one of them
@@ -69,8 +68,8 @@ pub(crate) fn set_opacity(window: &impl HasWindowHandle, opacity: f64) -> Result
     let hwnd = hwnd(window)?;
     let alpha = crate::alpha_byte(opacity);
     let style = ex_style(hwnd);
-    // An opaque window that is not layered yet looks the same as Electron's
-    // layered one at 255; it stays a plain window.
+    // An opaque window that is not layered yet looks the same as a layered
+    // one at 255; it stays a plain window.
     if style & WS_EX_LAYERED == 0 && alpha == u8::MAX {
         return Ok(());
     }

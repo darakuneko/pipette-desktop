@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! What a dataset is made of and which one is in effect for a provider:
-//! the checks of src/main/hub/hub-typing-dataset.ts (`isManifestEntry`,
-//! `isValidModel`) and `isValidOverride` / `getEffectiveDataset` of
-//! src/main/language-store.ts.
+//! the checks of a manifest entry, a model and an override, and the
+//! effective dataset.
 
 use pipette_js_json::{JsString, Object, Value};
 

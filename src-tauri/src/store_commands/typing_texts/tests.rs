@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The typing test text commands on a mock app with scripted dialogs and a
-//! temp userData directory. The dialog title and filter are those of
-//! src/main/typing-test-text-store.ts.
+//! temp userData directory.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

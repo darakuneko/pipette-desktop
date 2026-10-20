@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Typing sessions per scope (session-detector.ts): a session runs from
+//! Typing sessions per scope: a session runs from
 //! its first keystroke until the recording stops, an idle gap of
 //! [`SESSION_IDLE_GAP_MS`] or the app quits. The detector hands back the
 //! sessions it closes; the flush writes them.

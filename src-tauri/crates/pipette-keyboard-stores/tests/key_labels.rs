@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The key label store, with the cases of
-//! src/main/__tests__/key-label-store.test.ts and the Hub-side save options
+//! The key label store, with the Hub-side save options
 //! (an id, the current name kept, a tombstone brought back).
 
 #![allow(clippy::unwrap_used, clippy::panic)]

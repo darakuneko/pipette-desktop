@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The Analyze and Data modal handlers (typing-analytics-ipc-analyze.ts
-//! and the `ListItems` handler of typing-analytics-service.ts): the reads
+//! The Analyze and Data modal handlers: the reads
 //! of the [`Family`] in their three device forms, the typing-view heatmap,
 //! the device list and the local day files.
 

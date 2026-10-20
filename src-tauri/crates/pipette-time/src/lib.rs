@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! `Date.prototype.toISOString` and `Date.parse` of JavaScript, for the
-//! timestamps the Electron build writes and reads (log lines, sync
+//! timestamps the app writes and reads (log lines, sync
 //! envelopes, the clocks of the entry stores), `new Date(value)` of a
 //! JSON value read from a file ([`date_value_ms`]), and local calendar
 //! days in the system time zone ([`local_date_ms`], [`local_day_range_ms`]).
@@ -60,7 +60,7 @@ pub fn iso_8601_millis_checked(epoch_ms: i64) -> Option<String> {
 ///
 /// Where it differs from V8:
 /// - a date-time without an offset is read as UTC; JavaScript reads it as
-///   local time (the Electron build only writes `Z` times);
+///   local time (the app only writes `Z` times);
 /// - the forms only V8's fallback parser accepts (`Jan 1 2026`,
 ///   `2026-1-1`, a lowercase `t` / `z`, `+0900`, leading spaces, a date
 ///   followed by `Z`, …) are `None`.

@@ -12,7 +12,7 @@
 //! The decisions are compact.rs's and geometry.rs's; this module reads the
 //! window for them and applies what they decide. The window's bounds here
 //! are the rectangle the app saves as `windowState` (main_window.rs), in
-//! DIP, as Electron's bounds are on each system: on Linux the outer
+//! DIP: on Linux the outer
 //! position and the content size, with no frame to add or take off; on
 //! Windows and macOS the outer rectangle, frame included, which native.rs
 //! converts to the content size Tauri sets.
@@ -38,8 +38,8 @@ use display::DisplayWatch;
 use geometry::{ApplyHints, Change, Hints};
 
 /// How often the displays are looked at while the window sits still.
-/// Electron hears `display-metrics-changed`; Tauri has no such event, and
-/// GDK none for a work area that changes.
+/// Tauri has no event for a change of the displays, and GDK none for a work
+/// area that changes.
 const DISPLAY_POLL: Duration = Duration::from_secs(2);
 
 /// What the handlers keep about the window.

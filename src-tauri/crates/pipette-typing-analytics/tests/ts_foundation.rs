@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The installation id, the sync state file and the cache freshness check
 //! against what the TypeScript code did on the same userData directories
-//! (tests/fixtures, written by `pnpm run generate:analytics-db-fixtures`).
+//! (the recorded goldens in tests/fixtures).
 
 // Helpers outside #[test] functions unwrap fixture data too.
 #![allow(clippy::unwrap_used)]

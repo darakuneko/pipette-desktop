@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The events the backend sends to the pages, named by the `IpcChannels`
-//! strings (src/shared/ipc/channels.ts) the Electron main process sends them
-//! on, so the shim's `subscribe` (src/tauri-shim/ipc.ts) listens on the same
-//! channel the preload does.
+//! strings (src/shared/ipc/channels.ts) the shim's `subscribe`
+//! (src/tauri-shim/ipc.ts) listens on.
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Runtime};
@@ -29,8 +28,7 @@ pub const I18N_PACK_CHANGED: &str = "i18n-pack:changed";
 /// reordered, deleted or linked to the Hub.
 pub const THEME_PACK_CHANGED: &str = "theme-pack:changed";
 
-/// Sends `payload` on `event` to every page, as `broadcastToAllWindows`
-/// (src/main/utils/broadcast.ts) does. A failure is logged.
+/// Sends `payload` on `event` to every page. A failure is logged.
 pub fn emit_all<R: Runtime, S: Serialize + Clone>(app: &AppHandle<R>, event: &str, payload: S) {
     if let Err(err) = app.emit(event, payload) {
         log::error!("failed to emit {event}: {err}");

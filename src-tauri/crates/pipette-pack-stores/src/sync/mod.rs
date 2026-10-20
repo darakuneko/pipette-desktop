@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The sync of the pack stores (src/main/sync/pack-sync.ts and the stores'
-//! sync and GC entry points), shared by the language and theme packs.
+//! The sync of the pack stores (the stores' sync and GC entry points),
+//! shared by the language and theme packs.
 //!
 //! A pack has two sync units: the roster (`{i18n|themes}/index`, every
 //! pack's meta) and one body unit per pack (`…/packs/{id}`, the pack JSON).

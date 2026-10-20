@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The typing test texts: `sync/typing-test-texts`, the store of
-//! src/main/typing-test-text-store.ts, synced as the unit
+//! The typing test texts: `sync/typing-test-texts`, synced as the unit
 //! `typing-test-texts`.
 //!
 //! `index.json` is `{entries}` written as `JSON.stringify(index, null, 2)`;
@@ -20,10 +19,10 @@
 //! their read of the index. The reads (list, get, an import's lookup of an
 //! existing name) read the index as it is.
 //!
-//! A [`TypingTextStore`] holds what the Electron build keeps in its main
-//! process: whether each text is pure kana (`romajiCapable`, computed from
-//! the body and never written), cached by the entry's id and body filename,
-//! and the import held for the user's confirmation (import.rs).
+//! A [`TypingTextStore`] holds the in-process state: whether each text is pure
+//! kana (`romajiCapable`, computed from the body and never written), cached by
+//! the entry's id and body filename, and the import held for the user's
+//! confirmation (import.rs).
 //!
 //! Every operation answers like its handler: failures are values
 //! ([`TypingTextError`], with the handler's error code and `String(err)`),
@@ -127,7 +126,7 @@ impl State {
 
 /// The store's in-process state; the files live under the context's
 /// userData directory. Cheap to clone; the clones share the state. One per
-/// process, as the Electron build's module state is.
+/// process.
 #[derive(Clone, Default)]
 pub struct TypingTextStore {
     state: Arc<State>,

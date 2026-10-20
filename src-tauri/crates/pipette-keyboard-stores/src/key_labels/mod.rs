@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The key labels: `sync/key-labels`, the store of
-//! src/main/key-label-store.ts, synced as the unit `key-labels`.
+//! The key labels: `sync/key-labels`, synced as the unit
+//! `key-labels`.
 //!
 //! `index.json` is `{entries}` written as `JSON.stringify(index, null, 2)`;
 //! each body (`{id}_{ts}.json`) is `{name, map, compositeLabels?,
@@ -14,7 +14,7 @@
 //! of the entries and their order, survive every write; the other
 //! top-level fields of the index survive the writes that change entries in
 //! place (rename, delete, Hub link, the QWERTY entry) and are dropped by a
-//! save and a reorder, which write `{entries}`, as the Electron build does.
+//! save and a reorder, which write `{entries}`.
 //!
 //! The writes run under the store's write lock (`key-labels`, the name of
 //! its sync unit) and move legacy body names to id-carrying ones on their

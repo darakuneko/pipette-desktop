@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The theme pack check against `validateThemePack` of
-//! src/shared/theme/validate.ts: every pack recorded by
-//! scripts/pack-store-fixtures/record-theme-validate-fixtures.test.ts gets
+//! src/shared/theme/validate.ts: every recorded pack gets
 //! the same errors, warnings and header, and the limits and key lists the
 //! check reads are those of src/shared/types/theme-store.ts.
 

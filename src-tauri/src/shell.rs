@@ -53,8 +53,7 @@ impl pipette_google_auth::BrowserOpener for AuthBrowser {
     }
 }
 
-/// Why a URL is not opened; the messages are those of the Electron main
-/// process's `SHELL_OPEN_EXTERNAL` handler (src/main/index.ts).
+/// Why a URL is not opened, with the messages the page receives.
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum UrlError {
     #[error("Invalid URL")]
@@ -116,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn errors_carry_the_electron_messages() {
+    fn errors_carry_the_page_messages() {
         assert_eq!(CommandError::from(UrlError::Invalid), CommandError::new("Invalid URL"));
         assert_eq!(CommandError::from(UrlError::Scheme), CommandError::new("Invalid URL scheme"));
     }

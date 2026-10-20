@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript typing test text
-//! handlers by
-//! scripts/keyboard-store-fixtures/record-typing-text-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the typing test text handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the dialogs shown, the notified units and every file left
 //! behind compared byte for byte. The texts of a file-system error and of a

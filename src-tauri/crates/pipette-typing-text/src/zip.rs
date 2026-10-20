@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The `.txt` entry of an Aozora Bunko zip: `unzipSync` of fflate 0.8 (the
-//! Electron main process's unzipper) followed by `pickTextEntry` of
-//! src/main/aozora/aozora-import.ts.
+//! The `.txt` entry of an Aozora Bunko zip: the archive read as
+//! `unzipSync` of fflate 0.8 reads it, then the entry choice.
 //!
 //! The container is read as fflate reads it, so the same archives open and
 //! fail: the end record is searched backwards through up to 65,537 bytes

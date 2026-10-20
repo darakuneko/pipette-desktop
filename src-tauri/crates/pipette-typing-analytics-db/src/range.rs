@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The range reads (range-query-statements.ts and their methods in
-//! typing-analytics-db-reads.ts): the minute stats, the rollover trend,
+//! The range reads: the minute stats, the rollover trend,
 //! the Monitor App aggregates, the typing tests and runs, the sessions,
 //! the Backspace minutes and the peak records, each over `[since_ms,
 //! until_ms)`. `machine_hash` narrows a read to one device; `None` reads

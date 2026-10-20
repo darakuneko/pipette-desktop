@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Tombstoning the rows of a keyboard (the tombstone methods of
-//! typing-analytics-db-writes.ts): those of one device inside its deleted
+//! Tombstoning the rows of a keyboard: those of one device inside its deleted
 //! ranges, all of a keyboard, or all of one device of a keyboard. Each
 //! flips live rows only, so a row already tombstoned keeps the
 //! `updated_at` it was tombstoned with, and leaves the scopes as they are.
@@ -10,7 +9,7 @@ use rusqlite::{Savepoint, named_params};
 use crate::js::{ToJs, object};
 use crate::{Error, TypingAnalyticsDb, sql};
 
-/// One deleted range of a device (`DeleteRange`, deleted-ranges.ts). A row
+/// One deleted range of a device. A row
 /// is in it when its time is in `[start_ms, end_ms)` and at or before
 /// `cutoff_ms`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

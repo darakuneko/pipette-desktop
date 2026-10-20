@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The `{success, …}` objects the store handlers of the Electron build
-//! answer, as JSON text written by `pipette_js_json`, so the entries'
-//! fields this build does not know reach the renderer as `JSON.stringify`
-//! writes them: the flat form of the favorite and snapshot stores
-//! ([`response_json`]), and the `{success, data?, errorCode?, error?}`
-//! form of the key label and pack stores ([`coded_response`]).
+//! The `{success, …}` objects the store handlers answer, as JSON text written
+//! by `pipette_js_json`, so the entries' fields this build does not know reach
+//! the renderer as `JSON.stringify` writes them: the flat form of the favorite
+//! and snapshot stores ([`response_json`]), and the `{success, data?,
+//! errorCode?, error?}` form of the key label and pack stores
+//! ([`coded_response`]).
 
 use std::fmt::Display;
 

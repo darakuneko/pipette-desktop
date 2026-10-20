@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Where the JSONL masters and the deleted-range files live (paths.ts) and
-//! the UTC calendar days that name the day files (utc-day.ts):
+//! Where the JSONL masters and the deleted-range files live and the UTC
+//! calendar days that name the day files:
 //!
 //! `{userData}/sync/keyboards/{uid}/devices/{machineHash}/{YYYY-MM-DD}.jsonl`
 //!

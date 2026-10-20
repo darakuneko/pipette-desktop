@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Schema setup on open: the same three phases as the TypeScript constructor
-//! (typing-analytics-db-base.ts). The meta table comes first so the stored
+//! Schema setup on open, in three phases. The meta table comes first so the stored
 //! schema version can be read, the additive migrations run next, and the
 //! full schema (every table and index) last, so indexes that name a column
 //! a migration adds see that column.
 //!
-//! Unlike the TypeScript constructor, everything after the meta table runs
+//! Everything after the meta table runs
 //! in one transaction, and a migration that dropped tables leaves it open
 //! for the caller to commit once the cache is rebuilt
 //! ([`crate::TypingAnalyticsDb::commit_migration`]). The stored version is
 //! then never ahead of the rebuild: a failed or interrupted rebuild leaves
-//! the old version, and the next open (here or in the Electron build) drops
+//! the old version, and the next open drops
 //! the tables again and asks for the rebuild again.
 
 use rusqlite::{Connection, OptionalExtension, named_params, params};
@@ -20,7 +19,7 @@ use crate::sql::{CREATE_META, CREATE_SCHEMA, GET_META, SET_META};
 
 pub const SCHEMA_VERSION: i64 = 8;
 
-/// User-data tables, child before parent (`DATA_TABLE_NAMES`, schema.ts).
+/// User-data tables, child before parent.
 pub const DATA_TABLE_NAMES: [&str; 7] = [
     "typing_char_minute",
     "typing_matrix_minute",
@@ -93,8 +92,7 @@ fn migrate_and_create(conn: &Connection) -> Result<SchemaOutcome, Error> {
     Ok(outcome)
 }
 
-/// The additive migrations of typing-analytics-db-base.ts, in the same
-/// order and with the same version tests.
+/// The additive migrations, in order, each behind its version test.
 fn migrate(conn: &Connection, from: Option<f64>) -> Result<SchemaOutcome, Error> {
     let mut outcome = SchemaOutcome { cache_needs_rebuild: false };
     let Some(from) = from else { return Ok(outcome) };

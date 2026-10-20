@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The window on Windows and macOS, where Electron's bounds include the
-//! frame the system draws around the content: `getBounds` /
-//! `setBounds` / `setMinimumSize` and the saved `windowState` are the outer
-//! rectangle there, while Tauri sets the content size and the content's
-//! minimum size. The frame (outer minus content size) converts between the
-//! two. The opacity and the aspect ratio go through pipette-native, on the
-//! main thread.
+//! The window on Windows and macOS, where the app's bounds include the frame
+//! the system draws around the content: the bounds, the minimum size and the
+//! saved `windowState` are the outer rectangle there, while Tauri sets the
+//! content size and the content's minimum size. The frame (outer minus content
+//! size) converts between the two. The opacity and the aspect ratio go through
+//! pipette-native, on the main thread.
 //!
 //! Only the app's runtime has native windows; the runtime of tauri::test
 //! takes the sizes as they are, and Linux's bounds have no frame (mod.rs).
@@ -97,7 +96,7 @@ pub fn set_outer_bounds<R: Runtime>(window: &Window<R>, bounds: Rect) -> Result<
 /// macOS: Tauri opens a window by its content size, and the frame is known
 /// only once the window exists. A positioned window is put at its outer
 /// `bounds` again; a centered one is centered again at its new size (the
-/// system's centering, as Electron's `center`).
+/// system's centering).
 pub fn fit_opening_frame<R: Runtime>(window: &Window<R>, bounds: Rect, min_size: Size, positioned: bool) {
     let frame = frame(window);
     if frame == NO_FRAME {
@@ -122,8 +121,8 @@ pub fn fit_opening_frame<R: Runtime>(window: &Window<R>, bounds: Rect, min_size:
     }
 }
 
-/// Applies `hints` to a window without GTK: the minimum size (outer, as
-/// Electron's) as the content's, and on Windows and macOS the aspect ratio.
+/// Applies `hints` to a window without GTK: the minimum size (outer) as the
+/// content's, and on Windows and macOS the aspect ratio.
 /// On the main thread.
 pub fn apply_hints<R: Runtime>(window: &Window<R>, hints: Hints) -> Result<(), String> {
     let frame = frame(window);
@@ -139,8 +138,7 @@ pub fn apply_hints<R: Runtime>(window: &Window<R>, hints: Hints) -> Result<(), S
 }
 
 /// Sets the opacity of `window` (0..=1) on the main thread, on Windows and
-/// macOS; elsewhere nothing, as Electron's `setOpacity` does nothing on
-/// Linux.
+/// macOS; elsewhere nothing.
 pub fn set_opacity<R: Runtime>(window: &Window<R>, opacity: f64) {
     if !is_native::<R>() {
         return;

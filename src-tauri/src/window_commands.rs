@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The window commands behind the shim's window members
-//! (src/tauri-shim/api/window.ts): the WINDOW_* IPC handlers of
-//! src/main/index.ts for the zoom and the main window's visibility, and
-//! those of its `setupWindowIpc` for the Typing Test's view-only window
-//! (compact mode, aspect ratio, always on top, opacity, minimum size),
-//! which src/window_ops/ carries out.
+//! (src/tauri-shim/api/window.ts): the zoom and the main window's
+//! visibility, and the Typing Test's view-only window (compact mode, aspect
+//! ratio, always on top, opacity, minimum size), which src/window_ops/
+//! carries out.
 
 use pipette_app_config::{Value, clamp_zoom_factor};
 use tauri::{AppHandle, Runtime, WebviewWindow};

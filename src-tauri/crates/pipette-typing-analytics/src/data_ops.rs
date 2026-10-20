@@ -6,9 +6,9 @@
 //! device's own deleted ranges (deleted_ranges/apply.rs), the export and
 //! the import (import_export.rs), and the cache rebuild.
 //!
-//! None of them takes the sync lock: the commands hold it, as the Electron
-//! IPC handlers do. What writes this device's own day files runs on the
-//! recorder's flush chain, the one writer of those files.
+//! None of them takes the sync lock: the commands hold it. What writes this
+//! device's own day files runs on the recorder's flush chain, the one writer of
+//! those files.
 
 use std::future::Future;
 use std::io;

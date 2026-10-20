@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The rules of a key label's content, as src/main/key-label-store.ts
-//! applies them: the label maps and the body file read back or imported
-//! (`normalizeFile`). The name rules are those of crate::entry_index.
+//! The rules of a key label's content: the label maps and the body file read
+//! back or imported (`normalizeFile`). The name rules are those of
+//! crate::entry_index.
 
 use pipette_js_json::{Object, Value};
 

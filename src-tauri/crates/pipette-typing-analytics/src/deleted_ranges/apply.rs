@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! This device applying the ranges of its own hash's deleted-ranges file to
-//! its own typing data (src/main/typing-analytics/deleted-ranges-apply.ts):
+//! its own typing data:
 //! the rows in them are marked deleted in its day files
 //! (day_delete.rs), which then sync like any other change. The ids already
 //! applied are kept in a local record (`deleted-ranges-applied.json`) so

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The value conversions shared by the writes and the reads
-//! (typing-analytics-row-codec.ts): the histogram BLOB and the local
+//! The value conversions shared by the writes and the reads: the histogram
+//! BLOB and the local
 //! calendar day a `localtime` query groups by.
 
 use rusqlite::types::ValueRef;

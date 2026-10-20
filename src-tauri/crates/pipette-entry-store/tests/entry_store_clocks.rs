@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The clock specs of src/main/__tests__/entry-store-clocks.test.ts: which
+//! The clock specs of the stores: which
 //! per-group clock each write path of the stores moves, revival on
 //! explicit overwrites, the fixed built-in entries and the move of body
 //! files to id-carrying names, written as the sequences of helper calls

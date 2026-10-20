@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The autostart tests of src/main/__tests__/app-behavior.test.ts, and the
-//! guards that keep a build away from the real entry: only a distributed
-//! build without an isolated userData directory writes or removes it, and a
-//! development directory is refused when it reaches a real autostart
-//! directory. Every test runs on a temporary HOME.
+//! The autostart registrations, and the guards that keep a build away from the
+//! real entry: only a distributed build without an isolated userData directory
+//! writes or removes it, and a development directory is refused when it reaches
+//! a real autostart directory. Every test runs on a temporary HOME.
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -99,7 +98,7 @@ fn snapshot(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
     out
 }
 
-// --- app-behavior.test.ts: applyAutoLaunch ---
+// --- Applying autoLaunch ---
 
 #[test]
 fn is_a_no_op_when_unpackaged() {
@@ -193,7 +192,7 @@ fn populated_home() -> tempfile::TempDir {
     let home = tempfile::tempdir().expect("HOME");
     let config = home.path().join(".config");
     fs::create_dir_all(config.join("autostart")).expect("autostart");
-    fs::write(real_entry(home.path()), "the Electron build's entry\n").expect("entry");
+    fs::write(real_entry(home.path()), "the 0.4 build's entry\n").expect("entry");
     fs::write(config.join("autostart").join("other.desktop"), "someone else\n").expect("other");
     for name in ["pipette-desktop", "app.pipette.desktop", "custom-user-data"] {
         fs::create_dir_all(config.join(name)).expect("userData");
@@ -256,7 +255,7 @@ fn a_build_that_is_not_distributed_writes_and_removes_nothing() {
 
 #[test]
 fn a_build_on_a_user_data_directory_of_its_own_writes_and_removes_nothing() {
-    // Wherever the variable points, the Electron directory included: a run
+    // Wherever the variable points, the 0.4 directory included: a run
     // on a copy of the data or an isolated session never reaches the
     // entry of the user it runs as.
     let home = populated_home();

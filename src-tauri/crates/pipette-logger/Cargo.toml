@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-logger"
-description = "The app's log: rotating files under userData/logs in the Electron build's line format"
+description = "The app's log: rotating files under userData/logs in the 0.4 build's line format"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

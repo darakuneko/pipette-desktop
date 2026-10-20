@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-app-config"
-description = "The app config file <userData>/config.json, read and written as the Electron build's electron-store does"
+description = "The app config file <userData>/config.json, read and written in the format of the 0.4 build"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

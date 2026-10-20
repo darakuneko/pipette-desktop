@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! One line of a per-day JSONL master (jsonl-row.ts): the composite row ids,
+//! One line of a per-day JSONL master: the composite row ids,
 //! the line `serializeRow` writes, and the validation of `parseRow`.
 //!
 //! A row is held as the object `JSON.parse` made of the line, so a row read

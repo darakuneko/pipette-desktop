@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The XDG autostart desktop entry, `applyLinuxAutostart` of
-//! src/main/app-behavior.ts: the same file name and the same bytes, so the
-//! entry either build writes starts the app the same way.
+//! The XDG autostart desktop entry: the file name and the bytes of the 0.4
+//! build's entry, so the entry the 0.4 build wrote is the one this build
+//! writes.
 
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -16,8 +16,8 @@ pub(crate) const FILE_NAME: &str = "pipette.desktop";
 /// The start of every message about a failed write or removal.
 pub(crate) const FAILURE: &str = "auto-launch: failed to update Linux autostart entry: ";
 
-/// The entry that starts `exec`: quoted, not escaped, as the Electron build
-/// writes it, and the path's bytes as they are.
+/// The entry that starts `exec`: quoted, not escaped, as the 0.4 build
+/// wrote it, and the path's bytes as they are.
 pub(crate) fn desktop_entry(exec: &OsStr) -> Vec<u8> {
     let mut entry = b"[Desktop Entry]\nType=Application\nName=Pipette\nComment=Vial-compatible keyboard configurator\nExec=\""
         .to_vec();

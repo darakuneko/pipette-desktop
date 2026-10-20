@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Reading and writing config.json the way conf (under electron-store)
-//! does: read as UTF-8 with U+FFFD for bad bytes (Node's `readFileSync(path,
+//! Reading and writing config.json the way conf (the 0.4 build's config
+//! library) does: read as UTF-8 with U+FFFD for bad bytes (Node's `readFileSync(path,
 //! 'utf8')`), parsed by `JSON.parse` and copied into a fresh object, written
 //! with tab indentation and no final newline, atomically, keeping
 //! `__internal__` unless the new content has its own.

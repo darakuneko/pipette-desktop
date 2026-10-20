@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Keeping the window on top, and whether the session allows it: the
-//! WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED handler of src/main/index.ts decides
-//! from the environment, not from the display backend GTK actually uses
-//! (an X11 app under XWayland reads as unsupported there too), and so does
-//! this build, to answer as Electron does.
+//! Keeping the window on top, and whether the session allows it, decided
+//! from the environment, not from the display backend GTK actually uses (an
+//! X11 app under XWayland reads as unsupported too).
 
 /// Whether a window can stay on top: everywhere but Linux, and on Linux
 /// only when `WAYLAND_DISPLAY` is unset or empty and `XDG_SESSION_TYPE`
@@ -30,7 +28,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_support_matches_the_electron_table() {
+    fn the_support_matches_the_recorded_table() {
         let fixture = crate::window_ops::compact::tests::fixture();
         let cases = fixture["isAlwaysOnTopSupported"].as_array().unwrap();
         assert_eq!(cases.len(), 66);

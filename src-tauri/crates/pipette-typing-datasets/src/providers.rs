@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The bundled provider defaults, `TYPING_TEST_PROVIDER_DEFAULTS` of
-//! src/shared/data/typing-test-providers.ts. data/provider-defaults.json is
-//! written from it by scripts/typing-dataset-fixtures/ (CI fails when the
-//! committed file differs), so both builds ship the same defaults.
+//! src/shared/data/typing-test-providers.ts, recorded in
+//! data/provider-defaults.json. Nothing checks the two against each other:
+//! a change to one has to be made to the other.
 
 use std::sync::OnceLock;
 

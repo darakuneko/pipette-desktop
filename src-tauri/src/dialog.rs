@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Wry};
 
-/// A filter of the dialog's file list, as Electron's `FileFilter`.
+/// A filter of the dialog's file list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileFilter {
     pub name: String,
@@ -27,13 +27,12 @@ impl FileFilter {
         Self { name: name.to_owned(), extensions: extensions.iter().map(|&ext| ext.to_owned()).collect() }
     }
 
-    /// The `All Files` filter every dialog of the Electron main process ends
-    /// its list with.
+    /// The `All Files` filter.
     pub fn all_files() -> Self {
         Self::new("All Files", &["*"])
     }
 
-    /// Whether the filter lets every file through: Electron's `*` extension.
+    /// Whether the filter lets every file through: the `*` extension.
     fn matches_any_file(&self) -> bool {
         self.extensions.iter().any(|ext| ext == "*")
     }
@@ -41,9 +40,9 @@ impl FileFilter {
 
 /// The filters to hand to rfd: none when every filter lets every file
 /// through. rfd turns the `*` extension into the pattern `*.*`, which hides
-/// the files without an extension that Electron's `*` shows; a list of
-/// `*` filters alone (the typing test text import's) filters nothing, so
-/// leaving it out shows every file, as Electron does. A list that also has
+/// the files without an extension; a list of `*` filters alone (the typing
+/// test text import's) filters nothing, so leaving it out shows every file.
+/// A list that also has
 /// a real filter keeps its `All Files` as `*.*`.
 fn native_filters(filters: &[FileFilter]) -> &[FileFilter] {
     if filters.iter().all(FileFilter::matches_any_file) { &[] } else { filters }
@@ -55,7 +54,7 @@ pub enum DialogKind {
     SaveFile { default_name: String },
     /// Choose an existing file.
     OpenFile,
-    /// Choose one or more existing files (Electron's `multiSelections`).
+    /// Choose one or more existing files.
     OpenMany,
     /// Choose a directory; the dialog can create one.
     OpenFolder,

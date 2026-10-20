@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-native"
-description = "The window calls Tauri does not make on Windows and macOS, as Electron makes them there: a window's opacity and the aspect ratio of its content while the user resizes it, and the lookup of the window in front. The only crate of the workspace with unsafe code, behind safe functions"
+description = "The window calls Tauri does not make on Windows and macOS: a window's opacity and the aspect ratio of its content while the user resizes it, and the lookup of the window in front. The only crate of the workspace with unsafe code, behind safe functions"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

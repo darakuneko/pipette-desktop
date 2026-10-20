@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The garbage collection a sync pass runs on the pack stores it touched
-//! (src/main/sync/pack-gc.ts and the stores' `runGcUnderLock`): drop the
+//! The garbage collection a sync pass runs on the pack stores it touched:
+//! drop the
 //! tombstones past their 30 days, then remove the body files no meta names.
 //!
 //! It runs once per whole download pass, never from the merge of one unit:
@@ -171,7 +171,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn temp_files_match_the_pattern_of_the_electron_build() {
+    fn temp_files_match_the_temp_name_pattern() {
         for name in ["a.json.tmp", "a.json.123.abc0.tmp", ".json.1.f.tmp", "x.json.json.9.0.tmp"] {
             assert!(is_temp_file(name), "{name}");
         }

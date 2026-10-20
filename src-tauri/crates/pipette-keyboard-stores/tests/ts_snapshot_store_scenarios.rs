@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! Replays the scenarios recorded from the TypeScript snapshot handlers by
-//! scripts/keyboard-store-fixtures/record-snapshot-store-fixtures.test.ts:
+//! Replays the recorded golden scenarios of the snapshot handlers:
 //! the same userData files, clock and new ids, the same calls, then each
 //! response, the notified units and every file left behind compared byte
 //! for byte. A file-system error is recorded as `<os error>`, as its text

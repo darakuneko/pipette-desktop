@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The cases of src/main/aozora/__tests__/aozora-clean.test.ts.
+//! The cases of the Aozora Bunko text cleaning.
 
 use super::*;
 use crate::units::utf16;

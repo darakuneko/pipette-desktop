@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Reading and writing the deleted-ranges file of one (keyboard uid,
-//! machine hash) (deleted-ranges-store.ts), and the local record of the
-//! range ids this device has applied to its own day files
-//! (deleted-ranges-apply.ts).
+//! machine hash), and the local record of the range ids this device has
+//! applied to its own day files.
 //!
 //! Every read-modify-write of a deleted-ranges file and every read for a
 //! sync bundle holds the write lock keyed by the file's sync unit name

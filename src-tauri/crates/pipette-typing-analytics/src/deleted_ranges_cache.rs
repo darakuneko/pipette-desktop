@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Replaying one day file of a device into the cache while keeping that
-//! device's deleted ranges hidden (`replayDayRowsHidingDeletedRanges`,
-//! src/main/typing-analytics/deleted-ranges-cache.ts).
+//! device's deleted ranges hidden.
 //!
 //! It runs as one operation on the database thread: the ranges are read
 //! right before the transaction, so a ranges file written while an earlier

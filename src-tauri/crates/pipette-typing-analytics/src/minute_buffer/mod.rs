@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The per-minute aggregation of the recording (minute-buffer.ts): every
+//! The per-minute aggregation of the recording: every
 //! event lands in the entry of its scope, minute and test run, and a flush
 //! turns the entries into [`MinuteSnapshot`]s. Nothing finer than a minute
 //! leaves this buffer, so the written data is always derived, never a log
@@ -10,8 +10,8 @@
 //! and the merge of the day files keep the newest row), never a partial
 //! minute that would replace the full one.
 //!
-//! The maps keep the order their keys were first added, as the JavaScript
-//! `Map`s do, so the rows come out in the Electron build's order.
+//! The maps keep the order their keys were first added, and the rows come
+//! out in that order.
 
 use std::sync::Arc;
 
