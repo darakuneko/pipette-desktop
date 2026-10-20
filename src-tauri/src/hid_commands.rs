@@ -63,8 +63,8 @@ impl From<DeviceInfo> for DeviceInfoDto {
     }
 }
 
-/// One outgoing report: an array of at most MSG_LEN integers in 0..=255, as
-/// `validateHidData` in src/main/hid-service.ts accepts. The byte range is
+/// One outgoing report: an array of at most MSG_LEN integers in 0..=255. The
+/// byte range is
 /// enforced by deserializing into `u8`, the length here, so an invalid
 /// payload is rejected before it reaches the service.
 #[derive(Debug, PartialEq, Eq, Deserialize)]

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // What the service logs: the packet logs of VIAL_DEBUG_HID (their format is
-// checked against the TypeScript lines in src/packet_log.rs) and the reason
-// a device could not be opened, against the messages src/main/hid-service.ts
-// logs (tests/fixtures/ts_open_failure_logs.json, written by
-// scripts/hid-fixtures/record-open-failure-log-fixtures.test.ts).
+// checked against the recorded lines in src/packet_log.rs) and the reason
+// a device could not be opened, against the recorded messages
+// (tests/fixtures/ts_open_failure_logs.json).
 
 mod common;
 

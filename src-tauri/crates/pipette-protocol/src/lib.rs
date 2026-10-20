@@ -2,10 +2,8 @@
 //! Vial wire and transport constants plus the 32-byte report type, shared by
 //! the HID transport and the virtual keyboard.
 //!
-//! The constant values are generated from `src/shared/constants/protocol.ts`
-//! (`data/constants.rs`, written by
-//! `scripts/virtual-device-fixtures/record-virtual-device-fixtures.test.ts`),
-//! so the Rust side never carries its own copy of them.
+//! The constant values are the recorded values of
+//! `src/shared/constants/protocol.ts` (`data/constants.rs`).
 
 include!("../data/constants.rs");
 

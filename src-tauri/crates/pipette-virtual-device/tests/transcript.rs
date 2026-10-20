@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Replays the golden transcript recorded from the TypeScript virtual device
-// (scripts/virtual-device-fixtures/record-virtual-device-fixtures.test.ts):
+// Replays the golden transcript recorded from the TypeScript virtual device:
 // every request is fed with its recorded clock, and every response must be
 // byte-identical. Controller operations and recorded controller states are
 // replayed and checked in the same order.

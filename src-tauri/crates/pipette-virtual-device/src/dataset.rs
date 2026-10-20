@@ -4,10 +4,8 @@
 //! The keymap layers, sample macros and sample dynamic entries mirror the
 //! firmware source of the GPK60-63R (keymaps/vial/keymap.c, vial.json). Their
 //! keycode values and the device identity (VID/PID, name, serial, UID) come
-//! from `data/default_dataset.rs`, which is generated from the TypeScript
-//! sources
-//! (`scripts/virtual-device-fixtures/record-virtual-device-fixtures.test.ts`),
-//! so this crate never resolves keycode names itself.
+//! from `data/default_dataset.rs`, recorded from the TypeScript keycode
+//! tables, so this crate never resolves keycode names itself.
 
 use crate::dynamic_entries::{AltRepeatKeyEntry, ComboEntry, KeyOverrideEntry, TapDanceEntry};
 
