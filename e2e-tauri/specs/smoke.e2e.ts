@@ -22,6 +22,7 @@ import {
   openKeycodeHexInput,
   openOverlayTab,
   openToolsOverlay,
+  pageZoom,
   readAppLog,
   restartApp,
   setKeycode,
@@ -29,6 +30,7 @@ import {
   UNLOCK_KEYS,
   virtualDevice,
   waitForGone,
+  ZOOM_PERCENT,
 } from '../helpers/app'
 import { launchAppAgain, readAppConfig } from '../helpers/driver'
 
@@ -185,13 +187,6 @@ const isWindowVisible = () => invokeCommand<boolean>('window_is_visible')
 
 const THEME_SELECT = 'button[aria-label="Theme Packs"][aria-haspopup="listbox"]'
 const isDarkTheme = () => browser.execute(() => document.documentElement.classList.contains('dark'))
-const ZOOM_PERCENT = 125
-/** The window's width in CSS pixels over its width on screen: the zoom
- *  factor the page is drawn at. */
-async function pageZoom(): Promise<number> {
-  const { width } = await browser.getWindowRect()
-  return width / (await browser.execute(() => window.innerWidth))
-}
 
 /** Where the window is moved before a restart: inside an Xvfb screen of
  *  1920x1200 (the CI's), clear of the centered default placement, and at

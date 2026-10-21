@@ -150,16 +150,38 @@ impl AppConfigStore {
         check_key(key)?;
         let _guard = self.lock();
         self.set_locked(key, value.clone())?;
-        let listeners = self.listeners.lock().unwrap_or_else(PoisonError::into_inner);
-        for listener in listeners.iter() {
-            listener(key, &value);
-        }
+        self.notify(key, &value);
         Ok(())
     }
 
+    /// Tells the listeners `key` and `value`. The caller holds the store lock.
+    fn notify(&self, key: &str, value: &Value) {
+        let listeners = self.listeners.lock().unwrap_or_else(PoisonError::into_inner);
+        for listener in listeners.iter() {
+            listener(key, value);
+        }
+    }
+
     /// `store.clear()`: the defaults only, plus the current `__internal__`.
+    /// Tells no listener.
     pub fn clear(&self) -> Result<(), AppConfigError> {
         self.replace(DEFAULTS.values.clone())
+    }
+
+    /// [`clear`](Self::clear), then tells the listeners each default key
+    /// with the value written for it, under the same store lock as
+    /// [`set_from_renderer`](Self::set_from_renderer), so what they apply
+    /// follows the cleared config. A key without a default (left unset by
+    /// the clear) is not told.
+    pub fn clear_and_notify(&self) -> Result<(), AppConfigError> {
+        let _guard = self.lock();
+        write_store(&self.path, with_current_internal(&self.path, DEFAULTS.values.clone()))?;
+        for (key, value) in DEFAULTS.values.iter() {
+            if let Some(key) = key.as_str() {
+                self.notify(key, value);
+            }
+        }
+        Ok(())
     }
 
     /// Saves `config` as the whole content, plus the
@@ -170,7 +192,8 @@ impl AppConfigStore {
     }
 
     /// `listener` gets each key and value
-    /// [`set_from_renderer`](Self::set_from_renderer) stores, and nothing
+    /// [`set_from_renderer`](Self::set_from_renderer) stores and
+    /// [`clear_and_notify`](Self::clear_and_notify) writes, and nothing
     /// else. It runs under the store lock: it must not use the store, which
     /// would deadlock, nor wait for work that does.
     pub fn subscribe(&self, listener: impl Fn(&str, &Value) + Send + Sync + 'static) {
@@ -225,6 +248,38 @@ mod tests {
         store.set_from_renderer("zoomFactor", Some("150")).unwrap();
         let seen = seen.lock().unwrap().clone();
         assert_eq!(seen, [("zoomFactor".to_owned(), 150.0.into()), ("zoomFactor".to_owned(), 150.0.into())]);
+    }
+
+    /// `clear_and_notify` writes the defaults as `clear` does and tells the
+    /// listeners every default key with its default, in the defaults'
+    /// order; a key without a default is not told.
+    #[test]
+    fn clear_and_notify_tells_the_listeners_every_default() {
+        let tmp = TempDir::new().unwrap();
+        let store = AppConfigStore::open(tmp.path());
+        store.set("zoomFactor", 150.0.into()).unwrap();
+        store.set("debugMode", true.into()).unwrap();
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&seen);
+        store.subscribe(move |key, value| sink.lock().unwrap().push((key.to_owned(), value.clone())));
+        store.clear_and_notify().unwrap();
+
+        let defaults: Vec<(String, Value)> = DEFAULTS
+            .values
+            .iter()
+            .map(|(key, value)| (key.as_str().unwrap().to_owned(), value.clone()))
+            .collect();
+        assert_eq!(*seen.lock().unwrap(), defaults);
+        assert!(defaults.iter().any(|(key, value)| key == "zoomFactor" && *value == 100.0.into()));
+        assert!(!defaults.iter().any(|(key, _)| key == "debugMode"));
+        let other = AppConfigStore::open(&tmp.path().join("other"));
+        other.clear().unwrap();
+        let without_internal = |store: &AppConfigStore| {
+            let mut all = store.get_all().unwrap();
+            all.remove(INTERNAL_KEY);
+            all
+        };
+        assert_eq!(without_internal(&store), without_internal(&other));
     }
 
     /// Sets from several threads at once: each listener call finds its own

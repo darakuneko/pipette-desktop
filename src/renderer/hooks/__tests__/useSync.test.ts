@@ -448,6 +448,31 @@ describe('useSync', () => {
     expect(result.current.lastSyncResult).toBeNull()
   })
 
+  it('reads the status again and clears lastSyncResult after the reset of app settings', async () => {
+    let progressCallback: (p: unknown) => void = () => {}
+    mockVialAPI.syncOnProgress.mockImplementation((cb: (p: unknown) => void) => {
+      progressCallback = cb
+      return () => {}
+    })
+    mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: true })
+    const { result } = renderHookWithConfig(() => useSync())
+    await waitFor(() => {
+      expect(result.current.authStatus).toEqual({ authenticated: true })
+    })
+    act(() => {
+      progressCallback({ direction: 'upload', status: 'success', message: 'Sync complete' })
+    })
+    expect(result.current.lastSyncResult).not.toBeNull()
+
+    await act(async () => {
+      await result.current.resetAfterAppSettings()
+    })
+
+    expect(result.current.lastSyncResult).toBeNull()
+    expect(result.current.authStatus).toEqual({ authenticated: false })
+    expect(mockVialAPI.syncAuthSignOut).not.toHaveBeenCalled()
+  })
+
   it('calls syncExecute on syncNow', async () => {
     const { result } = renderHookWithConfig(() => useSync())
 

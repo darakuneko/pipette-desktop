@@ -174,6 +174,16 @@ export async function closeSettings(): Promise<void> {
   await waitForGone(tid('settings-modal'), 'the Settings modal did not close')
 }
 
+/** A zoom factor other than the default the specs set, in percent. */
+export const ZOOM_PERCENT = 125
+
+/** The window's width in CSS pixels over its width on screen: the zoom
+ *  factor the page is drawn at. */
+export async function pageZoom(): Promise<number> {
+  const { width } = await browser.getWindowRect()
+  return width / (await browser.execute(() => window.innerWidth))
+}
+
 /** The app's log, empty before its first line. */
 export function readAppLog(): string {
   const path = appLogPath()

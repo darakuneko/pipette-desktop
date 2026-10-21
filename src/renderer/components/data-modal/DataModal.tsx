@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
+import { useAppConfig } from '../../hooks/useAppConfig'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { BTN_SECONDARY } from '../../constants/ui-tokens'
@@ -169,6 +170,7 @@ export function DataModal({
       return (
         <LocalApplicationContent
           troubleshoot={troubleshoot}
+          onAppSettingsReset={sync.resetAfterAppSettings}
           t={t}
         />
       )
@@ -339,9 +341,11 @@ export function DataModal({
 /** Inline component for Local > Application content */
 function LocalApplicationContent({
   troubleshoot,
+  onAppSettingsReset,
   t,
 }: {
   troubleshoot: ReturnType<typeof useTroubleshooting>
+  onAppSettingsReset: () => Promise<void>
   t: (key: string, opts?: Record<string, unknown>) => string
 }) {
   return (
@@ -387,7 +391,7 @@ function LocalApplicationContent({
             </button>
           </div>
         </div>
-        <AppSettingsReset troubleshoot={troubleshoot} />
+        <AppSettingsReset troubleshoot={troubleshoot} onReset={onAppSettingsReset} />
       </section>
     </div>
   )
@@ -396,10 +400,14 @@ function LocalApplicationContent({
 /** Simple application settings reset with confirm */
 function AppSettingsReset({
   troubleshoot,
+  onReset,
 }: {
   troubleshoot: ReturnType<typeof useTroubleshooting>
+  /** Called after a successful reset, besides reading the config again. */
+  onReset: () => Promise<void>
 }) {
   const { t } = useTranslation()
+  const { reload } = useAppConfig()
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -418,6 +426,10 @@ function AppSettingsReset({
       return
     }
     setConfirming(false)
+    // The backend cleared the config and signed out without telling the
+    // renderer: read both again so the screen shows the cleared state.
+    void reload()
+    void onReset()
   }
 
   return (

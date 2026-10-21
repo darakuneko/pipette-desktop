@@ -193,6 +193,18 @@ export async function closeDataModal(): Promise<void> {
   await waitForGone(tid('data-modal'), 'the Data modal did not close')
 }
 
+/** Resets the app's settings from Data › Local › Application and waits
+ *  until the confirmation closes, which it does only when the reset
+ *  succeeded. Leaves the Data modal open. */
+export async function resetAppSettings(): Promise<void> {
+  await openDataModal()
+  await expandBranch('nav-local', 'nav-local-application')
+  await clickInPage(tid('nav-local-application'))
+  await clickInPage(tid('app-reset-btn'))
+  await clickInPage(tid('app-reset-confirm'))
+  await waitForGone(tid('app-reset-confirm'), 'the reset of the app settings did not succeed')
+}
+
 /** Opens the tree branch `branch` unless `child` already shows. */
 export async function expandBranch(branch: string, child: string, timeout = 15_000): Promise<void> {
   if (await $(tid(child)).isDisplayed()) return

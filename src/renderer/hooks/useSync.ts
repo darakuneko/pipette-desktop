@@ -79,6 +79,9 @@ export interface UseSyncReturn {
    *  call succeeded. */
   syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>
   refreshStatus: () => Promise<void>
+  /** Reads the status again after Reset › App Settings signed the account
+   *  out in the backend, and drops the last sync result as `signOut` does. */
+  resetAfterAppSettings: () => Promise<void>
   /** Reads the stored password's status again (`passwordStatus`) only. */
   refreshPasswordStatus: () => Promise<void>
   deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
@@ -230,6 +233,11 @@ export function useSync(): UseSyncReturn {
     return result
   }, [refreshStatus])
 
+  const resetAfterAppSettings = useCallback(async () => {
+    setLastSyncResult(null)
+    await refreshStatus()
+  }, [refreshStatus])
+
   const setConfig = useCallback((patch: Partial<AppConfig>) => {
     for (const [key, value] of Object.entries(patch)) {
       set(key as keyof AppConfig, value as AppConfig[keyof AppConfig])
@@ -336,6 +344,7 @@ export function useSync(): UseSyncReturn {
     validatePassword,
     syncNow,
     refreshStatus,
+    resetAfterAppSettings,
     refreshPasswordStatus,
     deleteFiles,
     listTrash,

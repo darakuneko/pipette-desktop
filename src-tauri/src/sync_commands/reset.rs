@@ -20,7 +20,7 @@ use tauri::{AppHandle, Manager, Runtime, State};
 
 use super::SyncSecrets;
 use super::result::SyncOperationResult;
-use super::triggers::{on_auto_sync_changed, triggers};
+use super::triggers::triggers;
 use crate::app_config::AppConfig;
 use crate::command_error::CommandError;
 
@@ -54,19 +54,10 @@ impl<R: Runtime> ResetHooks for AppResetHooks<R> {
     }
 
     fn clear_app_config(&self) -> Result<(), String> {
-        let config = self.app.state::<AppConfig>();
-        config.clear().map_err(|err| err.to_string())?;
-        // Clearing the store tells no listener: the sync's copy of autoSync
-        // follows the cleared value here.
-        let auto_sync = match config.get("autoSync") {
-            Ok(value) => value.as_ref().is_some_and(pipette_app_config::Value::is_truthy),
-            Err(err) => {
-                log::error!("[sync] failed to read autoSync after the reset: {err}");
-                false
-            }
-        };
-        on_auto_sync_changed(&self.app, auto_sync);
-        Ok(())
+        // The listeners (app_config.rs `listen_for_changes`) apply the cleared
+        // values: the sync's autoSync, the zoom, the tray and the sign-in
+        // registration.
+        self.app.state::<AppConfig>().clear_and_notify().map_err(|err| err.to_string())
     }
 
     fn forget_secret_key(&self) -> BoxFuture<'_, ()> {
@@ -79,8 +70,9 @@ impl<R: Runtime> ResetHooks for AppResetHooks<R> {
     }
 
     fn clear_logs(&self) {
-        // The cleared config has Debug Mode off (unset), and clearing it tells
-        // no listener: the files stop and are removed here, under one lock.
+        // The cleared config has Debug Mode off (unset), and the clear tells
+        // the listeners only the keys with a default, which debugMode lacks:
+        // the files stop and are removed here, under one lock.
         if let Err(err) = pipette_logger::set_file_enabled(false) {
             log::warn!("[sync] some log files were not removed: {err}");
         }
@@ -190,7 +182,8 @@ mod tests {
 
     /// Reset Local Data of App Settings removes all of `local/auth/` (the
     /// 0.4 build's files too) and this userData's key store entry,
-    /// stops polling and leaves auto sync off with the cleared config.
+    /// stops polling and tells the config's listeners the cleared values,
+    /// auto sync off among them.
     #[tokio::test]
     async fn app_settings_remove_every_secret_and_turn_auto_sync_off() {
         let user_data = tempfile::tempdir().unwrap();
@@ -199,6 +192,18 @@ mod tests {
         secrets.store(SecretKind::SyncPassword, b"pw").await.unwrap();
         std::fs::write(user_data.path().join("local/auth/oauth-tokens.enc"), "0.4").unwrap();
         app.state::<AppConfig>().set("autoSync", true.into()).unwrap();
+        app.state::<AppConfig>().set("trayResident", true.into()).unwrap();
+        // A listener as the app's (app_config.rs `listen_for_changes`) for
+        // autoSync, which also records what it heard.
+        let heard = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = Arc::clone(&heard);
+        let handle = app.handle().clone();
+        app.state::<AppConfig>().subscribe(move |key, value| {
+            if key == "autoSync" {
+                crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy());
+            }
+            sink.lock().unwrap().push((key.to_owned(), value.clone()));
+        });
         let triggers = Arc::clone(app.state::<Arc<SyncTriggers>>().inner());
         triggers.set_auto_sync(true);
         assert!(triggers.poller().is_polling());
@@ -217,6 +222,15 @@ mod tests {
         assert!(!triggers.poller().is_polling());
         let auto_sync = app.state::<AppConfig>().get("autoSync").unwrap();
         assert!(!auto_sync.as_ref().is_some_and(pipette_app_config::Value::is_truthy));
+        let heard = heard.lock().unwrap().clone();
+        for (key, value) in [
+            ("autoSync", false.into()),
+            ("trayResident", false.into()),
+            ("autoLaunch", false.into()),
+            ("zoomFactor", 100.0.into()),
+        ] {
+            assert!(heard.contains(&(key.to_owned(), value)), "{key} was not told: {heard:?}");
+        }
         // Turning auto sync on again starts polling: the triggers were told
         // it is off, not stopped for good.
         triggers.set_auto_sync(true);

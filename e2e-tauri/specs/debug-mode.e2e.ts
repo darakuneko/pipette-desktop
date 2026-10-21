@@ -9,9 +9,10 @@
 
 import { existsSync, writeFileSync } from 'node:fs'
 import { $, browser, expect } from '@wdio/globals'
-import { closeSettings, readAppLog, vialApi } from '../helpers/app'
+import { closeSettings, readAppLog, tid } from '../helpers/app'
 import { readAppConfig, userDataPath } from '../helpers/driver'
 import { openSettings, setSettingsToggle, waitForPage } from '../helpers/resident'
+import { closeDataModal, resetAppSettings } from '../helpers/sync'
 
 const TOGGLE = 'settings-debug-mode-toggle'
 const GENERATIONS = [0, 1, 2, 3, 4]
@@ -69,18 +70,19 @@ describe('Debug Mode and the log files', () => {
     await expectNoFileWritten()
   })
 
-  it('is turned off by Reset Local Data › App Settings', async () => {
+  it('is turned off by Reset Local Data › App Settings, and the toggle shows it', async () => {
     await setSettingsToggle(TOGGLE, true)
     await waitForVersionLine()
     await closeSettings()
-    const result = await vialApi<{ success: boolean }>('resetLocalTargets', {
-      keyboards: false,
-      favorites: false,
-      appSettings: true,
-    })
-    expect(result.success).toBe(true)
+    await resetAppSettings()
+    await closeDataModal()
     await waitForNoLogFiles('the reset did not remove the log files')
     expect(readAppConfig().debugMode).toBeUndefined()
+    await openSettings('tools')
+    expect(await $(tid(TOGGLE)).getAttribute('aria-checked')).toBe('false')
     await expectNoFileWritten()
+    // One click turns it on again: the toggle does not show a stale on.
+    await setSettingsToggle(TOGGLE, true)
+    await waitForVersionLine()
   })
 })

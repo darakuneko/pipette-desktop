@@ -93,7 +93,9 @@ pub fn apply_stored_debug_mode<R: Runtime>(app: &AppHandle<R>, store: &AppConfig
     }
 }
 
-/// Reacts to the renderer's changes: `zoomFactor` zooms every window,
+/// Reacts to the renderer's changes, and to Reset Local Data's clear of
+/// the config (`clear_and_notify` of pipette-app-config, which tells every
+/// key with a default): `zoomFactor` zooms every window,
 /// `trayResident` adds or removes the tray, `autoSync` starts or stops the
 /// polling and the flush (sync_commands/triggers.rs), `autoLaunch`
 /// registers or unregisters the app to start at sign-in (pipette-autostart,
@@ -111,8 +113,7 @@ pub fn apply_stored_debug_mode<R: Runtime>(app: &AppHandle<R>, store: &AppConfig
 /// those changes saved.
 pub fn listen_for_changes(app: &AppHandle) {
     let handle = app.clone();
-    let user_data = app.state::<crate::UserDataDir>().0.clone();
-    let launch_user_data = user_data.clone();
+    let launch_user_data = app.state::<crate::UserDataDir>().0.clone();
     app.state::<AppConfig>().subscribe(move |key, value| match key {
         "zoomFactor" => {
             let percent = clamp_zoom_factor(Some(value));
@@ -123,19 +124,21 @@ pub fn listen_for_changes(app: &AppHandle) {
         "trayResident" => crate::tray::set_tray_resident(&handle, value.is_truthy()),
         "autoSync" => crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy()),
         "debugMode" => apply_debug_mode(&handle, value.is_truthy()),
-        "autoLaunch" => {
-            let enabled = value.is_truthy();
-            let user_data = user_data.clone();
-            if let Err(err) = handle.run_on_main_thread(move || apply_auto_launch(enabled, &user_data)) {
-                log::error!("[app-config] failed to apply autoLaunch: {err}");
-            }
-        }
+        "autoLaunch" => queue_auto_launch(&handle, value.is_truthy()),
         _ => {}
     });
     match app.state::<AppConfig>().get("autoLaunch") {
         Ok(stored) => apply_auto_launch(stored.is_some_and(|value| value.is_truthy()), &launch_user_data),
         // Not taken as off: that would remove the entry over a read error.
         Err(err) => log::error!("[app-config] failed to read autoLaunch: {err}"),
+    }
+}
+
+/// Queues [`apply_auto_launch`] to the main thread without waiting for it.
+fn queue_auto_launch(app: &AppHandle, enabled: bool) {
+    let user_data = app.state::<crate::UserDataDir>().0.clone();
+    if let Err(err) = app.run_on_main_thread(move || apply_auto_launch(enabled, &user_data)) {
+        log::error!("[app-config] failed to apply autoLaunch: {err}");
     }
 }
 

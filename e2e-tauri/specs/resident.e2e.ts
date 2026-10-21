@@ -6,8 +6,10 @@
 // newest, nothing after a 500, the request's body), the tray's rows (the
 // keyboard's name and REC's count), the close button hiding the window
 // into the tray, starting hidden in the tray, a login autostart entry in
-// the session's own autostart directory, the Typing View's compact window
-// (minimum size, aspect ratio, always on top), and Quit from the tray. The
+// the session's own autostart directory, Reset Local Data › App Settings
+// turning the autostart entry, the tray icon and the zoom back to the
+// defaults, the Typing View's compact window (minimum size, aspect ratio,
+// always on top), and Quit from the tray. The
 // tests share one session (helpers/resident-harness.ts) and run in order;
 // each restart quits the app and launches it again on the same userData
 // directory.
@@ -26,6 +28,7 @@ import {
   countIn,
   EDITOR_SELECTOR,
   invokeCommand,
+  pageZoom,
   readAppLog,
   restartApp,
   tid,
@@ -35,6 +38,7 @@ import {
   virtualDevice,
   waitForGone,
   waitForUncovered,
+  ZOOM_PERCENT,
 } from '../helpers/app'
 import { APP_BINARY, quitApp, readAppConfig, sessionAppPid, userDataPath, waitForAppExit } from '../helpers/driver'
 import {
@@ -57,6 +61,7 @@ import {
   type WindowState,
 } from '../helpers/resident'
 import { fakeNotices, firstLaunchAt, startupNotices } from '../helpers/resident-harness'
+import { closeDataModal, fillInput, resetAppSettings } from '../helpers/sync'
 import { requestWindowClose, viewableWindowCount } from '../helpers/x11-window'
 import { firestoreTimestamp, notice } from '../../scripts/fake-notification/server'
 
@@ -86,6 +91,13 @@ function goldenNoticeBody(now: number): string {
   ) as { requests: { now: number; request: { body: string } }[] }
   const [first] = golden.requests
   return first.request.body.replace(`"value":${first.now}`, `"value":${now}`)
+}
+
+/** The autostart entry in the session's own autostart directory, null
+ *  while there is none. */
+function autostartEntry(): string | null {
+  const path = userDataPath('autostart', 'pipette.desktop')
+  return existsSync(path) ? readFileSync(path, 'utf8') : null
 }
 
 /** The autostart entry of the recorded golden of the autostart, for the
@@ -391,29 +403,63 @@ describe('Tauri build resident behaviour', function () {
 
   it('writes the autostart entry when Settings turns it on, removes it when off, and writes it at launch', async () => {
     const dir = userDataPath('autostart')
-    const entryPath = join(dir, 'pipette.desktop')
     const expected = goldenAutostartEntry(process.env.APPIMAGE ?? realpathSync(APP_BINARY))
-    const entry = (): string | null => (existsSync(entryPath) ? readFileSync(entryPath, 'utf8') : null)
-    expect(entry()).toBeNull()
+    expect(autostartEntry()).toBeNull()
 
     await openSettings('tools')
     await setSettingsToggle('settings-auto-launch-toggle', true)
-    await readUntil(async () => entry(), (text) => text === expected, 'the autostart entry is not the golden')
+    await readUntil(async () => autostartEntry(), (text) => text === expected, 'the autostart entry is not the golden')
     await setSettingsToggle('settings-auto-launch-toggle', false)
-    await readUntil(async () => entry(), (text) => text === null, 'the autostart entry was not removed')
+    await readUntil(async () => autostartEntry(), (text) => text === null, 'the autostart entry was not removed')
     await setSettingsToggle('settings-auto-launch-toggle', true)
-    await readUntil(async () => entry(), (text) => text === expected, 'the autostart entry was not written again')
+    await readUntil(async () => autostartEntry(), (text) => text === expected, 'the autostart entry was not written again')
     await closeSettings()
 
     try {
-      await restartApp(() => rmSync(entryPath))
+      await restartApp(() => rmSync(join(dir, 'pipette.desktop')))
       await waitForPage()
-      await readUntil(async () => entry(), (text) => text === expected, 'the launch did not write the autostart entry')
+      await readUntil(async () => autostartEntry(), (text) => text === expected, 'the launch did not write the autostart entry')
       expect(readdirSync(dir)).toEqual(['pipette.desktop'])
     } finally {
       await invokeCommand('app_config_set', { key: 'autoLaunch', value: 'false' })
     }
-    await readUntil(async () => entry(), (text) => text === null, 'the autostart entry stayed after autoLaunch turned off')
+    await readUntil(async () => autostartEntry(), (text) => text === null, 'the autostart entry stayed after autoLaunch turned off')
+  })
+
+  it('turns the autostart entry, the tray icon and the zoom back to the defaults on Reset Local Data › App Settings', async () => {
+    await openSettings('tools')
+    await setSettingsToggle('settings-auto-launch-toggle', true)
+    await readUntil(async () => autostartEntry(), (text) => text !== null, 'the autostart entry was not written')
+    // Set in the Settings modal, as the renderer then holds the zoom it
+    // applies and reads the cleared one after the reset.
+    await fillInput(tid('settings-zoom-factor-input'), String(ZOOM_PERCENT))
+    await closeSettings()
+    await invokeCommand('app_config_set', { key: 'trayResident', value: 'true' })
+    await waitForTray((state) => state.active, 'the tray icon did not show')
+    await browser.waitUntil(async () => Math.abs((await pageZoom()) - ZOOM_PERCENT / 100) < 0.01, {
+      timeoutMsg: 'the zoom was not applied',
+    })
+    const debugMode = readAppConfig().debugMode
+
+    try {
+      await resetAppSettings()
+      await closeDataModal()
+      await readUntil(async () => autostartEntry(), (text) => text === null, 'the reset left the autostart entry')
+      await waitForTray((state) => !state.active, 'the reset left the tray icon')
+      await browser.waitUntil(async () => Math.abs((await pageZoom()) - 1) < 0.01, {
+        timeoutMsg: 'the reset left the zoom',
+      })
+      const config = readAppConfig()
+      expect([config.autoLaunch, config.trayResident, config.zoomFactor]).toEqual([false, false, 100])
+      await openSettings('tools')
+      expect(await $(tid('settings-auto-launch-toggle')).getAttribute('aria-checked')).toBe('false')
+      await closeSettings()
+    } finally {
+      await invokeCommand('app_config_set', { key: 'autoLaunch', value: 'false' })
+      await invokeCommand('app_config_set', { key: 'zoomFactor', value: '100' })
+      // The reset turned the session's log files off; the later tests read the log.
+      if (debugMode === true) await invokeCommand('app_config_set', { key: 'debugMode', value: 'true' })
+    }
   })
 
   it("keeps the compact window's minimum size and aspect ratio across a move, and restores the window on leaving", async () => {

@@ -50,6 +50,7 @@ import {
   openDataModal,
   openSyncSettings,
   pollUntil,
+  resetAppSettings,
   returnToDeviceList,
   setPassword,
   settingsFileName,
@@ -441,11 +442,7 @@ describe('Tauri build Cloud Sync', function () {
     })
 
     it("resets the app's settings, which signs out", async () => {
-      await openDataModal()
-      await expandBranch('nav-local', 'nav-local-application')
-      await clickInPage(tid('nav-local-application'))
-      await clickInPage(tid('app-reset-btn'))
-      await clickInPage(tid('app-reset-confirm'))
+      await resetAppSettings()
       const authDir = userDataPath('local', 'auth')
       await browser.waitUntil(() => !existsSync(authDir) || readdirSync(authDir).length === 0, {
         timeoutMsg: 'local/auth was not cleared',
@@ -455,6 +452,11 @@ describe('Tauri build Cloud Sync', function () {
       expect(await vialApi<{ authenticated: boolean }>('syncAuthStatus')).toEqual(
         expect.objectContaining({ authenticated: false }),
       )
+      // The screen reads the signed-out state without a restart.
+      await openSyncSettings()
+      await $(tid('sync-sign-in')).waitForDisplayed()
+      expect(await $(tid('sync-auth-status')).isExisting()).toBe(false)
+      await closeSettings()
     })
   })
 })

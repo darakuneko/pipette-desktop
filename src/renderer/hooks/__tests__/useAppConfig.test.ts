@@ -10,6 +10,7 @@ import { useAppConfig } from '../useAppConfig'
 import { renderHookWithConfig } from './test-helpers'
 import { DEFAULT_APP_CONFIG, type AppConfig } from '../../../shared/types/app-config'
 import { appConfigApi } from '../../../tauri-shim/api/app-config'
+import i18n from '../../i18n'
 
 interface BackendOptions {
   config?: AppConfig
@@ -96,6 +97,37 @@ describe.each([plainMock, shimOverMockIPC])('useAppConfig ($name)', (backend) =>
 
     expect(result.current.loading).toBe(false)
     expect(result.current.config).toEqual(DEFAULT_APP_CONFIG)
+  })
+
+  it('reload replaces the config and the language with the stored ones', async () => {
+    backend.install({ config: { ...DEFAULT_APP_CONFIG, theme: 'dark', language: 'pack:ja' } })
+    const { result } = renderHookWithConfig(() => useAppConfig())
+    await act(async () => {})
+    expect(result.current.config.theme).toBe('dark')
+
+    const changeLanguage = vi.spyOn(i18n, 'changeLanguage')
+    backend.install({ config: DEFAULT_APP_CONFIG })
+    await act(async () => {
+      await result.current.reload()
+    })
+
+    expect(result.current.config).toEqual(DEFAULT_APP_CONFIG)
+    expect(changeLanguage).toHaveBeenCalledWith('builtin:en')
+    changeLanguage.mockRestore()
+  })
+
+  it('reload keeps the config when IPC fails', async () => {
+    backend.install({ config: { ...DEFAULT_APP_CONFIG, theme: 'dark' } })
+    const { result } = renderHookWithConfig(() => useAppConfig())
+    await act(async () => {})
+
+    backend.install({ getAllFails: true })
+    await act(async () => {
+      await result.current.reload()
+    })
+
+    expect(result.current.loading).toBe(false)
+    expect(result.current.config.theme).toBe('dark')
   })
 
   it('set updates state immediately and calls IPC', async () => {
