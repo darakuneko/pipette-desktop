@@ -272,6 +272,15 @@ export function SettingsToolsTab({
             onToggle={() => appConfig.set('startInTray', !(appConfig.config.startInTray ?? false))}
             disabled={!(appConfig.config.trayResident ?? false)}
           />
+
+          <SettingsToggleRow
+            rowTestId="settings-debug-mode-row"
+            toggleTestId="settings-debug-mode-toggle"
+            label={t('settings.debugMode')}
+            description={t('settings.debugModeDescription')}
+            on={appConfig.config.debugMode ?? false}
+            onToggle={() => appConfig.set('debugMode', !(appConfig.config.debugMode ?? false))}
+          />
         </div>
       </section>
 

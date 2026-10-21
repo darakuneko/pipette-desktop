@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Replays the recorded language pack scenarios through the handlers of
-//! this crate (common/replay.rs).
+//! this crate (common/replay.rs). The sample packs a scenario imports are
+//! the copies in tests/fixtures/sample-packs, the files the recording read:
+//! the answers name their version and hash, which change whenever the
+//! repository's sample-packs/i18n gain keys.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 

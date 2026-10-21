@@ -56,7 +56,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [6.3 Language Packs Manage](#63-language-packs-manage)
   - [6.4 Theme Packs Manage](#64-theme-packs-manage)
   - [6.5 Zoom (UI Scale)](#65-zoom-ui-scale)
-  - [6.6 Launch at Login / Stay in System Tray](#66-launch-at-login--stay-in-system-tray)
+  - [6.6 Launch at Login / Stay in System Tray / Debug Mode](#66-launch-at-login--stay-in-system-tray--debug-mode)
   - [6.7 Updating Pipette](#67-updating-pipette)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
@@ -2372,16 +2372,17 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 
 > **Warning**: Changing the zoom level may cause layout issues at extreme values. Use at your own risk.
 
-### 6.6 Launch at Login / Stay in System Tray
+### 6.6 Launch at Login / Stay in System Tray / Debug Mode
 
-The Tools tab shows four toggles below the Theme Packs and Zoom rows:
+The Tools tab shows five toggles below the Theme Packs and Zoom rows:
 
 - **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works only in a build that counts as installed (see the [Data Guide](Data.md#local-data)) — in a debug build, a build with the development tools, or a build started from inside its Cargo target directory, the toggle has no effect.
 - **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon, or choose **Show** from its menu, to bring the window back. Hovering the tray icon shows a live tooltip: just `Pipette` when idle, `Pipette — {keyboard name}` once a keyboard is connected, and `Pipette — {keyboard name} — Cnt: X · KPM: Y` while Typing Record (§4.3) is recording. The tray menu itself is **Show**, a separator, the connected keyboard's name (when one is connected) — with **Recording** / **Cnt: N** / **KPM: N** rows added while recording — another separator, then **Quit**. Menu and tooltip labels are fixed English text for now, not translated.
 - **Restore Last Session** (default ON): While ON, Pipette remembers the last keyboard you connected and automatically reconnects it the next time the app starts. Toggling this in Settings only affects the *next* launch — it never triggers a reconnect during the current session. Because the screen you were on is already remembered per keyboard, reconnecting also brings back the last screen you used with that keyboard. If the keyboard is not found within about 10 seconds of launch, Pipette gives up silently — no warning is shown, and the device selection screen stays as usual. Disconnecting a keyboard manually clears the remembered device.
 - **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog — including because Typing Record (§4.3) is on for a keyboard that reconnects locked — the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
+- **Debug Mode** (default OFF): While ON, Pipette writes its log files for troubleshooting (`logs/pipette-0.log` to `logs/pipette-4.log` in its data folder; see the [Data Guide](Data.md#logs)). Turning it ON starts writing right away, without a restart. Turning it OFF deletes the log files, and while it is OFF nothing is recorded. Your home folder in a path is written as `~` where possible. To report a problem, turn it ON, reproduce the problem, and check the log for personal information before you attach it. Reset Local Data with App Settings selected turns it OFF.
 
-All four are machine-local settings — they are not synced to other devices via Cloud Sync.
+All five are machine-local settings — they are not synced to other devices via Cloud Sync.
 
 ### 6.7 Updating Pipette
 

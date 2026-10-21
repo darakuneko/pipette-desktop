@@ -1,5 +1,5 @@
 {
-  "version": "0.1.123",
+  "version": "0.1.124",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1036,7 +1036,9 @@
     "restoreLastSession": "最後の状態で起動っしょ☆",
     "restoreLastSessionDescription": "起動したら前つないでたキーボードと画面、そのまま戻してくれるよ☆",
     "startInTray": "トレイ常駐で起動っしょ",
-    "startInTrayDescription": "ウィンドウ開かんとトレイに常駐したまま起動するからね☆"
+    "startInTrayDescription": "ウィンドウ開かんとトレイに常駐したまま起動するからね☆",
+    "debugMode": "デバッグモードっしょ☆",
+    "debugModeDescription": "トラブル調べる用にログファイル書き出すよ☆ オフにしたらログファイル消しちゃうからね"
   },
   "analyze": {
     "noKeyboards": "データまだなくね？",

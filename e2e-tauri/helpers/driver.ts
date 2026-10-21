@@ -7,7 +7,7 @@
 // directory.
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from 'node:fs'
+import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -80,6 +80,30 @@ export function appLogPath(): string {
 export function readAppConfig(): Record<string, unknown> {
   const path = userDataPath('config.json')
   return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : {}
+}
+
+/** Edits the app's config.json of the session (an empty object when it
+ *  does not exist), written back tab-indented, as the app writes it. */
+export function editAppConfig(edit: (config: Record<string, unknown>) => void): void {
+  const path = userDataPath('config.json')
+  const config = existsSync(path) ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>) : {}
+  edit(config)
+  writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
+}
+
+/** Whether {@link startDriver} starts each session's app with Debug Mode on.
+ *  The app writes its log file (`<userData>/logs`) only with Debug Mode on,
+ *  and it is off by default; the e2e specs read the log (`readAppLog`) and a
+ *  failed session prints it, so e2e-tauri/wdio.conf.ts turns this on for
+ *  every spec but the one of Debug Mode itself. The screenshots
+ *  (doc-capture) never turn it on: the Settings › Tools tab shows the
+ *  switch. */
+let debugModeSessions = false
+
+/** Sets whether the next sessions, the ones a harness starts later in the
+ *  same spec included, start with Debug Mode on. */
+export function setDebugModeSessions(on: boolean): void {
+  debugModeSessions = on
 }
 
 /** The sync units local/sync-pending.json lists of the running session;
@@ -400,6 +424,7 @@ export async function startDriver(sessionEnv: SessionEnv = {}): Promise<DriverSe
     rmSync(userDataDir, { recursive: true, force: true })
     throw err
   }
+  if (debugModeSessions) writeFileSync(join(userDataDir, 'config.json'), JSON.stringify({ debugMode: true }, null, '\t'))
   stopping = false
   const driver = spawn(DRIVER_COMMAND, ['--port', String(DRIVER_PORT), '--native-port', String(NATIVE_DRIVER_PORT)], {
     env: driverEnv,

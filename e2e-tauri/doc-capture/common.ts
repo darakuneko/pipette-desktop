@@ -7,11 +7,11 @@
 // overlay, the startup notice and other overlays, and picking a keyboard or
 // a keymap snapshot in Analyze.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { browser } from '@wdio/globals'
 import { DUMMY_TA_UID } from '../helpers/analyze-seed'
 import { restartApp, UNLOCK_KEYS, vialApi, VIRTUAL_DEVICE_NAME, virtualDevice } from '../helpers/app'
-import { userDataPath } from '../helpers/driver'
+import { editAppConfig, userDataPath } from '../helpers/driver'
 import { screenshotDir, screenshotPath } from './capture-paths'
 import type { Locator, Page } from './page'
 
@@ -104,15 +104,6 @@ export async function prepareCapture(page: Page): Promise<void> {
   await deviceButton(page, VIRTUAL_DEVICE_NAME).waitFor({ state: 'visible', timeout: STARTUP_TIMEOUT_MS })
   await page.waitForTimeout(1000)
   await dismissNotificationModal(page)
-}
-
-/** Edits the app's config.json of the session (an empty object when it
- *  does not exist), written back tab-indented, as the app writes it. */
-export function editAppConfig(edit: (config: Record<string, unknown>) => void): void {
-  const path = userDataPath('config.json')
-  const config = existsSync(path) ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>) : {}
-  edit(config)
-  writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
 }
 
 /** The virtual keyboard's PipetteSettings file of the session. */

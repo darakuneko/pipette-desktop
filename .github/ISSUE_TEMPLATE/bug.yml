@@ -42,7 +42,7 @@ body:
     attributes:
       label: Log
       description: |
-        Optional. The log is `logs/pipette-0.log` in Pipette's data folder ([where the data folder is on each OS](https://github.com/darakuneko/pipette-desktop/blob/main/docs/Data.md#local-data)). No keyboard data or personal information is logged. Paste the lines from around the time of the problem.
+        Optional. Turn on Debug Mode in Settings › Tools, reproduce the problem, and check the log: `logs/pipette-0.log` in Pipette's data folder ([where the data folder is on each OS](https://github.com/darakuneko/pipette-desktop/blob/main/docs/Data.md#local-data)). While Debug Mode is off, nothing is logged. Paste the lines from around the time of the problem. Mind personal information before you attach it: your home folder is replaced with `~` where possible, but other paths and names can still appear.
       render: text
   - type: textarea
     id: media

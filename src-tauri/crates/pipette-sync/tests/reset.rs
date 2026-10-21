@@ -409,8 +409,8 @@ async fn reset_local_signs_out_right_after_the_cancel_and_before_removing_anythi
             "typing:uid1",
             "typing:uid2",
             "clearConfig",
-            "forgetKey",
-            "clearLogs"
+            "clearLogs",
+            "forgetKey"
         ]
     );
     for gone in [
@@ -489,7 +489,7 @@ async fn reset_local_of_app_settings_holds_the_signed_in_accounts_units_for_its_
 
     w.resets.reset_local_targets(&local_targets(false, false, true)).await.unwrap();
 
-    assert_eq!(w.log(), ["signOutLocked", "signOut", "stopPolling", "clearConfig", "forgetKey", "clearLogs"]);
+    assert_eq!(w.log(), ["signOutLocked", "signOut", "stopPolling", "clearConfig", "clearLogs", "forgetKey"]);
     // The units were ownerless: the signed-in account claims them, and they
     // are held for it.
     assert!(w.pending_units().is_empty());

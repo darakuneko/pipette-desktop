@@ -113,6 +113,11 @@ export interface AppConfig {
    * at the first connect. Stays false on failure so the next launch
    * retries. */
   packsPulledOnce: boolean
+  /** Debug Mode: write the app's log files (`<userData>/logs`). Off, the
+   * log goes to stderr only and turning it off removes the files. Unset
+   * means off: it has no stored default, since the defaults are the bytes
+   * the 0.4 build's config store wrote. Per machine, not synced. */
+  debugMode?: boolean
   /** The version the user chose to skip in the update modal ("Skip this
    * version"), as the manifest names it. The startup check does not offer
    * exactly that version again; a newer one is offered. Per machine, not
@@ -150,6 +155,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'lastDevice',
   'packsPulledOnce',
   'updateSkippedVersion',
+  'debugMode',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {

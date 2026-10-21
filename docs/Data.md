@@ -67,6 +67,7 @@ General preferences that apply across all keyboards.
 | Typing recording consent | Whether the typing-analytics recording consent dialog has been accepted (gates the REC tab Start button) |
 | Typing-view heatmap window | Window length (minutes) for the typing-view real-time heatmap overlay |
 | Monitor App enabled | Whether to capture the active application name during typing-analytics recording. Required for the App filter and By App tab in Analyze |
+| Debug Mode | Whether the app writes its log files (see [Logs](#logs)) |
 
 ### Per-Keyboard Settings
 
@@ -201,9 +202,9 @@ Word lists downloaded from the server for the typing test. Can be managed (downl
 
 ### Logs
 
-Rotating log files for troubleshooting (`logs/pipette-0.log` to `logs/pipette-4.log`, rotated at 5 MB). They record what happened around connecting a keyboard, syncing, updating, and so on. When you report a problem you can attach them to your report yourself, and the developer uses them to find the cause. Pipette itself only writes, rotates, and deletes them: it does not read them for anything else, and sharing them is always your choice. Lines can include file paths, keyboard IDs, and HID device IDs (USB vendor ID and product ID). Reset Local Data with App Settings selected deletes them.
+Rotating log files for troubleshooting (`logs/pipette-0.log` to `logs/pipette-4.log`, rotated at 5 MB). They are written only while **Debug Mode** is ON (Settings › Tools, default OFF; see the [Operation Guide](OPERATION-GUIDE.md#66-launch-at-login--stay-in-system-tray--debug-mode)). Turning it ON starts writing right away, without a restart; turning it OFF deletes every log file, and while it is OFF nothing is recorded, a crash included. They record what happened around connecting a keyboard, syncing, updating, and so on. When you report a problem you can turn Debug Mode ON, reproduce the problem, and attach the log to your report yourself, and the developer uses it to find the cause. Pipette itself only writes, rotates, and deletes them: it does not read them for anything else, and sharing them is always your choice. Lines can include file paths, keyboard IDs, and HID device IDs (USB vendor ID and product ID); your home folder in a path is written as `~` where possible (for example `~/.config/pipette-desktop`). Check the lines for personal information before you share them. Reset Local Data with App Settings selected turns Debug Mode OFF and deletes them.
 
-The log files stay on this computer: they are not synced to Cloud Sync, and Pipette does not send them to Pipette Hub or anywhere else. Keystrokes, keymap contents, passwords, and tokens are not written to them. The one exception is the `VIAL_DEBUG_HID` environment variable: when you set it for troubleshooting, every HID report sent to and received from the keyboard (keymap contents included) is written to the log.
+The log files stay on this computer: they are not synced to Cloud Sync, and Pipette does not send them to Pipette Hub or anywhere else. Keystrokes, keymap contents, passwords, and tokens are not written to them. The one exception is the `VIAL_DEBUG_HID` environment variable: when you set it for troubleshooting while Debug Mode is ON, every HID report sent to and received from the keyboard (keymap contents included) is written to the log.
 
 ### Authentication Credentials
 

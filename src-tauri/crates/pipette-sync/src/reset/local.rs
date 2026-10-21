@@ -147,6 +147,9 @@ impl Resets {
             }
             if targets.app_settings {
                 self.hooks.clear_app_config().map_err(DataError::Other)?;
+                // Right after the clear, which turns Debug Mode off: a later
+                // removal that fails must not leave the log being written.
+                self.hooks.clear_logs();
                 let local = self.ctx.user_data().join("local");
                 remove_all(local.join("auth")).await?;
                 self.preflight.forget_change_state_cache();
@@ -157,7 +160,6 @@ impl Resets {
                 // resets (tests/fixtures/ts_reset.json) expect `local/logs`
                 // gone, so it is removed too.
                 remove_all(local.join("logs")).await?;
-                self.hooks.clear_logs();
             }
             Ok(())
         })

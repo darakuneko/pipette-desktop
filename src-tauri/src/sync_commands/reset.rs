@@ -79,8 +79,9 @@ impl<R: Runtime> ResetHooks for AppResetHooks<R> {
     }
 
     fn clear_logs(&self) {
-        // Logged here, after `remove_log_files` has let go of the logger's lock.
-        if let Err(err) = pipette_logger::remove_log_files() {
+        // The cleared config has Debug Mode off (unset), and clearing it tells
+        // no listener: the files stop and are removed here, under one lock.
+        if let Err(err) = pipette_logger::set_file_enabled(false) {
             log::warn!("[sync] some log files were not removed: {err}");
         }
     }

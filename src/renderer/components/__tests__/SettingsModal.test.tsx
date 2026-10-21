@@ -890,6 +890,32 @@ describe('SettingsModal', () => {
     })
   })
 
+  describe('Debug Mode (Tools tab)', () => {
+    it('renders the debug mode toggle off by default', () => {
+      renderAndSwitchToTools()
+      const toggle = screen.getByTestId('settings-debug-mode-toggle')
+      expect(toggle.getAttribute('aria-checked')).toBe('false')
+      expect(screen.getByTestId('settings-debug-mode-row')).toHaveTextContent('settings.debugMode')
+    })
+
+    it('calls appConfig.set with debugMode true when its toggle is clicked', () => {
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-debug-mode-toggle'))
+      expect(mockAppConfigSet).toHaveBeenCalledWith('debugMode', true)
+    })
+
+    it('calls appConfig.set with debugMode false when it is on and its toggle is clicked', () => {
+      mockAppConfigState.debugMode = true
+      renderAndSwitchToTools()
+
+      const toggle = screen.getByTestId('settings-debug-mode-toggle')
+      expect(toggle.getAttribute('aria-checked')).toBe('true')
+      fireEvent.click(toggle)
+      expect(mockAppConfigSet).toHaveBeenCalledWith('debugMode', false)
+    })
+  })
+
   describe('Security section (Tools tab)', () => {
     it('renders auto lock time selector with default value', () => {
       renderAndSwitchToTools()

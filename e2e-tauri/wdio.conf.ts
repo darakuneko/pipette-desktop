@@ -21,7 +21,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Options } from '@wdio/types'
-import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, startDriver, stopDriver } from './helpers/driver'
+import { APP_BINARY, DRIVER_HOST, DRIVER_PORT, setDebugModeSessions, startDriver, stopDriver } from './helpers/driver'
 import { startHubDriver, stopHubHarness } from './helpers/hub-harness'
 import { startResidentDriver, stopResidentHarness } from './helpers/resident-harness'
 import { parseShard, shardSpecs } from './helpers/shard'
@@ -32,6 +32,9 @@ const SYNC_SPEC = '/specs/sync.e2e.ts'
 const HUB_SPEC = '/specs/hub.e2e.ts'
 const RESIDENT_SPEC = '/specs/resident.e2e.ts'
 const UPDATER_SPEC = '/specs/updater.e2e.ts'
+/** The spec of Debug Mode itself, which starts from the app's default (off);
+ *  every other session starts with it on (helpers/driver.ts). */
+const DEBUG_MODE_SPEC = '/specs/debug-mode.e2e.ts'
 
 const SPECS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'specs')
 
@@ -88,6 +91,7 @@ export const config: Options.Testrunner & { capabilities: WebdriverIO.Capabiliti
   // and notice address nothing listens on.
   async beforeSession(_config, _capabilities, specs) {
     sessionFailed = false
+    setDebugModeSessions(!specs.some((spec) => spec.endsWith(DEBUG_MODE_SPEC)))
     if (specs.some((spec) => spec.endsWith(SYNC_SPEC))) await startSyncDriver()
     else if (specs.some((spec) => spec.endsWith(HUB_SPEC))) await startHubDriver()
     else if (specs.some((spec) => spec.endsWith(RESIDENT_SPEC))) await startResidentDriver()

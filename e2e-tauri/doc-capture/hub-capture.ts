@@ -11,10 +11,11 @@
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { browser } from '@wdio/globals'
+import { editAppConfig } from '../helpers/driver'
 import { readSample, SAMPLE_PACKS } from '../helpers/hub'
 import { HUB_TEST_ACCOUNT } from '../helpers/hub-env'
 import { assertHubSession, hubControl, hubState } from '../helpers/hub-harness'
-import { editAppConfig, prepareCapture, relaunchApp } from './common'
+import { prepareCapture, relaunchApp } from './common'
 import type { Page } from './page'
 
 /** The display name of the Hub test account in the screenshots. */

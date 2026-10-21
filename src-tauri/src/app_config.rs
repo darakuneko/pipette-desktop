@@ -8,6 +8,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use pipette_app_config::{AppConfigStore, Value, clamp_zoom_factor};
+use pipette_typing_analytics::identity::{os_arch, os_platform, os_release};
 use tauri::ipc::Response;
 use tauri::{AppHandle, Manager, Runtime, State, WebviewWindow};
 
@@ -64,12 +65,41 @@ pub(crate) fn set_zoom<R: Runtime>(window: &WebviewWindow<R>, percent: f64) {
     }
 }
 
+/// Applies Debug Mode to the log files (pipette-logger): on, lines go to the
+/// files from now on, and the version and the OS are logged first; off, the
+/// files are removed and nothing more is written to them.
+pub fn apply_debug_mode<R: Runtime>(app: &AppHandle<R>, enabled: bool) {
+    if let Err(err) = pipette_logger::set_file_enabled(enabled) {
+        log::warn!("[app-config] some log files were not removed: {err}");
+    }
+    if enabled {
+        log::info!(
+            "Pipette {} on {} {} ({})",
+            app.package_info().version,
+            os_platform(),
+            os_release(),
+            os_arch()
+        );
+    }
+}
+
+/// [`apply_debug_mode`] with the stored `debugMode`. A read error leaves the
+/// files disabled without removing them, so an unreadable config does not
+/// cost the user the log.
+pub fn apply_stored_debug_mode<R: Runtime>(app: &AppHandle<R>, store: &AppConfigStore) {
+    match store.get("debugMode") {
+        Ok(stored) => apply_debug_mode(app, stored.is_some_and(|value| value.is_truthy())),
+        Err(err) => log::error!("[app-config] failed to read debugMode: {err}"),
+    }
+}
+
 /// Reacts to the renderer's changes: `zoomFactor` zooms every window,
 /// `trayResident` adds or removes the tray, `autoSync` starts or stops the
 /// polling and the flush (sync_commands/triggers.rs), `autoLaunch`
 /// registers or unregisters the app to start at sign-in (pipette-autostart,
 /// which reaches the real entry only in a distributed build without
-/// `PIPETTE_USER_DATA_DIR`). Then applies the stored `autoLaunch`.
+/// `PIPETTE_USER_DATA_DIR`), `debugMode` starts or stops the log files
+/// ([`apply_debug_mode`]). Then applies the stored `autoLaunch`.
 ///
 /// The listener runs under the store lock, once per set in the order the
 /// sets were saved. The zoom, the tray and the sign-in changes are queued
@@ -92,6 +122,7 @@ pub fn listen_for_changes(app: &AppHandle) {
         }
         "trayResident" => crate::tray::set_tray_resident(&handle, value.is_truthy()),
         "autoSync" => crate::sync_commands::triggers::on_auto_sync_changed(&handle, value.is_truthy()),
+        "debugMode" => apply_debug_mode(&handle, value.is_truthy()),
         "autoLaunch" => {
             let enabled = value.is_truthy();
             let user_data = user_data.clone();

@@ -1,0 +1,2179 @@
+{
+  "version": "0.1.123",
+  "name": "Japanese - ギャル",
+  "common": {
+    "save": "保存☆",
+    "saved": "保存したよん！",
+    "cancel": "やめとく〜",
+    "delete": "ポイ☆",
+    "confirmDelete": "消しちゃっていい？☆",
+    "close": "閉じるっしょ",
+    "reset": "リセット☆",
+    "confirmReset": "リセットしちゃう？♡",
+    "revert": "元通り☆",
+    "confirmRevert": "戻しちゃう？",
+    "clear": "全消しっしょ！",
+    "confirmClear": "消しちゃっていい？",
+    "refresh": "アプデ☆",
+    "refreshing": "アプデなう…",
+    "disconnect": "バイバイ☆",
+    "loading": "読み込みちう…",
+    "apply": "適用しちゃう☆",
+    "notConfigured": "まだっしょ",
+    "settingsLabel": "セッティング☆:",
+    "configuration": "コンフィグっしょ",
+    "saving": "保存なう☆",
+    "back": "もどる〜",
+    "exported": "書き出したよん！",
+    "imported": "入れたよん！",
+    "load": "読み込み☆",
+    "confirmLoad": "読み込んじゃう？",
+    "labelPlaceholder": "ラベル",
+    "noLabel": "（ラベルなし）",
+    "synced": "同期おけ！",
+    "findOnHub": "Hub で探そ？☆",
+    "findOnHubHint": "アップされたやつ <hub>Pipette Hub</hub> でチェックできるよん☆",
+    "installed": "入れたよん！",
+    "searchPlaceholder": "Pipette Hub で検索っしょ（2文字以上で♡）…",
+    "done": "完了っしょ☆",
+    "edit": "編集っしょ",
+    "sortByName": "名前っ♡",
+    "importing": "インポートちう…",
+    "importedNamed": "{{name}} 入れたよん☆",
+    "updatedNamed": "{{name}} 更新したよん☆",
+    "importBatchFailed_one": "{{count}}個、入れられんかったよ…",
+    "importBatchFailed_other": "{{count}}個、入れられんかったよ…",
+    "importBatchHubSyncFailed_one": "{{count}}個は保存したけどHubへの同期は失敗…サゲ。。",
+    "importBatchHubSyncFailed_other": "{{count}}個は保存したけどHubへの同期は失敗…サゲ。。",
+    "importSummary_one": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
+    "importSummary_other": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
+    "pullFromCloud": "Google Driveから取ってくる☆",
+    "pulling": "取得中だよん..."
+  },
+  "app": {
+    "title": "Pipette☆",
+    "deviceNotConnected": "キーボードつながってないじゃん！",
+    "connecting": "つなげてるなう{{dots}}",
+    "selectDevices": "デバイス選んで〜♡",
+    "connectedTo": "{{name}} に接続なう☆",
+    "udevHelp": "Linuxでデバイス見つかんない？udevルール入ってるかチェックっしょ！詳細はVialのマニュアル見てねん☆",
+    "loadDummy": "JSONから読み込みちう…",
+    "keyboardTab": "デバイス☆",
+    "fileTab": "ファイルっしょ",
+    "analyzeTab": "分析タイム☆",
+    "loadPipetteFile": ".pipetteファイルを読み込むよん…",
+    "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できちゃう☆ライティングとテスター以外は全部いけるっしょ！",
+    "selectKeyboard": "ローカル保存ファイルを選んで♡",
+    "fileCount": "{{count}} 件☆",
+    "noSavedFiles": "保存したのないっぽみ"
+  },
+  "loading": {
+    "protocol": "デバイス情報チェケらなう☆",
+    "definition": "定義読み込みちう…",
+    "keymap": "キーマップ読み込みなう☆",
+    "macros": "マクロ読み込みちう！",
+    "dynamicEntries": "機能読み込みなう☆",
+    "settings": "設定読み込みちう…",
+    "migrating": "スナップショットお引っ越しなう♡",
+    "migratingEntry": "スナップショットお引っ越しちう ({{current}}/{{total}})"
+  },
+  "editor": {
+    "autoAdvance": "自動移動☆",
+    "viewMatrix": {
+      "label": "ビューマトリクスっしょ☆",
+      "edit": "編集っしょ",
+      "done": "完了っしょ☆",
+      "rowLabel": "行",
+      "colLabel": "列",
+      "blankOption": "—",
+      "wires": "配線っしょ☆",
+      "notice": "View Matrixっしょ、Pipetteの中だけの設定でキーボード本体には何も変わんないっしょ☆ カスタム位置が変えるのはPipetteがキーをたどる順番だけっしょ — Auto Move（キーポップオーバーの次のキーもね）、Shift+クリックの範囲選択、複数キーまとめてペーストする時の順番のことね。配線（Wires）はそれに合わせて描き直されるけど、キーボード本体のホントの配線はそのままっしょ☆"
+    },
+    "keymap": {
+      "title": "キーマップっしょ",
+      "layer": "レイヤー {{number}}",
+      "layerLabel": "レイヤー",
+      "collapseLayers": "レイヤーたたむ☆",
+      "expandLayers": "レイヤー広げる！",
+      "selectKey": "キーをクリックして編集っしょ☆",
+      "tapHoldSettings": "Tap-Hold 設定っしょ",
+      "tapHoldLabel": "Tap-Hold",
+      "mouseKeysSettings": "Mouse Keys 設定☆",
+      "mouseKeysLabel": "Mouse Keys",
+      "magicSettings": "Magic 設定っしょ",
+      "magicLabel": "Magic",
+      "graveEscapeSettings": "Grave Escape 設定☆",
+      "graveEscapeLabel": "Grave Escape",
+      "autoShiftSettings": "Auto Shift 設定っしょ",
+      "autoShiftLabel": "Auto Shift",
+      "oneShotKeysSettings": "One Shot Keys 設定☆",
+      "oneShotKeysLabel": "One Shot Keys",
+      "comboSettings": "Combo",
+      "comboLabel": "Combo",
+      "qmkSettingsSaveFailed": "設定保存できなかったっしょ…接続確認してもっかい試して☆",
+      "previousLayers": "前のレイヤーっしょ",
+      "nextLayers": "次のレイヤー☆",
+      "layerN": "レイヤー {{n}}",
+      "layerPreview": "プレビューっしょ☆ - {{label}}",
+      "undo": "巻き戻し☆",
+      "redo": "やり直しっしょ！",
+      "zoomIn": "デカくする☆",
+      "zoomOut": "小さくする☆",
+      "copySelected": "選んだキーをペーストっしょ ({{count}})",
+      "clickToPaste": "キーをクリックしてペースト☆",
+      "pickerHint": "Ctrl+クリックで複数、Shift+クリックで範囲選択っしょ☆からのキーをクリックでペースト！",
+      "pickerDoubleClickHint": "もう一回ダブルクリックするかEnterで閉じるよん☆",
+      "keyboardTab": "Keyboard",
+      "tabReorder": {
+        "hint": "ドラッグか←/→で並び替えっしょ☆ Enterで完了！",
+        "moved": "{{name}}を{{total}}コ中{{position}}番目に移動したよん☆",
+        "resetLabel": "タブの並び、最初に戻すよ☆",
+        "resetDone": "タブの並び、最初に戻したよ☆"
+      },
+      "pickerSourceCurrent": "なう",
+      "pickerSourceFile": "ファイル",
+      "pickerLoadFile": ".pipetteから読み込みっしょ…",
+      "pickerNoSavedFiles": "保存済みキーボードなしっしょ",
+      "pickerNoEntries": "保存済みキーマップなしっしょ",
+      "pickerBackToFiles": "← ファイル",
+      "pickerSourceDevice": "デバイス",
+      "pickerNoDevices": "他のキーボードつながってなくね？",
+      "pickerProbing": "キーボード読み取りちう...",
+      "pickerProbeError": "キーボード読み取り失敗…サゲ。。",
+      "pickerBackToDevices": "← デバイス",
+      "pickerCurrentState": "なうの状態☆",
+      "pickerSavedFiles": "ローカル保存されたセーブファイルっしょ",
+      "keyPopover": {
+        "keyTab": "キー☆",
+        "codeTab": "コードっしょ",
+        "searchPlaceholder": "キーコードを検索☆...",
+        "noResults": "キーコード見つかんないじゃん",
+        "hexLabel": "HexCode",
+        "hexManual": "16進数でキーコード割り当てできるよん☆",
+        "qmkLabel": "KeyCode: {{value}}",
+        "modMask": "Mod Mask",
+        "modTap": "Mod-Tap",
+        "lt": "LT",
+        "shT": "SH_T",
+        "lm": "LM",
+        "layerLabel": "レイヤー",
+        "keySelected": "選んだよん: {{key}}",
+        "clickToClose": "適用して閉じるかEnterで確定っしょ！",
+        "undo": "巻き戻し☆",
+        "redo": "やり直しっしょ！"
+      }
+    },
+    "layout": {
+      "title": "レイアウト☆",
+      "options": "レイアウトオプション",
+      "preview": "プレビューっしょ"
+    },
+    "macro": {
+      "title": "Macro☆",
+      "memoryUsage": "メモリ: {{used}} / {{total}} バイトっしょ",
+      "addAction": "アクション追加☆",
+      "text": "テキスト",
+      "tap": "タップ☆",
+      "down": "押す！",
+      "up": "離す☆",
+      "delay": "待ち",
+      "record": "記録っしょ",
+      "stopRecording": "ストップ！",
+      "editTitle": "M{{index}}",
+      "textEditor": "テキストエディタ☆",
+      "textEditorTitle": "マクロ編集（テキスト）☆",
+      "invalidJson": "JSONバグってるっぽい？",
+      "addKeycode": "キーコード追加☆",
+      "deleteKeycode": "キーコード消す！",
+      "editAction": "アクション編集っしょ",
+      "asciiOnly": "英数字・記号しか無理っしょ☆",
+      "unlockClickAgain": "アンロックしたらもう一回クリックして開いてね♡",
+      "unlockWarning": "パスワードとか大事なのは入れちゃダメっしょ！漏れるワンチャンあるから☆",
+      "invalidMacroEntry": "インデックス{{index}}のマクロ、バグってるっぽい？",
+      "textLayoutNote": "テキストはファームの配列（だいたいUS）で打たれるっしょ！OSの配列が違うと、一部の文字がズレて出ちゃうかも☆"
+    },
+    "lighting": {
+      "title": "Lighting☆",
+      "backlight": "Backlight",
+      "rgblight": "RGB Lighting",
+      "brightness": "ピカピカ度☆",
+      "effect": "エフェクトっしょ",
+      "speed": "スピード☆",
+      "breathing": "ブリージング",
+      "hue": "色み☆",
+      "saturation": "鮮やかさっしょ",
+      "value": "明るさ☆",
+      "hex": "HEX",
+      "noLighting": "このキーボード、ピカピカ制御できないじゃん",
+      "colorPicker": {
+        "label": "カラーピッカー☆",
+        "palette": "パレット",
+        "hsv": "HSV"
+      }
+    },
+    "tapDance": {
+      "title": "Tap Dance☆",
+      "onTap": "タップした時",
+      "onHold": "長押しの時",
+      "onDoubleTap": "2回タップの時",
+      "onTapHold": "タップ長押しの時",
+      "tappingTerm": "Tapping Term (ms)☆",
+      "hint": "TD({{index}}) を設定して使ってねん♡",
+      "editTitle": "TD({{index}})",
+      "editJson": "JSON編集っしょ",
+      "jsonEditorTitle": "JSON編集☆",
+      "invalidJson": "JSONバグってるっぽい？",
+      "unknownKeycode": "ナゾのキーコード: {{keycode}}",
+      "invalidTappingTerm": "0〜10000の数字でよろしく☆",
+      "applyFailed": "適用失敗…マジサゲ。。"
+    },
+    "combo": {
+      "title": "Combo☆",
+      "key": "Key {{number}}",
+      "output": "Output",
+      "editTitle": "Combo - {{index}}",
+      "timeout": "Timeout (ms)☆",
+      "selectEntry": "エントリ選んでね♡",
+      "settings": "Combo 設定っしょ",
+      "invalidJson": "JSONバグってるっぽい？",
+      "unknownKeycode": "ナゾのキーコード: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリ、バグってるっぽい？"
+    },
+    "keyOverride": {
+      "title": "Key Override☆",
+      "triggerKey": "Trigger Key",
+      "replacementKey": "Replacement Key",
+      "layers": "Layers",
+      "triggerMods": "Trigger Mods",
+      "negativeMods": "Negative Mods",
+      "suppressedMods": "Suppressed Mods",
+      "options": "Options",
+      "enabled": "Enabled☆",
+      "enableAll": "全部おけ！",
+      "disableAll": "全部ダメ！",
+      "editTitle": "Key Override - {{index}}",
+      "modsOnly": "Mods",
+      "settings": "Key Override 設定☆",
+      "selectEntry": "編集するやつ選んで♡",
+      "invalidJson": "JSONバグってるっぽい？",
+      "unknownKeycode": "ナゾのキーコード: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリ、バグってるっぽい？"
+    },
+    "altRepeatKey": {
+      "title": "Alt Repeat Key☆",
+      "lastKey": "Last Key",
+      "altKey": "Alt Key",
+      "allowedMods": "Allowed Mods",
+      "options": "Options",
+      "enabled": "Enabled☆",
+      "editTitle": "Alt Repeat Key - {{index}}",
+      "settings": "Alt Repeat Key 設定っしょ",
+      "selectEntry": "編集するやつ選んで♡",
+      "invalidJson": "JSONバグってるっぽい？",
+      "unknownKeycode": "ナゾのキーコード: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリ、バグってるっぽい？"
+    },
+    "keyTester": {
+      "title": "キーテスター☆"
+    },
+    "typingTest": {
+      "title": "タイピングテストっしょ",
+      "switchToTypingMode": "タイピングテスト☆",
+      "exitTypingMode": "テスト終わりっしょ！",
+      "restart": "もう一回☆",
+      "nextTest": "次のテストいくよ☆",
+      "collapseSettings": "設定閉じるっしょ",
+      "expandSettings": "設定開くっしょ",
+      "keymapToggle": "キーマップ☆",
+      "statsToggle": "計測っしょ",
+      "controlsToggle": "操作っしょ",
+      "hideKeymap": "キーマップ隠すっしょ",
+      "showKeymap": "キーマップ見せるっしょ",
+      "hideStats": "計測隠すっしょ",
+      "showStats": "計測見せるっしょ",
+      "hideControls": "操作隠すっしょ",
+      "showControls": "操作見せるっしょ",
+      "saveUnnamedToggle": "名前なしでも保存☆",
+      "enableSaveUnnamed": "名前なくても自動保存しちゃう☆",
+      "disableSaveUnnamed": "保存するには名前必須ってことで☆",
+      "section": {
+        "settings": "設定☆",
+        "data": "データ☆",
+        "view": "表示☆"
+      },
+      "compare": {
+        "button": "比較っしょ",
+        "title": "比較☆",
+        "previous": "前回っしょ",
+        "best": "ベスト☆",
+        "average": "平均っしょ",
+        "pinned": "結果☆",
+        "off": "オフっしょ",
+        "noResults": "ピンできる結果まだないじゃん",
+        "colName": "名前",
+        "colKeyboard": "キーボード",
+        "colTime": "タイム"
+      },
+      "wpm": "WPM",
+      "kpm": "KPM",
+      "accuracy": "ガチ度☆",
+      "kspc": "KSPC",
+      "time": "タイム",
+      "words": "単語",
+      "lines": "行っしょ",
+      "chars": "文字数☆",
+      "fontSize": "Font",
+      "correct": "正解☆",
+      "incorrect": "ミスったｗ",
+      "loading": "読み込みちう…",
+      "wordCount": "{{current}} / {{total}}",
+      "mode": {
+        "words": "単語っしょ",
+        "time": "タイム☆",
+        "quote": "引用っしょ",
+        "fileImport": "テキストっしょ",
+        "lines": "行っしょ"
+      },
+      "punctuation": "句読点☆",
+      "numbers": "数字っしょ",
+      "weakSpotTraining": "苦手克服モード☆",
+      "japaneseInputToggle": "日本語入力☆",
+      "romaji": {
+        "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"
+      },
+      "kana": {
+        "imeHint": "かな入力モードの時はOSのIMEオフにしといてね☆"
+      },
+      "romajiSettings": {
+        "title": "日本語入力の詳細設定☆",
+        "inputMethodLabel": "入力方式っしょ",
+        "inputMethod": {
+          "direct": "直接入力っしょ",
+          "romaji": "ローマ字っしょ",
+          "kana": "かなっしょ"
+        },
+        "caseLabel": "表示する文字っしょ",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "guideLinesLabel": "表示行数っしょ",
+        "lineEndEnterLabel": "行末でEnter必須にするっしょ",
+        "lineEndEnterHint": "オンだと行末の単語はEnter押すまで確定しないよん☆ オフれば他の単語と同じで自動で次いくよ☆",
+        "guideLabel": "表示パターンっしょ",
+        "guideHint": "表示だけだから、他の入力パターンでも正解になるよん☆",
+        "inputLabel": "入力パターンっしょ",
+        "inputHint": "オフにしたパターンはハネられるよん。ベース（ヘボン式/訓令式）は最低1つ生かしといてね☆",
+        "style": {
+          "hepburn": "ヘボン式 (shi/chi)☆",
+          "kunrei": "訓令式 (si/ti)☆",
+          "c": "C表記 (ca) ☆",
+          "q": "Q表記 (qu) ☆",
+          "digraph": "二重字 (jya)☆",
+          "xSmall": "小文字x (xa) ☆",
+          "lSmall": "小文字l (la) ☆",
+          "w": "W表記 (wi) ☆",
+          "v": "V表記 (va) ☆",
+          "f": "F表記 (fa) ☆",
+          "ye": "YE表記 (ye) ☆",
+          "xn": "撥音x (xn) ☆",
+          "nApos": "N区切り (n') ☆"
+        },
+        "styleTip": {
+          "hepburn": "し:shi じ:ji ち:chi つ:tsu ふ:fu しゃ:sha しゅ:shu しょ:sho じゃ:ja じゅ:ju じょ:jo ちゃ:cha ちゅ:chu ちょ:cho\nっし:sshi っち:cchi っち:tchi っつ:ttsu っふ:ffu っしゃ:ssha っちゃ:tcha っじゃ:jja",
+          "kunrei": "し:si じ:zi ち:ti つ:tu ふ:hu しゃ:sya しゅ:syu しょ:syo じゃ:zya じゅ:zyu じょ:zyo ちゃ:tya ちゅ:tyu ちょ:tyo\nっし:ssi っち:tti っつ:ttu っふ:hhu っしゃ:ssya っちゃ:ttya っじゃ:zzya",
+          "c": "か:ca く:cu こ:co し:ci せ:ce ちゃ:cya ちゅ:cyu ちょ:cyo ちぃ:cyi ちぇ:cye",
+          "q": "く:qu くぁ:qa くぃ:qi くぇ:qe くぉ:qo",
+          "digraph": "じゃ:jya じゅ:jyu じょ:jyo じぃ:jyi じぇ:jye",
+          "xSmall": "ぁ:xa ぃ:xi ぅ:xu ぇ:xe ぉ:xo ゃ:xya ゅ:xyu ょ:xyo ゎ:xwa ゕ:xka ゖ:xke ぃ:xyi ぇ:xye っ:xtu っ:xtsu",
+          "lSmall": "ぁ:la ぃ:li ぅ:lu ぇ:le ぉ:lo ゃ:lya ゅ:lyu ょ:lyo ゎ:lwa ゕ:lka ゖ:lke ぃ:lyi ぇ:lye っ:ltu っ:ltsu",
+          "w": "うぃ:wi うぃ:whi うぇ:we うぇ:whe うぉ:who うぁ:wha う:wu う:whu",
+          "v": "ゔ:vu ゔぁ:va ゔぃ:vi ゔぇ:ve ゔぉ:vo ゔゃ:vya ゔゅ:vyu ゔょ:vyo ゔぃ:vyi ゔぇ:vye",
+          "f": "ふぁ:fa ふぃ:fi ふぇ:fe ふぉ:fo ふゅ:fyu ふゃ:fya ふょ:fyo ふぁ:hwa ふぃ:hwi ふぇ:hwe ふぉ:hwo ふゅ:hwyu",
+          "ye": "いぇ:ye",
+          "xn": "ん:xn",
+          "nApos": "ん:n'"
+        }
+      },
+      "weakSpotSettings": {
+        "title": "苦手克服モード☆",
+        "tokenJoin": "・",
+        "tokenOverflow": " ほか{{extra}}個☆",
+        "notApplicableNote": "単語パターンと時間パターンでしか使えないっしょ！",
+        "statusUnavailable": "履歴、まだ読み込み中だし。ちょい待ってて☆",
+        "statusNoWeakSpots": "苦手ゼロだし☆",
+        "statusActive": "苦手見つかった（{{tokenCount}}個）: {{tokens}}",
+        "statusActiveNoTokens": "苦手見つかったよ☆",
+        "description": "{{missThreshold}}回以上ミスった文字（ローマ字入力だと綴りの区切り単位ね）は苦手認定！タイミング記録があれば（{{minTimingSamples}}回以上のサンプル）、普段のペースより{{slownessRatio}}倍以上遅い、またはつまずき（普段の{{stallMultiple}}倍超の間隔）がサンプルの{{stallRatePercent}}%以上あっても苦手認定になるよん☆",
+        "windowDescription": "判定は直近{{count}}回分の記録だけ見てるっしょ！",
+        "windowDescriptionAll": "判定は今までの記録全部見てるっしょ！",
+        "decayDescription": "古いミスはだんだん軽くなってくよ、{{days}}日ごとに半分ね☆",
+        "biasDescription": "有効にすると出題される単語の約{{percent}}%が苦手な文字から選ばれるっしょ☆",
+        "historyRetentionNote": "上の範囲設定とか減衰設定に関係なく、履歴自体が直近{{max}}件までしか残らないから、それより古い記録は判定に入らないっしょ☆",
+        "sectionDetection": "判定の条件",
+        "sectionWindow": "データの範囲",
+        "sectionSampling": "出題のバランス",
+        "missThresholdLabel": "ミス回数のしきい値（回）",
+        "slownessRatioLabel": "遅さの倍率（倍）",
+        "stallRateLabel": "詰まり率（%）",
+        "stallMultipleLabel": "詰まり判定の倍率（倍）",
+        "minTimingSamplesLabel": "最低サンプル数",
+        "missWindowLabel": "集計範囲（直近の回数）",
+        "missWindowAll": "全部",
+        "decayLabel": "時間経過での重み減衰（半減期・日）",
+        "decayNone": "オフ",
+        "biasRatioLabel": "苦手な文字の出題割合（%）",
+        "resetButton": "デフォに戻す☆"
+      },
+      "quoteLength": {
+        "short": "短っ！",
+        "medium": "ふつー",
+        "long": "長っ！",
+        "all": "全部☆"
+      },
+      "quoteSource": "-- {{source}}",
+      "nameResult": "この結果に名前つけよ☆",
+      "nameModal": {
+        "title": "結果に名前つける☆"
+      },
+      "viewOnly": "タイピングビュー☆",
+      "exitViewOnly": "ビュー終わりっしょ！",
+      "alwaysOnTop": "最前面☆",
+      "recordModalTitle": "記録セッティング☆",
+      "recordStart": "記録開始！",
+      "recordStop": "ストップ☆",
+      "monitorApp": {
+        "label": "Monitor App"
+      },
+      "heatmap": {
+        "legend": "ヒートマップ: 直近{{minutes}}分っしょ☆"
+      },
+      "closeHint": "クリックでメニュー出るよん☆",
+      "recordingIndicator": "記録なう☆",
+      "resetSize": "初期サイズ☆",
+      "fitSize": "フィット！",
+      "opacity": "不透明度☆",
+      "opacityAria": "ウィンドウの不透明度☆",
+      "baseLayer": "Base Layer",
+      "modeLabel": "データ元っしょ",
+      "pattern": "パターンっしょ",
+      "units": "単位っしょ",
+      "unitsWords": "単位(単語)☆",
+      "unitsSec": "単位(秒)☆",
+      "unitsLines": "単位(行)☆",
+      "optionLabel": "オプションっしょ",
+      "baseLayerShort": "Base",
+      "heatmapWindow": "タイピングビューのヒートマップ表示（分）☆",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} 分っしょ",
+      "consent": {
+        "title": "タイピング分析、記録しちゃう？☆",
+        "collectedHeading": "集めるやつら",
+        "collectedItems": [
+          "1分ごとの文字頻度っしょ",
+          "キー押した回数（いろいろ別）☆",
+          "タイピング速度の分布（リズムっしょ）",
+          "アプリ名（ONの時だけ☆どっちか不明ならナゾ扱いで！）"
+        ],
+        "notCollectedHeading": "集めないやつら",
+        "notCollectedItems": [
+          "細かい打鍵タイミングは無視☆",
+          "入力した中身やパスワードは絶対見ないっしょ！",
+          "URLとかファイルパスもポイっちょ☆"
+        ],
+        "accept": "有効にするっしょ！"
+      },
+      "paused": "ウィンドウどこ行った？ｗ",
+      "layerNote": "レイヤー追随は MO/LT/LM だけおけ☆他は反映されないワンチャンあるから！",
+      "language": {
+        "title": "データ元☆",
+        "searchPlaceholder": "言語を検索☆...",
+        "downloaded": "入れたよん！",
+        "available": "いけるっしょ",
+        "noResults": "そんな言語なくね？",
+        "words": "{{count}} 単語☆",
+        "lines": "{{count}} 行☆",
+        "loadingLanguage": "言語読み込みちう…",
+        "downloadFailed": "ダウンロード失敗…サゲ。。",
+        "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba☆",
+        "tabFileImport": "ファイル取込っしょ",
+        "tabAozora": "青空文庫☆",
+        "import": "UTF-8のテキスト取り込むっしょ",
+        "importEmpty": "インポートしたテキストまだないじゃん",
+        "importFailed": "インポート失敗…サゲ",
+        "importErrorNotUtf8": "UTF-8のテキストファイルしか無理っしょ",
+        "importErrorTooLarge": "ファイルでかすぎ！（最大5MB）",
+        "importErrorEmpty": "打てるテキストないじゃん",
+        "importOverwritePrompt": "「{{name}}」もうあるっしょ。上書きする？",
+        "confirmOverwrite": "上書きっしょ",
+        "fileImportText": "インポートしたテキスト☆",
+        "datasetUpdateAvailable": "単語リストの更新あるよん☆",
+        "datasetUpdate": "更新っしょ",
+        "datasetUpdating": "更新中…",
+        "catalogSearchPlaceholder": "作品名とか著者名で検索☆...",
+        "catalogImportAction": "取り込むっしょ",
+        "estimatedChars": "だいたい{{count}}文字っしょ",
+        "catalogImportErrorDuplicate": "その作品名もう入れてあるじゃん",
+        "catalogImportErrorGeneric": "ダウンロード失敗（{{code}}）…サゲ",
+        "catalogLoadFailed": "カタログ読み込めなかったっしょ…ネット確認してもっかい試して☆",
+        "kanaRowLabel": "行",
+        "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込むっしょ",
+        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込むっしょ",
+        "romajiBadge": "Romaji☆",
+        "romajiFilter": "ローマ字入力できるやつだけ表示するっしょ☆"
+      },
+      "memory": {
+        "pause": "一時停止っしょ",
+        "resumeButton": "再開っしょ",
+        "resumeTitle": "保存したテスト再開する？☆",
+        "resumeBody": "{{total}} 語中 {{current}} 語目で止まってるよ☆続きからいく？最初からやり直す？",
+        "resume": "続きから再開☆",
+        "restart": "最初からっしょ"
+      },
+      "history": {
+        "title": "履歴☆",
+        "retentionNote": "履歴は直近{{max}}件までしか残らないっしょ☆",
+        "bestWpm": "最高☆",
+        "avgWpm": "ふつー",
+        "last10Avg": "最近の10回",
+        "totalTests": "テスト数☆",
+        "avgAccuracy": "平均ガチ度",
+        "avgHold": "平均押しっぱ時間☆",
+        "avgHoldAbbr": "AKH",
+        "date": "いつ？",
+        "name": "名前",
+        "unnamed": "名前なし☆",
+        "mode": "モード☆",
+        "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba☆",
+        "tabAozora": "青空文庫☆",
+        "tabFileImport": "ファイル取込っしょ",
+        "tabText": "テキスト",
+        "tabResults": "結果☆",
+        "tabAnalysis": "分析☆",
+        "viewTabsAriaLabel": "履歴の表示を切り替えるっしょ",
+        "sourceFilterLabel": "ソースで絞り込むっしょ",
+        "periodFilterLabel": "期間で絞り込むっしょ",
+        "period1Week": "1週間☆",
+        "period1Month": "1ヶ月☆",
+        "period3Months": "3ヶ月☆",
+        "period1Year": "1年☆",
+        "periodAll": "全期間☆",
+        "noResults": "結果ないじゃん",
+        "pb": "PB☆",
+        "allModes": "全部",
+        "filterMode": "モードで絞り込むっしょ",
+        "filterText": "テキストで絞り込むっしょ",
+        "exportCsv": "CSV出すっしょ",
+        "delete": "ポイっちょ☆",
+        "accuracyTrendTitle": "正確性の推移☆",
+        "wpmTrendTitle": "WPMの推移☆",
+        "trendBest": "最高☆",
+        "trendWorst": "イマイチ",
+        "trendAvg": "ふつー",
+        "conditionFilterLabel": "条件で絞り込みっしょ",
+        "conditionPunctuation": "+句読点☆",
+        "conditionNumbers": "+数字っしょ",
+        "conditionRomaji": "+ローマ字入力☆",
+        "conditionKana": "+かな☆",
+        "conditionWeakSpot": "+苦手克服モード☆",
+        "conditionTatoeba": "Tatoeba",
+        "mistakeRankingTitle": "苦手な文字☆",
+        "mistakeRankingEmpty": "まだミスってないっしょ",
+        "errorMixTitle": "誤り種別☆",
+        "errorMixEmpty": "まだ対象のやつないっしょ",
+        "errorMixColumnType": "種別",
+        "errorMixColumnYou": "あなた",
+        "errorMixColumnPopAvg": "母平均",
+        "errorMixLabelSubstitution": "置換",
+        "errorMixLabelOmission": "脱字",
+        "errorMixLabelInsertion": "衍字",
+        "errorMixDescSubstitution": "置換ってのは、その位置で本来と違う文字打っちゃう誤りのことね☆",
+        "errorMixAdviceSubstitution": "隣のキー押し間違えてること多いよ。スピードより正確さ重視で、そこだけちょい慎重に打ってみて!",
+        "errorMixDescOmission": "脱字は、対象の文字を打たずにスルーしちゃう誤りのことっしょ。",
+        "errorMixAdviceOmission": "焦って打っちゃう時に起きがちだよ。そのキー、他より強めに押さなきゃダメじゃないかチェックしてみて☆",
+        "errorMixDescInsertion": "衍字は、対象にない余計な文字打っちゃう誤りのことだよ。",
+        "errorMixAdviceInsertion": "キー二度押ししちゃってること多いっしょ。うっかり連打しちゃってないか気にしてみて!",
+        "timeline": {
+          "modalTitle": "打鍵タイムライン☆",
+          "openButton": "打鍵タイムライン開くじゃん",
+          "linkLabel": "タイムライン☆",
+          "loading": "タイムライン読み込み中…",
+          "error": "このランの打鍵ログ読み込めなかったじゃん",
+          "partialBadge": "途中",
+          "stats": {
+            "wordPace": "ワード速度☆",
+            "runWpm": "WPM",
+            "accuracy": "正確度☆",
+            "overlap": "重複率☆",
+            "duration": "所要時間☆",
+            "kpm": "1分の打鍵数☆",
+            "durationSeconds": "{{s}}秒",
+            "avgHold": "平均押しっぱ時間☆",
+            "avgHoldTooltip": "キー押してから離すまでの平均時間（ミリ秒）だよ☆"
+          },
+          "legend": {
+            "normal": "普通の打鍵",
+            "mistake": "ミス☆",
+            "overlap": "重複打鍵",
+            "overlapTooltip": "前のキー離す前に押しちゃったやつ",
+            "unjudged": "未判定",
+            "unjudgedTooltip": "正誤わかんないやつ",
+            "blank": "ブランク",
+            "blankTooltip": "圧縮表示だよ",
+            "leadIn": "ワード前の間",
+            "blankLine": "ブランク",
+            "blankLineTooltip": "250ms超、圧縮表示だよ",
+            "leadInLine": "行前の間じゃん",
+            "correctedNote": "ミスの印、提出前に直したのも入ってるから、印あっても正確度100%になることあるよ",
+            "infoAriaLabel": "凡例の補足情報"
+          },
+          "axisNote": "ブランクは軸上で圧縮して表示してるけど、出てる時間は全部リアルな値だよ",
+          "correlationUnreliable": "このラン、正誤の印あてにならないかも（IME変換通った入力あるから）",
+          "zoom": {
+            "label": "拡大率",
+            "aria": "タイムラインの拡大率"
+          },
+          "tooltip": {
+            "releaseUnobserved": "離鍵未観測",
+            "overlapYes": "前のキーと重複",
+            "overlapNo": "重複なし",
+            "overlapUnknown": "重複不明",
+            "mistake": "ミス（直されたかも）",
+            "unjudged": "未判定",
+            "correct": "正解☆",
+            "offset": "+{{ms}}ms",
+            "blankDuration": "ブランク: {{ms}}ms",
+            "leadInDuration": "ワード前の間: {{ms}}ms",
+            "leadInLineDuration": "行前の間: {{ms}}ms"
+          },
+          "line": {
+            "indexAria": "{{n}}行目じゃん",
+            "romajiAria": "ローマ字: {{text}}"
+          }
+        }
+      },
+      "results": {
+        "mistakesLabel": "ミスった文字ｗ",
+        "errorSubstitutions": "置換 {{count}}こ",
+        "errorOmissions": "脱字 {{count}}こ",
+        "errorInsertions": "衍字 {{count}}こ",
+        "timelineConsentHint": "打鍵タイムライン見たいなら、タイピング記録オンにしてね☆",
+        "missedBarTypedLine": "代わりに打ってたの: {{chars}}",
+        "missedBarCorrectedLine": "Backspaceで直したの: {{count}}こ",
+        "missedBarMovedOnLine": "直さず次いっちゃったの: {{count}}こ",
+        "missedBarNoDetail": "この記録、打鍵ごとの詳細ないみたい"
+      }
+    },
+    "hoverDetails": {
+      "none": "なしっしょ",
+      "on": "オン☆",
+      "off": "オフ〜"
+    }
+  },
+  "error": {
+    "loadFailed": "レイアウト読み込めなかった…サゲ。。",
+    "saveFailed": "保存失敗したんだけど！マジサゲ。。",
+    "exampleUid": "固有のUIDにしてね♡",
+    "dummyMode": "ダミーモード☆",
+    "pipetteFileMode": "ファイルモードっしょ",
+    "unsavedChanges": "保存してないのあるじゃん！",
+    "vilV1NotSupported": "データ古っ！キーマップ開いてアプデしよ？☆",
+    "protocolVersion": "VIAプロトコル、対応してないっぽい？アプデっしょ！",
+    "exportKeymapCFailed": "keymap.c 書き出せなかった…サゲ。。",
+    "exportPdfFailed": "PDF書き出せなかった…マジサゲ。。",
+    "sideloadFailed": "JSON読み込めなかったっしょ…",
+    "sideloadInvalidDefinition": "定義バグってるっぽい？必須項目なくね？",
+    "notVialCompatible": "Vial対応してなくね？ワンチャンある☆",
+    "deviceLoadFailed": "キーボードからデータ読み込めなかった…ケーブル確認してもう一回繋いで〜！",
+    "deviceOpenFailed": "キーボード開けなかったんだけど…他のアプリが使ってるか、アクセス拒否られてるかも！もう一回繋ぎ直してみて〜！",
+    "deviceListFailed": "繋がってるキーボードの一覧取れなかったー…",
+    "applyRolledBack": "キーボードへの書き込み失敗したー！でも前の設定に戻せたから安心して〜",
+    "applyNotRolledBack": "キーボードへの書き込み失敗して、前の設定にも戻せなかった…マジサゲ。。もう一回繋ぎ直して、保存してたスナップショット読み込んでみて！"
+  },
+  "warning": {
+    "echoDetected": "通信エラー！？ケーブル確認して差し直して〜！",
+    "partialLoad": "一部の設定読み込めてないかも…再接続したら直るかもよ？"
+  },
+  "keycodes": {
+    "basic": "Basic☆",
+    "iso": "ISO",
+    "jis": "JIS",
+    "international": "International",
+    "language": "Language",
+    "layers": "Layers",
+    "behavior": "Behavior",
+    "modifiers": "Modifiers",
+    "lighting": "Lighting",
+    "system": "System",
+    "tapDance": "Tap-Hold / Tap Dance",
+    "macro": "Macro",
+    "combo": "Combo",
+    "keyOverride": "Key Override",
+    "altRepeatKey": "Alt Repeat Key",
+    "settingsNote": "これ全体用だから個別に割り当てとか無理っしょ☆",
+    "macroMoreActions": "残り {{count}} 行☆",
+    "user": "User",
+    "midi": "MIDI",
+    "group": {
+      "characters": "Characters",
+      "editing": "Editing",
+      "modifiers": "Modifiers",
+      "navigation": "Navigation",
+      "function": "Function",
+      "lock": "Lock",
+      "numpad": "Numpad",
+      "system": "System",
+      "shifted": "Shifted Symbols",
+      "internal": "Internal",
+      "magic": "Magic",
+      "audio": "Audio & Music",
+      "haptic": "Haptic",
+      "mode": "Mode",
+      "autoShift": "Auto Shift",
+      "comboKeys": "Key",
+      "keyOverrideKeys": "Key",
+      "altRepeatKeyKeys": "Key",
+      "capsWord": "Caps Word",
+      "tappingTerm": "Dynamic Tapping Term",
+      "autocorrect": "Autocorrect",
+      "leader": "Leader",
+      "boot": "Boot",
+      "osm": "One-Shot Modifiers",
+      "oneShotControl": "One-Shot Control",
+      "modMask": "Modifier Masks",
+      "modTap": "Mod-Tap",
+      "modSpecial": "Special",
+      "backlight": "Backlight",
+      "rgbLighting": "RGB Lighting",
+      "rgbMatrix": "RGB Matrix",
+      "systemControl": "System",
+      "app": "App",
+      "browser": "Browser",
+      "mediaPlayback": "Media",
+      "mouse": "Mouse",
+      "lockingKeys": "Locking Keys",
+      "layerSpecial": "Special",
+      "layerMO": "MO – Momentary",
+      "layerDF": "DF – Default Layer",
+      "layerPDF": "PDF – Persistent Default",
+      "layerTG": "TG – Toggle",
+      "layerTT": "TT – Tap Toggle",
+      "layerOSL": "OSL – One Shot Layer",
+      "layerTO": "TO – Turn On Layer",
+      "layerLT": "LT – Layer Tap",
+      "layerLM": "LM – Layer Mod",
+      "macroDM": "Dynamic Macro",
+      "midiNotes": "Notes",
+      "midiOctave": "Octave",
+      "midiTranspose": "Transpose",
+      "midiVelocity": "Velocity",
+      "midiChannel": "Channel",
+      "midiControl": "Control",
+      "swapHands": "Swap Hands",
+      "sequencer": "Sequencer",
+      "joystick": "Joystick",
+      "ledMatrix": "LED Matrix"
+    }
+  },
+  "unlock": {
+    "title": "ロック解除しよ？☆",
+    "instructions": "光ってるキーを長押ししてアンロック！☆",
+    "hint": "やめるなら抜き差ししちゃえｗ",
+    "progress": "進捗: {{current}} / {{total}} っしょ",
+    "cancel": "やめとく〜",
+    "missingKeys": "このアンロックキー、レイアウトに無いんだけど！: {{positions}}。解除できないかもｗ ファームの設定見るか、作った人に聞いてみて〜☆"
+  },
+  "fileIO": {
+    "loadLayout": ".vilっしょ",
+    "sideloadJson": "JSONサイドロード☆",
+    "importing": "入れてるなう…",
+    "exporting": "出してるなう…",
+    "importSuccess": "インポート完了っしょ！",
+    "uidMismatchConfirm": "これ他のキーボード用っぽくね？読み込んじゃう？"
+  },
+  "statusBar": {
+    "autoAdvance": "自動移動☆",
+    "locked": "ロックちう",
+    "unlocked": "アンロックっしょ",
+    "typingGroup": "タイピング☆:",
+    "typingViewShort": "View",
+    "typingTestShort": "Test",
+    "typingTestExitShort": "Exit Test",
+    "typingRecordShort": "Record",
+    "sync": {
+      "pending": "同期待ちっしょ",
+      "syncing": "同期ちう…",
+      "synced": "同期おけ！",
+      "error": "エラー！サゲ。。",
+      "partial": "一部ダメだったｗ"
+    }
+  },
+  "security": {
+    "lock": "ロック☆",
+    "unlock": "ロック解除☆",
+    "lockRecConfirmTitle": "記録オフにしてロックする？☆",
+    "lockRecConfirmBody": "記録中っしょ！ロックしたら記録オフになるよ☆"
+  },
+  "theme": {
+    "label": "テーマっしょ",
+    "light": "ライト☆",
+    "dark": "ダーク☆",
+    "system": "システムっしょ"
+  },
+  "layout": {
+    "keyboardLayout": "キーラベル表示☆",
+    "exportAllPdf": "全部！",
+    "exportCurrentPdf": "なう",
+    "pdfFooterLabel": ".pdfっしょ"
+  },
+  "layoutStore": {
+    "title": "データ☆",
+    "noSavedLayouts": "保存したのないじゃん",
+    "saveFailed": "保存失敗…マジサゲ。。",
+    "maxEntriesReached": "保存いっぱいで草。消さないと無理っしょ☆",
+    "loadFailed": "読み込み失敗したんだけど！",
+    "delete": "ポイっちょ☆",
+    "import": "インポート",
+    "export": "エクスポート",
+    "confirmOverwrite": "上書きしちゃう？♡",
+    "exportVil": ".vil",
+    "exportKeymapC": ".c",
+    "exportPdf": ".pdf",
+    "versionPrefix": "v{{version}} - "
+  },
+  "analyzeFilterStore": {
+    "title": "検索条件の保存っしょ",
+    "tabSave": "条件保存☆",
+    "selectKeyboard": "管理するならキーボード選んで♡",
+    "saveFailed": "保存失敗したんだけど！",
+    "loadFailed": "読み込み失敗…サゲ。。",
+    "unsupportedVersion": "新しすぎて無理っしょ☆アプデして！",
+    "maxEntriesReached": "保存いっぱーい！（上限 {{max}} 件）古いのはポイっちょ☆",
+    "csv": ".csv",
+    "empty": "保存したのないっぽみ",
+    "confirmOverwrite": "上書きしちゃう？♡"
+  },
+  "sync": {
+    "googleAccount": "Googleアカウント☆",
+    "connected": "接続おけ！",
+    "signOut": "バイバイ☆",
+    "confirmDisconnect": "切断しちゃう？",
+    "disconnectHubWarning": "Hubもバイバイになるよん☆",
+    "signIn": "接続っしょ",
+    "authenticating": "認証待ちなう...",
+    "authFailed": "認証失敗ｗもう一回っしょ☆",
+    "signInBusy": "同期中だからサインインむりｗちょい待ってからもう一回っしょ☆",
+    "signOutBusy": "同期中だからバイバイむりｗちょい待ってからもう一回っしょ☆",
+    "signOutPasswordChanging": "パスワード変え中だからバイバイむりｗ終わってからもう一回っしょ☆",
+    "resetBusy": "同期中だからリセットむりｗちょい待ってからもう一回っしょ☆",
+    "deleteBusy": "同期中だから削除むりｗちょい待ってからもう一回っしょ☆",
+    "trashBusy": "同期中だからゴミ箱いじれないｗちょい待ってからもう一回っしょ☆",
+    "importBusy": "同期中だからインポートむりｗちょい待ってからもう一回っしょ☆",
+    "ownDeviceDeleteFromLocal": "このデバイスのデータはLocalタブから消してね☆",
+    "encryptionPassword": "暗号化パスワード☆",
+    "passwordSet": "パスワード設定おけ！",
+    "passwordPlaceholder": "パスワード入れてねん♡",
+    "setPassword": "パスワード設定っしょ",
+    "passwordTooWeak": "パスワード弱すぎｗ",
+    "passwordSetFailed": "パスワード設定失敗…サゲ。。",
+    "changePassword": "パスワード変える☆",
+    "changePasswordInfo": "全部のデータ新しく暗号化し直すよん！",
+    "changingPassword": "パスワード変更ちう…",
+    "settingPassword": "パスワード設定ちう☆",
+    "samePassword": "前と同じじゃん！変えてよｗ",
+    "autoSync": "自動同期っしょ",
+    "enable": "おけ！",
+    "disable": "停止☆",
+    "manualSync": "手動同期っしょ",
+    "sync": "同期☆",
+    "resetTarget": {
+      "favorites": "お気に入り♡",
+      "i18nPacks": "言語パック☆",
+      "themePacks": "テーマパック☆",
+      "keyLabels": "キーラベル☆",
+      "typingTestTexts": "タイピングテスト文章☆"
+    },
+    "resetTargetsConfirm": "消したら戻んないけどいい？ガチで☆",
+    "syncing": "同期ちう☆",
+    "continueOffline": "オフラインでいくっしょ！",
+    "noSyncYet": "まだ同期してないじゃん",
+    "changePasswordError": {
+      "unauthenticated": "Google入ってからにして☆",
+      "noPasswordFile": "このPCに同期パスワードないよｗ 変更じゃなくて決めてよ☆",
+      "decryptFailed": "保存したパスワード読めないから変えらんないんですけどｗ",
+      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃパスワード変えらんないっぽい…",
+      "remoteCheckFailed": "Google Driveにつながんない…あとでもっかい変えてみて！"
+    },
+    "changePasswordInProgress": "同期してるから後にしてｗ",
+    "passwordChange": {
+      "alreadyInProgress": "このPCでパスワード変更まだ途中だよ☆ 先に続けるか、前のパスワードに戻してね！",
+      "notInProgress": "今パスワード変更してないよｗ",
+      "invalidState": "パスワード変更の進み具合が読めないんだけど…",
+      "keysUnavailable": "パスワード変更用にとっといたパスワードが読めない…OSのキーチェーン使えるか見てからもう一回やって！",
+      "wrongStep": "パスワード変更の今の段階じゃそれムリ～",
+      "notStarted": "パスワード変更始まってなかったよ☆ もう一回変えてみて！",
+      "locked": "別のPCで同期パスワード変えてる途中だよ！終わってからもう一回やって☆",
+      "lost": "別のPCも同時にパスワード変え始めちゃった！終わってからもう一回ね☆",
+      "lockLost": "Google Drive のロック消されちゃったから（別のPCかも）、パスワード変更ストップしたよ！",
+      "interrupted": "パスワード変更途中で止まっちゃった！あとで続きできるよ☆",
+      "undecryptable": "前のパスワードでも新しいパスワードでも開けないファイルが Google Drive にあるよ！消してから続けて☆",
+      "notConverged": "パスワード変えてる間に Google Drive のファイルがずっと変わってたよ！ほかのPCの Pipette 閉じてから続けて☆",
+      "blockedByOtherDevice": "別のPCで同期パスワード変えてる途中だから、終わるまでこっちの同期はお休みだよ☆",
+      "blockedLocal": "このPCのパスワード変更がまだ終わってないから、同期止めてるよ！先に続けるか、前のパスワードに戻すか、やめちゃってね☆",
+      "closeOtherPcs": "パスワード変え終わるまで、ほかのPCの Pipette は閉じといてね☆",
+      "working": "パスワード変更がんばってるとこ…",
+      "toNew": "新しいパスワードへの変更まだ終わってないよ！このPCの同期はお休み中☆",
+      "toOld": "前のパスワードに戻すのまだ終わってないよ！このPCの同期はお休み中☆",
+      "stepLabel": "今ここ: {{step}}",
+      "step": {
+        "locking": "準備中☆",
+        "reencrypting": "Google Drive のファイル暗号化し直し中☆",
+        "committing": "変更キメてるとこ☆",
+        "cleanup": "お片付け中☆"
+      },
+      "resume": "続ける☆",
+      "revertToOld": "前のパスワードに戻す",
+      "revertToNew": "やっぱ新しいパスワードにする☆",
+      "abandonLabel": "パスワード変えるのやめる",
+      "abandon": "やめる",
+      "confirmAbandon": "ほんとにやめる？",
+      "abandonWarning": "Google Drive のファイル、前のと新しいパスワードがごちゃ混ぜのまま残るかも！開けないやつは データ☆ › Sync › クラウドデータ☆ で消してね☆",
+      "deleteSkipped": "どっちかのパスワードで開けるから、消さないでおいたよ☆",
+      "releaseBusy": "このPCで同期中だよ！ちょっと待ってからもう一回やって☆",
+      "ownLockLeft": "このPCが Google Drive に置きっぱのロックのせいで、全部のPCの同期止まってるよ！",
+      "lockStartedAt": "始めた時間: {{time}}",
+      "releaseLockLabel": "Google Drive のパスワード変更ロック",
+      "releaseLock": "ロック外す☆",
+      "confirmRelease": "外しちゃっていい？",
+      "releaseWarning": "ほかのPCで同期とかパスワード変更とか動いてないか、ちゃんと見てね！"
+    },
+    "import": "インポート",
+    "export": "エクスポート",
+    "importComplete": "インポート完了っしょ！",
+    "importFailed": "インポート失敗…サゲ。。",
+    "passwordMismatch": "パスワード違くね？確認してよｗ",
+    "passwordAlreadySet": "パスワードもう保存されてるよ～！「パスワード入れ直す☆」か「パスワード変える☆」使ってね♡",
+    "scanning": "スキャンちう…",
+    "downloading": "ダウンロードなう☆",
+    "noRemoteData": "リモートにデータないじゃん",
+    "undecryptableCount": "{{count}} 件開けないやつあるｗ",
+    "trash": {
+      "description": "おんなじデータの別コピーが選ばれたから、同期が使わなくなったコピーたちだよ☆ 復元したら今のコピーと入れ替えね（今のはゴミ箱行き）",
+      "empty": "ゴミ箱すっからかん☆",
+      "restore": "復活☆",
+      "notRestorable": "この PC の打鍵データは復活むりｗこの PC からまた上がるから安心☆",
+      "updated": "更新 {{date}}",
+      "autoDelete": "今のコピーがあるなら {{date}} 過ぎたらポイ☆",
+      "notFound": "これもうゴミ箱にいないっぽいｗ"
+    },
+    "checkingRemotePassword": "同期チェックなう☆",
+    "existingPasswordHint": "もう設定されてるよん！使ってたパスワード入れてね♡",
+    "reenterPasswordWarning": "このPCのパスワード、Google Driveとズレてるっぽい！他のPCで使ってるパスワード入れてね♡",
+    "reenterPassword": "パスワード入れ直す☆",
+    "reenterPasswordNoRemote": "Google Driveにまだ比べるパスワード無いよ～！フォーム閉じて今のパスワードで同期してね♡",
+    "storedPasswordUnreadable": "このPCに保存したパスワード、キーチェーンに断られて読めないんですけどｗ キーチェーンがロック中とか拒否っちゃったなら、解除して「もう一回！」押してね♡ それ以外なら下でパスワード設定し直してね！",
+    "keystoreUnavailableNotice": "OSのキーチェーン開けなかったなら、解除するか設定して（Linuxならキーリング）、Pipette再起動してね♡",
+    "updateRequired": "このGoogle Driveの同期データ、新しいPipetteで作られてるっぽい！同期続けたいならアプデしてね☆",
+    "updateBanner": {
+      "message": "Cloud Sync、新しいPipetteじゃないとダメっぽい！同期続けたいならアプリをアプデしてね☆",
+      "openDownloadPage": "ダウンロードページ開く☆"
+    },
+    "unavailable": "ネットヤバくね？同期できないじゃん",
+    "retry": "もう一回！",
+    "pullError": {
+      "busy": "今ちょうど同期ちうだから、ちょい待ってもっかい押して☆",
+      "unauthenticated": "Google Driveから取ってくるにはGoogle入ってから☆",
+      "noPasswordFile": "Google Driveから取ってくるには同期パスワード決めてよｗ",
+      "decryptFailed": "保存したパスワード読めなかったんですけどｗ",
+      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃGoogle Driveから取ってこれないっぽい…",
+      "remoteCheckFailed": "Google Driveにつながんない…また後でやってみて！",
+      "partial": "一部のパック取得失敗…サゲ。。もっかい試して！"
+    },
+    "readiness": {
+      "unauthenticated": "同期オンにするにはGoogle入ってから☆",
+      "noPasswordFile": "同期オンにするには同期パスワード決めてよｗ",
+      "decryptFailed": "保存したパスワード読めないんですけどｗ",
+      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃ同期できないっぽい…",
+      "remoteCheckFailed": "Google Driveにつながんない…同期ストップ中！"
+    }
+  },
+  "settings": {
+    "title": "設定っしょ",
+    "tabData": "接続☆",
+    "tabTools": "ツールっしょ",
+    "dataSync": "データ同期☆",
+    "defaults": "新しいキーボードのデフォ設定っしょ",
+    "defaultLayout": "キーラベル☆",
+    "defaultAutoAdvance": "自動移動っしょ",
+    "defaultLayerPanelOpen": "レイヤーリスト広げる☆",
+    "defaultSplitKeyMode": "Shiftキーを分離☆",
+    "defaultQuickSelect": "速攻で選択！",
+    "basicViewTypeList": "LIST",
+    "basicViewTypeAnsi": "ANSI",
+    "basicViewTypeIso": "ISO",
+    "basicViewTypeJis": "JIS",
+    "security": "セキュリティ☆",
+    "autoLockTime": "自動ロックタイムっしょ",
+    "autoLockDescription": "放置で自動ロック☆",
+    "autoLockMinutes": "{{minutes}} 分っしょ",
+    "maxKeymapHistory": "履歴の上限☆",
+    "tabNotification": "お知らせっしょ",
+    "tabAbout": "情報☆",
+    "about": {
+      "version": "バージョン {{version}}",
+      "license": "ライセンス: {{license}}",
+      "licenseValue": "GPL-3.0-or-later"
+    },
+    "zoomLevel": "ズーム☆",
+    "zoomLevelWarning": "表示崩れてもウチらは知らないっしょ！自己責任で変えてね☆",
+    "autoLaunch": "自動起動っしょ☆",
+    "autoLaunchDescription": "サインインしたら自動で Pipette 起きるよ☆",
+    "trayResident": "トレイ常駐っしょ",
+    "trayResidentDescription": "ウィンドウ閉じてもトレイでずっと動いてるからね☆",
+    "restoreLastSession": "最後の状態で起動っしょ☆",
+    "restoreLastSessionDescription": "起動したら前つないでたキーボードと画面、そのまま戻してくれるよ☆",
+    "startInTray": "トレイ常駐で起動っしょ",
+    "startInTrayDescription": "ウィンドウ開かんとトレイに常駐したまま起動するからね☆"
+  },
+  "analyze": {
+    "noKeyboards": "データまだなくね？",
+    "noData": "その期間のデータないじゃん",
+    "selectKeyboard": "一覧から選んでね♡",
+    "appUsage": {
+      "title": "アプリ別利用配分☆",
+      "loading": "アプリデータ読み込みちう…",
+      "empty": "データないしｗ Monitor App 入れて REC しよ？",
+      "unknown": "ナゾ / 混ざってる☆",
+      "other": "その他",
+      "tooltipKeystrokesLabel": "打鍵っしょ",
+      "tooltipShareLabel": "比率☆"
+    },
+    "wpmByApp": {
+      "title": "アプリ別 WPM☆",
+      "loading": "WPM読み込みちう…",
+      "empty": "1分集計まだなくね？ REC開始っしょ！",
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "打鍵っしょ"
+    },
+    "tablistLabel": "分析のタイプ☆",
+    "splitView": {
+      "toggle": "分割表示っしょ",
+      "narrowWindow": "ウィンドウ狭すぎｗ広げてよ☆"
+    },
+    "export": {
+      "categoriesLabel": "出すカテゴリ☆",
+      "confirm": ".csvっしょ",
+      "failed": "出せなかった…サゲ。。",
+      "snapshotMissing": "スナップショットないと無理っしょ☆この期間はダメっぽみ",
+      "conditionLabel": {
+        "device": "デバイス☆",
+        "app": "アプリっしょ",
+        "keymap": "キーマップ☆",
+        "range": "期間っしょ"
+      },
+      "fingerOverrides": "指の割り当て☆",
+      "fingerOverridesDefault": "デフォ",
+      "fingerOverridesCustomized": "カスタム ({{count}})☆",
+      "category": {
+        "summary": "サマリー☆",
+        "wpm": "WPMっしょ",
+        "interval": "間隔☆",
+        "activity": "活動量っしょ",
+        "byApp": "アプリ別☆",
+        "heatmap": "ヒートマップっしょ",
+        "ergonomics": "エルゴノミクス☆",
+        "bigrams": "バイグラムっしょ",
+        "layer": "レイヤー☆",
+        "layoutComparison": "レイアウト比較っしょ"
+      },
+      "appDataApps": {
+        "label": "アプリ別データ☆",
+        "all": "全部のアプリ！",
+        "none": "なしっしょ",
+        "selectAll": "全部☆",
+        "deselectAll": "なしっしょ",
+        "hint": "Hubに入れるアプリを選んでね♡"
+      }
+    },
+    "loading": {
+      "keyboards": "キーボード一覧読み込みちう…",
+      "syncing": "クラウド同期ちう☆",
+      "preparing": "チャート準備なう♡"
+    },
+    "unit": {
+      "keys": "回っしょ",
+      "activations": "回☆"
+    },
+    "benchmark": {
+      "populationAverage": "みんなの平均 {{value}} WPMだよん☆",
+      "populationAverageKspc": "みんなの平均 {{value}}だよん☆",
+      "position": {
+        "farBelow": "平均よりかなりスローっしょ",
+        "below": "平均よりゆっくりめ",
+        "average": "ふつーくらい☆",
+        "above": "平均より速いじゃん",
+        "farAbove": "平均よりめっちゃ速い★"
+      },
+      "positionRate": {
+        "farBelow": "平均よりかなり少ないっしょ",
+        "below": "平均より少なめ",
+        "average": "ふつーくらい☆",
+        "above": "平均より多いじゃん",
+        "farAbove": "平均よりめっちゃ多い★"
+      },
+      "positionRateShort": {
+        "farBelow": "かなり少なめ",
+        "below": "やや少なめ",
+        "average": "平均的",
+        "above": "やや多め",
+        "farAbove": "かなり多め"
+      },
+      "referenceLineLabel": "みんなの平均☆",
+      "toggleAria": "みんなの平均ラインを表示するよん"
+    },
+    "snapshotTimeline": {
+      "title": "キーマップ履歴☆",
+      "current": "なうのキーマップ"
+    },
+    "wpm": {
+      "legend": "WPM",
+      "description": "WPM — Words per minuteっしょ！1分あたりの打鍵を5で割ったやつ☆",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM サマリー☆",
+          "totalKeystrokes": "合計打鍵っしょ",
+          "activeDuration": "打ってた時間☆",
+          "overallWpm": "平均WPMっしょ",
+          "peakWpm": "最高WPM☆マジ神！",
+          "lowestWpm": "最低WPM…",
+          "weightedMedianWpm": "中央値WPM☆",
+          "totalBackspaces": "Bksp合計っしょ",
+          "overallBksPercent": "平均 Bksp %☆",
+          "overallBksPercentDesc": "Backspaceどんだけ押したかｗ"
+        }
+      },
+      "errorProxy": {
+        "legend": "Bksp %☆",
+        "description": "Backspaceの割合っしょ☆全部の打鍵から集計してるよん！"
+      },
+      "timeOfDay": {
+        "tooltipLabel": "時間帯☆",
+        "summary": {
+          "label": "時間帯別WPMサマリーっしょ☆",
+          "totalKeystrokes": "合計打鍵っしょ",
+          "activeDuration": "打ってた時間☆",
+          "overallWpm": "平均WPMっしょ",
+          "peakHour": "ピーク時間帯☆",
+          "peakHourDesc": "一番速かった時間っしょ！",
+          "lowestHour": "最遅時間帯ｗ",
+          "lowestHourDesc": "一番遅かった時間っしょ（打ってないのは除外☆）",
+          "activeHours": "活動した時間数☆",
+          "activeHoursDesc": "何時間打ってたか（24中）っしょ！"
+        }
+      }
+    },
+    "interval": {
+      "legend": {
+        "min": "最小☆",
+        "p25": "p25",
+        "p50": "中央値☆",
+        "p75": "p75",
+        "max": "最大☆"
+      },
+      "description": {
+        "min": "最小 — 最速の瞬間っしょ！マジヤバい☆",
+        "p25": "p25 — 1/4のタイミングっしょ☆",
+        "p50": "中央値 — 半分の速さっしょ！",
+        "p75": "p75 — 3/4のタイミングっしょ☆",
+        "max": "最大 — 一番止まってた時間ｗ"
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "sectionTitle": "間隔の分布☆",
+        "tooltipLabel": "推定打鍵数☆",
+        "summary": {
+          "label": "打鍵リズムサマリーっしょ☆",
+          "medianP50": "中央値インターバル☆",
+          "fast": "高速 (<200ms)☆",
+          "fastDesc": "爆速の割合っしょ！",
+          "normal": "標準 (200-500ms)☆",
+          "normalDesc": "ふつーの割合っしょ！",
+          "slow": "緩慢 (500ms-2s)☆",
+          "slowDesc": "ゆっくりな割合ｗ",
+          "pause": "ポーズ (>=2s)☆",
+          "pauseDesc": "止まってた割合っしょｗ",
+          "longestPause": "最長インターバル（1分）"
+        }
+      },
+      "timeSeries": {
+        "sectionTitle": "間隔の推移っしょ",
+        "summary": {
+          "label": "インターバルサマリー☆",
+          "medianP50": "中央値（重み付き）☆",
+          "shortest": "最短インターバル（1分）☆",
+          "longestPause": "最長インターバル（1分）☆"
+        }
+      }
+    },
+    "rollover": {
+      "sectionTitle": "観測ロールオーバー率☆",
+      "ariaLabel": "観測ロールオーバー率サマリー☆",
+      "stat": {
+        "title": "観測ロールオーバー率☆",
+        "description": "実効サンプリング周期は p50 中央値 {{p50}} / p95 最悪値 {{p95}}っしょ。サンプリング周期より短い重なりは見えないから、この値は控えめに出ちゃう感じ☆ガチの正確な数値じゃないよ"
+      },
+      "chart": {
+        "legend": "観測ロールオーバー☆"
+      },
+      "underBiasNote": "この数値、構造的に低めに出ちゃうやつだから、真のロールオーバー率じゃないっしょ☆平均ラインより下でも遅いってわけじゃないよ"
+    },
+    "duration": {
+      "sectionTitle": "打鍵長っしょ",
+      "ariaLabel": "打鍵長サマリーっしょ",
+      "tooltipLabel": "サンプル数っしょ",
+      "empty": "この期間、打鍵長データないっしょ。打鍵長は matrix モードでロック解除中にタイピングした時だけ記録される感じ☆この機能入る前の期間とか、記録オフだった期間はデータないよ",
+      "bin": {
+        "lt50": "<50ms",
+        "50to80": "50-80ms",
+        "80to110": "80-110ms",
+        "110to140": "110-140ms",
+        "140to180": "140-180ms",
+        "180to250": "180-250ms",
+        "250to400": "250-400ms",
+        "gt400": ">400ms"
+      },
+      "stat": {
+        "mean": "平均打鍵長",
+        "sd": "SD",
+        "sdDesc": "ホールド時間のバラつき具合っしょ☆SDが低いと毎回同じくらいの長さで押せてる、高いとバラつきがデカいってこと！",
+        "samples": "サンプル数",
+        "samplesDesc": "1サンプルは、キー押してから離すまでを1回分測ったやつっしょ☆",
+        "populationAverage": "母集団平均 {{value}} msっしょ"
+      }
+    },
+    "tappingTerm": {
+      "sectionTitle": "Tapping Term 診断っしょ",
+      "ariaLabel": "Tapping Term 診断サマリーっしょ",
+      "stat": {
+        "current": "今の値",
+        "assumed": "想定値っしょ",
+        "tapP95": "観測タップ p95",
+        "tapP95Desc": "このキーのタップの長さ、95%はこの範囲より短かったってこと☆上の Tapping Term と比べて、タップとホールドが見分けやすいかの目安になるっしょ",
+        "samples": "サンプル数っしょ",
+        "recordedCounts": "記録済みタップ / ホールド"
+      },
+      "recordedCountsDescription": "打鍵した時に有効だった Tapping Term で分類されてるから、今の値とはズレてることもあるっしょ☆参考程度に見といてね",
+      "verdict": {
+        "unknown": {
+          "insufficientSamples": "これ診断するにはタップ・ホールドの記録がまだ足りないっしょ",
+          "noTapMass": "これらのキー、今の値だともう全部ホールド判定になっちゃってて、比べれるタップ側のデータがまだないっしょ",
+          "bucketResolution": "Tapping Term、あんたの普段のタップの長さと同じ計測区間に入っちゃってるから、実際どっち側にあるかこのデータじゃ判断できない感じ☆"
+        },
+        "ok": "今の Tapping Term、あんたの打鍵感にちょうど合ってる感じ☆",
+        "canLower": "あんたの打鍵傾向なら ~{{value}} ms くらいまで下げても平気そうっしょ",
+        "nearTerm": "この Tapping Term 付近だと長いタップと短いホールドの区別つかないっしょ☆数字だけじゃ切り分けれない感じ"
+      },
+      "reportedHint": "エディタの {{tab}} タブ → {{button}} から変えれるっしょ",
+      "unreportedNotice": "このファームウェア、QMK Settings 経由で Tapping Term 教えてくれないみたい。だからこの診断は QMK の既定値 {{default}} ms 前提でやってるっしょ。変えたいならファームウェアの再ビルドが必要だよ",
+      "guidance": "このキーボード繋いだら Tapping Term 読み取って診断できるっしょ☆"
+    },
+    "activity": {
+      "tableLabel": "時間 × 曜日の活動量☆",
+      "tableLabelWpm": "時間 × 曜日の WPM☆",
+      "hourHeader": "{{hour}}時っしょ",
+      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys)☆",
+      "cellTitleWithShare": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys) (全体の {{share}}%☆)",
+      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})☆",
+      "legendLow": "0",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)☆",
+      "legendHighWpm": "{{wpm}} WPM☆",
+      "summary": {
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%☆)",
+        "wpmContext": "{{wpm}} WPM☆"
+      },
+      "keystrokes": {
+        "summary": {
+          "label": "活動量サマリーっしょ☆",
+          "mostFrequentDow": "最頻曜日☆",
+          "mostFrequentDowDesc": "一番打った曜日っしょ！",
+          "mostFrequentHour": "最頻時間帯☆",
+          "mostFrequentHourDesc": "一番打った時間っしょ！",
+          "peakCell": "ピークセル☆",
+          "peakCellDesc": "最強の時間と曜日っしょ☆",
+          "activeCells": "活動したマス数☆",
+          "activeCellsDesc": "どんだけ打ってたか（168中）っしょ！"
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "活動量 WPM サマリー☆",
+          "overallWpm": "平均WPMっしょ",
+          "peakCell": "ピークセル☆",
+          "peakCellDesc": "最強WPMの時間と曜日っしょ☆",
+          "lowestCell": "最遅セルｗ",
+          "lowestCellDesc": "一番遅かった時間と曜日っしょｗ",
+          "activeCells": "活動したマス数☆",
+          "activeCellsDesc": "どんだけ打ってたか（168中）っしょ！"
+        }
+      },
+      "sessions": {
+        "tooltipLabel": "セッション☆",
+        "tooltipValue": "{{count}} 件 ({{share}}%☆)",
+        "bin": {
+          "lt5Min": "5分未満",
+          "5to15Min": "5-15分",
+          "15to30Min": "15-30分",
+          "30to60Min": "30-60分",
+          "1to2Hours": "1-2時間",
+          "2to4Hours": "2-4時間",
+          "gtFourHours": "4時間以上"
+        },
+        "summary": {
+          "label": "セッション分布サマリーっしょ☆",
+          "sessionCount": "セッション数☆",
+          "totalDuration": "合計時間っしょ",
+          "meanDuration": "平均の長さ☆",
+          "medianDuration": "中央値の長さっしょ",
+          "longestDuration": "最長セッション☆",
+          "shortestDuration": "最短セッションｗ"
+        }
+      },
+      "dow": {
+        "0": "日",
+        "1": "月",
+        "2": "火",
+        "3": "水",
+        "4": "木",
+        "5": "金",
+        "6": "土"
+      },
+      "calendar": {
+        "gridLabel": "年間カレンダーっしょ☆",
+        "monthShortYear": "{{year}}-{{monthShort}}",
+        "monthShort": {
+          "1": "1月",
+          "2": "2月",
+          "3": "3月",
+          "4": "4月",
+          "5": "5月",
+          "6": "6月",
+          "7": "7月",
+          "8": "8月",
+          "9": "9月",
+          "10": "10月",
+          "11": "11月",
+          "12": "12月"
+        },
+        "cellTooltipKeystrokes": "{{date}} — {{keystrokes}} $t(analyze.unit.keys)（{{activeDuration}}）☆",
+        "cellTooltipWpm": "{{date}} — {{wpm}} WPM（{{activeDuration}}）☆",
+        "cellTooltipSessions": "{{date}} — 開始セッション {{count}}☆",
+        "cellTooltipEmpty": "{{date}} — 活動なしｗ",
+        "summary": {
+          "label": "カレンダーサマリーっしょ☆",
+          "total": "合計打鍵っしょ",
+          "avgWpm": "平均WPM☆",
+          "activeDays": "活動した日っしょ",
+          "activeDaysValue": "{{active}} / {{total}} ({{share}}%☆)",
+          "peak": "ピークの日☆",
+          "avg": "活動日の平均っしょ"
+        }
+      }
+    },
+    "analysisTab": {
+      "summary": "サマリー☆",
+      "wpm": "WPMっしょ",
+      "interval": "間隔☆",
+      "activity": "活動量っしょ",
+      "keyHeatmap": "ヒートマップ☆",
+      "ergonomics": "エルゴノミクスっしょ",
+      "bigrams": "バイグラム☆",
+      "layoutComparison": "レイアウト比較っしょ",
+      "layer": "レイヤー☆",
+      "byApp": "アプリ別っしょ"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "今日のサマリー☆",
+        "ariaLabel": "今日のサマリーっしょ",
+        "keystrokesLabel": "打鍵数☆",
+        "wpmLabel": "WPMっしょ",
+        "activeDurationLabel": "打ってた時間☆"
+      },
+      "weeklyReport": {
+        "sectionTitle": "最近の7日間っしょ☆",
+        "ariaLabel": "週次レポート☆",
+        "delta": "{{glyph}} {{sign}}{{pct}}%（前と比べて☆）",
+        "deltaInsufficient": "{{glyph}} —（まだわかんないｗ）",
+        "keystrokesLabel": "打鍵数☆",
+        "wpmLabel": "WPMっしょ",
+        "activeDurationLabel": "打ってた時間☆",
+        "activeDurationContext": "{{previous}}（前の7日）",
+        "activeDaysLabel": "アクティブ日数☆",
+        "activeDaysUnit": "日"
+      },
+      "profile": {
+        "sectionTitle": "タイピングプロファイル（最近の {{days}} 日☆）",
+        "ariaLabel": "タイピングプロファイルっしょ",
+        "insufficient": "データ足りなくね？",
+        "speedLabel": "スピード☆",
+        "speedDesc": "WPMで Slow (<30) / Medium (30-50) / Fast (>50) に分けるよん☆",
+        "speedContext": "{{wpm}} WPMっしょ",
+        "speed": {
+          "slow": "ゆっくりｗ",
+          "medium": "ふつー",
+          "fast": "速っ！☆"
+        },
+        "handBalanceLabel": "左右バランス☆",
+        "handBalanceDesc": "どっちの手で打ってるか☆50/50くらいが理想っしょ！",
+        "handBalanceContext": "左 {{leftPct}}% / 右 {{rightPct}}%☆",
+        "handBalance": {
+          "leftBias": "左寄りｗ",
+          "balanced": "バランスおけ！",
+          "rightBias": "右寄りｗ"
+        },
+        "sfbLabel": "SFB 率☆",
+        "sfbDesc": "同じ指で連続して打った割合っしょ☆低い方が滑らか！",
+        "sfbContext": "同じ指 {{pct}}%☆",
+        "sfb": {
+          "low": "低み☆",
+          "medium": "中くらい",
+          "high": "高みｗ"
+        },
+        "fatigueLabel": "疲労リスク☆",
+        "fatigueDesc": "一番速い時と遅い時の差っしょ☆大きいと疲れてるかも？",
+        "fatigueContext": "ピークから {{pct}}% 低下ｗ",
+        "fatigue": {
+          "low": "低☆",
+          "medium": "中",
+          "high": "高ｗ"
+        },
+        "kspcLabel": "KSPC☆",
+        "kspcDesc": "1文字打つのに何回キー押してるかっしょ（Backspaceも1打鍵カウント）☆この期間に保存したタイピングテストの結果から出してるよ。Device/Appのフィルタは効かないっしょ（打鍵データじゃなくてHistoryから計算してるから）。ローマ字入力のランはカウントしてないっしょ（計算の仕組みが違うから下の基準値と比べらんないんだよね☆）",
+        "errorMixLabel": "誤り種別☆",
+        "errorMixContext": "置換{{subPct}}%(平均{{subAvg}}%)・脱字{{omPct}}%(平均{{omAvg}}%)・衍字{{insPct}}%(平均{{insAvg}}%)だよ",
+        "errorMixDesc": "置換・脱字・衍字がどんくらいの割合か、ってやつ☆この期間に保存したタイピングテストの結果から文字数で重み付けして出してるよ。Device/Appのフィルタは効かないっしょ（打鍵データじゃなくてHistoryから計算してるから）。ローマ字入力のランは対象外だよ（確定した綴りはいつも合ってるやつだから、分類するもんが無いんだよね☆）",
+        "typistClusterLabel": "打鍵タイプ☆",
+        "typistClusterDesc": "この期間の打鍵の平均を、スピード・リズム・誤りの傾向から作った母集団のタイプ別プロフィールと比べてるよ☆ロールオーバーはこの比較には入ってないっしょ",
+        "typistClusterDescNoError": "この期間の打鍵の平均を母集団のタイプ別プロフィールと比べてるよ☆誤りの傾向はこの判定に入ってないっしょ — 今回は判定に使える誤りデータが無かったんだよね☆",
+        "typistCluster": {
+          "1": {
+            "name": "まったりリズム型☆",
+            "context": "平均よりゆっくりめのペースで、交互打鍵は普通っしょ。誤りの残りも平均的な感じ☆"
+          },
+          "2": {
+            "name": "まったり交互打鍵型☆",
+            "context": "ゆっくりめのペースで交互打鍵強め！誤りの残りは平均より多めだよ"
+          },
+          "3": {
+            "name": "標準ペース・誤り多めっしょ",
+            "context": "ペースも交互打鍵も普通くらいだけど、誤りの残りはちょい多めっしょ"
+          },
+          "4": {
+            "name": "標準ペース・右手強めｗ",
+            "context": "ペースは普通で、右手が左手よりはっきり速いっしょ☆"
+          },
+          "5": {
+            "name": "標準ペース・交互打鍵強め☆",
+            "context": "ペースは普通くらいで、この中で一番交互打鍵つよつよなタイプ！"
+          },
+          "6": {
+            "name": "標準ペース・バランス型☆",
+            "context": "どの指標も母集団のど真ん中くらい、めっちゃ標準っしょ"
+          },
+          "7": {
+            "name": "速め・誤りちょい多めｗ",
+            "context": "平均より速いペースで、誤りの残りは一番速いグループよりちょっと多めだよ☆"
+          },
+          "8": {
+            "name": "速め・誤り少なめ☆",
+            "context": "この中で一番速くて、誤りの残りもこの中じゃ少なめなタイプ！"
+          },
+          "noMatch": {
+            "name": "該当なしｗ",
+            "context": "どのタイプにも似てる感じしなかったっしょ☆"
+          },
+          "ambiguous": {
+            "name": "中間タイプ☆",
+            "context": "二つのタイプにだいたい同じくらい近い感じだったよ☆"
+          }
+        }
+      }
+    },
+    "bigrams": {
+      "loading": "バイグラムデータ読み込みちう…",
+      "empty": "バイグラムデータまだないじゃんｗ記録しよ？",
+      "error": "バイグラム取得失敗…サゲ。。",
+      "quadrant": {
+        "top": "頻出ペア☆",
+        "slow": "ペア間隔っしょ",
+        "fingerIki": "指間隔☆",
+        "classes": "打鍵パターン☆"
+      },
+      "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ",
+      "gramToggle": {
+        "ariaLabel": "N-gram の粒度っしょ",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
+      "column": {
+        "pair": "ペア☆",
+        "class": "分類☆",
+        "count": "回数っしょ",
+        "avgIki": "平均間隔☆",
+        "avgIkiTrigramTooltip": "3キー間にある2つの間隔の平均だよ。3キー全体の時間じゃないから注意っしょ",
+        "sd": "SD",
+        "p95": "p95間隔っしょ",
+        "rollover": "ロールオーバー☆",
+        "rolloverTooltip": "このペアで前のキー押しっぱなしのまま次押しちゃった割合っしょ。サンプリングだから控えめに出ちゃう系。詳しくは Interval タブの観測ロールオーバー率見てね"
+      },
+      "fingerIki": {
+        "noSnapshot": "スナップショットないと無理っしょ☆REC開始して！",
+        "sortLabel": "並び順☆",
+        "sort": {
+          "desc": "遅い順ｗ",
+          "asc": "速い順☆"
+        }
+      },
+      "classes": {
+        "noSnapshot": "手の使用もスナップショットないと無理っしょ☆REC開始して！",
+        "section": {
+          "handUsage": "手の使用☆",
+          "wordPosition": "単語内位置☆"
+        },
+        "className": {
+          "left": "左手☆",
+          "right": "右手☆",
+          "alternation": "交互っしょ☆",
+          "repetition": "連打ｗ",
+          "initiation": "語頭ｗ",
+          "inWord": "語中っしょ"
+        },
+        "coverage": "{{percent}}%のペア分類できたっしょ☆",
+        "deltaLeft": "ΔLeft",
+        "deltaRight": "ΔRight",
+        "deltaInitiation": "ΔInitiation",
+        "deltaTooltip": "プラスなら最初に書いてる方が遅かったってことっしょ☆",
+        "excludedNote": "{{count}}件は区切り文字で終わってるから除外したっしょ☆"
+      },
+      "pairIntervalThreshold": {
+        "label": "平均間隔☆",
+        "suffix": "ms 以上っしょ",
+        "ariaLabel": "最小インターバル(ms)"
+      },
+      "cellTooltipOccurrencesLabel": "出た回数☆",
+      "cellTooltipAvgIkiLabel": "平均間隔っしょ"
+    },
+    "keyHeatmap": {
+      "layer": "レイヤー☆",
+      "layerOption": "レイヤー {{i}}",
+      "layerOptionMulti": "レイヤー {{layers}}",
+      "bondToggle": "レイヤー {{i}} を結合☆",
+      "noLayout": "レイアウトデータなくね？",
+      "noSnapshot": "スナップショットないじゃん！REC開始しよ？☆",
+      "modeToggle": {
+        "ariaLabel": "ヒートマップの着彩モードっしょ",
+        "count": "回数っしょ",
+        "speed": "速度っしょ",
+        "duration": "打鍵長っしょ"
+      },
+      "speed": {
+        "colAvgIki": "到達 Avg IKIっしょ",
+        "empty": "この期間の到達速度データまだないっしょ",
+        "minSampleNote": "到達回数が {{n}} 回未満のキーは着彩しないっしょ",
+        "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ"
+      },
+      "duration": {
+        "colAvgDuration": "平均打鍵長",
+        "empty": "この期間の打鍵長データまだないっしょ",
+        "minSampleNote": "打鍵長サンプルが {{n}} 件未満のキーは着彩しないっしょ"
+      },
+      "ranking": {
+        "frequentUsedN": "上位☆",
+        "frequentUsed": "よく使うキーっしょ",
+        "colKey": "キー",
+        "colLayer": "レイヤー",
+        "colMatrix": "マトリクス",
+        "colCount": "回数☆",
+        "aggregate": "集計っしょ",
+        "aggregateOption": {
+          "cell": "物理☆",
+          "char": "文字っしょ"
+        },
+        "keyGroup": "グループ☆",
+        "keyGroupOption": {
+          "all": "全部！",
+          "char": "文字☆",
+          "modifier": "修飾っしょ",
+          "layerOp": "レイヤー操作☆"
+        },
+        "emptyFrequentUsed": "キー押してなくね？ｗ"
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "指の負担☆",
+      "handBalance": "左右バランスっしょ",
+      "rowUsage": "段別バランス☆",
+      "rowLoad": "段別の負担っしょ",
+      "noSnapshot": "スナップショットないじゃん！RECして☆",
+      "noLayout": "レイアウト情報ないっぽい？",
+      "noData": "打鍵データないしｗ",
+      "finger": {
+        "left-pinky": "左小指☆",
+        "left-ring": "左薬指っしょ",
+        "left-middle": "左中指☆",
+        "left-index": "左人差し指っしょ",
+        "left-thumb": "左親指☆",
+        "right-thumb": "右親指☆",
+        "right-index": "右人差し指っしょ",
+        "right-middle": "右中指☆",
+        "right-ring": "右薬指っしょ",
+        "right-pinky": "右小指☆"
+      },
+      "fingerKind": {
+        "thumb": "親指☆",
+        "index": "人差し指っしょ",
+        "middle": "中指☆",
+        "ring": "薬指っしょ",
+        "pinky": "小指☆"
+      },
+      "hand": {
+        "left": "左手☆",
+        "right": "右手☆"
+      },
+      "rowCategory": {
+        "function": "F 行☆",
+        "number": "数字行っしょ",
+        "top": "上段☆",
+        "home": "ホーム行っしょ",
+        "bottom": "下段☆",
+        "thumb": "親指段っしょ"
+      },
+      "learning": {
+        "noData": "データ足りないｗもっと打ってから来て！",
+        "belowMinSample": "足りなすぎｗ",
+        "totalKeystrokes": "{{count}} 打ったよん☆",
+        "relativeTrendNote": "絶対的なスコアじゃなくてトレンドを見てねん♡",
+        "score": {
+          "overall": "総合スコア☆",
+          "fingerLoad": "指の偏りっしょ",
+          "handBalance": "左右バランス☆",
+          "homeRowStay": "ホーム行率っしょ"
+        },
+        "summary": {
+          "latestOverall": "なうのスコア☆",
+          "delta_one": "前との差っしょ",
+          "delta_other": "過去 {{count}} 区間との差☆",
+          "baselineMean": "基準 {{value}}っしょ",
+          "bucketCount": "区間数☆",
+          "qualifiedCount": "有効なやつっしょ"
+        }
+      }
+    },
+    "layoutComparison": {
+      "sourceLabel": "なう",
+      "targetLabel": "比較っしょ",
+      "noTargetOption": "—",
+      "noTarget": "比較するやつ選んでよｗ",
+      "noSnapshot": "スナップショットないじゃん！REC開始☆",
+      "noData": "打鍵データ記録されてなくね？",
+      "loading": "計算ちう…",
+      "fetchError": "計算失敗…サゲ。。",
+      "skipWarning": "{{percent}}% くらい対応できなかったｗ参考程度にね☆",
+      "fingerDiffTitle": "{{target}} との指負担差分☆",
+      "heatmapDiffTitle": "{{target}} との位置別負担差分っしょ",
+      "heatmapDiffLegend": {
+        "decrease": "減ったよん☆",
+        "increase": "増えたしｗ"
+      },
+      "headers": {
+        "metric": "指標☆",
+        "current": "なう"
+      },
+      "metrics": {
+        "fingerLoad": "指の負担っしょ",
+        "handBalance": "左右バランス☆",
+        "rowDist": "行分布っしょ",
+        "homeRow": "ホーム行率☆"
+      }
+    },
+    "layer": {
+      "title": "レイヤー別打鍵数☆",
+      "activationsTitle": "レイヤー起動回数っしょ",
+      "layerLabel": "レイヤー {{layer}}",
+      "noData": "レイヤー別の記録ないじゃん",
+      "noActivations": "レイヤー操作した記録ないしｗ",
+      "requiresSnapshot": "これ見るならスナップショット必要っしょ☆REC開始！"
+    },
+    "finger": {
+      "short": {
+        "left-pinky": "左小",
+        "left-ring": "左薬",
+        "left-middle": "左中",
+        "left-index": "左人",
+        "left-thumb": "左親",
+        "right-thumb": "右親",
+        "right-index": "右人",
+        "right-middle": "右中",
+        "right-ring": "右薬",
+        "right-pinky": "右小"
+      }
+    },
+    "fingerAssignment": {
+      "button": "指割り当て☆",
+      "title": "指割り当て設定っしょ",
+      "subtitle": "キーをクリックして上書きできるよん♡",
+      "save": "保存☆",
+      "reset": "推定に戻すっしょ",
+      "resetAll": "全部リセット！",
+      "noSnapshot": "スナップショットないじゃん！",
+      "popoverLabel": "指を選んで♡",
+      "leftHand": "左手☆",
+      "rightHand": "右手☆"
+    },
+    "peak": {
+      "peakKeystrokesPerMin": "1分最大☆",
+      "peakKeystrokesPerDay": "1日最大っしょ",
+      "longestSession": "最長セッション（分）☆",
+      "longestSessionDesc": "ぶっ続けで打った最長記録っしょ！"
+    },
+    "streakGoal": {
+      "sectionTitle": "連続記録っしょ☆",
+      "ariaLabel": "連続記録と目標のまとめ☆",
+      "currentStreakLabel": "なう☆",
+      "currentStreakDesc": "今のサイクルで続いてる日数っしょ！達成でリセット☆",
+      "currentValue": "{{current}}/{{goalDays}} 日っしょ",
+      "longestStreakLabel": "歴代1位☆",
+      "goalLabel": "目標設定っしょ",
+      "goalDaysAria": "目標の日数☆",
+      "goalKeystrokesAria": "1日の目標打鍵っしょ",
+      "changeWarning": "目標変えるとカウント消えるけどおけ？",
+      "confirm": "確定っしょ！",
+      "daysUnit": "日",
+      "keystrokesUnit": "回/日",
+      "historyButton": "達成履歴☆",
+      "historyTitle": "達成履歴っしょ",
+      "historyEmpty": "履歴まだないじゃんｗ",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} 日 / {{keystrokes}} 回☆",
+      "historyColumn": {
+        "period": "期間☆",
+        "goal": "目標っしょ",
+        "days": "日数☆",
+        "total": "合計打鍵っしょ",
+        "average": "平均/日☆"
+      }
+    },
+    "filters": {
+      "keyboard": "キーボード☆",
+      "period": "期間っしょ",
+      "device": "デバイス☆",
+      "deviceOption": {
+        "own": "このデバイスっしょ",
+        "all": "全部合わせちゃう☆"
+      },
+      "app": "アプリっしょ",
+      "appOption": {
+        "none": "全部合わせちゃう☆",
+        "multi": "{{first}} 他{{rest}}件っしょ"
+      },
+      "typingTest": "TypingTestっしょ",
+      "typingTestOption": {
+        "none": "全部合わせちゃう☆",
+        "multi": "{{first}} 他{{rest}}件っしょ"
+      },
+      "run": "結果っしょ",
+      "runOption": {
+        "none": "全部合わせちゃう☆",
+        "multi": "{{first}} 他{{rest}}件っしょ"
+      },
+      "dimensionLabel": "App / TypingTestで絞り込みっしょ☆",
+      "unit": "表示☆",
+      "unitOption": {
+        "sec": "秒っしょ",
+        "ms": "ミリ秒☆"
+      },
+      "intervalViewMode": "ビュー☆",
+      "intervalViewModeOption": {
+        "timeSeries": "時系列っしょ",
+        "distribution": "分布☆"
+      },
+      "intervalDistributionSection": "セクション☆",
+      "wpmViewMode": "ビュー☆",
+      "wpmViewModeOption": {
+        "timeSeries": "時系列っしょ",
+        "timeOfDay": "時間帯別☆"
+      },
+      "wpmMinSample": "最小サンプル☆",
+      "wpmMinSampleOption": {
+        "sec30": "30秒",
+        "min1": "1分",
+        "min2": "2分",
+        "min5": "5分"
+      },
+      "ergonomicsViewMode": "ビュー☆",
+      "ergonomicsViewModeOption": {
+        "snapshot": "スナップショットっしょ",
+        "learning": "学習曲線☆"
+      },
+      "ergonomicsPeriod": "区間っしょ",
+      "ergonomicsPeriodOption": {
+        "week": "週☆",
+        "month": "月っしょ"
+      },
+      "activityMetric": "指標☆",
+      "activityMetricOption": {
+        "keystrokes": "打鍵数っしょ",
+        "wpm": "WPM☆",
+        "sessions": "セッションっしょ"
+      },
+      "activityView": "ビュー☆",
+      "activityViewOption": {
+        "grid": "時間っしょ",
+        "calendar": "日☆"
+      },
+      "calendarNormalization": "正規化っしょ",
+      "calendarNormalizationOption": {
+        "absolute": "絶対値☆",
+        "shareOfWeekly": "週内シェアっしょ",
+        "shareOfTotal": "期間シェア☆"
+      },
+      "calendarRange": "表示期間っしょ",
+      "calendarRangeOption": {
+        "1": "1ヶ月",
+        "3": "3ヶ月",
+        "6": "6ヶ月",
+        "12": "12ヶ月"
+      },
+      "calendarRangePrev": "前の月っしょ",
+      "calendarRangeNext": "次の月☆",
+      "layerBaseLayer": "ベース☆",
+      "normalization": "正規化っしょ",
+      "normalizationOption": {
+        "absolute": "絶対数☆",
+        "perHour": "1時間あたりっしょ",
+        "shareOfTotal": "総打鍵比 (%)☆"
+      },
+      "granularity": "粒度っしょ",
+      "granularityOption": {
+        "auto": "自動☆",
+        "min1": "1分",
+        "min5": "5分",
+        "min10": "10分",
+        "min15": "15分",
+        "min30": "30分",
+        "hour1": "1時間",
+        "hour3": "3時間",
+        "hour6": "6時間",
+        "hour12": "12時間",
+        "day1": "1日",
+        "day3": "3日",
+        "week1": "1週間",
+        "month1": "1ヶ月"
+      },
+      "sourceLabel": "ソース☆",
+      "editConditions": "検索条件を編集っしょ☆",
+      "chipAriaLabel": "検索条件を編集っしょ☆",
+      "sourceDisabledByApp": "By Appだと全ソース合わせちゃうから、この項目は使えないっしょ☆",
+      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータ使うから、この項目は使えないっしょ☆",
+      "openRunTimeline": "タイムライン開いちゃお☆"
+    }
+  },
+  "dataModal": {
+    "title": "データ☆",
+    "local": "ローカルっしょ",
+    "keyboards": "キーボード☆",
+    "favorites": "お気に入り♡",
+    "application": "アプリっしょ",
+    "sync": "Sync - 遠くのデータ☆",
+    "hub": "Hub - 遠くのデータっしょ",
+    "noKeyboards": "保存したのないじゃん",
+    "noSaves": "セーブ見つかんないｗ",
+    "importExportDesc": "全部出したり入れたりできるよん☆",
+    "deleteAll": "全部消すっしょ！",
+    "deleteAllConfirm": "同期してるのも全部消えるけどおけ？ｗ",
+    "syncNoOrphans": "全部ここにあるっぽみ☆",
+    "resetAppSettings": "アプリ設定リセット☆",
+    "cloudData": "クラウドデータ☆",
+    "trash": "ゴミ箱☆",
+    "typing": {
+      "title": "タイピング☆",
+      "noKeyboards": "タイピングデータないじゃん",
+      "noItems": "このキーボードのデータないしｗ",
+      "summaryLine": "{{days}} 日分 / 合計 {{keystrokes}} 打ったよん☆",
+      "colDateZone": "日付☆（{{zone}}）",
+      "colKeystrokes": "打鍵数っしょ",
+      "colActiveMs": "打ってた時間☆",
+      "selectAll": "全部選ぶっしょ！",
+      "selectRow": "{{date}} を選ぶ☆",
+      "deleteSelected": "選んだの消すっしょ ({{count}})",
+      "deleteAll": "これの全データ消すっしょ！",
+      "confirmDeleteSelected": "選んだ {{count}} 日分消しちゃう？他のは残るけど、前のExportを再インポしても消えたままだよ☆",
+      "confirmDeleteAll": "全部消しちゃう？他のPCからも次の同期で消えるよ。他のデバイスの分は残るけど、前のExportを再インポしても消えたままだよ☆",
+      "confirmDeleteSelectedDevice": "このデバイスの {{count}} 日分、ここでソッコー隠しちゃう？記録したPCが次に同期したら消えるよ。今より後に打った分は残るから安心してね☆",
+      "confirmDeleteAllDevice": "このデバイスの全部の日、ここでソッコー隠しちゃう？記録したPCが次に同期したら消えるよ。今より後に打った分は残るから安心してね☆",
+      "exportLabel": "Export…☆",
+      "importLabel": "Import…っしょ",
+      "importStatus": {
+        "importing": "取り込みちう…",
+        "exporting": "書き出しちう☆",
+        "imported": "{{count}} 日分いれたよん☆",
+        "exported": "{{count}} 日分だしたよんっしょ",
+        "reason": {
+          "invalid-filename": "ファイル名バグってね？",
+          "live-day-locked": "記録なうだからロックされてるしｗ {{unlock}} に解除☆",
+          "duplicate-in-batch": "同じ日のが混ざってるんだけど！",
+          "no-matching-target": "そんな日のデータどこにもなくね？",
+          "empty-or-invalid-content": "中身スカスカかバグってるっしょ☆",
+          "rows-outside-day-window": "時間ズレてね？ｗ",
+          "read-error": "読み込めなかった…サゲ。。",
+          "deleted-ranges-unreadable": "削除範囲が読めなかったから、この日はそのままにしといたよ…"
+        }
+      },
+      "noRemoteDevices": "他のデバイスで打った記録ないじゃん"
+    }
+  },
+  "editorSettings": {
+    "title": "メニューっしょ",
+    "tabData": "データ☆",
+    "tabSave": "保存っしょ",
+    "tabTools": "設定 / インポート☆",
+    "tabLayout": "レイアウトっしょ",
+    "basicViewType": "Basic タブ表示☆",
+    "splitKeyMode": "Shiftキー分離っしょ",
+    "quickSelect": "爆速選択☆",
+    "layerHoverPreview": "レイヤー勝手にチラ見せ☆",
+    "entryHoverPreview": "お気に入り♡ホバーで中身チラ見せ☆",
+    "keyEditorZoom": "エディタズーム☆"
+  },
+  "hub": {
+    "uploadToHub": "アップっしょ☆",
+    "uploading": "アップなう…",
+    "uploadSuccess": "アップしたよん！",
+    "uploadFailed": "アップ失敗ｗマジサゲ。。",
+    "updateOnHub": "アプデ☆",
+    "updating": "アプデちう…",
+    "updateSuccess": "アプデおけ！",
+    "updateFailed": "アプデ失敗したんだけどｗ",
+    "syncSuccess": "同期おけ！",
+    "syncFailed": "同期失敗…サゲ。。",
+    "removeFromHub": "ポイっちょ☆",
+    "removeSuccess": "消したよん！",
+    "removeFailed": "消せなかったｗサゲ。。",
+    "confirmRemove": "消しちゃう？☆",
+    "pipetteHub": "Hubっしょ☆",
+    "uploadQuestion": "アップしちゃう？♡",
+    "deleteFromHub": "消すっしょ",
+    "hubConnected": "Hub つながってる☆",
+    "hubDisconnected": "Hub つながってないｗ",
+    "enabled": "接続おけ！",
+    "enable": "つなげる☆",
+    "disable": "バイバイっしょ",
+    "confirmDisconnect": "切断しちゃう？",
+    "noPosts": "投稿まだなくね？",
+    "requiresAuth": "Googleつなげてから来て☆",
+    "renameFailed": "名前変えられなかったｗ",
+    "deleteFailed": "消せなかった…サゲ。。",
+    "hubSynced": "同期おけ！",
+    "displayName": "投稿者名☆",
+    "displayNameDescription": "Hubでの名前決めてねん♡",
+    "displayNameSaved": "名前保存したよん！",
+    "displayNameSaveFailed": "保存失敗…マジサゲ。。",
+    "displayNameTaken": "その名前もう使われてるしｗ",
+    "openInBrowser": "開く☆",
+    "needsDisplayName": "名前設定してよｗ",
+    "displayNameRequired": "アップするなら必要っしょ☆",
+    "authDisplayNameConflict": "Googleの名前とかぶってるんだけど！変えてよｗ",
+    "accountDeactivated": "アカウント死んでるっぽいｗサポートに言って☆",
+    "rateLimited": "リクエスト多すぎｗちょっと待ってからにして☆",
+    "notSignedIn": "Hubと同期するにはGoogle入ってから☆",
+    "error": {
+      "keystrokesBelow": "打鍵数足りなくね？（100打鍵以上してｗ）",
+      "rangeExceeds": "期間長すぎｗ 30日以内にして☆",
+      "unsupportedVersion": "新しすぎてHubが読み込めないｗアプデっしょ！",
+      "kindMismatch": "analyticsの投稿じゃなくね？",
+      "invalidPayload": "中身バグっててアップできないんだけど！",
+      "malformedPayload": "チャートバグってるっぽみ☆",
+      "entryNotFound": "条件見つかんないじゃん！更新してみて☆",
+      "malformedSavedPayload": "保存したの壊れてね？ｗ",
+      "unsupportedSavedVersion": "バージョン新しすぎて無理っしょ☆",
+      "noRange": "期間情報ないじゃん。Analyzeからやり直して☆",
+      "noSnapshot": "スナップショットないしｗキーボード使ってからまた来て！",
+      "invalidId": "特定できなかったｗパネル更新っしょ☆",
+      "titleEmpty": "タイトル入れてよｗ",
+      "titleTooLong": "タイトル長すぎｗ 200文字以内にして☆",
+      "authFailed": "認証失敗っしょｗサインインし直して！",
+      "payloadTooLarge": "デカすぎｗチャート減らすか期間短くして☆"
+    },
+    "uploadConfirm": {
+      "title": {
+        "create": "Hubにアップっしょ☆",
+        "update": "Hub投稿をアプデ☆"
+      },
+      "visibilityPublic": "公開",
+      "publicDesc": "Hubの一覧と検索に出るよ☆",
+      "visibilityPrivate": "非公開（限定リンク）",
+      "privateDesc": "秘密リンク知ってる子だけ見れるっしょ☆ 一覧・検索には出ないよ",
+      "expiryLabel": "リンクの有効期限",
+      "expiryDays_one": "{{count}}日",
+      "expiryDays_other": "{{count}}日",
+      "expiresAtPreview": "{{date}} に切れちゃう☆",
+      "warnUrlExpiryChange": "アプデすると投稿作り直しだから、共有リンクと期限が変わるっしょ☆",
+      "confirm": "決定☆",
+      "cancel": "やめとく"
+    },
+    "private": {
+      "badgePublic": "Hub（公開）",
+      "badgePrivate": "Hub（非公開）",
+      "expiresAt": "{{date}} に切れちゃう☆",
+      "noExpiry": "無期限",
+      "removeConfirm": "Hubから消しちゃう？ 非公開リンクはすぐ使えなくなるよ☆"
+    }
+  },
+  "notification": {
+    "title": "お知らせ☆",
+    "empty": "お知らせないじゃん",
+    "type": {
+      "Info": "情報っしょ☆",
+      "Warning": "警告！",
+      "Update": "アプデ☆"
+    }
+  },
+  "update": {
+    "title": "アプデきてるよ☆",
+    "failedTitle": "アプデ失敗しちゃった…",
+    "message": "Pipette {{version}} 出てるよ！今のは {{currentVersion}} だよん☆",
+    "releasePage": "{{version}} の新しいとこ見てみる？",
+    "install": "アプデする☆",
+    "retry": "もっかいやる！",
+    "later": "今はいいや〜",
+    "skip": "このバージョンはパス☆",
+    "downloading": "ダウンロード中… {{size}} MB",
+    "downloadingPercent": "ダウンロード中… {{percent}}%",
+    "restarting": "仕上げ中〜！Pipette 再起動するね♡",
+    "errorHint": "リリースページから新しいの落として自分で入れてもOKだよ☆",
+    "error": {
+      "network": "アプデ落とせなかった…ネットつながってるか見てもっかいやってみて！",
+      "signature": "アプデが本物か確かめられなかったから、入れなかったよ！",
+      "permission": "Pipette が入ってるフォルダに書き込めないっぽい…",
+      "cancelled": "Pipette 終わりかけてたから、アプデは入れなかったよ〜",
+      "busy": "今アプデ確認中だよ！ちょい待ってからもっかいね☆",
+      "previousAppNotRestored": "アプデできなかったし、前のも戻せなかった…ごめん！前のやつのコピーは {{path}} に置いてあるよ。リリースページから新しいの落として入れてね☆",
+      "unknown": "アプデ中になんかバグった…"
+    },
+    "about": {
+      "check": "アプデ確認する☆",
+      "checking": "アプデ確認中…",
+      "disabled": "このPipetteは自分でアプデしないやつだよ〜",
+      "upToDate": "Pipette 最新だよ☆",
+      "available": "Pipette {{version}} 出てるよ！",
+      "availableSkipped": "Pipette {{version}} 出てるよ！起動のときはパスしたけど、ここからならアプデできるよ☆",
+      "open": "{{version}} にアプデする☆…"
+    }
+  },
+  "favoriteStore": {
+    "title": "お気に入り♡",
+    "noSaved": "保存したのないじゃんｗ",
+    "saveFailed": "保存失敗したんだけど！",
+    "loadFailed": "読み込み失敗…サゲ。。",
+    "delete": "ポイっちょ☆",
+    "saveCurrentState": "なうを保存☆",
+    "export": "エクスポート",
+    "exportAll": "全部出すっしょ！",
+    "import": "インポート",
+    "exportFailed": "エクスポート失敗…サゲ。。",
+    "importFailed": "インポート失敗したんだけどｗ",
+    "importSuccess": "{{imported}} 件いれたよん☆",
+    "importPartial": "{{imported}} 件いれたけど {{skipped}} 件飛ばしたｗ",
+    "importEmpty": "なにも入んなかったｗ",
+    "exportCurrent": "エクスポート",
+    "importCurrent": "インポート"
+  },
+  "keyLabels": {
+    "title": "キーラベル☆",
+    "manageRow": "管理っしょ☆",
+    "edit": "編集っしょ",
+    "hubEmpty": "ハブにキーラベルないじゃんｗ",
+    "search": "検索っしょ",
+    "searching": "検索なう…",
+    "import": "インポート",
+    "empty": "キーラベルないしｗ検索かImportで足してね♡",
+    "actionUpload": "アップ☆",
+    "actionUpdate": "アプデっしょ",
+    "actionSync": "同期☆",
+    "actionRemove": "バイバイｗ",
+    "actionDownload": "落とすっしょ",
+    "actionDelete": "ポイっちょ☆",
+    "actionExport": ".json",
+    "typeKeymapWrite": "書き換えOKっしょ☆",
+    "typeViewOnly": "見るだけっしょ",
+    "typeKeymapWriteShort": "書換OK☆",
+    "typeViewOnlyShort": "見るだけ",
+    "qwertyDefaultName": "QWERTY（デフォっしょ☆）",
+    "qwertyDefaultShort": "デフォっしょ",
+    "hubRemoved": "(消されたｗ)",
+    "errorDuplicate": "名前かぶってるんだけど！",
+    "errorImportFailed": "キーラベルのインポート失敗…サゲ。。",
+    "errorInvalidName": "名前バグってね？",
+    "errorSearchFailed": "Hub検索失敗…マジサゲ。。",
+    "errorGeneric": "失敗したｗ",
+    "missingTitle": "キーラベル見つかんないじゃん",
+    "missingMessage": "「{{name}}」がないからQWERTYでいくっしょ☆",
+    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}} か、キーピッカーの Edit ボタンから落とせるよん☆",
+    "missingClose": "閉じるっしょ",
+    "keymapApply": {
+      "title": "「{{name}}」キーマップも書き換えちゃう？",
+      "saveRecommendation": "書き換える前に今のキーマップ保存しとくのがマジ安心っしょ。書き換えは全レイヤーのキーコードがガラッと変わっちゃうし、Undo/Redoの履歴も消えちゃうから、戻したいなら保存したファイルから復元するしかないっしょ！",
+      "confirmApply": "適用しちゃう？☆",
+      "tabsLabel": "見え方っしょ",
+      "errorPartial": "一部のキー書き換え失敗…マジサゲ。。そこでストップしたから、必要なら前に保存した.vilファイルかスナップショットから復元してっしょ"
+    }
+  },
+  "themePacks": {
+    "title": "テーマパック☆",
+    "import": "テーマパック入れるっしょ",
+    "manageRow": "テーマパック管理☆",
+    "parseError": "ファイル読めなかったｗ",
+    "selectTheme": "{{name}} にする☆",
+    "hubEmpty": "Hub にテーマパックないじゃんｗ",
+    "preview": "プレビュー☆",
+    "previewing": "プレビューちう☆"
+  },
+  "i18n": {
+    "edit": "編集☆",
+    "errorGeneric": "失敗したｗ",
+    "errorInvalidJson": "JSONじゃなくね？これｗ",
+    "hubEmpty": "Hubに言語パックないじゃんｗ",
+    "import": "インポート",
+    "jaRemoved": {
+      "dismiss": "閉じるっしょ",
+      "message": "日本語パックはHubにあるから落としてねん♡",
+      "title": "日本語パックお引っ越ししたよん☆"
+    },
+    "manageRow": "言語管理っしょ",
+    "missingKeys": {
+      "description": "足りないやつのテンプレ出すから編集して入れてねん♡",
+      "empty": "全部設定おけ！マジ神☆",
+      "title": "設定してないやつらｗ"
+    },
+    "modalTitle": "言語っしょ",
+    "notSetKeys": "設定してないやつら☆",
+    "selectLanguage": "{{name}}にする☆",
+    "preview": {
+      "dangerousWarning": "禁止キー入ってるからダメっしょ！"
+    },
+    "search": "検索っしょ"
+  }
+}

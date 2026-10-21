@@ -7,7 +7,9 @@
 //! - one line per record, `[<ISO 8601 UTC with ms>] [<LEVEL>] <message>\n`
 //!   (tests/ts_log_lines.rs checks recorded lines of the 0.4 build's logger).
 //!
-//! Every line is also written to stderr. Records of the app's own crates
+//! Every line is written to stderr; to the files only while they are
+//! enabled ([`set_file_enabled`], off after [`init`]). The home folder in a
+//! message is replaced with `~` on both (mask.rs). Records of the app's own crates
 //! (targets starting with `pipette`) are kept from DEBUG up; those of other
 //! crates (Tauri, the WebView) from WARN up, so their debug output does not
 //! fill the files. A panic is logged as an ERROR before the default panic
@@ -16,19 +18,24 @@
 //! When the log directory cannot be created the logger still writes to
 //! stderr.
 //!
-//! [`remove_log_files`] removes the files under the logger's lock.
+//! [`set_file_enabled`] works on the files under the logger's lock, and does
+//! nothing before [`init`] or when the logger writes to stderr only. Nothing
+//! under that lock logs or panics: a record would take the lock again. So it
+//! returns its error, for the caller to log.
 
 mod format;
+mod mask;
 mod rotating_file;
 
 use std::cell::Cell;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
 pub use format::format_line;
+use mask::HomeMask;
 use rotating_file::{MAX_FILE_SIZE, RotatingFile};
 
 /// Targets of the app's own crates (`pipette_app`, `pipette_hid`, …).
@@ -42,12 +49,26 @@ pub enum InitError {
     AlreadyInstalled,
 }
 
-/// The log files, shared by [`FileLogger`] and [`remove_log_files`]. Unset
+/// The log files and whether lines go to them.
+struct FileOutput {
+    file: RotatingFile,
+    enabled: bool,
+}
+
+/// The log files, shared by [`FileLogger`] and [`set_file_enabled`]. Unset
 /// before [`init`] and when the log directory could not be created: stderr
 /// only.
-static FILE: OnceLock<Mutex<RotatingFile>> = OnceLock::new();
+static FILE: OnceLock<Mutex<FileOutput>> = OnceLock::new();
 
-struct FileLogger;
+/// The files under the logger's lock (see the module doc); `None` when there
+/// are none.
+fn lock_file() -> Option<std::sync::MutexGuard<'static, FileOutput>> {
+    FILE.get().map(|file| file.lock().unwrap_or_else(std::sync::PoisonError::into_inner))
+}
+
+struct FileLogger {
+    home: HomeMask,
+}
 
 /// Whether a record of `target` at `level` is kept.
 fn keeps(target: &str, level: Level) -> bool {
@@ -64,12 +85,17 @@ impl Log for FileLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        let line = format_line(pipette_time::now_ms(), record.level(), &record.args().to_string());
+        let message = record.args().to_string();
+        let line = format_line(pipette_time::now_ms(), record.level(), &self.home.apply(&message));
         let _ = std::io::stderr().write_all(line.as_bytes());
-        let Some(file) = FILE.get() else {
+        let Some(mut output) = lock_file() else {
             return;
         };
-        let result = file.lock().unwrap_or_else(std::sync::PoisonError::into_inner).append(&line);
+        if !output.enabled {
+            return;
+        }
+        let result = output.file.append(&line);
+        drop(output);
         if let Err(err) = result {
             // Logging must never take the app down; the line is on stderr.
             let _ = writeln!(std::io::stderr(), "failed to write the log file: {err}");
@@ -79,29 +105,33 @@ impl Log for FileLogger {
     fn flush(&self) {}
 }
 
-/// Installs the logger, writing to `log_dir` (created if missing), and the
-/// panic hook. Call once, first thing at startup. When `log_dir` cannot be
-/// created the logger and the hook are installed anyway, writing to stderr
-/// only, and the error says why.
-pub fn init(log_dir: PathBuf) -> Result<(), InitError> {
+/// Installs the logger, with the files in `log_dir` (created if missing)
+/// disabled, and the panic hook. `home` is the home folder to mask. Call
+/// once, first thing at startup. When `log_dir` cannot be created the logger
+/// and the hook are installed anyway, writing to stderr only, and the error
+/// says why.
+pub fn init(log_dir: PathBuf, home: Option<&Path>) -> Result<(), InitError> {
     let created = std::fs::create_dir_all(&log_dir);
-    log::set_boxed_logger(Box::new(FileLogger)).map_err(|_| InitError::AlreadyInstalled)?;
+    let logger = FileLogger { home: HomeMask::new(home) };
+    log::set_boxed_logger(Box::new(logger)).map_err(|_| InitError::AlreadyInstalled)?;
     if created.is_ok() {
-        let _ = FILE.set(Mutex::new(RotatingFile::new(log_dir.clone(), MAX_FILE_SIZE)));
+        let file = RotatingFile::new(log_dir.clone(), MAX_FILE_SIZE);
+        let _ = FILE.set(Mutex::new(FileOutput { file, enabled: false }));
     }
     log::set_max_level(LevelFilter::Debug);
     install_panic_hook();
     created.map_err(|err| InitError::CreateDir(log_dir, err))
 }
 
-/// [`RotatingFile::remove_files`] under the logger's lock. Does nothing when
-/// [`init`] was not called or the logger writes to stderr only. The caller
-/// logs the error: logging here would take the lock again.
-pub fn remove_log_files() -> std::io::Result<()> {
-    match FILE.get() {
-        Some(file) => file.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove_files(),
-        None => Ok(()),
-    }
+/// Starts or stops writing lines to the files, under the logger's lock
+/// (module doc). Stopping also removes them under the same lock, so no line
+/// is appended between the switch and the removal.
+pub fn set_file_enabled(enabled: bool) -> std::io::Result<()> {
+    let Some(mut output) = lock_file() else {
+        return Ok(());
+    };
+    output.enabled = enabled;
+    if enabled { Ok(()) } else { output.file.remove_files() }
 }
 
 fn install_panic_hook() {

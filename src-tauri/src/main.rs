@@ -446,9 +446,13 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // Opened after `build` (a second launch never gets here) and before the
+    // first line, so the log files follow the stored Debug Mode from the
+    // start; the config's own errors at open reach stderr only.
+    let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
+    app_config::apply_stored_debug_mode(app.handle(), &config);
     log::info!("Pipette starting");
     spawn_v04_cleanup(user_data.clone());
-    let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
     app.manage(Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env()))));
     app.manage(UserDataDir(user_data));
     app.manage(config);
@@ -474,8 +478,10 @@ fn spawn_v04_cleanup(user_data: PathBuf) {
 /// Starts the log after `build`, that is after the single-instance check, so
 /// a second launch never touches the running app's log; records emitted
 /// while the app is built (plugin setup included) are not written to the file.
+/// The files stay disabled until the stored Debug Mode is applied, and a
+/// failed build never touches them.
 fn start_log(user_data: &Path) {
-    if let Err(err) = pipette_logger::init(user_data.join("logs")) {
+    if let Err(err) = pipette_logger::init(user_data.join("logs"), std::env::home_dir().as_deref()) {
         log::error!("the log file is unavailable: {err}");
     }
 }

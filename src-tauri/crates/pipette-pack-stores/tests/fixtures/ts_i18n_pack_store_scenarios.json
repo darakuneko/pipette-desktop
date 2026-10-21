@@ -1658,16 +1658,16 @@
       "imports/array.json": "[1,2]",
       "imports/lone.json": "{\"name\":\"Lone \\ud800\",\"version\":\"1\"}",
       "imports/Japanese.json": {
-        "copyOf": "sample-packs/i18n/i18n-packs-Japanese.json"
+        "copyOf": "src-tauri/crates/pipette-pack-stores/tests/fixtures/sample-packs/i18n/i18n-packs-Japanese.json"
       },
       "imports/Japanese_-_ギャル.json": {
-        "copyOf": "sample-packs/i18n/i18n-packs-Japanese_-_ギャル.json"
+        "copyOf": "src-tauri/crates/pipette-pack-stores/tests/fixtures/sample-packs/i18n/i18n-packs-Japanese_-_ギャル.json"
       },
       "imports/Japanese_-_京言葉.json": {
-        "copyOf": "sample-packs/i18n/i18n-packs-Japanese_-_京言葉.json"
+        "copyOf": "src-tauri/crates/pipette-pack-stores/tests/fixtures/sample-packs/i18n/i18n-packs-Japanese_-_京言葉.json"
       },
       "imports/Japanese_-_紳士.json": {
-        "copyOf": "sample-packs/i18n/i18n-packs-Japanese_-_紳士.json"
+        "copyOf": "src-tauri/crates/pipette-pack-stores/tests/fixtures/sample-packs/i18n/i18n-packs-Japanese_-_紳士.json"
       },
       "exports/": null
     },

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.123",
+  "version": "0.1.124",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1046,7 +1046,9 @@
     "restoreLastSession": "最後の状態で起動",
     "restoreLastSessionDescription": "起動時に最後に接続していたキーボードと画面を復元します",
     "startInTray": "トレイ常駐で起動",
-    "startInTrayDescription": "ウィンドウを開かずタスクトレイ常駐で起動します"
+    "startInTrayDescription": "ウィンドウを開かずタスクトレイ常駐で起動します",
+    "debugMode": "デバッグモード",
+    "debugModeDescription": "不具合の調査用にログファイルを書き出します。オフにするとログファイルを削除します"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがありません",
