@@ -14,7 +14,7 @@ use serde::Deserialize;
 use crate::{DriveApi, DriveError, DriveFile, DriveFuture, FileList, ListQuery, UploadedFile};
 
 /// The `fields` of a listing.
-pub const LIST_FIELDS: &str = "nextPageToken, files(id, name, modifiedTime, createdTime)";
+pub const LIST_FIELDS: &str = "nextPageToken, files(id, name, modifiedTime, createdTime, version)";
 /// The boundary of the multipart create; the content of a sync file is
 /// JSON, which never has a line that starts with it.
 const BOUNDARY: &str = "---pipette-sync-boundary";
@@ -162,6 +162,11 @@ fn parse<'a, T: Deserialize<'a>>(body: &'a [u8]) -> Result<T, DriveError> {
     serde_json::from_slice(body).map_err(|err| DriveError::BadResponse(err.to_string()))
 }
 
+/// Drive's `version`, an int64 its JSON sends as a string.
+fn parse_version(version: Option<&str>) -> Option<u64> {
+    version?.parse().ok()
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FileJson {
@@ -169,6 +174,7 @@ struct FileJson {
     name: String,
     modified_time: String,
     created_time: Option<String>,
+    version: Option<String>,
 }
 
 impl From<FileJson> for DriveFile {
@@ -178,6 +184,7 @@ impl From<FileJson> for DriveFile {
             name: file.name,
             modified_time: file.modified_time,
             created_time: file.created_time,
+            version: parse_version(file.version.as_deref()),
         }
     }
 }
@@ -195,11 +202,16 @@ struct ListJson {
 struct UploadedJson {
     id: String,
     modified_time: String,
+    version: Option<String>,
 }
 
 impl From<UploadedJson> for UploadedFile {
     fn from(file: UploadedJson) -> Self {
-        Self { id: file.id, modified_time: file.modified_time }
+        Self {
+            id: file.id,
+            modified_time: file.modified_time,
+            version: parse_version(file.version.as_deref()),
+        }
     }
 }
 
@@ -246,7 +258,7 @@ impl<R: HttpRequester, T: AccessTokenSource> DriveApi for HttpDrive<R, T> {
 
     fn create(&self, name: String, content: String) -> DriveFuture<'_, UploadedFile> {
         Box::pin(async move {
-            let body = self.create_file(name, content, "id,modifiedTime").await?;
+            let body = self.create_file(name, content, "id,modifiedTime,version").await?;
             Ok(parse::<UploadedJson>(&body)?.into())
         })
     }
@@ -261,8 +273,8 @@ impl<R: HttpRequester, T: AccessTokenSource> DriveApi for HttpDrive<R, T> {
     fn update(&self, id: String, content: String) -> DriveFuture<'_, UploadedFile> {
         Box::pin(async move {
             // `fields` is asked for: the default answer to a media upload
-            // has no modifiedTime.
-            let url = format!("{}/files/{id}?uploadType=media&fields=id,modifiedTime", self.upload);
+            // has no modifiedTime or version.
+            let url = format!("{}/files/{id}?uploadType=media&fields=id,modifiedTime,version", self.upload);
             let body =
                 self.send(Method::Patch, url, Some("application/json"), Some(content.into_bytes())).await?;
             Ok(parse::<UploadedJson>(&body)?.into())
@@ -271,7 +283,7 @@ impl<R: HttpRequester, T: AccessTokenSource> DriveApi for HttpDrive<R, T> {
 
     fn rename(&self, id: String, name: String) -> DriveFuture<'_, DriveFile> {
         Box::pin(async move {
-            let url = format!("{}/files/{id}?fields=id,name,modifiedTime", self.api);
+            let url = format!("{}/files/{id}?fields=id,name,modifiedTime,version", self.api);
             let body = serde_json::json!({ "name": name }).to_string().into_bytes();
             let answer = self.send(Method::Patch, url, Some("application/json"), Some(body)).await?;
             Ok(parse::<FileJson>(&answer)?.into())
@@ -294,10 +306,23 @@ mod tests {
     fn encodes_a_query_as_url_search_params_does() {
         assert_eq!(
             form_encode(&[("fields", LIST_FIELDS), ("q", "name contains 'a\\'b'")]),
-            "fields=nextPageToken%2C+files%28id%2C+name%2C+modifiedTime%2C+createdTime%29\
+            "fields=nextPageToken%2C+files%28id%2C+name%2C+modifiedTime%2C+createdTime%2C+version%29\
              &q=name+contains+%27a%5C%27b%27"
         );
         assert_eq!(form_encode(&[("x", "~é*-._")]), "x=%7E%C3%A9*-._");
+    }
+
+    #[test]
+    fn reads_the_version_when_drive_answers_it() {
+        let listed: ListJson =
+            parse(br#"{"files":[{"id":"a","name":"n","modifiedTime":"t","version":"7"}]}"#).unwrap();
+        assert_eq!(DriveFile::from(listed.files.into_iter().next().unwrap()).version, Some(7));
+        let uploaded: UploadedFile =
+            parse::<UploadedJson>(br#"{"id":"a","modifiedTime":"t"}"#).unwrap().into();
+        assert_eq!(uploaded.version, None);
+        let odd: ListJson =
+            parse(br#"{"files":[{"id":"a","name":"n","modifiedTime":"t","version":"x"}]}"#).unwrap();
+        assert_eq!(DriveFile::from(odd.files.into_iter().next().unwrap()).version, None);
     }
 
     #[test]

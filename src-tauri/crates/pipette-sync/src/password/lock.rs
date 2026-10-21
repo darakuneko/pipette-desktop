@@ -285,6 +285,7 @@ mod tests {
             name: PASSWORD_CHANGE_LOCK_FILE.to_owned(),
             modified_time: "2026-01-01T00:00:00.000Z".to_owned(),
             created_time: created_time.map(str::to_owned),
+            version: None,
         }
     }
 

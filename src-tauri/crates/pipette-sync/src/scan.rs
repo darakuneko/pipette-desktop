@@ -278,6 +278,7 @@ mod tests {
             name: name.to_owned(),
             modified_time: "2025-01-01T00:00:00.000Z".to_owned(),
             created_time: None,
+            version: None,
         }
     }
 

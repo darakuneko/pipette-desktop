@@ -158,6 +158,7 @@ async fn backfill(ctx: &StoreContext, files: &[Value], events: &Events) -> (Valu
             name: text(get(file, "name")),
             modified_time: text(get(file, "modifiedTime")),
             created_time: None,
+            version: None,
         });
     }
     let drive = Arc::new(drive);
@@ -253,6 +254,7 @@ async fn a_keyboard_deleted_during_the_backfill_stays_deleted() {
             name: format!("keyboards_{uid}_snapshots.enc"),
             modified_time: "2026-10-01T00:00:00.000Z".to_owned(),
             created_time: None,
+            version: None,
         })
         .to_vec();
     let client = DriveClient::new(Arc::new(drive), Arc::new(NoWaits));

@@ -25,6 +25,7 @@ use pipette_typing_analytics::sync_units::{
 };
 use zeroize::Zeroizing;
 
+use crate::day_uploads::retain_day_uploads;
 use crate::dispatch::{UnitError, UnitSync};
 use crate::preflight::{Preflight, PreflightError};
 use crate::units::{DeviceDayUnit, parse_device_day_unit};
@@ -123,14 +124,23 @@ impl ReconcileChanges {
         !self.reconciled_at.is_empty() || self.uploaded.iter().any(|(_, removed)| !removed.is_empty())
     }
 
-    fn apply(&self, state: &mut TypingSyncState) {
+    /// Also drops each reconciled keyboard's `day_uploads` entries whose day
+    /// is not in its resulting `uploaded`: a day sent again after it left
+    /// must not count as unchanged. Returns whether any entry was dropped.
+    fn apply(&self, state: &mut TypingSyncState) -> bool {
+        let mut pruned = false;
         for (key, removed) in &self.uploaded {
-            let days = uploaded_days(&state.uploaded, key).into_iter().filter(|day| !removed.contains(day));
+            let days: IndexSet<String> = uploaded_days(&state.uploaded, key)
+                .into_iter()
+                .filter(|day| !removed.contains(day))
+                .collect();
+            pruned |= retain_day_uploads(&mut state.day_uploads, key, |day| days.contains(day));
             set_uploaded_days(&mut state.uploaded, key, days);
         }
         for (key, at) in &self.reconciled_at {
             set(&mut state.reconciled_at, key, Value::Number(*at));
         }
+        pruned
     }
 }
 
@@ -187,12 +197,15 @@ async fn delete_all_copies(drive: &DriveClient, listing: &Listing, day: &RemoteD
 ///
 /// A delete removes every copy and trash file of the day's name. Rule 2
 /// and the orphans also see a day that only has trash files; rule 3 needs
-/// a live copy, so such a day is uploaded again. The state is saved (with
-/// `last_synced_at`) only when it changed, through
+/// a live copy, so such a day is uploaded again. A `day_uploads` entry goes
+/// with its day. The state is saved only when it changed, through
 /// [`TypingAnalytics::update_sync_state`]: the file is read again and only
 /// the reconcile's changes are applied to it, so a day recorded while the
-/// deletes ran is kept. Nothing holds that lock while Drive is called. A
-/// failed save is the error, after any deletes on Drive.
+/// deletes ran is kept. Nothing holds that lock while Drive is called.
+/// `last_synced_at` moves only when a day left `uploaded` or a time was
+/// recorded; dropping only `day_uploads` entries saves the state without
+/// it (Drive is untouched). A failed save is the error, after any deletes
+/// on Drive.
 ///
 /// Rule 2 and the orphans delete what is not local, so nothing runs on
 /// what was not read: a state that cannot be loaded is the error before any
@@ -301,19 +314,21 @@ pub async fn reconcile_own_hash_typing_analytics(
     }
 
     let mutated = changes.changes_state();
-    if !mutated {
-        // Nothing is saved, but the returned state still carries each
-        // reconciled keyboard's list, sorted, as the file would.
-        changes.apply(&mut state);
+    // Applied here too so the state returned when nothing is saved carries
+    // each reconciled keyboard's list sorted, as the file would.
+    let pruned = changes.apply(&mut state);
+    if !mutated && !pruned {
         return Ok(Reconciled { state, mutated });
     }
     let synced_at = clock.now_ms() as f64;
     let (analytics, own) = (analytics.clone(), own_hash.to_owned());
     let state = blocking(move || {
         analytics.update_sync_state(&own, |state| {
-            changes.apply(state);
-            state.last_synced_at = synced_at;
-            true
+            let pruned = changes.apply(state);
+            if mutated {
+                state.last_synced_at = synced_at;
+            }
+            mutated || pruned
         })
     })
     .await?;

@@ -165,6 +165,7 @@ pub async fn seed_drive(world: &World, codec: &Arc<KeyCachedCodec>, seed: &Value
             name: name.to_owned(),
             modified_time: file.modified_time,
             created_time: None,
+            version: None,
         };
         let trash = pipette_drive::trash_names::trash_file_name(&created, renamed_at).unwrap();
         world.drive.inner.rename(file.id, trash).await.unwrap();

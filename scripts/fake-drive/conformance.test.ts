@@ -84,7 +84,7 @@ function create(name: string, content: string, fields: string): Promise<Response
 function listPage(nameContains: string | undefined, pageSize: number, pageToken: string | undefined): Promise<Response> {
   const params = new URLSearchParams({
     spaces: 'appDataFolder',
-    fields: 'nextPageToken, files(id, name, modifiedTime, createdTime)',
+    fields: 'nextPageToken, files(id, name, modifiedTime, createdTime, version)',
     pageSize: String(pageSize),
   })
   if (nameContains) params.set('q', `name contains '${nameContains.replace(/'/g, "\\'")}'`)
@@ -95,6 +95,7 @@ function listPage(nameContains: string | undefined, pageSize: number, pageToken:
 interface Saved {
   id: string
   modifiedTime: string
+  version?: string
 }
 
 /** Sends one step; resolves with the failed response, or null on success. */
@@ -110,7 +111,10 @@ async function runStep(step: Step, saved: Map<string, Saved>, context: string): 
   const idOf = (): string => (step.id === 'missing' ? 'missing-id' : savedFile(step.id).id)
   const save = (file: Saved): void => {
     if (!step.save) return
-    if (expectation.newer) expect(file.modifiedTime > savedFile(step.save).modifiedTime, context).toBe(true)
+    if (expectation.newer) {
+      expect(file.modifiedTime > savedFile(step.save).modifiedTime, context).toBe(true)
+      expect(Number(file.version) > Number(savedFile(step.save).version), context).toBe(true)
+    }
     saved.set(step.save, file)
   }
   const ok = async (response: Response): Promise<unknown> => {
@@ -126,7 +130,7 @@ async function runStep(step: Step, saved: Map<string, Saved>, context: string): 
         return null
       }
       case 'create':
-        save((await ok(await create(step.name ?? '', step.content ?? '', 'id,modifiedTime'))) as Saved)
+        save((await ok(await create(step.name ?? '', step.content ?? '', 'id,modifiedTime,version'))) as Saved)
         return null
       case 'createRaw': {
         const answer = (await ok(await create(step.name ?? '', step.content ?? '', 'id'))) as { id: string }
@@ -135,7 +139,7 @@ async function runStep(step: Step, saved: Map<string, Saved>, context: string): 
         return null
       }
       case 'update': {
-        const response = await fetch(`${upload}/files/${idOf()}?uploadType=media&fields=id,modifiedTime`, {
+        const response = await fetch(`${upload}/files/${idOf()}?uploadType=media&fields=id,modifiedTime,version`, {
           method: 'PATCH',
           headers: { ...AUTH, 'Content-Type': 'application/json' },
           body: step.content,
@@ -144,7 +148,7 @@ async function runStep(step: Step, saved: Map<string, Saved>, context: string): 
         return null
       }
       case 'rename': {
-        const response = await fetch(`${api}/files/${idOf()}?fields=id,name,modifiedTime`, {
+        const response = await fetch(`${api}/files/${idOf()}?fields=id,name,modifiedTime,version`, {
           method: 'PATCH',
           headers: { ...AUTH, 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: step.name }),
@@ -170,12 +174,12 @@ async function runStep(step: Step, saved: Map<string, Saved>, context: string): 
         let pageToken: string | undefined
         do {
           const page = (await ok(await listPage(step.nameContains, step.pageSize ?? 1000, pageToken))) as {
-            files: Array<{ id: string; name: string; modifiedTime: string; createdTime: string }>
+            files: Array<{ id: string; name: string; modifiedTime: string; createdTime: string; version: string }>
             nextPageToken?: string
           }
           sizes.push(page.files.length)
           for (const file of page.files) {
-            expect(file.id && file.modifiedTime && file.createdTime, context).toBeTruthy()
+            expect(file.id && file.modifiedTime && file.createdTime && file.version, context).toBeTruthy()
             names.push(file.name)
           }
           pageToken = page.nextPageToken
@@ -277,7 +281,7 @@ describe('the fake Drive', () => {
       {
         method: 'GET',
         path: '/drive/v3/files',
-        query: { spaces: 'appDataFolder', fields: 'nextPageToken, files(id, name, modifiedTime, createdTime)', pageSize: '10', q: "name contains 'a'" },
+        query: { spaces: 'appDataFolder', fields: 'nextPageToken, files(id, name, modifiedTime, createdTime, version)', pageSize: '10', q: "name contains 'a'" },
       },
     ])
   })

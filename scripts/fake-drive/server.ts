@@ -82,6 +82,7 @@ function pickFields(file: StoredFile, wanted: readonly string[] | null): Record<
     mimeType: file.mimeType,
     modifiedTime: file.modifiedTime,
     createdTime: file.createdTime,
+    version: file.version,
   }
   if (wanted === null) return all
   return Object.fromEntries(wanted.filter((field) => field in all).map((field) => [field, all[field]]))

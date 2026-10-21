@@ -12,6 +12,9 @@
 //!   write has a later `modifiedTime` than the one before. A rename counts
 //!   as a write: real Drive may or may not move `modifiedTime` on a
 //!   rename, and the sync must work either way;
+//! - a file's `version` is 1 when it is created and grows by one with each
+//!   update and rename of it (real Drive raises it on every change too,
+//!   by an amount of its choosing);
 //! - an unknown id is 404; [`InMemoryDrive::inject`] makes the next
 //!   requests fail with a status of the test's choosing, and
 //!   [`InMemoryDrive::lose_answers`] makes the next requests of an
@@ -98,6 +101,15 @@ pub struct StoredFile {
     pub content: Vec<u8>,
 }
 
+impl StoredFile {
+    /// Raises the file's `version` by one and returns it.
+    fn bump_version(&mut self) -> u64 {
+        let next = self.file.version.unwrap_or(0) + 1;
+        self.file.version = Some(next);
+        next
+    }
+}
+
 #[derive(Default)]
 struct State {
     /// In the order they were created.
@@ -157,10 +169,11 @@ impl State {
                 name,
                 modified_time: now.clone(),
                 created_time: Some(now.clone()),
+                version: Some(1),
             },
             content: content.into_bytes(),
         });
-        UploadedFile { id, modified_time: now }
+        UploadedFile { id, modified_time: now, version: Some(1) }
     }
 
     fn list(&self, query: &ListQuery) -> Result<FileList, DriveError> {
@@ -277,7 +290,8 @@ impl DriveApi for InMemoryDrive {
             let stored = state.file_mut(&id)?;
             stored.content = content.into_bytes();
             stored.file.modified_time = now.clone();
-            Ok(UploadedFile { id, modified_time: now })
+            let version = stored.bump_version();
+            Ok(UploadedFile { id, modified_time: now, version: Some(version) })
         })
     }
 
@@ -288,6 +302,7 @@ impl DriveApi for InMemoryDrive {
             let stored = state.file_mut(&id)?;
             stored.file.name = name;
             stored.file.modified_time = now;
+            stored.bump_version();
             // A rename answers the fields it asks for: no createdTime.
             Ok(DriveFile { created_time: None, ..stored.file.clone() })
         })

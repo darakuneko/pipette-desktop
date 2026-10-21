@@ -34,10 +34,12 @@ use zeroize::Zeroizing;
 
 use crate::bundle::{BundleError, bundle_plaintext, bundle_sync_unit};
 use crate::codec::EnvelopeCodec;
+use crate::day_uploads::{DayUpload, day_content_sha256, day_upload, set_day_upload};
 use crate::merge::{
     AnalyticsEnv, MergeEnv, MergeError, MergeEvents, PackRosters, merge_analytics_unit,
     merge_device_day_bundle, merge_sync_unit,
 };
+use crate::password::check::validated_password_check;
 use crate::typing_remote::{pointer_key, set_uploaded_days, uploaded_days};
 use crate::unit_locks::UnitLocks;
 use crate::units::{DeviceDayUnit, parse_device_day_unit};
@@ -146,25 +148,33 @@ impl UnitSync {
         password: &str,
         listing: Option<&Listing>,
     ) -> Result<(), UnitError> {
-        self.locks.with_lock(&format!("upload:{unit}"), self.upload_locked(unit, password, listing)).await
+        self.locks
+            .with_lock(&format!("upload:{unit}"), self.upload_locked(unit, password, listing, false))
+            .await
     }
 
+    /// With `skip_unchanged`, an own day unchanged since its last upload
+    /// (`day_uploads` of `sync_state.json`) is not sent; Drive's copy is
+    /// then that upload, whose revision is recorded as handled.
     async fn upload_locked(
         &self,
         unit: &str,
         password: &str,
         listing: Option<&Listing>,
+        skip_unchanged: bool,
     ) -> Result<(), UnitError> {
         let (ctx, owned_unit) = (self.ctx.clone(), unit.to_owned());
         let bundle = tokio::task::spawn_blocking(move || bundle_sync_unit(&ctx, &owned_unit))
             .await
             .map_err(other)??;
         let Some(bundle) = bundle else { return Ok(()) };
-        let content = self
-            .codec
-            .seal(bundle_plaintext(&bundle), Zeroizing::new(password.to_owned()), unit.to_owned())
-            .await
-            .map_err(UnitError::Other)?;
+        let day = parse_device_day_unit(unit);
+        // A day's upload is recorded only under a validated password-check,
+        // with the hash of the text this upload sends (not of the file read
+        // again after it: a line appended meanwhile counts as not sent).
+        let sent = day
+            .and_then(|_| validated_password_check(&self.runtime, password))
+            .and_then(|check| Some((day_content_sha256(&bundle)?, check)));
 
         let listed;
         let listing = match listing {
@@ -175,7 +185,21 @@ impl UnitSync {
             }
         };
         let name = drive_file_name(unit);
-        let listed_id = listing.pick_canonical(&name).map(|file| file.id.clone());
+        let canonical = listing.pick_canonical(&name);
+        if skip_unchanged
+            && let (Some(day), Some((sha256, check)), Some(file)) = (day, &sent, canonical)
+            && let Some(revision) = self.unchanged_day(day, sha256, file, check).await
+        {
+            self.runtime.remote().record(&name, revision);
+            return Ok(());
+        }
+
+        let content = self
+            .codec
+            .seal(bundle_plaintext(&bundle), Zeroizing::new(password.to_owned()), unit.to_owned())
+            .await
+            .map_err(UnitError::Other)?;
+        let listed_id = canonical.map(|file| file.id.clone());
         // A listing taken before an earlier upload of this run created the
         // file does not show it (an Analyze sync and a flush can both start
         // without today's day file): that file is updated rather than a
@@ -201,8 +225,9 @@ impl UnitSync {
         }
         // Recorded after the bookkeeping: an upload whose bookkeeping
         // failed stays unknown, so the next pass uploads it again.
-        if let Some(day) = parse_device_day_unit(unit) {
-            self.record_day_uploaded(day).await?;
+        if let Some(day) = day {
+            let upload = sent.and_then(|(sha256, check)| DayUpload::new(sha256, &uploaded, check));
+            self.record_day_uploaded(day, upload).await?;
         }
         self.runtime
             .remote()
@@ -210,23 +235,65 @@ impl UnitSync {
         Ok(())
     }
 
+    /// The revision of this device's last upload of `day` when the day is
+    /// unchanged since (see [`DayUpload::is_unchanged`]) and `file` is the
+    /// Drive file the pass would write; `None` when it must be sent, a
+    /// `sync_state.json` that cannot be read included.
+    async fn unchanged_day(
+        &self,
+        day: DeviceDayUnit<'_>,
+        sha256: &str,
+        file: &DriveFile,
+        password_check: &RemoteRevision,
+    ) -> Option<RemoteRevision> {
+        let root = self.ctx.user_data().to_path_buf();
+        let state = tokio::task::spawn_blocking(move || {
+            pipette_typing_analytics::sync_state::try_load_sync_state(&root)
+        })
+        .await
+        .ok()?
+        .ok()??;
+        let upload = day_upload(&state.day_uploads, &pointer_key(day.uid, day.machine_hash), day.utc_day)?;
+        if upload.is_unchanged(sha256, file, password_check) {
+            return Some(upload.file);
+        }
+        // Logged so a Drive that moves the version without a write of this
+        // device can be told apart from a changed day.
+        if upload.matches_but_version(sha256, file, password_check) {
+            log::debug!(
+                "typing day {} {} sent again: Drive version {:?}, recorded {}",
+                day.uid,
+                day.utc_day,
+                file.version,
+                upload.version
+            );
+        }
+        None
+    }
+
     /// Adds an uploaded day to `uploaded` of `sync_state.json`, so the
     /// reconcile tells "never uploaded" from "uploaded, then removed on
-    /// Drive". The list stays sorted and free of duplicates; nothing is
-    /// written when the day is in it already. The uploads of a pass run
-    /// at once, so the read-modify-write goes through
+    /// Drive", and sets its `day_uploads` entry (none when there is nothing
+    /// to compare). The uploads of a pass run at once, so the
+    /// read-modify-write goes through
     /// [`pipette_typing_analytics::TypingAnalytics::update_sync_state`], one
     /// at a time.
-    async fn record_day_uploaded(&self, day: DeviceDayUnit<'_>) -> Result<(), UnitError> {
+    async fn record_day_uploaded(
+        &self,
+        day: DeviceDayUnit<'_>,
+        upload: Option<DayUpload>,
+    ) -> Result<(), UnitError> {
         let own = self.own_hash()?;
         let (analytics, now) = (self.ops.analytics().clone(), self.ops.analytics().now_ms());
         let (key, utc_day) = (pointer_key(day.uid, day.machine_hash), day.utc_day.to_owned());
         tokio::task::spawn_blocking(move || {
             analytics
                 .update_sync_state(&own, |state| {
+                    let entry_changed =
+                        set_day_upload(&mut state.day_uploads, &key, &utc_day, upload.as_ref());
                     let mut days = uploaded_days(&state.uploaded, &key);
                     if !days.insert(utc_day) {
-                        return false;
+                        return entry_changed;
                     }
                     set_uploaded_days(&mut state.uploaded, &key, days);
                     state.last_synced_at = now as f64;
@@ -264,7 +331,8 @@ impl UnitSync {
         listing: Option<&Listing>,
     ) -> Result<(), UnitError> {
         // This device's own days are append-only logs only it writes, so
-        // nothing on Drive is newer: uploaded in place without a download.
+        // nothing on Drive is newer: uploaded in place without a download,
+        // and only when the day changed since its last upload.
         if let Some(day) = parse_device_day_unit(unit)
             && day.machine_hash == self.own_hash()?
         {
@@ -273,7 +341,8 @@ impl UnitSync {
             if !is_safe_path_segment(day.uid) {
                 return Err(MergeError::Malformed(unit.to_owned()).into());
             }
-            return self.upload_sync_unit(unit, password, listing).await;
+            let upload = self.upload_locked(unit, password, listing, true);
+            return self.locks.with_lock(&format!("upload:{unit}"), upload).await;
         }
 
         let content = self.drive.download(&file.id).await?;

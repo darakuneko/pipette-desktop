@@ -134,6 +134,7 @@ impl World {
             name: name.into(),
             modified_time: modified_time.into(),
             created_time: None,
+            version: None,
         };
         self.drive.files.lock().unwrap().insert(id.into(), file);
     }
@@ -176,6 +177,7 @@ fn trash_of(id: &str, name: &str, modified_time: &str, renamed_at_ms: i64) -> St
         name: name.into(),
         modified_time: modified_time.into(),
         created_time: None,
+        version: None,
     };
     trash_file_name(&file, renamed_at_ms).unwrap()
 }

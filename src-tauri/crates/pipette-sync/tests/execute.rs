@@ -512,7 +512,7 @@ async fn a_new_own_day_is_uploaded_and_recorded_once() {
     assert!(world.requests().contains(&format!("create:{name}")));
     world.upload(SyncScope::All).await;
     let requests = world.requests();
-    assert!(requests.iter().any(|r| r.starts_with("update:")), "{requests:?}");
+    assert!(!requests.iter().any(|r| r.starts_with("update:")), "unchanged, not sent again: {requests:?}");
     assert!(downloads(&requests, &world).is_empty(), "an own day is never downloaded");
     let key = format!("{UID}|{}", world.own_hash());
     assert_eq!(sync_state(&world)["uploaded"][&key], serde_json::json!(["2026-04-18"]));

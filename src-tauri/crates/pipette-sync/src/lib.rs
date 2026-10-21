@@ -39,6 +39,7 @@ pub mod bundle;
 pub mod codec;
 pub mod crypto;
 pub mod data_error;
+mod day_uploads;
 pub mod dispatch;
 pub mod execute;
 pub mod flush;

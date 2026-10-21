@@ -13,7 +13,9 @@ use pipette_sync_format::drive_names::drive_file_name;
 use pipette_sync_format::password_check::{
     PASSWORD_CHECK_UNIT, encrypt_password_check, password_check_matches,
 };
-use pipette_sync_runtime::{SyncCredentialFailureReason, ValidatedPasswordCheck};
+use pipette_sync_runtime::{
+    RemoteRevision, SyncCredentialFailureReason, SyncRuntime, ValidatedPasswordCheck,
+};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
@@ -43,8 +45,17 @@ pub fn find_password_check(listing: &[DriveFile]) -> Option<&DriveFile> {
     })
 }
 
+/// The password-check last validated, if `password` opened it. Every entry
+/// point validates one before it writes, so during a pass this is the pass's
+/// password-check.
+pub fn validated_password_check(runtime: &SyncRuntime, password: &str) -> Option<RemoteRevision> {
+    let check = runtime.credentials().validated_password_check()?;
+    (check.password_fingerprint == fingerprint(password))
+        .then_some(RemoteRevision { id: check.id, modified_time: check.modified_time })
+}
+
 fn revision(file: &DriveFile) -> UploadedFile {
-    UploadedFile { id: file.id.clone(), modified_time: file.modified_time.clone() }
+    UploadedFile { id: file.id.clone(), modified_time: file.modified_time.clone(), version: file.version }
 }
 
 /// The SHA-256 digest of `password`, kept with the validated
@@ -390,6 +401,7 @@ mod tests {
             name: password_check_file_name(),
             modified_time: modified_time.to_owned(),
             created_time: None,
+            version: None,
         }
     }
 

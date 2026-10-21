@@ -353,6 +353,8 @@ async fn a_day_recorded_while_the_reconcile_deletes_on_drive_is_kept() {
                     &json!({key(UID): ["2026-10-14", "2026-10-16"], key(OTHER): ["2026-10-16"]}).to_string(),
                 )
                 .unwrap();
+                state.day_uploads =
+                    parse(&json!({key(UID): {"2026-10-16": upload_entry()}}).to_string()).unwrap();
                 true
             })
             .unwrap();
@@ -373,5 +375,72 @@ async fn a_day_recorded_while_the_reconcile_deletes_on_drive_is_kept() {
     assert_eq!(uploaded.get(&key(OTHER)), Some(&parse(r#"["2026-10-16"]"#).unwrap()));
     assert_eq!(saved.reconciled_at.as_object().unwrap().get(&key(UID)), Some(&Value::Number(1.0)));
     assert_eq!(saved.last_synced_at, NOW as f64);
+    assert_eq!(
+        saved.day_uploads,
+        parse(&json!({key(UID): {"2026-10-16": upload_entry()}}).to_string()).unwrap()
+    );
     assert_eq!(reconciled.state, saved);
+}
+
+/// A `day_uploads` entry as an upload records it.
+fn upload_entry() -> serde_json::Value {
+    json!({"sha256": "x", "file_id": "f", "version": "1", "modified_time": "t",
+        "password_check_id": "p", "password_check_modified_time": "t", "format": 2})
+}
+
+#[tokio::test]
+async fn a_day_that_leaves_uploaded_loses_its_upload_entry() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = upload_entry();
+    // 2026-10-14 is uploaded and local and keeps its entry; 2026-10-15 was
+    // removed here (rule 2) and 2026-10-16 is not uploaded at all.
+    write_state(
+        dir.path(),
+        json!({"_rev": 3, "my_device_id": own_hash(),
+            "uploaded": {key(UID): ["2026-10-14", "2026-10-15"]},
+            "reconciled_at": {key(UID): 1}, "last_synced_at": 3,
+            "day_uploads": {key(UID): {"2026-10-14": entry, "2026-10-15": entry, "2026-10-16": entry}}})
+        .to_string(),
+    );
+    let day_dir = device_day_dir(dir.path(), UID, &own_hash());
+    std::fs::create_dir_all(&day_dir).unwrap();
+    std::fs::write(day_dir.join("2026-10-14.jsonl"), "{}\n").unwrap();
+    let (_drive, client, listing) =
+        drive_with(&[day_name(UID, "2026-10-14"), day_name(UID, "2026-10-15")]).await;
+
+    reconcile(&client, &listing, dir.path()).await.unwrap();
+
+    let saved: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(sync_state_path(dir.path())).unwrap()).unwrap();
+    assert_eq!(saved["uploaded"][key(UID)], json!(["2026-10-14"]));
+    assert_eq!(saved["day_uploads"], json!({key(UID): {"2026-10-14": entry}}));
+}
+
+#[tokio::test]
+async fn dropping_only_upload_entries_saves_the_state_without_moving_the_sync_time() {
+    let dir = tempfile::tempdir().unwrap();
+    let entry = upload_entry();
+    // Nothing leaves `uploaded` and the reconcile is not pending; only the
+    // entry of 2026-10-16, which is not uploaded, goes.
+    write_state(
+        dir.path(),
+        json!({"_rev": 3, "my_device_id": own_hash(),
+            "uploaded": {key(UID): ["2026-10-14"]},
+            "reconciled_at": {key(UID): 1}, "last_synced_at": 3,
+            "day_uploads": {key(UID): {"2026-10-14": entry, "2026-10-16": entry}}})
+        .to_string(),
+    );
+    let day_dir = device_day_dir(dir.path(), UID, &own_hash());
+    std::fs::create_dir_all(&day_dir).unwrap();
+    std::fs::write(day_dir.join("2026-10-14.jsonl"), "{}\n").unwrap();
+    let (_drive, client, listing) = drive_with(&[day_name(UID, "2026-10-14")]).await;
+
+    let reconciled = reconcile(&client, &listing, dir.path()).await.unwrap();
+
+    assert!(!reconciled.mutated);
+    let saved: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(sync_state_path(dir.path())).unwrap()).unwrap();
+    assert_eq!(saved["day_uploads"], json!({key(UID): {"2026-10-14": entry}}));
+    assert_eq!(saved["last_synced_at"], json!(3));
+    assert_eq!(reconciled.state, load_sync_state(dir.path()).unwrap());
 }

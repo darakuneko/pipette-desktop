@@ -14,6 +14,9 @@
 //     from 2026-01-01T00:00:00.000Z and stamps the file with it. A rename
 //     counts as a write: real Drive may or may not move `modifiedTime` on
 //     a rename, and the sync must work either way;
+//   - a file's `version` is 1 when it is created and grows by one with
+//     each update and rename of it (real Drive raises it on every change
+//     too, by an amount of its choosing);
 //   - an unknown id is 404.
 
 /** 2026-01-01T00:00:00.000Z. */
@@ -29,6 +32,8 @@ export interface StoredFile {
   name: string
   modifiedTime: string
   createdTime: string
+  /** Drive's `version`, a whole number as text, as Drive answers it. */
+  version: string
   content: Buffer
   mimeType: string
 }
@@ -114,7 +119,7 @@ export class DriveState {
   create(name: string, content: Buffer, mimeType: string): StoredFile {
     this.nextId += 1
     const now = this.tick()
-    const file: StoredFile = { id: `fake-${this.nextId}`, name, modifiedTime: now, createdTime: now, content, mimeType }
+    const file: StoredFile = { id: `fake-${this.nextId}`, name, modifiedTime: now, createdTime: now, version: '1', content, mimeType }
     this.files.push(file)
     return file
   }
@@ -124,6 +129,7 @@ export class DriveState {
     if (!file) return notFound(id)
     file.content = content
     file.modifiedTime = this.tick()
+    file.version = String(Number(file.version) + 1)
     return file
   }
 
@@ -132,6 +138,7 @@ export class DriveState {
     if (!file) return notFound(id)
     file.name = name
     file.modifiedTime = this.tick()
+    file.version = String(Number(file.version) + 1)
     return file
   }
 

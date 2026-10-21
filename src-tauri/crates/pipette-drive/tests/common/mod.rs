@@ -290,7 +290,7 @@ impl DriveServer {
                 let content = parts[1].1.clone();
                 match fields.as_deref() {
                     Some("id") => Ok(ok(json!({ "id": self.drive.create_raw(name, content).await? }))),
-                    Some("id,modifiedTime") => {
+                    Some("id,modifiedTime,version") => {
                         let file = self.drive.create(name, content).await?;
                         Ok(ok(json!({ "id": file.id, "modifiedTime": file.modified_time })))
                     }
@@ -299,12 +299,12 @@ impl DriveServer {
             }
             (Method::Patch, _, Some(id)) if path.starts_with("/upload/") => {
                 assert_eq!(param("uploadType").as_deref(), Some("media"));
-                assert_eq!(fields.as_deref(), Some("id,modifiedTime"));
+                assert_eq!(fields.as_deref(), Some("id,modifiedTime,version"));
                 let file = self.drive.update(id, body()).await?;
                 Ok(ok(json!({ "id": file.id, "modifiedTime": file.modified_time })))
             }
             (Method::Patch, _, Some(id)) => {
-                assert_eq!(fields.as_deref(), Some("id,name,modifiedTime"));
+                assert_eq!(fields.as_deref(), Some("id,name,modifiedTime,version"));
                 let name: Value = serde_json::from_str(&body()).unwrap();
                 let file = self.drive.rename(id, name["name"].as_str().unwrap().to_owned()).await?;
                 Ok(ok(json!({ "id": file.id, "name": file.name, "modifiedTime": file.modified_time })))

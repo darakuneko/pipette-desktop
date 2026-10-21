@@ -189,6 +189,7 @@ mod tests {
             name: name.to_owned(),
             modified_time: String::new(),
             created_time: None,
+            version: None,
         }
     }
 

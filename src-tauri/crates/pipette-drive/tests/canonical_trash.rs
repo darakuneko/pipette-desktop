@@ -35,6 +35,7 @@ fn drive_file(value: &Value) -> DriveFile {
         name: text(value, "name"),
         modified_time: text(value, "modifiedTime"),
         created_time: None,
+        version: None,
     }
 }
 
@@ -127,6 +128,7 @@ fn a_trash_name_round_trips_and_maps_to_no_sync_unit() {
             name: name.into(),
             modified_time: "2026-10-01T00:00:00.000Z".into(),
             created_time: None,
+            version: None,
         };
         let trash_name = trash_file_name(&file, 1).unwrap();
         assert_eq!(sync_unit_from_file_name(&trash_name), None);

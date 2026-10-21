@@ -25,6 +25,15 @@ async fn listing(world: &World) -> Listing {
     Listing::new(world.preflight.drive().list_files(None).await.unwrap())
 }
 
+/// A listing with its password-check validated, as every entry point does
+/// before it writes.
+async fn validated_listing(world: &World) -> Listing {
+    let generation = world.preflight.sync_format_generation();
+    let listing = listing(world).await;
+    world.preflight.ensure_password_check_validated(PASSWORD, listing.files(), generation).await.unwrap();
+    listing
+}
+
 fn own_day_unit(world: &World) -> String {
     format!("keyboards/{UID}/devices/{}/days/{DAY}", world.own_hash())
 }
@@ -132,15 +141,81 @@ async fn an_own_day_is_uploaded_in_place_and_recorded_as_uploaded() {
     write_own_day(&world, "{\"id\":\"x\"}\n");
     let unit = own_day_unit(&world);
     let file = world.seed_unit(&unit, "older").await;
-    let listing = listing(&world).await;
+    let listing = validated_listing(&world).await;
     world.requests();
 
     world.units.sync_or_upload(&unit, PASSWORD, &listing).await.unwrap();
+    // The same listing, as the upload of a pass after its download: it
+    // shows the revision before the upload.
     world.units.sync_or_upload(&unit, PASSWORD, &listing).await.unwrap();
 
-    assert_eq!(world.requests(), [format!("update:{}", file.id), format!("update:{}", file.id)]);
+    assert_eq!(world.requests(), [format!("update:{}", file.id)]);
+    assert!(world.is_known(&unit));
     let state: serde_json::Value = serde_json::from_str(&sync_state_text(&world)).unwrap();
     assert_eq!(state["uploaded"][format!("{UID}|{}", world.own_hash())], serde_json::json!([DAY]));
+}
+
+/// Uploads the own day once.
+async fn upload_own_day_once(world: &World) -> String {
+    write_own_day(world, "{\"id\":\"x\"}\n");
+    let unit = own_day_unit(world);
+    world.seed_unit(&unit, "older").await;
+    world.units.sync_or_upload(&unit, PASSWORD, &validated_listing(world).await).await.unwrap();
+    unit
+}
+
+/// A validated listing of Drive now, its own requests forgotten.
+async fn fresh_listing(world: &World) -> Listing {
+    let listing = validated_listing(world).await;
+    world.requests();
+    listing
+}
+
+fn day_upload_entry(world: &World) -> serde_json::Value {
+    let state: serde_json::Value = serde_json::from_str(&sync_state_text(world)).unwrap();
+    state["day_uploads"][format!("{UID}|{}", world.own_hash())][DAY].clone()
+}
+
+#[tokio::test]
+async fn an_unchanged_own_day_is_not_sent_again() {
+    let world = World::new().await;
+    let unit = upload_own_day_once(&world).await;
+    let entry = day_upload_entry(&world);
+    assert_eq!(entry["format"], serde_json::json!(pipette_sync::format::SYNC_FORMAT_VERSION));
+
+    world.units.sync_or_upload(&unit, PASSWORD, &fresh_listing(&world).await).await.unwrap();
+
+    assert_eq!(world.requests(), Vec::<String>::new());
+    assert!(world.is_known(&unit));
+    assert_eq!(day_upload_entry(&world), entry);
+}
+
+#[tokio::test]
+async fn an_own_day_with_a_new_line_is_sent_again() {
+    let world = World::new().await;
+    let unit = upload_own_day_once(&world).await;
+    write_own_day(&world, "{\"id\":\"x\"}\n{\"id\":\"y\"}\n");
+    let listing = fresh_listing(&world).await;
+    let file = listing.pick_canonical(&drive_file_name(&unit)).unwrap().clone();
+
+    world.units.sync_or_upload(&unit, PASSWORD, &listing).await.unwrap();
+
+    assert_eq!(world.requests(), [format!("update:{}", file.id)]);
+    assert!(world.drive_content(&unit).unwrap().contains("\\\"y\\\""));
+}
+
+#[tokio::test]
+async fn an_own_day_is_sent_again_under_another_password_check() {
+    let world = World::new().await;
+    let unit = upload_own_day_once(&world).await;
+    let listing_before = listing(&world).await;
+    let check = listing_before.pick_canonical("password-check.enc").unwrap().id.clone();
+    let day = listing_before.pick_canonical(&drive_file_name(&unit)).unwrap().id.clone();
+    world.drive.rewrite_password_check(&check, PASSWORD).await;
+
+    world.units.sync_or_upload(&unit, PASSWORD, &fresh_listing(&world).await).await.unwrap();
+
+    assert_eq!(world.requests(), [format!("update:{day}")]);
 }
 
 fn sync_state_text(world: &World) -> String {
@@ -157,6 +232,7 @@ async fn an_own_day_with_a_hostile_uid_is_refused_before_any_request() {
         name: drive_file_name(&unit),
         modified_time: T.into(),
         created_time: None,
+        version: None,
     };
     world.requests();
 
@@ -195,6 +271,7 @@ async fn a_remembered_file_renamed_to_trash_is_not_written_to() {
         name: format!("{name}.trash.1.2.trashed-id"),
         modified_time: T.into(),
         created_time: None,
+        version: None,
     };
     world.requests();
 

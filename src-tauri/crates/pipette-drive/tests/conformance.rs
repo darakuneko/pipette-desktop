@@ -51,7 +51,10 @@ async fn list_pages(drive: &InMemoryDrive, step: &Value) -> Result<(Vec<usize>, 
         sizes.push(page.files.len());
         for file in page.files {
             assert!(
-                !file.id.is_empty() && !file.modified_time.is_empty() && file.created_time.is_some(),
+                !file.id.is_empty()
+                    && !file.modified_time.is_empty()
+                    && file.created_time.is_some()
+                    && file.version.is_some(),
                 "{file:?}"
             );
             names.push(file.name);
@@ -89,6 +92,7 @@ async fn run_step(
         if let Some(key) = step["save"].as_str() {
             if expect["newer"].as_bool() == Some(true) {
                 assert!(file.modified_time > saved[key].modified_time, "{context}: not newer");
+                assert!(file.version.unwrap() > saved[key].version.unwrap(), "{context}: version not raised");
             }
             saved.insert(key.to_owned(), file);
         }
@@ -112,7 +116,7 @@ async fn run_step(
             .await
             .map(|id| {
                 // Only the id comes back; the time is not compared.
-                save(saved, UploadedFile { id, modified_time: String::new() });
+                save(saved, UploadedFile { id, modified_time: String::new(), version: None });
             }),
         "update" => drive
             .update(id_of(saved, step), text(step, "content").to_owned())
@@ -123,7 +127,10 @@ async fn run_step(
             if let Some(key) = expect["sameIdAs"].as_str() {
                 assert_eq!(file.id, saved[key].id, "{context}");
             }
-            save(saved, UploadedFile { id: file.id, modified_time: file.modified_time });
+            save(
+                saved,
+                UploadedFile { id: file.id, modified_time: file.modified_time, version: file.version },
+            );
         }),
         "delete" => drive.delete(id_of(saved, step)).await,
         "download" => drive.download(id_of(saved, step)).await.map(|content| {
@@ -172,10 +179,19 @@ async fn stamps_each_write_one_second_after_the_last() {
     let drive = InMemoryDrive::new();
     let first = drive.create("a.enc".into(), "1".into()).await.unwrap();
     let second = drive.update(first.id.clone(), "2".into()).await.unwrap();
-    assert_eq!(first, UploadedFile { id: "fake-1".into(), modified_time: "2026-01-01T00:00:00.000Z".into() });
+    assert_eq!(
+        first,
+        UploadedFile {
+            id: "fake-1".into(),
+            modified_time: "2026-01-01T00:00:00.000Z".into(),
+            version: Some(1)
+        }
+    );
     assert_eq!(second.modified_time, "2026-01-01T00:00:01.000Z");
+    assert_eq!(second.version, Some(2));
     let renamed = drive.rename(first.id.clone(), "b.enc".into()).await.unwrap();
     assert_eq!(renamed.modified_time, "2026-01-01T00:00:02.000Z");
+    assert_eq!(renamed.version, Some(3));
     let stored = drive.files();
     assert_eq!(stored.len(), 1);
     assert_eq!(stored[0].file.created_time.as_deref(), Some("2026-01-01T00:00:00.000Z"));

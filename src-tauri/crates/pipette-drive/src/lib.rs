@@ -39,6 +39,11 @@ pub struct DriveFile {
     pub modified_time: String,
     /// When Drive created the file; absent when the response leaves it out.
     pub created_time: Option<String>,
+    /// Drive's `version`: a number that grows with every change Drive makes
+    /// to the file, its content or its metadata. Unlike `modifiedTime`, no
+    /// client can set it. Absent when the response leaves it out or it is
+    /// not a whole number.
+    pub version: Option<u64>,
 }
 
 /// One listing request (`DriveClient::list_files` asks for every page in
@@ -66,6 +71,8 @@ pub struct FileList {
 pub struct UploadedFile {
     pub id: String,
     pub modified_time: String,
+    /// See [`DriveFile::version`].
+    pub version: Option<u64>,
 }
 
 /// Why an attempt failed.
