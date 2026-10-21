@@ -134,8 +134,8 @@ mod tests {
     fn a_new_installation_initializes_with_an_empty_cache() {
         let user_data = TempDir::new().unwrap();
         let ready = block_on(analytics(&user_data).ready()).unwrap();
-        assert_eq!(ready.sync_state.lock().unwrap().my_device_id.as_str(), Some(ready.machine_hash.as_str()));
-        assert!(pipette_typing_analytics::sync_state::sync_state_path(user_data.path()).exists());
+        let state = pipette_typing_analytics::sync_state::load_sync_state(user_data.path()).unwrap();
+        assert_eq!(state.my_device_id.as_str(), Some(ready.machine_hash.as_str()));
     }
 
     #[test]

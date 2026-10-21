@@ -22,7 +22,6 @@
 
 use std::collections::HashMap;
 use std::future::Future;
-use std::path::Path;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
@@ -42,7 +41,6 @@ use crate::minute_buffer::{MinuteBuffer, PeekCounts};
 use crate::rows::{ResolvedScope, RowsByUidDay, group_rows_by_uid_day};
 use crate::service::{Ready, TypingAnalytics};
 use crate::session_detector::{FinalizedSession, SessionDetector};
-use crate::sync_state::save_sync_state;
 use crate::sync_units::typing_analytics_device_day_sync_unit;
 
 /// How long after an event the flush runs.
@@ -380,9 +378,9 @@ impl Recorder {
         }
         let Some(batch) = self.take_batch(all) else { return };
         let (rows, updated_at) = (batch.rows, batch.updated_at);
-        let user_data = self.analytics.user_data().to_path_buf();
+        let analytics = self.analytics.clone();
         let hash = ready.machine_hash.clone();
-        let written = tokio::task::spawn_blocking(move || persist(&user_data, &ready, rows, updated_at))
+        let written = tokio::task::spawn_blocking(move || persist(&analytics, &ready, rows, updated_at))
             .await
             .map_err(|err| Error::Blocking(err.to_string()))
             .and_then(|written| written);
@@ -466,14 +464,19 @@ fn claim_updated_at(state: &mut State, now: f64, above_ms: f64) -> f64 {
 /// Writes a flush's rows: each keyboard's days in ascending order, each day
 /// appended to this device's day file (the file is the master: a cache
 /// that fails to apply is rebuilt from it) and then applied to the cache;
-/// then `last_synced_at`. `uploaded` is the sync layer's: it records what
-/// the cloud has confirmed. Returns the days written per keyboard.
+/// then `last_synced_at`, through [`TypingAnalytics::update_sync_state`] so
+/// the rest of the state (the sync layer's upload and reconcile
+/// bookkeeping) is kept as the file holds it. A state that cannot be read
+/// or written is left as it is and the flush still succeeds: the rows are
+/// written, and nothing reads `last_synced_at` back. Returns the days
+/// written per keyboard.
 fn persist(
-    user_data: &Path,
+    analytics: &TypingAnalytics,
     ready: &Ready,
     rows: RowsByUidDay,
     updated_at: f64,
 ) -> Result<Vec<(String, Vec<String>)>, Error> {
+    let user_data = analytics.user_data();
     let mut written = Vec::new();
     for (uid, by_day) in rows {
         let mut days: Vec<_> = by_day.into_iter().filter(|(_, rows)| !rows.is_empty()).collect();
@@ -492,9 +495,8 @@ fn persist(
             written.push((uid, written_days));
         }
     }
-    let mut state = ready.sync_state.lock().unwrap_or_else(PoisonError::into_inner);
-    state.last_synced_at = updated_at;
-    save_sync_state(user_data, &state)?;
+    // `touch_last_synced_at` logs a failure; it does not fail the flush.
+    let _ = analytics.touch_last_synced_at(&ready.machine_hash, updated_at);
     Ok(written)
 }
 

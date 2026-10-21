@@ -9,7 +9,7 @@ use tempfile::TempDir;
 use super::*;
 use crate::identity::MachineIdentity;
 use crate::service::RebuildCache;
-use crate::sync_state::{TypingSyncState, load_sync_state, sync_state_path};
+use crate::sync_state::{TypingSyncState, load_sync_state, save_sync_state, sync_state_path};
 
 const MACHINE_ID: &str = "machine";
 const INSTALLATION_ID: &str = "0f1e2d3c-4b5a-4697-8877-665544332211";
@@ -355,4 +355,88 @@ async fn drop_buffered_typing_drops_minutes_and_sessions_of_the_keyboard() {
     assert!(!f.day_file("A").exists());
     assert!(f.day_file("B").exists());
     assert_eq!(f.clock.now_ms(), TS);
+}
+
+/// The state with `DAY` uploaded and reconciled for `uid`, written the way
+/// the sync layer writes it.
+fn record_upload(f: &Fixture, uid: &str) -> TypingSyncState {
+    let key = format!("{uid}|{}", f.hash);
+    f.recorder
+        .analytics()
+        .update_sync_state(&f.hash, |state| {
+            state.uploaded = pipette_js_json::parse(&format!(r#"{{"{key}":["{DAY}"]}}"#)).unwrap();
+            state.reconciled_at = pipette_js_json::parse(&format!(r#"{{"{key}":5}}"#)).unwrap();
+            true
+        })
+        .unwrap();
+    load_sync_state(f.dir.path()).unwrap()
+}
+
+#[tokio::test]
+async fn a_flush_keeps_what_the_sync_layer_wrote_and_moves_only_last_synced_at() {
+    let f = fixture();
+    // Starts the analytics, which read the state once.
+    f.ingest(char_event("A", TS, "a")).await;
+    f.recorder.flush_now(true).await;
+    let synced = record_upload(&f, "A");
+
+    f.clock.set(TS + 1_000);
+    f.ingest(char_event("A", TS + 1_000, "b")).await;
+    f.recorder.flush_now(true).await;
+    assert_eq!(f.count("SELECT keystrokes FROM typing_minute_stats"), 2);
+    assert_eq!(
+        load_sync_state(f.dir.path()).unwrap(),
+        TypingSyncState { last_synced_at: (TS + 1_000) as f64, ..synced }
+    );
+}
+
+#[tokio::test]
+async fn a_flush_waits_for_an_update_of_the_state_and_keeps_its_change() {
+    let f = fixture();
+    f.ingest(char_event("A", TS, "a")).await;
+    f.recorder.flush_now(true).await;
+
+    let (analytics, hash) = (f.recorder.analytics().clone(), f.hash.clone());
+    let (inside_tx, inside) = std_mpsc::channel();
+    let (release, released) = std_mpsc::channel::<()>();
+    let update = std::thread::spawn(move || {
+        analytics.update_sync_state(&hash, |state| {
+            inside_tx.send(()).unwrap();
+            released.recv().unwrap();
+            state.uploaded = pipette_js_json::parse(r#"{"A|h":["2026-04-14"]}"#).unwrap();
+            true
+        })
+    });
+    inside.recv().unwrap();
+
+    f.clock.set(TS + 1_000);
+    f.ingest(char_event("A", TS + 1_000, "b")).await;
+    let flush = f.recorder.flush_now(true);
+    tokio::pin!(flush);
+    assert!(tokio::time::timeout(Duration::from_millis(50), &mut flush).await.is_err());
+    release.send(()).unwrap();
+    update.join().unwrap().unwrap();
+    flush.await;
+
+    let state = load_sync_state(f.dir.path()).unwrap();
+    assert_eq!(state.uploaded, pipette_js_json::parse(r#"{"A|h":["2026-04-14"]}"#).unwrap());
+    assert_eq!(state.last_synced_at, (TS + 1_000) as f64);
+}
+
+#[tokio::test]
+async fn a_flush_over_a_state_that_cannot_be_read_writes_the_rows_and_leaves_the_file() {
+    let f = fixture();
+    f.ingest(char_event("A", TS, "a")).await;
+    f.recorder.flush_now(true).await;
+    let path = sync_state_path(f.dir.path());
+    std::fs::write(&path, "{").unwrap();
+    let units_before = f.units.lock().unwrap().len();
+
+    f.ingest(char_event("A", TS + 500, "b")).await;
+    f.recorder.flush_now(true).await;
+    assert_eq!(f.count("SELECT keystrokes FROM typing_minute_stats"), 2);
+    assert_eq!(f.units.lock().unwrap().len(), units_before + 1);
+    // Nothing is reopened for a retry.
+    assert!(!f.recorder.state().dirty);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "{");
 }

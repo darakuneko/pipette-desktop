@@ -25,7 +25,6 @@ use pipette_drive::canonical::Listing;
 use pipette_drive::client::DriveClient;
 use pipette_drive::retry::DriveFailure;
 use pipette_entry_store::is_safe_path_segment;
-use pipette_js_json::Value;
 use pipette_keyboard_stores::StoreContext;
 use pipette_sync_format::drive_names::drive_file_name;
 use pipette_sync_runtime::{RemoteRevision, SyncRuntime};
@@ -39,7 +38,7 @@ use crate::merge::{
     AnalyticsEnv, MergeEnv, MergeError, MergeEvents, PackRosters, merge_analytics_unit,
     merge_device_day_bundle, merge_sync_unit,
 };
-use crate::typing_remote::{pointer_key, set, uploaded_days};
+use crate::typing_remote::{pointer_key, set_uploaded_days, uploaded_days};
 use crate::unit_locks::UnitLocks;
 use crate::units::{DeviceDayUnit, parse_device_day_unit};
 
@@ -223,17 +222,17 @@ impl UnitSync {
         let (analytics, now) = (self.ops.analytics().clone(), self.ops.analytics().now_ms());
         let (key, utc_day) = (pointer_key(day.uid, day.machine_hash), day.utc_day.to_owned());
         tokio::task::spawn_blocking(move || {
-            analytics.update_sync_state(&own, |state| {
-                let mut days = uploaded_days(&state.uploaded, &key);
-                if !days.insert(utc_day) {
-                    return false;
-                }
-                let mut days: Vec<String> = days.into_iter().collect();
-                days.sort();
-                set(&mut state.uploaded, &key, Value::Array(days.into_iter().map(Value::from).collect()));
-                state.last_synced_at = now as f64;
-                true
-            })
+            analytics
+                .update_sync_state(&own, |state| {
+                    let mut days = uploaded_days(&state.uploaded, &key);
+                    if !days.insert(utc_day) {
+                        return false;
+                    }
+                    set_uploaded_days(&mut state.uploaded, &key, days);
+                    state.last_synced_at = now as f64;
+                    true
+                })
+                .map(drop)
         })
         .await
         .map_err(other)?

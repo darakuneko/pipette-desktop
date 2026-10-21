@@ -443,18 +443,14 @@ impl SyncExecutor {
             log::warn!("typing analytics did not start before the reconcile: {err}");
         }
         let reconciled = match self.units.own_hash() {
-            Ok(hash) => {
-                let analytics = self.units.ops().analytics();
-                reconcile_own_hash_typing_analytics(
-                    self.units.drive(),
-                    &listing,
-                    self.units.ctx().user_data(),
-                    &hash,
-                    analytics.clock().as_ref(),
-                )
-                .await
-                .map_err(|err| err.to_string())
-            }
+            Ok(hash) => reconcile_own_hash_typing_analytics(
+                self.units.drive(),
+                &listing,
+                self.units.ops().analytics(),
+                &hash,
+            )
+            .await
+            .map_err(|err| err.to_string()),
             Err(err) => Err(err.to_string()),
         };
         let mutated = reconciled.map(|r| r.mutated).unwrap_or_else(|err| {

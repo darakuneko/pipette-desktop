@@ -24,7 +24,6 @@ use pipette_drive::DriveApi;
 use pipette_drive::canonical::Listing;
 use pipette_drive::client::DriveClient;
 use pipette_drive::fake::{DriveOp, Fault, InMemoryDrive};
-use pipette_entry_store::FixedClock;
 use pipette_js_json::{Value, parse, stringify};
 use pipette_sync::bundle::{bundle_plaintext, bundle_sync_unit};
 use pipette_sync::merge::{AnalyticsMerge, MergeError, merge_analytics_unit, queue_own_deleted_ranges_apply};
@@ -260,9 +259,9 @@ async fn reconciles_match_the_recorded_golden() {
             fault.only = Some(DriveOp::Delete);
             drive.inner().inject(fault);
         }
-        let clock = FixedClock::new(now);
+        let analytics = common::analytics_at(root, "machine", now);
         let reconciled =
-            reconcile_own_hash_typing_analytics(&client, &listing, root, &own_hash, &clock).await.unwrap();
+            reconcile_own_hash_typing_analytics(&client, &listing, &analytics, &own_hash).await.unwrap();
         failures.check(
             format!("{name}: mutated"),
             Value::Bool(reconciled.mutated),

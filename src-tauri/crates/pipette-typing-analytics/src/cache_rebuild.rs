@@ -119,7 +119,6 @@ pub fn rebuild_from_master_files(clock: Arc<dyn Clock>) -> RebuildCache {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Freshness {
     pub rebuilt: bool,
-    pub state: TypingSyncState,
 }
 
 /// Rebuilds the cache with `rebuild` when it cannot be trusted for
@@ -134,15 +133,14 @@ pub fn ensure_cache_is_fresh(
     rebuild: impl FnOnce() -> Result<(), Error>,
 ) -> Result<Freshness, Error> {
     let existing = load_sync_state(user_data);
-    if let Some(state) = existing.filter(|state| !force && state.my_device_id.as_str() == Some(my_device_id))
-    {
-        return Ok(Freshness { rebuilt: false, state });
+    if existing.is_some_and(|state| !force && state.my_device_id.as_str() == Some(my_device_id)) {
+        return Ok(Freshness { rebuilt: false });
     }
     rebuild()?;
     let state =
         TypingSyncState { last_synced_at: clock.now_ms() as f64, ..TypingSyncState::empty(my_device_id) };
     save_sync_state(user_data, &state)?;
-    Ok(Freshness { rebuilt: true, state })
+    Ok(Freshness { rebuilt: true })
 }
 
 #[cfg(test)]
@@ -169,10 +167,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (first, ran) = ensure(dir.path(), "a", false);
         assert!(ran && first.rebuilt);
-        assert_eq!(first.state, TypingSyncState { last_synced_at: 42.0, ..TypingSyncState::empty("a") });
+        let saved = TypingSyncState { last_synced_at: 42.0, ..TypingSyncState::empty("a") };
+        assert_eq!(load_sync_state(dir.path()), Some(saved.clone()));
         let (again, ran) = ensure(dir.path(), "a", false);
         assert!(!ran && !again.rebuilt);
-        assert_eq!(again.state, first.state);
+        assert_eq!(load_sync_state(dir.path()), Some(saved));
         assert!(ensure(dir.path(), "b", false).1);
         assert!(ensure(dir.path(), "b", true).1);
     }

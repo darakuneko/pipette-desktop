@@ -132,8 +132,9 @@ async fn a_launch_on_an_old_schema_rebuilds_inside_the_migration() {
 
     let clock = Arc::new(FixedClock::new(T));
     let ready = analytics(dir.path(), clock).ready().await.unwrap();
-    assert_eq!(ready.sync_state.lock().unwrap().last_synced_at, T as f64);
     drop(ready);
+    let synced = pipette_typing_analytics::sync_state::load_sync_state(dir.path()).unwrap();
+    assert_eq!(synced.last_synced_at, T as f64);
     assert_eq!(live_minutes(dir.path()), 3);
     let version: String = rusqlite::Connection::open(db_path(dir.path()))
         .unwrap()

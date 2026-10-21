@@ -142,11 +142,18 @@ pub fn table_dump(user_data: &Path, table: &str) -> Vec<String> {
 pub struct DriveLog {
     inner: InMemoryDrive,
     requests: Mutex<Vec<String>>,
+    /// Runs at each delete, before the file is deleted.
+    before_delete: Option<Box<dyn Fn() + Send + Sync>>,
 }
 
 impl DriveLog {
     pub fn new(inner: InMemoryDrive) -> Self {
-        Self { inner, requests: Mutex::new(Vec::new()) }
+        Self { inner, requests: Mutex::new(Vec::new()), before_delete: None }
+    }
+
+    /// The Drive, running `hook` at each delete before it deletes.
+    pub fn with_before_delete(inner: InMemoryDrive, hook: impl Fn() + Send + Sync + 'static) -> Self {
+        Self { before_delete: Some(Box::new(hook)), ..Self::new(inner) }
     }
 
     pub fn inner(&self) -> &InMemoryDrive {
@@ -195,6 +202,9 @@ impl DriveApi for DriveLog {
 
     fn delete(&self, id: String) -> DriveFuture<'_, ()> {
         self.log(format!("delete {id}"));
+        if let Some(hook) = &self.before_delete {
+            hook();
+        }
         self.inner.delete(id)
     }
 }
@@ -204,6 +214,14 @@ pub struct NoTimer;
 
 impl FlushTimer for NoTimer {
     fn schedule(&self, _: Duration, _: Box<dyn FnOnce() + Send>) {}
+}
+
+/// The analytics of a userData with this machine id at a fixed time.
+pub fn analytics_at(root: &Path, machine_id: &str, now: i64) -> Arc<TypingAnalytics> {
+    let clock = Arc::new(FixedClock::new(now));
+    let machine_id = machine_id.to_owned();
+    let identity = MachineIdentity::new(root, Arc::new(RandomUuid), Box::new(move || Ok(machine_id.clone())));
+    Arc::new(TypingAnalytics::new(root, identity, clock.clone(), rebuild_from_master_files(clock)))
 }
 
 /// The analytics of a userData with this machine id at a fixed time, and
@@ -219,16 +237,8 @@ pub struct Harness {
 
 impl Harness {
     pub fn new(root: &std::path::Path, machine_id: &str, now: i64) -> Self {
-        let clock = Arc::new(FixedClock::new(now));
-        let machine_id = machine_id.to_owned();
-        let identity =
-            MachineIdentity::new(root, Arc::new(RandomUuid), Box::new(move || Ok(machine_id.clone())));
-        let analytics = Arc::new(TypingAnalytics::new(
-            root,
-            identity,
-            clock.clone(),
-            rebuild_from_master_files(clock.clone()),
-        ));
+        let analytics = analytics_at(root, machine_id, now);
+        let clock = analytics.clock().clone();
         let notified = Arc::new(Mutex::new(Vec::new()));
         let notify = {
             let notified = notified.clone();

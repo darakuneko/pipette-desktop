@@ -35,9 +35,6 @@ pub type InitializedHook = Box<dyn Fn() + Send + Sync>;
 pub struct Ready {
     pub machine_hash: String,
     pub db: DbActor,
-    /// The state the freshness check read or wrote; the flush and the sync
-    /// pass keep it up to date.
-    pub sync_state: Mutex<TypingSyncState>,
 }
 
 /// The outcome every waiter of one initialization gets.
@@ -106,24 +103,38 @@ impl TypingAnalytics {
         &self.clock
     }
 
-    /// The read-modify-write of `sync_state.json` the sync layer does after
-    /// an upload or a merge: reads the file (an empty state for `own_hash`
+    /// The read-modify-write of `sync_state.json` the flush and the sync
+    /// layer do: reads the file (an empty state for `own_hash`
     /// when there is none), lets `update` change it, and writes it when
-    /// `update` answers true. A file that cannot be read or is not a state
+    /// `update` answers true. Returns the state `update` left, written or
+    /// not. A file that cannot be read or is not a state
     /// is the error and is left as it is: writing an empty state over it
     /// would drop `uploaded` and `reconciled_at`, and the next reconcile
-    /// would delete this device's days on Drive as orphans. One runs at a time, so two
-    /// of them never write over each other's change. The flush does not
-    /// take this lock: it writes the state it keeps in memory. Blocks.
+    /// would delete this device's days on Drive as orphans. One runs at a
+    /// time, so two of them never write over each other's change. Blocks.
     pub fn update_sync_state(
         &self,
         own_hash: &str,
         update: impl FnOnce(&mut TypingSyncState) -> bool,
-    ) -> std::io::Result<()> {
+    ) -> std::io::Result<TypingSyncState> {
         let _writing = self.sync_state_writes.lock().unwrap_or_else(PoisonError::into_inner);
         let mut state =
             try_load_sync_state(&self.user_data)?.unwrap_or_else(|| TypingSyncState::empty(own_hash));
-        if update(&mut state) { save_sync_state(&self.user_data, &state) } else { Ok(()) }
+        if update(&mut state) {
+            save_sync_state(&self.user_data, &state)?;
+        }
+        Ok(state)
+    }
+
+    /// [`Self::update_sync_state`] moving only `last_synced_at`, to `at`.
+    /// A failure is logged as a warning and returned.
+    pub fn touch_last_synced_at(&self, own_hash: &str, at: f64) -> std::io::Result<()> {
+        self.update_sync_state(own_hash, |state| {
+            state.last_synced_at = at;
+            true
+        })
+        .map(drop)
+        .inspect_err(|err| log::warn!("typing-analytics sync state update failed: {err}"))
     }
 
     fn lock(&self) -> MutexGuard<'_, Init> {
@@ -180,25 +191,22 @@ impl TypingAnalytics {
                 (self.rebuild)(&db, &self.user_data, &machine_hash)?;
                 Ok(db.call_blocking(|db| db.commit_migration())??)
             });
-        let freshness = match freshness {
-            Ok(freshness) => freshness,
-            Err(err) => {
-                // Rolled back here, before a retry opens the file again;
-                // the database thread closing the connection after `db` is
-                // dropped would roll it back too, but later. A failed
-                // rollback is left to that close.
-                let _ = db.call_blocking(|db| db.rollback_migration());
-                return Err(err);
-            }
-        };
-        Ok(Ready { machine_hash, db, sync_state: Mutex::new(freshness.state) })
+        if let Err(err) = freshness {
+            // Rolled back here, before a retry opens the file again;
+            // the database thread closing the connection after `db` is
+            // dropped would roll it back too, but later. A failed
+            // rollback is left to that close.
+            let _ = db.call_blocking(|db| db.rollback_migration());
+            return Err(err);
+        }
+        Ok(Ready { machine_hash, db })
     }
 
     /// [`ensure_cache_is_fresh`], forced, on the initialized
-    /// analytics: rebuilds the cache and writes a new `sync_state.json`.
-    /// The state the flush keeps in memory is left as it is, so the next
-    /// flush writes it back with its `last_synced_at`. Blocks; the queries
-    /// and the flush go on between the days it replays.
+    /// analytics: rebuilds the cache and writes a new, empty
+    /// `sync_state.json` (the next flush moves its `last_synced_at`).
+    /// Blocks; the queries and the flush go on between the days it
+    /// replays.
     pub fn rebuild_now(&self, ready: &Ready) -> Result<(), Error> {
         ensure_cache_is_fresh(&self.user_data, &ready.machine_hash, true, self.clock.as_ref(), || {
             (self.rebuild)(&ready.db, &self.user_data, &ready.machine_hash)
@@ -245,7 +253,6 @@ mod tests {
         assert_eq!(rebuilds.load(Ordering::SeqCst), 1);
         let state = load_sync_state(dir.path()).unwrap();
         assert_eq!(state, TypingSyncState { last_synced_at: 9.0, ..TypingSyncState::empty(&a.machine_hash) });
-        assert_eq!(*a.sync_state.lock().unwrap(), state);
         assert!(Arc::ptr_eq(&ta.ready().await.unwrap(), &a));
     }
 
@@ -260,7 +267,8 @@ mod tests {
         let rebuilds = Arc::new(AtomicUsize::new(0));
         let ready = analytics(dir.path(), || Ok("m".into()), rebuilds.clone()).ready().await.unwrap();
         assert_eq!(rebuilds.load(Ordering::SeqCst), 0);
-        assert_eq!(*ready.sync_state.lock().unwrap(), saved);
+        drop(ready);
+        assert_eq!(load_sync_state(dir.path()).unwrap(), saved);
     }
 
     #[tokio::test]
@@ -312,7 +320,7 @@ mod tests {
 
         let ready = launch(false).ready().await.unwrap();
         assert_eq!(rebuilds.load(Ordering::SeqCst), 3);
-        assert_eq!(*ready.sync_state.lock().unwrap(), TypingSyncState { last_synced_at: 9.0, ..saved });
+        assert_eq!(load_sync_state(dir.path()).unwrap(), TypingSyncState { last_synced_at: 9.0, ..saved });
         drop(ready);
         assert_eq!(version(), SCHEMA_VERSION.to_string());
 
@@ -394,7 +402,8 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "{");
         // No file is no state: the update starts from an empty one.
         std::fs::remove_file(&path).unwrap();
-        ta.update_sync_state("h", |_| true).unwrap();
-        assert_eq!(load_sync_state(dir.path()).unwrap(), TypingSyncState::empty("h"));
+        let state = ta.update_sync_state("h", |_| true).unwrap();
+        assert_eq!(state, TypingSyncState::empty("h"));
+        assert_eq!(load_sync_state(dir.path()).unwrap(), state);
     }
 }

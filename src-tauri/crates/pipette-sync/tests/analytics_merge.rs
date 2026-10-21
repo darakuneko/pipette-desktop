@@ -13,12 +13,11 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
-use common::{Harness, NoWaits};
+use common::{DriveLog, Harness, NoWaits};
 use pipette_drive::DriveApi;
 use pipette_drive::canonical::Listing;
 use pipette_drive::client::DriveClient;
 use pipette_drive::fake::InMemoryDrive;
-use pipette_entry_store::FixedClock;
 use pipette_js_json::{Value, parse};
 use pipette_sync::merge::{MergeError, merge_analytics_unit};
 use pipette_sync::typing_remote::{Reconciled, reconcile_own_hash_typing_analytics};
@@ -188,7 +187,8 @@ async fn drive_with(names: &[String]) -> (Arc<InMemoryDrive>, DriveClient, Listi
 }
 
 async fn reconcile(client: &DriveClient, listing: &Listing, root: &Path) -> std::io::Result<Reconciled> {
-    reconcile_own_hash_typing_analytics(client, listing, root, &own_hash(), &FixedClock::new(NOW)).await
+    let analytics = common::analytics_at(root, MACHINE, NOW);
+    reconcile_own_hash_typing_analytics(client, listing, &analytics, &own_hash()).await
 }
 
 /// Writes `text` as `sync_state.json` and returns it.
@@ -325,4 +325,53 @@ async fn only_the_keyboard_that_cannot_be_read_is_skipped() {
     let reconciled_at = saved.reconciled_at.as_object().unwrap();
     assert_eq!(reconciled_at.get(&key(UID)), None);
     assert_eq!(reconciled_at.get(&key(OTHER)), Some(&Value::Number(NOW as f64)));
+}
+
+#[tokio::test]
+async fn a_day_recorded_while_the_reconcile_deletes_on_drive_is_kept() {
+    const OTHER: &str = "kb2";
+    let dir = tempfile::tempdir().unwrap();
+    // An uploaded day that is not local: rule 2 deletes it on Drive.
+    write_state(
+        dir.path(),
+        json!({
+            "_rev": 3,
+            "my_device_id": own_hash(),
+            "uploaded": {key(UID): ["2026-10-14"]},
+            "reconciled_at": {key(UID): 1},
+            "last_synced_at": 3
+        })
+        .to_string(),
+    );
+    let analytics = common::analytics_at(dir.path(), MACHINE, NOW);
+    // Another writer records uploads while the delete is under way.
+    let writer = analytics.clone();
+    let drive = Arc::new(DriveLog::with_before_delete(InMemoryDrive::new(), move || {
+        writer
+            .update_sync_state(&own_hash(), |state| {
+                state.uploaded = parse(
+                    &json!({key(UID): ["2026-10-14", "2026-10-16"], key(OTHER): ["2026-10-16"]}).to_string(),
+                )
+                .unwrap();
+                true
+            })
+            .unwrap();
+    }));
+    drive.inner().create(day_name(UID, "2026-10-14"), "{}".into()).await.unwrap();
+    let client = DriveClient::new(drive.clone(), Arc::new(NoWaits));
+    let listing = Listing::new(client.list_files(None).await.unwrap());
+
+    // The same analytics as the hook's writer: a reconcile that held the
+    // state lock during the delete would deadlock here.
+    let reconciled =
+        reconcile_own_hash_typing_analytics(&client, &listing, &analytics, &own_hash()).await.unwrap();
+    assert!(reconciled.mutated);
+    assert!(drive.inner().files().is_empty());
+    let saved = load_sync_state(dir.path()).unwrap();
+    let uploaded = saved.uploaded.as_object().unwrap();
+    assert_eq!(uploaded.get(&key(UID)), Some(&parse(r#"["2026-10-16"]"#).unwrap()));
+    assert_eq!(uploaded.get(&key(OTHER)), Some(&parse(r#"["2026-10-16"]"#).unwrap()));
+    assert_eq!(saved.reconciled_at.as_object().unwrap().get(&key(UID)), Some(&Value::Number(1.0)));
+    assert_eq!(saved.last_synced_at, NOW as f64);
+    assert_eq!(reconciled.state, saved);
 }
