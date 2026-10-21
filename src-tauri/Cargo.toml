@@ -191,8 +191,12 @@ unsafe_code = "forbid"
 unwrap_used = "warn"
 
 # The sync format's PBKDF2 runs 600,000 iterations per key derivation, which
-# takes seconds per call when unoptimized. Optimizing just the crypto crates
-# keeps dev builds and tests fast without slowing every compile.
+# is slow when unoptimized. Generic code is instantiated in the crate that
+# calls it, so besides the crypto crates the crate that runs the PBKDF2
+# (pipette-sync-format) is optimized too. Optimizing only these crates keeps
+# dev builds fast.
+[profile.dev.package.pipette-sync-format]
+opt-level = 3
 [profile.dev.package.pbkdf2]
 opt-level = 3
 [profile.dev.package.sha2]
