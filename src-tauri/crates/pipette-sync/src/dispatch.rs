@@ -237,7 +237,10 @@ impl UnitSync {
         })
         .await
         .map_err(other)?
-        .map_err(other)
+        .map_err(|err| {
+            log::warn!("typing-analytics upload bookkeeping failed: {err}");
+            other(err)
+        })
     }
 
     /// Merges the Drive file `file` of `unit` into the local files, then

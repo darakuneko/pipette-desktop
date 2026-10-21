@@ -94,10 +94,12 @@ pub async fn merge_device_day_bundle(
     // write over each other.
     let (now, own) = (analytics.now_ms(), own_hash.to_owned());
     blocking(move || {
-        Ok(analytics.update_sync_state(&own, |state| {
-            state.last_synced_at = now as f64;
-            true
-        })?)
+        Ok(analytics
+            .update_sync_state(&own, |state| {
+                state.last_synced_at = now as f64;
+                true
+            })
+            .inspect_err(|err| log::warn!("typing-analytics sync state update failed: {err}"))?)
     })
     .await
 }

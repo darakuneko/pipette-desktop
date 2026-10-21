@@ -113,10 +113,25 @@ fn is_reconciled_at_record(value: &Value) -> bool {
 /// The state in `user_data`, or `None` when the file is
 /// missing, cannot be read, is not JSON or is not a state.
 pub fn load_sync_state(user_data: &Path) -> Option<TypingSyncState> {
-    let bytes = std::fs::read(sync_state_path(user_data)).ok()?;
+    try_load_sync_state(user_data).ok().flatten()
+}
+
+/// The state in `user_data`; `Ok(None)` only when the file is missing
+/// (`NotFound`). A file that cannot be read, is not JSON or is not a state
+/// is an error, so a caller that deletes by the state can tell it from a
+/// device that has no state yet.
+pub fn try_load_sync_state(user_data: &Path) -> std::io::Result<Option<TypingSyncState>> {
+    let bytes = match std::fs::read(sync_state_path(user_data)) {
+        Ok(bytes) => bytes,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err),
+    };
+    let invalid =
+        |what: &str| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("sync_state.json {what}"));
     // Each invalid sequence reads as U+FFFD.
-    let parsed = pipette_js_json::parse(&String::from_utf8_lossy(&bytes)).ok()?;
-    TypingSyncState::from_value(&parsed)
+    let parsed =
+        pipette_js_json::parse(&String::from_utf8_lossy(&bytes)).map_err(|_| invalid("is not JSON"))?;
+    TypingSyncState::from_value(&parsed).map(Some).ok_or_else(|| invalid("is not a typing sync state"))
 }
 
 /// Writes `state` through a temp file and a rename,
@@ -183,6 +198,30 @@ mod tests {
         save_sync_state(dir.path(), &state).unwrap();
         assert_eq!(load_sync_state(dir.path()), Some(state));
         std::fs::write(sync_state_path(dir.path()), "{").unwrap();
+        assert_eq!(load_sync_state(dir.path()), None);
+    }
+
+    #[test]
+    fn try_load_tells_a_missing_state_from_one_that_cannot_be_used() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(try_load_sync_state(dir.path()).unwrap(), None);
+        let state = TypingSyncState::empty("dev");
+        save_sync_state(dir.path(), &state).unwrap();
+        assert_eq!(try_load_sync_state(dir.path()).unwrap(), Some(state));
+        for text in [
+            "{",
+            "[]",
+            r#"{"_rev":4,"my_device_id":"d","uploaded":{},"reconciled_at":{},"last_synced_at":0}"#,
+            r#"{"_rev":3,"my_device_id":"d","uploaded":{"k":"x"},"reconciled_at":{},"last_synced_at":0}"#,
+        ] {
+            std::fs::write(sync_state_path(dir.path()), text).unwrap();
+            assert!(try_load_sync_state(dir.path()).is_err(), "{text}");
+            assert_eq!(load_sync_state(dir.path()), None, "{text}");
+        }
+        // A directory where the file goes cannot be read.
+        std::fs::remove_file(sync_state_path(dir.path())).unwrap();
+        std::fs::create_dir(sync_state_path(dir.path())).unwrap();
+        assert!(try_load_sync_state(dir.path()).is_err());
         assert_eq!(load_sync_state(dir.path()), None);
     }
 }

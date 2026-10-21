@@ -6,13 +6,15 @@
 //!
 //! The listings read a directory the way Node's `readdir` with file types
 //! does: an entry is a file or a directory by its own type (a symbolic
-//! link is neither), and a directory that cannot be read lists nothing.
+//! link is neither), and a directory that cannot be read lists nothing
+//! (except in [`try_list_device_days`], which reports it).
 //! Names are compared as JavaScript compares strings, by UTF-16 code units.
 //! A name that is not UTF-8 is skipped; Node would list it with U+FFFD in
 //! place of the bad bytes, a path that leads nowhere.
 
 use std::cmp::Ordering;
 use std::fs::{DirEntry, FileType};
+use std::io;
 use std::path::{Path, PathBuf};
 
 const JSONL_EXT: &str = ".jsonl";
@@ -85,12 +87,29 @@ fn day_of_filename(name: &str) -> Option<&str> {
     is_utc_day(day).then_some(day)
 }
 
-fn days_in(dir: &Path) -> Vec<String> {
-    entries(dir)
+/// [`entries`] of an opened directory, but an error reading an entry or
+/// an entry's type is reported instead of skipped.
+fn try_entries(read: std::fs::ReadDir) -> io::Result<Vec<(String, FileType)>> {
+    let mut found = Vec::new();
+    for entry in read {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        if let Ok(name) = entry.file_name().into_string() {
+            found.push((name, file_type));
+        }
+    }
+    Ok(found)
+}
+
+/// The days of the day files among `entries`, ascending.
+fn days_of(entries: Vec<(String, FileType)>) -> Vec<String> {
+    let mut days: Vec<String> = entries
         .into_iter()
         .filter(|(_, t)| t.is_file())
         .filter_map(|(name, _)| day_of_filename(&name).map(str::to_owned))
-        .collect()
+        .collect();
+    days.sort();
+    days
 }
 
 /// The machine hashes under `{uid}/devices/` with a deleted-ranges file
@@ -105,9 +124,23 @@ pub fn list_deleted_ranges_hashes(user_data: &Path, uid: &str) -> Vec<String> {
 
 /// The UTC days with a day file of (`uid`, `machine_hash`), ascending.
 pub fn list_device_days(user_data: &Path, uid: &str, machine_hash: &str) -> Vec<String> {
-    let mut days = days_in(&device_day_dir(user_data, uid, machine_hash));
-    days.sort();
-    days
+    days_of(entries(&device_day_dir(user_data, uid, machine_hash)))
+}
+
+/// [`list_device_days`], but a directory that cannot be read is an error
+/// rather than no days: only a missing directory (`NotFound`) lists none.
+/// For a caller that acts on the days missing locally, where an empty
+/// listing would read as "every day was removed".
+pub fn try_list_device_days(user_data: &Path, uid: &str, machine_hash: &str) -> io::Result<Vec<String>> {
+    // Only the open is "no directory". A NotFound while reading the entries
+    // (one removed during the listing) is an error like any other, so the
+    // days not read yet are not taken as removed.
+    let read = match std::fs::read_dir(device_day_dir(user_data, uid, machine_hash)) {
+        Ok(read) => read,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(err) => return Err(err),
+    };
+    Ok(days_of(try_entries(read)?))
 }
 
 /// One day file found by [`list_all_device_day_jsonl_files`].
@@ -126,7 +159,7 @@ pub fn list_all_device_day_jsonl_files(user_data: &Path) -> Vec<DeviceDayJsonlRe
     for uid in subdirectories(&keyboards_root(user_data)) {
         for machine_hash in subdirectories(&devices_dir(user_data, &uid)) {
             let dir = device_day_dir(user_data, &uid, &machine_hash);
-            for utc_day in days_in(&dir) {
+            for utc_day in days_of(entries(&dir)) {
                 let path = device_day_jsonl_path(user_data, &uid, &machine_hash, &utc_day);
                 refs.push(DeviceDayJsonlRef {
                     uid: uid.clone(),
@@ -227,5 +260,54 @@ mod tests {
         }
         assert_eq!(list_device_days(dir.path(), "0xAABB", "hash-a"), ["2026-04-17", "2026-04-19"]);
         assert!(list_device_days(dir.path(), "0xAABB", "missing").is_empty());
+    }
+
+    #[test]
+    fn try_list_device_days_lists_the_same_days_and_nothing_for_a_missing_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let day_dir = device_day_dir(dir.path(), "0xAABB", "hash-a");
+        std::fs::create_dir_all(day_dir.join("2026-04-20.jsonl")).unwrap();
+        for name in ["2026-04-19.jsonl", "2026-04-17.jsonl", "README.txt"] {
+            std::fs::write(day_dir.join(name), "").unwrap();
+        }
+        assert_eq!(
+            try_list_device_days(dir.path(), "0xAABB", "hash-a").unwrap(),
+            ["2026-04-17", "2026-04-19"]
+        );
+        assert!(try_list_device_days(dir.path(), "0xAABB", "missing").unwrap().is_empty());
+        assert!(try_list_device_days(dir.path(), "no-such-keyboard", "hash-a").unwrap().is_empty());
+    }
+
+    #[test]
+    fn try_list_device_days_fails_on_a_directory_it_cannot_read() {
+        let dir = tempfile::tempdir().unwrap();
+        // A file where the device directory goes.
+        let day_dir = device_day_dir(dir.path(), "0xAABB", "hash-a");
+        std::fs::create_dir_all(day_dir.parent().unwrap()).unwrap();
+        std::fs::write(&day_dir, "").unwrap();
+        assert!(try_list_device_days(dir.path(), "0xAABB", "hash-a").is_err());
+        assert!(list_device_days(dir.path(), "0xAABB", "hash-a").is_empty());
+        // A file where a parent directory goes. Windows reports that path as
+        // not found (ERROR_PATH_NOT_FOUND), which lists no days.
+        #[cfg(unix)]
+        assert!(try_list_device_days(&day_dir, "0xAABB", "hash-a").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn try_list_device_days_fails_on_a_directory_without_read_permission() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let day_dir = device_day_dir(dir.path(), "0xAABB", "hash-a");
+        std::fs::create_dir_all(&day_dir).unwrap();
+        std::fs::write(day_dir.join("2026-04-19.jsonl"), "").unwrap();
+        std::fs::set_permissions(&day_dir, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // Root reads it anyway; there is nothing to check then.
+        let readable = std::fs::read_dir(&day_dir).is_ok();
+        let listed = try_list_device_days(dir.path(), "0xAABB", "hash-a");
+        std::fs::set_permissions(&day_dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        if !readable {
+            assert!(listed.is_err());
+        }
     }
 }

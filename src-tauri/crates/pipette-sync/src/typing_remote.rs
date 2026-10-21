@@ -18,8 +18,8 @@ use pipette_entry_store::Clock;
 use pipette_js_json::Value;
 use pipette_sync_format::drive_names::{drive_file_name, is_data_file_name, sync_unit_from_file_name};
 use pipette_typing_analytics::jsonl::paths::deleted_ranges_path;
-use pipette_typing_analytics::jsonl::{keyboards_root, list_device_days};
-use pipette_typing_analytics::sync_state::{TypingSyncState, load_sync_state, save_sync_state};
+use pipette_typing_analytics::jsonl::{keyboards_root, try_list_device_days};
+use pipette_typing_analytics::sync_state::{TypingSyncState, save_sync_state, try_load_sync_state};
 use pipette_typing_analytics::sync_units::{
     typing_analytics_device_day_sync_unit, typing_deleted_ranges_sync_unit,
 };
@@ -154,6 +154,11 @@ async fn delete_all_copies(drive: &DriveClient, listing: &Listing, day: &RemoteD
 /// a live copy, so such a day is uploaded again. The state is saved (with
 /// `last_synced_at`) only when it changed; a failed save is the error,
 /// after any deletes on Drive.
+///
+/// Rule 2 and the orphans delete what is not local, so nothing runs on
+/// what was not read: a state that cannot be loaded is the error before any
+/// delete, and a keyboard whose day directory cannot be listed is skipped
+/// with a warning, its `uploaded` and `reconciled_at` left for the next pass.
 pub async fn reconcile_own_hash_typing_analytics(
     drive: &DriveClient,
     listing: &Listing,
@@ -163,7 +168,7 @@ pub async fn reconcile_own_hash_typing_analytics(
 ) -> io::Result<Reconciled> {
     let root = user_data.to_path_buf();
     let (state, local_uids) =
-        blocking(move || Ok((load_sync_state(&root), local_keyboard_uids(&root)))).await?;
+        blocking(move || Ok((try_load_sync_state(&root)?, local_keyboard_uids(&root)))).await?;
     let mut state = state.unwrap_or_else(|| TypingSyncState::empty(own_hash));
     let mut remote = collect_remote_own_hash_days(listing, own_hash);
 
@@ -188,7 +193,8 @@ pub async fn reconcile_own_hash_typing_analytics(
             Ok(uids
                 .into_iter()
                 .map(|uid| {
-                    let days: HashSet<String> = list_device_days(&root, &uid, &own).into_iter().collect();
+                    let days = try_list_device_days(&root, &uid, &own)
+                        .map(|days| days.into_iter().collect::<HashSet<String>>());
                     (uid, days)
                 })
                 .collect::<HashMap<_, _>>())
@@ -199,7 +205,13 @@ pub async fn reconcile_own_hash_typing_analytics(
     let mut mutated = false;
     for uid in &candidates {
         let key = pointer_key(uid, own_hash);
-        let local = local_days.remove(uid).unwrap_or_default();
+        let local = match local_days.remove(uid).unwrap_or_else(|| Ok(HashSet::new())) {
+            Ok(local) => local,
+            Err(err) => {
+                log::warn!("typing-analytics reconcile skipped {uid}: its day files cannot be listed: {err}");
+                continue;
+            }
+        };
         let mut uploaded = uploaded_days(&state.uploaded, &key);
         let mut cloud = remote.shift_remove(uid).unwrap_or_default();
 

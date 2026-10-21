@@ -11,8 +11,8 @@ pub mod row;
 pub use paths::{
     DELETED_RANGES_FILENAME, DeviceDayJsonlRef, InvalidUtcDay, deleted_ranges_applied_path,
     deleted_ranges_path, device_day_dir, device_day_jsonl_path, devices_dir, is_utc_day, keyboards_root,
-    list_all_device_day_jsonl_files, list_deleted_ranges_hashes, list_device_days, utc_day_boundary_ms,
-    utc_day_from_ms,
+    list_all_device_day_jsonl_files, list_deleted_ranges_hashes, list_device_days, try_list_device_days,
+    utc_day_boundary_ms, utc_day_from_ms,
 };
 pub use reader_writer::{ReadResult, append_lines_to_file, append_rows_to_file, read_rows};
 pub use row::{
