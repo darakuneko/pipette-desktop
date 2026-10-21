@@ -447,12 +447,28 @@ fn main() {
         }
     };
     log::info!("Pipette starting");
+    spawn_v04_cleanup(user_data.clone());
     let config: app_config::AppConfig = Arc::new(pipette_app_config::AppConfigStore::open(&user_data));
     app.manage(Hid(Arc::new(HidService::new(VirtualDeviceMode::from_env()))));
     app.manage(UserDataDir(user_data));
     app.manage(config);
     app.manage(ExternalOpener::system());
     app.run(lifecycle::on_run_event);
+}
+
+/// Removes what the 0.4 build left in `user_data` on a thread of its own, so
+/// the start does not wait on it. Runs after the Windows `lockfile` is held
+/// and the log has started.
+fn spawn_v04_cleanup(user_data: PathBuf) {
+    let spawned = std::thread::Builder::new().name("v04-leftovers".into()).spawn(move || {
+        let removed = pipette_fs::remove_v04_leftovers(&user_data);
+        if removed > 0 {
+            log::info!("removed {removed} entries the 0.4 build left in the userData directory");
+        }
+    });
+    if let Err(err) = spawned {
+        log::warn!("cannot start the removal of the 0.4 leftovers: {err}");
+    }
 }
 
 /// Starts the log after `build`, that is after the single-instance check, so

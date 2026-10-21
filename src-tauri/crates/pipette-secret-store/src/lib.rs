@@ -4,8 +4,8 @@
 //! with it ([`secret_file`]).
 //!
 //! The files are `tauri-*.bin`, never the 0.4 build's `*.enc`: this crate
-//! neither reads nor writes those, so the 0.4 build keeps its own sign-in
-//! and password in the same userData directory.
+//! neither reads nor writes those. The app removes them at startup
+//! (`remove_v04_leftovers` in `pipette-fs/src/v04_leftovers.rs`).
 
 // The dev key file keeps the master key in plain text, so only a debug
 // build may have the code that reads its variable. Every bundled build is

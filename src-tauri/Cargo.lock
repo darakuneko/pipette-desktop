@@ -3154,6 +3154,7 @@ name = "pipette-fs"
 version = "0.0.0"
 dependencies = [
  "dirs 7.0.0",
+ "log",
  "regex",
  "rustix",
  "serde",

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-fs"
-description = "File system groundwork: atomic writes, the userData directory and the 0.4 profile lock check"
+description = "File system groundwork: atomic writes, the userData directory, the 0.4 profile lock check and the removal of the 0.4 leftovers"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,6 +12,8 @@ rust-version.workspace = true
 # The OS config directory, the base of the default userData (the same one
 # the 0.4 build's userData is under). Tauri already pulls it in.
 dirs = "=7.0.0"
+# The errors of the removal of the 0.4 leftovers (src/v04_leftovers.rs).
+log = "=0.4.34"
 thiserror = "=2.0.21"
 
 # The host name and the process liveness check of the 0.4 lock
