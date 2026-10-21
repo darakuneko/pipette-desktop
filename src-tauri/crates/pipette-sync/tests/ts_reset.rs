@@ -5,8 +5,8 @@
 //! tree (path → bytes) and Drive files.
 //!
 //! The reset also removes this userData's key store entry with `local/auth/`
-//! (`forgetKey`), which the recording has none of; that call is left out of the
-//! comparison.
+//! (`forgetKey`) and the app's log files (`clearLogs`), which the recording
+//! has none of; those calls are left out of the comparison.
 
 #![allow(clippy::unwrap_used, clippy::panic)]
 
@@ -102,11 +102,12 @@ fn pending_state(w: &World) -> Value {
 }
 
 /// The calls the recording logs: a typing cleanup with its scope, always every
-/// device's rows here.
+/// device's rows here. `forgetKey` and `clearLogs` are left out (see the
+/// module doc).
 fn calls(w: &World) -> Vec<String> {
     w.log()
         .into_iter()
-        .filter(|call| call != "forgetKey")
+        .filter(|call| !["forgetKey", "clearLogs"].contains(&call.as_str()))
         .map(|call| match call.strip_prefix("typing:") {
             Some(uid) => format!("typing:{uid}:all"),
             None => call,

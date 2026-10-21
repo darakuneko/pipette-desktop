@@ -51,6 +51,9 @@ pub trait ResetHooks: Send + Sync {
     /// files it opened are gone. Never fails: a key left behind opens
     /// nothing.
     fn forget_secret_key(&self) -> BoxFuture<'_, ()>;
+    /// Removes the app's log files. Never fails: a file left behind is
+    /// logged and kept.
+    fn clear_logs(&self);
     /// The keyboards the typing-analytics cache has rows of.
     fn typing_keyboards(&self) -> BoxFuture<'_, Result<Vec<String>, String>>;
     /// Flushes and removes this machine's day files of `uid` and hides every

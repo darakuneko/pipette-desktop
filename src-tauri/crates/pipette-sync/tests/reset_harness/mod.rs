@@ -172,6 +172,10 @@ impl ResetHooks for FakeHooks {
         Box::pin(std::future::ready(()))
     }
 
+    fn clear_logs(&self) {
+        self.note("clearLogs".into());
+    }
+
     fn typing_keyboards(&self) -> BoxFuture<'_, Result<Vec<String>, String>> {
         Box::pin(std::future::ready(self.typing_keyboards.lock().unwrap().clone()))
     }

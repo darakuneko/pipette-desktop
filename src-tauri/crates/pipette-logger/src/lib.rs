@@ -15,6 +15,8 @@
 //! catches and reports itself: that one is logged as a DEBUG record only.
 //! When the log directory cannot be created the logger still writes to
 //! stderr.
+//!
+//! [`remove_log_files`] removes the files under the logger's lock.
 
 mod format;
 mod rotating_file;
@@ -22,7 +24,7 @@ mod rotating_file;
 use std::cell::Cell;
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
@@ -40,10 +42,12 @@ pub enum InitError {
     AlreadyInstalled,
 }
 
-struct FileLogger {
-    /// `None` when the log directory could not be created: stderr only.
-    file: Option<Mutex<RotatingFile>>,
-}
+/// The log files, shared by [`FileLogger`] and [`remove_log_files`]. Unset
+/// before [`init`] and when the log directory could not be created: stderr
+/// only.
+static FILE: OnceLock<Mutex<RotatingFile>> = OnceLock::new();
+
+struct FileLogger;
 
 /// Whether a record of `target` at `level` is kept.
 fn keeps(target: &str, level: Level) -> bool {
@@ -62,7 +66,7 @@ impl Log for FileLogger {
         }
         let line = format_line(pipette_time::now_ms(), record.level(), &record.args().to_string());
         let _ = std::io::stderr().write_all(line.as_bytes());
-        let Some(file) = &self.file else {
+        let Some(file) = FILE.get() else {
             return;
         };
         let result = file.lock().unwrap_or_else(std::sync::PoisonError::into_inner).append(&line);
@@ -81,11 +85,23 @@ impl Log for FileLogger {
 /// only, and the error says why.
 pub fn init(log_dir: PathBuf) -> Result<(), InitError> {
     let created = std::fs::create_dir_all(&log_dir);
-    let file = created.is_ok().then(|| Mutex::new(RotatingFile::new(log_dir.clone(), MAX_FILE_SIZE)));
-    log::set_boxed_logger(Box::new(FileLogger { file })).map_err(|_| InitError::AlreadyInstalled)?;
+    log::set_boxed_logger(Box::new(FileLogger)).map_err(|_| InitError::AlreadyInstalled)?;
+    if created.is_ok() {
+        let _ = FILE.set(Mutex::new(RotatingFile::new(log_dir.clone(), MAX_FILE_SIZE)));
+    }
     log::set_max_level(LevelFilter::Debug);
     install_panic_hook();
     created.map_err(|err| InitError::CreateDir(log_dir, err))
+}
+
+/// [`RotatingFile::remove_files`] under the logger's lock. Does nothing when
+/// [`init`] was not called or the logger writes to stderr only. The caller
+/// logs the error: logging here would take the lock again.
+pub fn remove_log_files() -> std::io::Result<()> {
+    match FILE.get() {
+        Some(file) => file.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove_files(),
+        None => Ok(()),
+    }
 }
 
 fn install_panic_hook() {

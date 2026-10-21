@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The resets of the Data modal and the settings, on crates/pipette-sync's
 //! `reset`, with the rest of the app as the resets need it: the sign-out
-//! that keeps the pending units, polling, the app config, the key store
-//! and the typing analytics. Each answers a `SyncOperationResult`
+//! that keeps the pending units, polling, the app config, the key store,
+//! the log files and the typing analytics. Each answers a `SyncOperationResult`
 //! (result.rs); an argument the handler would refuse is refused before the
 //! lock is taken.
 
@@ -76,6 +76,13 @@ impl<R: Runtime> ResetHooks for AppResetHooks<R> {
                 log::warn!("[sync] the key store entry of the removed secrets stays: {err}");
             }
         })
+    }
+
+    fn clear_logs(&self) {
+        // Logged here, after `remove_log_files` has let go of the logger's lock.
+        if let Err(err) = pipette_logger::remove_log_files() {
+            log::warn!("[sync] some log files were not removed: {err}");
+        }
     }
 
     fn typing_keyboards(&self) -> BoxFuture<'_, Result<Vec<String>, String>> {

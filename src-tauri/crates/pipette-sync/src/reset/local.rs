@@ -13,7 +13,8 @@
 //! files): it is refused while this machine has a password change, and it signs
 //! out right after the first cancel, before anything is removed. A failed
 //! sign-out ends the reset with nothing removed, the sign-in and settings kept,
-//! polling still running, and the cancelled units put back pending.
+//! polling still running, and the cancelled units put back pending. It also
+//! removes the app's log files (`ResetHooks::clear_logs`).
 
 use pipette_keyboard_stores::{KEYBOARD_META_SYNC_UNIT, TombstoneOutcome};
 use pipette_sync_runtime::ResetKeyboards;
@@ -151,7 +152,12 @@ impl Resets {
                 self.preflight.forget_change_state_cache();
                 self.hooks.forget_secret_key().await;
                 remove_all(local.join("downloads").join("languages")).await?;
+                // Nothing writes `local/logs`: the logger writes
+                // `<userData>/logs`, which `clear_logs` removes. The recorded
+                // resets (tests/fixtures/ts_reset.json) expect `local/logs`
+                // gone, so it is removed too.
                 remove_all(local.join("logs")).await?;
+                self.hooks.clear_logs();
             }
             Ok(())
         })

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! `init` with a log directory that cannot be created: the logger is still
-//! installed (stderr only) and the error says why. A test binary of its own,
-//! since a process has one logger.
+//! installed (stderr only), the error says why, and removing the log files
+//! does nothing. A test binary of its own, since a process has one logger.
 
 use std::path::PathBuf;
 
@@ -13,5 +13,7 @@ fn an_unusable_log_directory_still_installs_the_logger() {
     assert!(matches!(result, Err(pipette_logger::InitError::CreateDir(..))), "{result:?}");
     assert!(log::log_enabled!(target: "pipette_app", log::Level::Info));
     log::info!(target: "pipette_app", "reaches stderr");
+    // Stderr only: there are no files to remove.
+    assert!(pipette_logger::remove_log_files().is_ok());
     std::fs::remove_file(blocker).unwrap();
 }

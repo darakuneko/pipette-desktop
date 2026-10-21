@@ -122,6 +122,27 @@ impl RotatingFile {
         Ok(())
     }
 
+    /// Closes the current file and removes every generation, then creates
+    /// the directory again when it is missing, so the next line goes to a
+    /// new `pipette-0.log`. A missing file is skipped. Every step is tried
+    /// even when one fails, and the first error is returned. Nothing here
+    /// panics or logs: it runs under the logger's lock.
+    pub fn remove_files(&mut self) -> std::io::Result<()> {
+        self.current = None;
+        let mut first_error = None;
+        for generation in 0..MAX_GENERATIONS {
+            if let Err(err) = std::fs::remove_file(self.path(generation))
+                && err.kind() != std::io::ErrorKind::NotFound
+            {
+                first_error.get_or_insert(err);
+            }
+        }
+        if let Err(err) = std::fs::create_dir_all(&self.dir) {
+            first_error.get_or_insert(err);
+        }
+        first_error.map_or(Ok(()), Err)
+    }
+
     /// Drops the oldest generation and moves each other one up. Each step is
     /// best effort: a file another writer already moved or removed is
     /// skipped.
@@ -272,6 +293,62 @@ mod tests {
         file.append("old\n").unwrap();
         file.append("new\n").unwrap();
         assert_eq!(read(&dir, 0).as_deref(), Some("old\nnew\n"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    fn write_generations(dir: &Path) {
+        for generation in 0..MAX_GENERATIONS {
+            std::fs::write(dir.join(log_file_name(generation)), format!("{generation}\n")).unwrap();
+        }
+    }
+
+    #[test]
+    fn removing_the_files_removes_every_generation_and_keeps_other_files() {
+        let dir = log_dir("remove");
+        write_generations(&dir);
+        std::fs::write(dir.join("other.log"), "other\n").unwrap();
+        let mut file = RotatingFile::new(dir.clone(), MAX_FILE_SIZE);
+        file.append("open\n").unwrap();
+        file.remove_files().unwrap();
+        assert!((0..MAX_GENERATIONS).all(|g| read(&dir, g).is_none()));
+        assert_eq!(std::fs::read_to_string(dir.join("other.log")).unwrap(), "other\n");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn removing_missing_files_succeeds() {
+        let dir = log_dir("remove-missing");
+        RotatingFile::new(dir.clone(), MAX_FILE_SIZE).remove_files().unwrap();
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_removed_directory_is_created_again() {
+        let dir = log_dir("remove-dir");
+        let mut file = RotatingFile::new(dir.clone(), MAX_FILE_SIZE);
+        file.append("before\n").unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        file.remove_files().unwrap();
+        file.append("after\n").unwrap();
+        assert_eq!(read(&dir, 0).as_deref(), Some("after\n"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// A generation that cannot be removed (here a non-empty directory)
+    /// fails the call, and the others are removed all the same.
+    #[test]
+    fn a_file_that_cannot_be_removed_does_not_stop_the_others() {
+        let dir = log_dir("remove-blocked");
+        write_generations(&dir);
+        std::fs::remove_file(dir.join(log_file_name(1))).unwrap();
+        std::fs::create_dir_all(dir.join(log_file_name(1)).join("inside")).unwrap();
+        let mut file = RotatingFile::new(dir.clone(), MAX_FILE_SIZE);
+        file.append("open\n").unwrap();
+        assert!(file.remove_files().is_err());
+        assert!(dir.join(log_file_name(1)).is_dir());
+        assert!([0, 2, 3, 4].iter().all(|&g| read(&dir, g).is_none()));
+        file.append("after\n").unwrap();
+        assert_eq!(read(&dir, 0).as_deref(), Some("after\n"));
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

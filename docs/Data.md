@@ -201,7 +201,9 @@ Word lists downloaded from the server for the typing test. Can be managed (downl
 
 ### Logs
 
-Rotating log files for debugging. No keyboard data or personal information is logged.
+Rotating log files for troubleshooting (`logs/pipette-0.log` to `logs/pipette-4.log`, rotated at 5 MB). They record what happened around connecting a keyboard, syncing, updating, and so on. When you report a problem you can attach them to your report yourself, and the developer uses them to find the cause. Pipette itself only writes, rotates, and deletes them: it does not read them for anything else, and sharing them is always your choice. Lines can include file paths, keyboard IDs, and HID device IDs (USB vendor ID and product ID). Reset Local Data with App Settings selected deletes them.
+
+The log files stay on this computer: they are not synced to Cloud Sync, and Pipette does not send them to Pipette Hub or anywhere else. Keystrokes, keymap contents, passwords, and tokens are not written to them. The one exception is the `VIAL_DEBUG_HID` environment variable: when you set it for troubleshooting, every HID report sent to and received from the keyboard (keymap contents included) is written to the log.
 
 ### Authentication Credentials
 
@@ -352,7 +354,7 @@ Pipette can export keymap data in several formats. These are local file download
 | Operation | Snapshots | Settings | Favorites | Cloud Data | Hub Posts | App Settings |
 |-----------|:---------:|:--------:|:---------:|:----------:|:--------:|:------------:|
 | Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | - | - |
-| Reset Local Data | Selected targets deleted | Selected targets deleted | Selected targets deleted | - | - | Selected targets reset to defaults |
+| Reset Local Data | Selected targets deleted | Selected targets deleted | Selected targets deleted | - | - | Selected targets reset to defaults (log files deleted) |
 | Reset Sync Data | - | - | - | Selected targets deleted | - | - |
 | Change Password | - | - | - | All files re-encrypted (duplicate copies moved to Trash first) | - | - |
 | Sign Out | - | - | - | - | - | - |

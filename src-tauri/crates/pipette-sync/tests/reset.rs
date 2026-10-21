@@ -403,7 +403,15 @@ async fn reset_local_signs_out_right_after_the_cancel_and_before_removing_anythi
     assert_eq!(*seen.lock().unwrap(), [(false, true)], "every unit cancelled, nothing removed yet");
     assert_eq!(
         w.log(),
-        ["signOutLocked", "stopPolling", "typing:uid1", "typing:uid2", "clearConfig", "forgetKey"]
+        [
+            "signOutLocked",
+            "stopPolling",
+            "typing:uid1",
+            "typing:uid2",
+            "clearConfig",
+            "forgetKey",
+            "clearLogs"
+        ]
     );
     for gone in [
         "sync/keyboards",
@@ -481,7 +489,7 @@ async fn reset_local_of_app_settings_holds_the_signed_in_accounts_units_for_its_
 
     w.resets.reset_local_targets(&local_targets(false, false, true)).await.unwrap();
 
-    assert_eq!(w.log(), ["signOutLocked", "signOut", "stopPolling", "clearConfig", "forgetKey"]);
+    assert_eq!(w.log(), ["signOutLocked", "signOut", "stopPolling", "clearConfig", "forgetKey", "clearLogs"]);
     // The units were ownerless: the signed-in account claims them, and they
     // are held for it.
     assert!(w.pending_units().is_empty());
