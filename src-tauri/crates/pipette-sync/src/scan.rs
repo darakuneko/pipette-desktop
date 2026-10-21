@@ -4,6 +4,7 @@
 //! (`list_undecryptable_files`), the Data modal's scan of what Drive holds
 //! (`scan_remote_data`) and one unit's bundle (`fetch_remote_bundle`).
 
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use futures_util::StreamExt;
@@ -22,6 +23,7 @@ use zeroize::Zeroizing;
 use crate::codec::EnvelopeCodec;
 use crate::execute::SYNC_CONCURRENCY;
 use crate::preflight::{Preflight, PreflightError};
+use crate::units::parse_device_day_unit;
 
 const I18N_INDEX_SYNC_UNIT: &str = "i18n/index";
 const THEME_INDEX_SYNC_UNIT: &str = "themes/index";
@@ -111,6 +113,10 @@ pub async fn list_undecryptable_files(
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SyncDataScanResult {
     pub keyboards: Vec<String>,
+    /// The keyboards with a day file of another device (any hash but this
+    /// one's), sorted: the Data modal's Sync > Typing lists them beside the
+    /// keyboards typed on here. A subset of `keyboards`.
+    pub typing_keyboards: Vec<String>,
     /// The local name of each listed keyboard that has one, as the names
     /// file holds it.
     pub keyboard_names: Vec<(String, Value)>,
@@ -151,6 +157,7 @@ impl SyncDataScanResult {
             .collect();
         let mut result = Object::new();
         result.insert("keyboards", strings(&self.keyboards));
+        result.insert("typingKeyboards", strings(&self.typing_keyboards));
         result.insert("keyboardNames", Value::Object(names));
         result.insert("favorites", strings(&self.favorites));
         result.insert("i18nPacks", strings(&self.i18n_packs));
@@ -170,14 +177,21 @@ fn push_new(list: &mut Vec<String>, item: &str) {
     }
 }
 
-/// The categories of `data_files`, from their names.
-fn categorize(data_files: &[DriveFile]) -> SyncDataScanResult {
+/// The categories of `data_files`, from their names. The typing keyboards
+/// are those with a day of a hash other than `own_hash`; none without it.
+fn categorize(data_files: &[DriveFile], own_hash: Option<&str>) -> SyncDataScanResult {
     let mut result = SyncDataScanResult::default();
     let (mut i18n_index, mut themes_index) = (false, false);
+    let mut typing_keyboards = BTreeSet::new();
     for file in data_files {
         let Some(unit) = sync_unit_from_file_name(&file.name) else { continue };
         if unit.starts_with("keyboards/") {
             push_new(&mut result.keyboards, unit.split('/').nth(1).unwrap_or(""));
+            if let (Some(own), Some(day)) = (own_hash, parse_device_day_unit(&unit))
+                && day.machine_hash != own
+            {
+                typing_keyboards.insert(day.uid.to_owned());
+            }
         } else if unit.starts_with("favorites/") {
             push_new(&mut result.favorites, unit.split('/').nth(1).unwrap_or(""));
         } else if let Some(id) = unit.strip_prefix(I18N_PACK_PREFIX) {
@@ -194,6 +208,7 @@ fn categorize(data_files: &[DriveFile]) -> SyncDataScanResult {
             themes_index = true;
         }
     }
+    result.typing_keyboards = typing_keyboards.into_iter().collect();
     result.has_i18n_data = i18n_index || !result.i18n_packs.is_empty();
     result.has_themes_data = themes_index || !result.theme_packs.is_empty();
     result
@@ -213,16 +228,18 @@ async fn local_keyboard_names(ctx: &StoreContext, uids: Vec<String>) -> Vec<(Str
 }
 
 /// What Drive holds and which of its files the stored password does not open;
-/// empty without credentials.
+/// empty without credentials. `own_hash` is this device's machine hash, whose
+/// days do not make a typing keyboard.
 pub async fn scan_remote_data(
     preflight: &Arc<Preflight>,
     codec: &dyn EnvelopeCodec,
     ctx: &StoreContext,
+    own_hash: Option<&str>,
 ) -> Result<SyncDataScanResult, PreflightError> {
     let Some((password, data_files)) = fetch_validated_data_files(preflight).await? else {
         return Ok(SyncDataScanResult::default());
     };
-    let mut result = categorize(&data_files);
+    let mut result = categorize(&data_files, own_hash);
     result.keyboard_names = local_keyboard_names(ctx, result.keyboards.clone()).await;
     result.undecryptable = find_undecryptable_files(preflight, codec, &password, &data_files).await;
     Ok(result)
@@ -279,7 +296,7 @@ mod tests {
         .into_iter()
         .map(file)
         .collect();
-        let result = categorize(&files);
+        let result = categorize(&files, None);
         assert_eq!(result.keyboards, ["uid1", "uid-only"]);
         assert_eq!(result.favorites, ["tapDance", "macro"]);
         assert_eq!(result.theme_packs, ["pack-a"]);
@@ -289,16 +306,17 @@ mod tests {
 
     #[test]
     fn an_index_alone_still_has_data() {
-        let result = categorize(&[file("i18n_index.enc"), file("themes_index.enc")]);
+        let result = categorize(&[file("i18n_index.enc"), file("themes_index.enc")], None);
         assert!(result.i18n_packs.is_empty() && result.theme_packs.is_empty());
         assert!(result.has_i18n_data && result.has_themes_data);
-        assert!(!categorize(&[]).has_i18n_data);
+        assert!(!categorize(&[], None).has_i18n_data);
     }
 
     #[test]
     fn answers_in_the_renderer_shape() {
         let result = SyncDataScanResult {
             keyboards: vec!["a".into()],
+            typing_keyboards: vec!["a".into()],
             keyboard_names: vec![("a".into(), "Board".into())],
             undecryptable: vec![UndecryptableFile {
                 file_id: "f".into(),
@@ -309,7 +327,7 @@ mod tests {
         };
         assert_eq!(
             result.to_json(),
-            r#"{"keyboards":["a"],"keyboardNames":{"a":"Board"},"favorites":[],"i18nPacks":[],"themePacks":[],"keyLabels":false,"typingTestTexts":false,"hasI18nData":false,"hasThemesData":false,"undecryptable":[{"fileId":"f","fileName":"x.enc","syncUnit":null}]}"#
+            r#"{"keyboards":["a"],"typingKeyboards":["a"],"keyboardNames":{"a":"Board"},"favorites":[],"i18nPacks":[],"themePacks":[],"keyLabels":false,"typingTestTexts":false,"hasI18nData":false,"hasThemesData":false,"undecryptable":[{"fileId":"f","fileName":"x.enc","syncUnit":null}]}"#
         );
     }
 }

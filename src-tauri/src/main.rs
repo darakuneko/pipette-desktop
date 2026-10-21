@@ -258,7 +258,6 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         sync_commands::password_change::sync_password_change_release_locks,
         sync_commands::password_change::sync_list_undecryptable,
         sync_commands::analytics_remote::sync_analytics_now,
-        sync_commands::analytics_remote::typing_analytics_has_remote,
         sync_commands::analytics_remote::typing_analytics_list_remote_cloud_hashes,
         sync_commands::analytics_remote::typing_analytics_list_remote_cloud_days,
         sync_commands::analytics_remote::typing_analytics_fetch_remote_day,

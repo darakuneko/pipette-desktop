@@ -22,13 +22,6 @@
     "response": false
   },
   {
-    "member": "typingAnalyticsHasRemote",
-    "args": [],
-    "command": "typing_analytics_has_remote",
-    "invokeArgs": {},
-    "response": false
-  },
-  {
     "member": "typingAnalyticsListRemoteCloudHashes",
     "args": [
       "0x1234"

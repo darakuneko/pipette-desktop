@@ -64,8 +64,6 @@ const NEW_PASSWORD = 'e2e-Changed-Pass-4Lp$zT8@nB3q-Fig'
 /** The keyboard of the seeded typing days. */
 const TYPING_UID = 'e2e-sync-typing-kb'
 const TYPING_SCOPE = 'e2e-sync-scope'
-/** A keyboard B types on and deletes the typing of. */
-const SCRATCH_UID = 'e2e-sync-scratch-kb'
 const FAVORITE_LABEL = 'E2E sync favorite'
 const FAVORITE_FILE = 'favorites_tapDance.enc'
 const TAP_DANCE = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
@@ -174,10 +172,8 @@ describe('Tauri build Cloud Sync', function () {
 
   let uid = ''
   let hashA = ''
-  let hashB = ''
   let autoAdvanceOnDrive = false
   const typingDays = [utcDay(Date.now() - 2 * DAY_MS), utcDay(Date.now() - DAY_MS)]
-  const ownTypingDay = utcDay(Date.now() - 3 * DAY_MS)
 
   describe('machine A', () => {
     it('signs in, sets the password and uploads a change ten seconds after it is saved', async () => {
@@ -257,7 +253,7 @@ describe('Tauri build Cloud Sync', function () {
   describe('machine B', () => {
     it('signs in with the same password, lists the keyboard only on Drive and downloads it on connect', async () => {
       await switchMachine()
-      hashB = await machineHash()
+      const hashB = await machineHash()
       expect(hashB).not.toBe(hashA)
 
       await openSyncSettings()
@@ -330,17 +326,7 @@ describe('Tauri build Cloud Sync', function () {
       expect(JSON.parse(readFileSync(statePath, 'utf8')).step).toBe('reencrypting')
       expect(driveFilesNamed(PASSWORD_CHANGE_LOCK)).toHaveLength(1)
 
-      await restartApp(async () => {
-        // Days typed on B, for the next test: the Data modal lists the other
-        // devices' typing of the keyboards B has typing of, once a local
-        // typing page has been emptied.
-        for (const typingUid of [TYPING_UID, SCRATCH_UID]) {
-          const dir = userDataPath('sync', 'keyboards', typingUid, 'devices', hashB)
-          mkdirSync(dir, { recursive: true })
-          writeFileSync(join(dir, `${ownTypingDay}.jsonl`), deviceDayContent(typingUid, hashB, `${typingUid}-b`, ownTypingDay))
-        }
-        rmSync(userDataPath('local', 'typing-analytics', 'sync_state.json'), { force: true })
-      })
+      await restartApp()
       expect(existsSync(statePath)).toBe(true)
       await openSyncSettings()
       await $(tid('sync-password-change-panel')).waitForDisplayed({ timeout: 30_000 })
@@ -360,17 +346,8 @@ describe('Tauri build Cloud Sync', function () {
       expect(existsSync(remoteDir)).toBe(false)
 
       await openDataModal()
-      // The Sync side's typing branch shows once a local typing page has
-      // been emptied, which refreshes the typing lists; it lists the
-      // keyboards B has local typing of.
-      await expandBranch('nav-local', 'nav-local-typing')
-      await expandBranch('nav-local-typing', `nav-typing-${SCRATCH_UID}`)
-      await clickInPage(tid(`nav-typing-${SCRATCH_UID}`))
-      await $(tid(`typing-row-${ownTypingDay}`)).waitForDisplayed({ timeout: 30_000 })
-      await clickInPage(tid('typing-delete-all'))
-      await clickInPage(tid('typing-delete-all-confirm'))
-      await $(tid('typing-empty')).waitForDisplayed({ timeout: 30_000 })
-
+      // B has no typing of the keyboard: the Sync side's typing branch lists
+      // it from A's days on Drive as soon as the modal opens.
       await expandBranch('nav-sync', 'nav-sync-typing', 30_000)
       await expandBranch('nav-sync-typing', `nav-sync-typing-${TYPING_UID}`)
       await expandBranch(`nav-sync-typing-${TYPING_UID}`, `nav-sync-typing-${TYPING_UID}-${hashA}`, 30_000)

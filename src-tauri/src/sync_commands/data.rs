@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use pipette_keyboard_stores::StoreContext;
 use pipette_sync::codec::EnvelopeCrypto;
+use pipette_sync::dispatch::UnitSync;
 use pipette_sync::local_data::{collect_export_categories, export_default_filename, export_text};
 use pipette_sync::preflight::Preflight;
 use pipette_sync::reset::Resets;
@@ -117,13 +118,16 @@ pub async fn import_local_data(
 }
 
 /// What Drive holds, by category, and the files the stored password does
-/// not open; empty without credentials.
+/// not open; empty without credentials. Without this device's hash no
+/// keyboard is listed as typed on by another device.
 #[tauri::command]
 pub async fn sync_scan_remote(
     preflight: State<'_, Arc<Preflight>>,
     stores: State<'_, StoreContext>,
+    units: State<'_, Arc<UnitSync>>,
 ) -> Result<Response, CommandError> {
-    let result = scan_remote_data(&preflight, &EnvelopeCrypto, &stores).await?;
+    let own_hash = units.own_hash().ok();
+    let result = scan_remote_data(&preflight, &EnvelopeCrypto, &stores, own_hash.as_deref()).await?;
     Ok(Response::new(result.to_json()))
 }
 

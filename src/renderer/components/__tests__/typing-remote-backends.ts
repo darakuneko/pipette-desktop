@@ -10,6 +10,7 @@
 import { mockIPC } from '@tauri-apps/api/mocks'
 import type { VialAPI } from '../../../shared/types/vial-api'
 import { keyboardDataApi } from '../../../tauri-shim/api/keyboard-data'
+import { syncDataApi } from '../../../tauri-shim/api/sync-data'
 import { typingAnalyticsApi } from '../../../tauri-shim/api/typing-analytics'
 import { typingAnalyticsDataApi } from '../../../tauri-shim/api/typing-analytics-data'
 import { typingAnalyticsRemoteApi } from '../../../tauri-shim/api/typing-analytics-remote'
@@ -18,13 +19,13 @@ type Member =
   | 'listStoredKeyboards'
   | 'typingAnalyticsListKeyboards'
   | 'typingAnalyticsListDeviceInfos'
-  | 'typingAnalyticsHasRemote'
   | 'typingAnalyticsListRemoteCloudHashes'
   | 'typingAnalyticsListRemoteCloudDays'
   | 'typingAnalyticsFetchRemoteDay'
   | 'typingAnalyticsListLocalDeviceDays'
   | 'typingAnalyticsListItemsForHash'
   | 'typingAnalyticsDeleteDeviceData'
+  | 'syncScanRemote'
 
 /** A spy per member, called with the member's own arguments. */
 export type TypingRemoteSpies = { [K in Member]: (...args: Parameters<VialAPI[K]>) => unknown }
@@ -50,7 +51,6 @@ export function typingRemoteBackends(spies: TypingRemoteSpies): TypingRemoteBack
             case 'list_stored_keyboards': return spies.listStoredKeyboards()
             case 'typing_analytics_list_keyboards': return spies.typingAnalyticsListKeyboards()
             case 'typing_analytics_list_device_infos': return spies.typingAnalyticsListDeviceInfos(a.uid)
-            case 'typing_analytics_has_remote': return spies.typingAnalyticsHasRemote()
             case 'typing_analytics_list_remote_cloud_hashes': return spies.typingAnalyticsListRemoteCloudHashes(a.uid)
             case 'typing_analytics_list_remote_cloud_days':
               return spies.typingAnalyticsListRemoteCloudDays(a.uid, a.machineHash)
@@ -63,10 +63,11 @@ export function typingRemoteBackends(spies: TypingRemoteSpies): TypingRemoteBack
               const dates = (payload as { dates: string[] | 'all' }).dates
               return spies.typingAnalyticsDeleteDeviceData(a.uid, a.machineHash, dates)
             }
+            case 'sync_scan_remote': return spies.syncScanRemote()
             default: throw new Error(`unexpected command ${cmd}`)
           }
         })
-        installVialAPI({ ...keyboardDataApi, ...typingAnalyticsApi, ...typingAnalyticsRemoteApi, ...typingAnalyticsDataApi })
+        installVialAPI({ ...keyboardDataApi, ...syncDataApi, ...typingAnalyticsApi, ...typingAnalyticsRemoteApi, ...typingAnalyticsDataApi })
       },
     },
   ]

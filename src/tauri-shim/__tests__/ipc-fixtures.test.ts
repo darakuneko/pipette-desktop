@@ -266,9 +266,6 @@ const CALLERS: Record<string, Caller> = {
   syncListUndecryptable: { run: ({ syncPasswordChange }) => syncPasswordChange.syncPasswordChangeApi.syncListUndecryptable() },
   syncFormatStatus: { run: ({ syncExecute }) => syncExecute.syncExecuteApi.syncFormatStatus() },
   syncAnalyticsNow: { run: ({ syncExecute }, [uid]) => syncExecute.syncExecuteApi.syncAnalyticsNow(uid as string) },
-  typingAnalyticsHasRemote: {
-    run: ({ typingAnalyticsRemote }) => typingAnalyticsRemote.typingAnalyticsRemoteApi.typingAnalyticsHasRemote(),
-  },
   typingAnalyticsListRemoteCloudHashes: {
     run: ({ typingAnalyticsRemote }, [uid]) =>
       typingAnalyticsRemote.typingAnalyticsRemoteApi.typingAnalyticsListRemoteCloudHashes(uid as string),

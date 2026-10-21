@@ -6,6 +6,7 @@
     "invokeArgs": {},
     "response": {
       "keyboards": [],
+      "typingKeyboards": [],
       "keyboardNames": {},
       "favorites": [],
       "i18nPacks": [],

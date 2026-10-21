@@ -8,7 +8,6 @@ identifier = "typing-analytics-remote"
 description = "Syncs one keyboard's typing analytics with Drive, and reads and fetches other devices' typing days on Drive."
 permissions = [
   "allow-sync-analytics-now",
-  "allow-typing-analytics-has-remote",
   "allow-typing-analytics-list-remote-cloud-hashes",
   "allow-typing-analytics-list-remote-cloud-days",
   "allow-typing-analytics-fetch-remote-day",

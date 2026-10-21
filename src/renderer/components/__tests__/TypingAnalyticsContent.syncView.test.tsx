@@ -24,13 +24,13 @@ const spies = {
   listStoredKeyboards: vi.fn(),
   typingAnalyticsListKeyboards: vi.fn(),
   typingAnalyticsListDeviceInfos: vi.fn(),
-  typingAnalyticsHasRemote: vi.fn(),
   typingAnalyticsListRemoteCloudHashes: vi.fn(),
   typingAnalyticsListRemoteCloudDays: vi.fn(),
   typingAnalyticsFetchRemoteDay: vi.fn(),
   typingAnalyticsListLocalDeviceDays: vi.fn(),
   typingAnalyticsListItemsForHash: vi.fn(),
   typingAnalyticsDeleteDeviceData: vi.fn(),
+  syncScanRemote: vi.fn(),
 } satisfies TypingRemoteSpies
 
 beforeEach(() => {

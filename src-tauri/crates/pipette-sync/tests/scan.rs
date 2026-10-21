@@ -14,6 +14,8 @@ use pipette_sync::codec::{CodecFuture, EnvelopeCodec};
 use pipette_sync::scan::{SyncDataScanResult, UndecryptableFile, fetch_remote_bundle, scan_remote_data};
 use reset_harness::{PASSWORD, World, write};
 
+const OWN: &str = "own-hash";
+
 struct TestCodec;
 
 impl EnvelopeCodec for TestCodec {
@@ -53,7 +55,7 @@ async fn categorizes_keyboards_favorites_and_undecryptable_files() {
     let bad = w.drive.seed("favorites_macro.enc", "bad").await;
     w.add_trash("favorites_combo.enc", 1000).await;
 
-    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx).await.unwrap();
+    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx, Some(OWN)).await.unwrap();
 
     assert_eq!(result.keyboards, ["uid1", "uid2"]);
     assert_eq!(result.keyboard_names, vec![("uid1".to_owned(), "One".into())]);
@@ -69,13 +71,37 @@ async fn categorizes_keyboards_favorites_and_undecryptable_files() {
 }
 
 #[tokio::test]
+async fn lists_the_keyboards_with_another_devices_typing_days_with_their_names() {
+    let w = world().await;
+    for name in [
+        "keyboards_uid2_devices_hash-b_days_2026-10-14.enc",
+        "keyboards_uid1_devices_hash-a_days_2026-10-14.enc",
+        "keyboards_uid1_devices_hash-b_days_2026-10-15.enc",
+        // This device's day and another device's deleted ranges alone do not count.
+        "keyboards_uid3_devices_own-hash_days_2026-10-14.enc",
+        "keyboards_uid4_devices_hash-a_deleted-ranges.enc",
+    ] {
+        w.drive.seed(name, "ok").await;
+    }
+    w.add_trash("keyboards_uid5_devices_hash-a_days_2026-10-14.enc", 1000).await;
+
+    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx, Some(OWN)).await.unwrap();
+    assert_eq!(result.typing_keyboards, ["uid1", "uid2"]);
+    assert_eq!(result.keyboard_names, vec![("uid1".to_owned(), "One".into())]);
+
+    // Without this device's hash no keyboard is claimed.
+    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx, None).await.unwrap();
+    assert!(result.typing_keyboards.is_empty());
+}
+
+#[tokio::test]
 async fn reports_packs_and_the_global_units() {
     let w = world().await;
     for name in ["i18n_index.enc", "themes_packs_pack-a.enc", "key-labels.enc", "typing-test-texts.enc"] {
         w.drive.seed(name, "ok").await;
     }
 
-    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx).await.unwrap();
+    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx, Some(OWN)).await.unwrap();
 
     assert!(result.i18n_packs.is_empty() && result.has_i18n_data);
     assert_eq!(result.theme_packs, ["pack-a"]);
@@ -89,7 +115,7 @@ async fn is_empty_without_credentials() {
     w.drive.seed("favorites_macro.enc", "ok").await;
     w.sign_in.0.store(false, Ordering::SeqCst);
 
-    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx).await.unwrap();
+    let result = scan_remote_data(&w.preflight, &TestCodec, &w.ctx, Some(OWN)).await.unwrap();
 
     assert_eq!(result, SyncDataScanResult::default());
     assert!(fetch_remote_bundle(&w.preflight, &TestCodec, "favorites/macro").await.unwrap().is_none());
@@ -102,7 +128,7 @@ async fn is_refused_while_the_password_change_lock_is_listed_downloading_nothing
     w.drive.seed("favorites_macro.enc", "ok").await;
     w.drive.take_events();
 
-    let refusal = scan_remote_data(&w.preflight, &TestCodec, &w.ctx).await.unwrap_err();
+    let refusal = scan_remote_data(&w.preflight, &TestCodec, &w.ctx, Some(OWN)).await.unwrap_err();
 
     assert_eq!(refusal.to_string(), "sync.passwordChange.blockedByOtherDevice");
     assert!(!w.drive.take_events().iter().any(|event| event.starts_with("download:")));

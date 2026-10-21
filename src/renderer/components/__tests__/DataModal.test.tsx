@@ -17,6 +17,7 @@ import type { SyncDataScanResult } from '../../../shared/types/sync'
 function fullScanResult(overrides?: Partial<SyncDataScanResult>): SyncDataScanResult {
   return {
     keyboards: [],
+    typingKeyboards: [],
     keyboardNames: {},
     favorites: [],
     i18nPacks: [],
@@ -72,7 +73,6 @@ const mockTypingAnalyticsSaveKeymapSnapshot = vi.fn().mockResolvedValue({ saved:
 const mockTypingAnalyticsGetKeymapSnapshotForRange = vi.fn().mockResolvedValue(null)
 const mockTypingAnalyticsListRemoteHashes = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListLocalDeviceDays = vi.fn().mockResolvedValue([])
-const mockTypingAnalyticsHasRemote = vi.fn().mockResolvedValue(false)
 const mockTypingAnalyticsListRemoteCloudHashes = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListRemoteCloudDays = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsFetchRemoteDay = vi.fn().mockResolvedValue(true)
@@ -110,7 +110,6 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsGetKeymapSnapshotForRange: mockTypingAnalyticsGetKeymapSnapshotForRange,
     typingAnalyticsListRemoteHashes: mockTypingAnalyticsListRemoteHashes,
     typingAnalyticsListLocalDeviceDays: mockTypingAnalyticsListLocalDeviceDays,
-    typingAnalyticsHasRemote: mockTypingAnalyticsHasRemote,
     typingAnalyticsListRemoteCloudHashes: mockTypingAnalyticsListRemoteCloudHashes,
     typingAnalyticsListRemoteCloudDays: mockTypingAnalyticsListRemoteCloudDays,
     typingAnalyticsFetchRemoteDay: mockTypingAnalyticsFetchRemoteDay,
@@ -192,7 +191,6 @@ describe('DataModal', () => {
     mockTypingAnalyticsGetKeymapSnapshotForRange.mockResolvedValue(null)
     mockTypingAnalyticsListRemoteHashes.mockResolvedValue([])
     mockTypingAnalyticsListLocalDeviceDays.mockResolvedValue([])
-    mockTypingAnalyticsHasRemote.mockResolvedValue(false)
     mockTypingAnalyticsListRemoteCloudHashes.mockResolvedValue([])
     mockTypingAnalyticsListRemoteCloudDays.mockResolvedValue([])
     mockTypingAnalyticsFetchRemoteDay.mockResolvedValue(true)
@@ -863,6 +861,34 @@ describe('DataModal', () => {
       await waitFor(() => expect(screen.getByTestId('trash-empty')).toBeInTheDocument())
       expect(listTrash).toHaveBeenCalledTimes(1)
       expect(screen.getByTestId('data-nav-breadcrumb')).toHaveTextContent('dataModal.sync›dataModal.trash')
+    })
+  })
+
+  describe('Sync > Typing', () => {
+    const syncOn = () => makeProps({ sync: makeSyncMock({ authStatus: { authenticated: true }, hasPassword: true }) })
+
+    it('lists the keyboards only another device typed on as soon as the modal opens', async () => {
+      mockTypingAnalyticsListKeyboards.mockResolvedValue([{ uid: 'kb-local', productName: 'Local KB', vendorId: 1, productId: 2 }])
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({
+        keyboards: ['kb-named', 'kb-unnamed'],
+        typingKeyboards: ['kb-named', 'kb-unnamed'],
+        keyboardNames: { 'kb-named': 'Named KB' },
+      }))
+      render(<DataModal {...syncOn()} />)
+      fireEvent.click(screen.getByTestId('nav-sync'))
+      fireEvent.click(await screen.findByTestId('nav-sync-typing'))
+
+      expect(screen.getByTestId('nav-sync-typing-kb-named')).toHaveTextContent('Named KB')
+      expect(screen.getByTestId('nav-sync-typing-kb-unnamed')).toHaveTextContent('kb-unnamed')
+      expect(screen.getByTestId('nav-sync-typing-kb-local')).toHaveTextContent('Local KB')
+    })
+
+    it('hides the branch when neither this machine nor another device has typing', async () => {
+      render(<DataModal {...syncOn()} />)
+      fireEvent.click(screen.getByTestId('nav-sync'))
+      await screen.findByTestId('nav-sync-empty')
+
+      expect(screen.queryByTestId('nav-sync-typing')).not.toBeInTheDocument()
     })
   })
 

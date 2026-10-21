@@ -6,6 +6,7 @@ import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/typ
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import { useLatestRequest } from '../../hooks/use-latest-request'
 import { affectsStoredKeyboards, useSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
+import { byDisplayName, syncKeyboardName } from './sync-keyboard-name'
 
 export interface UseDataNavTreeOptions {
   showHubTab: boolean
@@ -29,7 +30,6 @@ export function resetDataNavCache(): void {
 export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOptions) {
   const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
   const [typingKeyboards, setTypingKeyboards] = useState<TypingKeyboardSummary[]>([])
-  const [hasRemoteTyping, setHasRemoteTyping] = useState(false)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     () => cachedExpandedNodes ?? new Set(),
   )
@@ -40,13 +40,21 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   // Sync scan state
   const [syncScanResult, setSyncScanResult] = useState<SyncDataScanResult | null>(null)
   const [syncScanning, setSyncScanning] = useState(false)
+  // Whether the scan has run since the sync was last enabled.
   const syncScannedRef = useRef(false)
+  // Bumped when the sync is disabled, so a read of Drive started before
+  // (possibly for another account) does not apply its answer.
+  const syncGenerationRef = useRef(0)
 
   // Remote typing hashes keyed by uid — populated lazily when the user
   // expands Sync > Typing > {keyboard} so startup stays quiet.
   const [remoteTypingHashes, setRemoteTypingHashes] = useState<Record<string, string[]>>({})
   const remoteTypingFetchedRef = useRef<Set<string>>(new Set())
   const refreshRemoteTypingHashes = useCallback(async (uid: string) => {
+    const generation = syncGenerationRef.current
+    const apply = (hashes: string[]) => {
+      if (generation === syncGenerationRef.current) setRemoteTypingHashes((prev) => ({ ...prev, [uid]: hashes }))
+    }
     try {
       // Merge cache-known hashes (immediate) with cloud-discovered
       // hashes (authoritative) so a device we've never fetched from
@@ -57,10 +65,9 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
         window.vialAPI.typingAnalyticsListRemoteCloudHashes(uid),
       ])
       const local = infoBundle ? infoBundle.remotes.map((r) => r.machineHash) : []
-      const merged = Array.from(new Set<string>([...local, ...cloud])).sort()
-      setRemoteTypingHashes((prev) => ({ ...prev, [uid]: merged }))
+      apply(Array.from(new Set<string>([...local, ...cloud])).sort())
     } catch {
-      setRemoteTypingHashes((prev) => ({ ...prev, [uid]: [] }))
+      apply([])
     }
   }, [])
   const ensureRemoteTypingHashes = useCallback((uid: string) => {
@@ -96,24 +103,37 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     window.vialAPI.typingAnalyticsListKeyboards().then(setTypingKeyboards).catch(() => {})
   }, [])
 
-  // Auto-scan sync when enabled
+  // Auto-scan sync when enabled. Only the newest scan sets the result and
+  // ends `syncScanning`, so an older one that ends later is dropped.
+  const beginScanRequest = useLatestRequest()
   const handleSyncScan = useCallback(async () => {
+    const isCurrent = beginScanRequest()
     setSyncScanning(true)
-    try {
-      const result = await window.vialAPI.syncScanRemote()
-      setSyncScanResult(result)
-    } catch {
-      setSyncScanResult(null)
-    } finally {
-      setSyncScanning(false)
-    }
-  }, [])
+    const result = await window.vialAPI.syncScanRemote().catch(() => null)
+    if (!isCurrent()) return
+    setSyncScanResult(result)
+    setSyncScanning(false)
+  }, [beginScanRequest])
 
+  // Once each time the sync becomes enabled (signing in again rescans with
+  // fresh names); the ref keeps a double-run effect from scanning twice.
+  // Disabling it drops what was read from Drive, which may belong to the
+  // account signed out of.
   useEffect(() => {
-    if (!syncEnabled || syncScannedRef.current) return
+    if (!syncEnabled) {
+      syncScannedRef.current = false
+      syncGenerationRef.current++
+      beginScanRequest()
+      setSyncScanning(false)
+      setSyncScanResult(null)
+      remoteTypingFetchedRef.current.clear()
+      setRemoteTypingHashes((prev) => (Object.keys(prev).length === 0 ? prev : {}))
+      return
+    }
+    if (syncScannedRef.current) return
     syncScannedRef.current = true
     void handleSyncScan()
-  }, [syncEnabled, handleSyncScan])
+  }, [syncEnabled, handleSyncScan, beginScanRequest])
 
   // Filter sync scan result: exclude keyboards that exist locally
   const filteredSyncScanResult = useMemo(() => {
@@ -125,6 +145,21 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
       favorites: [], // Favorites are always managed locally
     }
   }, [syncScanResult, storedKeyboards])
+
+  // Sync > Typing: the local typing keyboards and those the scan found
+  // another device's typing days of, named as Sync > Keyboards names them
+  // (a local keyboard's product name comes before its uid); none while the
+  // sync is off.
+  const syncTypingKeyboards = useMemo(() => {
+    if (!syncEnabled) return []
+    const fallbacks = new Map(typingKeyboards.map((kb) => [kb.uid, kb.productName || kb.uid]))
+    for (const uid of syncScanResult?.typingKeyboards ?? []) {
+      if (!fallbacks.has(uid)) fallbacks.set(uid, uid)
+    }
+    return [...fallbacks]
+      .map(([uid, fallback]) => ({ uid, name: syncKeyboardName(uid, syncScanResult, storedKeyboards, fallback) }))
+      .sort((a, b) => byDisplayName(a.name, b.name))
+  }, [syncEnabled, typingKeyboards, syncScanResult, storedKeyboards])
 
   // Sync to cache on change
   useEffect(() => {
@@ -158,18 +193,9 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   useSyncUnitApplied(affectsStoredKeyboards, () => { void reloadStoredKeyboardsAfterSync() })
 
   const refreshTypingKeyboards = useCallback(async () => {
-    // The remote-typing probe is fire-and-forget alongside the local
-    // listing — both feed Sync > Typing visibility decisions and hiding
-    // it on a transient cloud failure is the safer default.
-    const [keyboards, hasRemote] = await Promise.all([
-      window.vialAPI.typingAnalyticsListKeyboards().catch(() => [] as TypingKeyboardSummary[]),
-      syncEnabled
-        ? window.vialAPI.typingAnalyticsHasRemote().catch(() => false)
-        : Promise.resolve(false),
-    ])
+    const keyboards = await window.vialAPI.typingAnalyticsListKeyboards().catch(() => [] as TypingKeyboardSummary[])
     setTypingKeyboards(keyboards)
-    setHasRemoteTyping(hasRemote)
-  }, [syncEnabled])
+  }, [])
 
   const onSyncKeyboardSelect = useCallback(
     async (uid: string, name: string) => {
@@ -221,7 +247,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   return {
     storedKeyboards,
     typingKeyboards,
-    hasRemoteTyping,
+    syncTypingKeyboards,
     expandedNodes,
     toggleExpand,
     isExpanded,

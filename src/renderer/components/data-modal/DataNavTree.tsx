@@ -7,14 +7,13 @@ import type { DataNavPath } from './data-modal-types'
 import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
-
-/** Case-insensitive A-Z compare for keyboard display names. */
-const byDisplayName = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: 'base' })
+import { byDisplayName, syncKeyboardName } from './sync-keyboard-name'
 
 interface Props {
   storedKeyboards: StoredKeyboardInfo[]
   typingKeyboards: TypingKeyboardSummary[]
-  hasRemoteTyping: boolean
+  /** The Sync > Typing keyboards, sorted by name (useDataNavTree.ts). */
+  syncTypingKeyboards: { uid: string; name: string }[]
   activePath: DataNavPath | null
   onNavigate: (path: DataNavPath) => void
   isExpanded: (nodeId: string) => boolean
@@ -129,16 +128,10 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   )
 }
 
-export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid, remoteTypingHashes, ensureRemoteTypingHashes }: Props) {
+export function DataNavTree({ storedKeyboards, typingKeyboards, syncTypingKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid, remoteTypingHashes, ensureRemoteTypingHashes }: Props) {
   const { t } = useTranslation()
 
-  function resolveSyncKeyboardName(uid: string): string {
-    return (
-      syncScanResult?.keyboardNames?.[uid] ??
-      storedKeyboards.find((kb) => kb.uid === uid)?.name ??
-      uid
-    )
-  }
+  const resolveSyncKeyboardName = (uid: string): string => syncKeyboardName(uid, syncScanResult, storedKeyboards)
 
   return (
     <div className="flex flex-col gap-0.5 py-2 px-1" data-testid="data-nav-tree">
@@ -302,12 +295,12 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
             })}
           </Branch>
         )}
-        {/* Typing — per-keyboard, per-device subtree powered by the
-            local cache so startup stays quiet. Hidden entirely when
-            cloud has no non-own typing data or while a scan is in
-            flight; expanding a keyboard triggers a lazy fetch of its
-            remote hashes. */}
-        {!syncScanning && hasRemoteTyping && (
+        {/* Typing — per-keyboard, per-device subtree of the local typing
+            keyboards and those the scan found another device's days of.
+            Hidden while a scan is in flight or with no keyboard to list;
+            expanding a keyboard triggers a lazy fetch of its remote
+            hashes. */}
+        {!syncScanning && syncTypingKeyboards.length > 0 && (
         <Branch
           label={t('dataModal.typing.title')}
           depth={1}
@@ -315,72 +308,62 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
           onToggle={() => onToggle('sync-typing')}
           testId="nav-sync-typing"
         >
-          {typingKeyboards.length === 0 ? (
-            <div
-              className="text-xs text-content-muted py-1"
-              style={treeIndentStyle(3)}
-              data-testid="nav-sync-typing-empty"
-            >
-              {t('dataModal.typing.noKeyboards')}
-            </div>
-          ) : (
-            typingKeyboards.map((kb) => {
-              const nodeId = `sync-typing-${kb.uid}`
-              const hashes = remoteTypingHashes[kb.uid] ?? []
-              const open = isExpanded(nodeId)
-              return (
-                <Branch
-                  key={kb.uid}
-                  label={kb.productName || kb.uid}
-                  depth={2}
-                  open={open}
-                  onToggle={() => {
-                    onToggle(nodeId)
-                    ensureRemoteTypingHashes(kb.uid)
-                  }}
-                  testId={`nav-sync-typing-${kb.uid}`}
-                >
-                  {hashes.length === 0 ? (
-                    <div
-                      className="text-xs text-content-muted py-1"
-                      style={treeIndentStyle(4)}
-                      data-testid={`nav-sync-typing-${kb.uid}-empty`}
-                    >
-                      {t('dataModal.typing.noRemoteDevices')}
-                    </div>
-                  ) : (
-                    hashes.map((hash) => {
-                      const deviceLabel = deviceLabelFromHash(hash)
-                      return (
-                        <Leaf
-                          key={hash}
-                          label={deviceLabel}
-                          depth={3}
-                          active={isActivePath(activePath, {
-                            section: 'sync',
-                            page: 'sync-typing-device',
-                            uid: kb.uid,
-                            name: kb.productName || kb.uid,
-                            machineHash: hash,
-                            deviceLabel,
-                          })}
-                          onClick={() => onNavigate({
-                            section: 'sync',
-                            page: 'sync-typing-device',
-                            uid: kb.uid,
-                            name: kb.productName || kb.uid,
-                            machineHash: hash,
-                            deviceLabel,
-                          })}
-                          testId={`nav-sync-typing-${kb.uid}-${hash}`}
-                        />
-                      )
-                    })
-                  )}
-                </Branch>
-              )
-            })
-          )}
+          {syncTypingKeyboards.map((kb) => {
+            const nodeId = `sync-typing-${kb.uid}`
+            const hashes = remoteTypingHashes[kb.uid] ?? []
+            const open = isExpanded(nodeId)
+            return (
+              <Branch
+                key={kb.uid}
+                label={kb.name}
+                depth={2}
+                open={open}
+                onToggle={() => {
+                  onToggle(nodeId)
+                  ensureRemoteTypingHashes(kb.uid)
+                }}
+                testId={`nav-sync-typing-${kb.uid}`}
+              >
+                {hashes.length === 0 ? (
+                  <div
+                    className="text-xs text-content-muted py-1"
+                    style={treeIndentStyle(4)}
+                    data-testid={`nav-sync-typing-${kb.uid}-empty`}
+                  >
+                    {t('dataModal.typing.noRemoteDevices')}
+                  </div>
+                ) : (
+                  hashes.map((hash) => {
+                    const deviceLabel = deviceLabelFromHash(hash)
+                    return (
+                      <Leaf
+                        key={hash}
+                        label={deviceLabel}
+                        depth={3}
+                        active={isActivePath(activePath, {
+                          section: 'sync',
+                          page: 'sync-typing-device',
+                          uid: kb.uid,
+                          name: kb.name,
+                          machineHash: hash,
+                          deviceLabel,
+                        })}
+                        onClick={() => onNavigate({
+                          section: 'sync',
+                          page: 'sync-typing-device',
+                          uid: kb.uid,
+                          name: kb.name,
+                          machineHash: hash,
+                          deviceLabel,
+                        })}
+                        testId={`nav-sync-typing-${kb.uid}-${hash}`}
+                      />
+                    )
+                  })
+                )}
+              </Branch>
+            )
+          })}
         </Branch>
         )}
         {/* Cloud Data — global (all-keyboard) remote reset targets:

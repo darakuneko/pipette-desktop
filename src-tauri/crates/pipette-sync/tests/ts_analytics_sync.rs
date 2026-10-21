@@ -170,9 +170,7 @@ async fn run_call(calls: &Calls, call: &Value) -> Value {
     if let Some(uid) = call["analyticsSync"].as_str() {
         return value(json!(calls.analytics.execute_analytics_sync(uid).await));
     }
-    let answer = if call.get("hasRemote").is_some() {
-        calls.remote.has_any_remote_typing_data().await.map(|v| json!(v))
-    } else if let Some(uid) = call["hashes"].as_str() {
+    let answer = if let Some(uid) = call["hashes"].as_str() {
         calls.remote.list_remote_typing_hashes(uid).await.map(|v| json!(v))
     } else if let Some(args) = call.get("days") {
         let args = strings(args);

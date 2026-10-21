@@ -289,8 +289,8 @@ impl From<DriveFailure> for RemoteTypingError {
 }
 
 /// The Data modal's reads of the typing data on Drive (the Sync > Typing
-/// tree): whether another device has any, its devices and days, and the
-/// lazy fetch of one of its days. None takes the sync lock or creates the
+/// tree): the other devices with days of a keyboard, their days, and the
+/// lazy fetch of one of those days. None takes the sync lock or creates the
 /// sync-format marker; each lists Drive whole and stops on the guard like
 /// a pass. Signed out, without a usable password, or while the guard
 /// blocks, they find nothing.
@@ -337,17 +337,6 @@ impl RemoteTyping {
                 (day.machine_hash != own_hash).then(|| (day.uid.to_owned(), day.machine_hash.to_owned()))
             })
             .collect()
-    }
-
-    /// Whether Drive holds a day file of another device, which decides whether
-    /// the Sync > Typing tree is shown.
-    pub async fn has_any_remote_typing_data(&self) -> Result<bool, RemoteTypingError> {
-        if self.signed_in_with_password().await.is_none() {
-            return Ok(false);
-        }
-        let own = self.units.own_hash()?;
-        let Some((listing, _)) = self.guarded_listing().await? else { return Ok(false) };
-        Ok(!Self::remote_day_units(&listing, &own).is_empty())
     }
 
     /// The other devices with a day file of keyboard `uid` on Drive, sorted; it

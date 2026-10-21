@@ -270,7 +270,6 @@ const SYNC_MEMBERS = [
   {
     module: typingAnalyticsRemoteApi,
     members: [
-      'typingAnalyticsHasRemote',
       'typingAnalyticsListRemoteCloudHashes',
       'typingAnalyticsListRemoteCloudDays',
       'typingAnalyticsFetchRemoteDay',
@@ -321,7 +320,6 @@ const SYNC_REAL = [
   'exportLocalData',
   'importLocalData',
   'syncAnalyticsNow',
-  'typingAnalyticsHasRemote',
   'typingAnalyticsListRemoteCloudHashes',
   'typingAnalyticsListRemoteCloudDays',
   'typingAnalyticsFetchRemoteDay',
@@ -426,7 +424,7 @@ describe('shim coverage', () => {
 
   it('lists the Cloud Sync members, each in one module, and the real ones', () => {
     const members = SYNC_MEMBERS.flatMap(({ members }) => members)
-    expect(new Set(members).size).toBe(38)
+    expect(new Set(members).size).toBe(37)
     expect(members.filter((name) => !(VIAL_API_MEMBER_NAMES as readonly string[]).includes(name))).toEqual([])
     const listeners = members.filter((name) => VIAL_API_MEMBER_KINDS[name as keyof typeof VIAL_API_MEMBER_KINDS] === 'listener')
     expect(listeners.sort()).toEqual(['syncOnFormatStatusChanged', 'syncOnProgress', 'syncOnUnitApplied'])

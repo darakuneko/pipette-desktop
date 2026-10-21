@@ -69,11 +69,6 @@ pub async fn sync_analytics_now(
 }
 
 #[tauri::command]
-pub async fn typing_analytics_has_remote(remote: State<'_, Arc<RemoteTyping>>) -> Result<bool, CommandError> {
-    Ok(remote.has_any_remote_typing_data().await?)
-}
-
-#[tauri::command]
 pub async fn typing_analytics_list_remote_cloud_hashes(
     remote: State<'_, Arc<RemoteTyping>>,
     uid: Arg,

@@ -216,7 +216,6 @@ export const VIAL_API_MEMBER_KINDS = {
   typingAnalyticsListDurationCells: 'request',
   typingAnalyticsGetLayoutComparisonForRange: 'request',
   typingAnalyticsListLocalDeviceDays: 'request',
-  typingAnalyticsHasRemote: 'request',
   typingAnalyticsListRemoteCloudHashes: 'request',
   typingAnalyticsListRemoteCloudDays: 'request',
   typingAnalyticsFetchRemoteDay: 'request',

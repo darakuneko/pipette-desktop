@@ -160,6 +160,9 @@ export interface SyncTrashDeleteResult extends Pick<SyncOperationResult, 'succes
 
 export interface SyncDataScanResult {
   keyboards: string[]
+  /** The keyboards with a typing day file of another device on Drive,
+   *  sorted (a subset of `keyboards`). */
+  typingKeyboards: string[]
   /** uid -> deviceName from synced meta (when available) */
   keyboardNames: Record<string, string>
   favorites: string[]

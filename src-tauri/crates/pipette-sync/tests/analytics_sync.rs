@@ -375,7 +375,6 @@ async fn the_reads_find_nothing_signed_out_and_send_nothing() {
     e.world.sign_in.0.store(false, std::sync::atomic::Ordering::SeqCst);
     e.world.requests();
 
-    assert!(!e.remote.has_any_remote_typing_data().await.unwrap());
     assert!(e.remote.list_remote_typing_hashes(UID).await.unwrap().is_empty());
     assert!(e.remote.list_remote_typing_days(UID, REMOTE).await.unwrap().is_empty());
     assert!(!e.remote.fetch_remote_typing_day(UID, REMOTE, DAY).await.unwrap());
