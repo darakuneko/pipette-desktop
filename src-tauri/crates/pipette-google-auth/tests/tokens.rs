@@ -52,6 +52,29 @@ async fn keeps_the_tokens_for_the_next_process() {
 }
 
 #[tokio::test]
+async fn keeps_the_sign_in_when_the_user_data_directory_is_renamed() {
+    let harness = Harness::new();
+    harness.sign_in_with(tokens(json!({ "access_token": "kept" }))).await;
+    let elsewhere = tempfile::tempdir().unwrap();
+    let moved = elsewhere.path().join("userData");
+    std::fs::rename(harness.user_data.path(), &moved).unwrap();
+    // The next process, at the new path, with nothing in memory.
+    let secrets = Arc::new(pipette_secret_store::SecretStore::new(&moved, harness.keystore.clone()));
+    secrets.master_key().forget();
+    let config = pipette_google_auth::AuthConfig {
+        auth_endpoint: common::AUTH_ENDPOINT.into(),
+        token_endpoint: common::TOKEN_ENDPOINT.into(),
+        http: harness.endpoint.clone(),
+        timing: AuthTiming::default(),
+        now_ms: Arc::new(|| NOW),
+        hub_test_account: Arc::new(|| None),
+    };
+    let next = pipette_google_auth::GoogleAuth::new(config, secrets);
+    assert!(next.is_authenticated().await);
+    assert_eq!(next.access_token().await.as_deref().map(String::as_str), Some("kept"));
+}
+
+#[tokio::test]
 async fn a_failed_exchange_stores_nothing() {
     let harness = Harness::new();
     harness.endpoint.answer(Answer::Reply(400, json!("bad request")));
@@ -344,6 +367,28 @@ async fn a_key_store_that_is_unavailable_refuses_to_store_the_tokens() {
     harness.endpoint.ok(tokens(json!({})));
     let err = harness.auth.exchange_code_for_tokens("code", "v", 8080, &SwitchDirectly).await.unwrap_err();
     assert_eq!(err.to_string(), "OS keychain encryption is not available");
+    assert!(!harness.token_file().exists());
+}
+
+#[tokio::test]
+async fn a_closed_secret_store_refuses_the_tokens_as_an_unavailable_key_store() {
+    let harness = Harness::new();
+    // A record of the key's account name that is no file closes the store.
+    std::fs::create_dir_all(harness.user_data.path().join("local/auth/key-account")).unwrap();
+    let secrets =
+        Arc::new(pipette_secret_store::SecretStore::new(harness.user_data.path(), harness.keystore.clone()));
+    let config = pipette_google_auth::AuthConfig {
+        auth_endpoint: common::AUTH_ENDPOINT.into(),
+        token_endpoint: common::TOKEN_ENDPOINT.into(),
+        http: harness.endpoint.clone(),
+        timing: AuthTiming::default(),
+        now_ms: Arc::new(|| NOW),
+        hub_test_account: Arc::new(|| None),
+    };
+    let auth = pipette_google_auth::GoogleAuth::new(config, secrets);
+    harness.endpoint.ok(tokens(json!({})));
+    let err = auth.exchange_code_for_tokens("code", "v", 8080, &SwitchDirectly).await.unwrap_err();
+    assert!(matches!(err, AuthError::KeystoreUnavailable), "{err}");
     assert!(!harness.token_file().exists());
 }
 

@@ -6,7 +6,18 @@
 //! write, and the AES-256-GCM ciphertext with its 16-byte tag. The
 //! associated data is [`FILE_MAGIC`], the kind's name and the key's account
 //! name, each followed by a NUL byte, so a file opens only as the kind it was
-//! written as and only with the key of its own userData directory.
+//! written as and only with the key of the account it was written under.
+//!
+//! The account name is recorded in the userData directory
+//! ([`ACCOUNT_RECORD_FILE`]), so the secrets keep opening when the directory
+//! is moved or copied: the key and the associated data both follow the
+//! record, not the path. A directory without a record uses the name of its
+//! path ([`key_account`]) and records it with the first secret it stores,
+//! or when the store is made and secret files are already there. A record is
+//! never rewritten, whatever name it holds. A record that cannot be read
+//! closes the store for the process: it stores nothing and reads as
+//! `keystoreUnavailable`, so no secret is written under a name the next
+//! process would not use.
 //!
 //! The failure reason of a read: a file that cannot be read is
 //! `keystoreUnavailable` when the key store does not answer and
@@ -24,8 +35,12 @@ use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use zeroize::Zeroizing;
 
-use crate::keystore::Keystore;
+use crate::keystore::{Keystore, KeystoreError};
 use crate::master_key::{KEYSTORE_TIMEOUT, Key, MasterKey, key_account};
+
+/// The file of `local/auth/` that holds the account name of the master key:
+/// one line, written once and never rewritten.
+const ACCOUNT_RECORD_FILE: &str = "key-account";
 
 /// The first bytes of every secret file.
 pub const FILE_MAGIC: &[u8; 4] = b"PTS1";
@@ -86,6 +101,10 @@ pub enum StoreError {
     /// The key store could not read or create the master key.
     #[error("OS keychain encryption is not available")]
     KeystoreUnavailable,
+    /// The record of the key's account name ([`ACCOUNT_RECORD_FILE`]) could
+    /// not be read when the store was made.
+    #[error("the account record of the secret key (local/auth/key-account) cannot be read")]
+    AccountUnreadable,
     #[error("{0}")]
     Io(#[from] std::io::Error),
 }
@@ -146,11 +165,75 @@ pub fn open_secret(key: &Key, kind: SecretKind, account: &str, file: &[u8]) -> O
 pub struct SecretStore {
     auth_dir: PathBuf,
     key: MasterKey,
+    /// The account record could not be read when the store was made: every
+    /// store fails and every read is `keystoreUnavailable`.
+    closed: bool,
+}
+
+/// The account name in the record text, `None` when it is empty. The name
+/// is the one line of the record without the white space around it, in
+/// whatever form; a record of more than one line or with control
+/// characters is an error, as a record that cannot be read is.
+fn recorded_account(text: &str) -> std::io::Result<Option<&str>> {
+    let name = text.trim();
+    if name.chars().any(char::is_control) {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "not a single line"));
+    }
+    Ok((!name.is_empty()).then_some(name))
+}
+
+/// The account name recorded at `path`; `None` when there is no record or
+/// it is empty.
+fn read_account_record(path: &Path) -> std::io::Result<Option<String>> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => Ok(recorded_account(&text)?.map(str::to_owned)),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(err),
+    }
+}
+
+fn write_account_record(path: &Path, account: &str) -> std::io::Result<()> {
+    pipette_fs::write_file_atomic(path, format!("{account}\n").as_bytes())
+}
+
+/// Whether `auth_dir` holds a secret file of any kind.
+fn has_secret_files(auth_dir: &Path) -> bool {
+    SecretKind::ALL.iter().any(|kind| auth_dir.join(kind.file_name()).exists())
+}
+
+/// The account name of the master key of `user_data`, `None` when the
+/// record cannot be read. Without a record it is the name of the path, and
+/// secret files already in `auth_dir` get that name recorded: they were
+/// written under it.
+fn resolve_account(user_data: &Path, auth_dir: &Path) -> Option<String> {
+    let record = auth_dir.join(ACCOUNT_RECORD_FILE);
+    match read_account_record(&record) {
+        Ok(Some(account)) => Some(account),
+        Ok(None) => {
+            let account = key_account(user_data);
+            if has_secret_files(auth_dir)
+                && let Err(err) = write_account_record(&record, &account)
+            {
+                // The next store records it, or the next start tries again.
+                log::warn!("[secret-store] the account of the secret key could not be recorded: {err}");
+            }
+            Some(account)
+        }
+        Err(err) => {
+            log::warn!(
+                "[secret-store] the account record of the secret key cannot be read; the secrets are \
+                 closed until the next start: {err}"
+            );
+            None
+        }
+    }
 }
 
 impl SecretStore {
-    /// The secrets of `user_data`, under its master key in `keystore`.
-    /// Creates `user_data` when it is missing ([`key_account`]).
+    /// The secrets of `user_data`, under its master key in `keystore`, with
+    /// the key's account name from the record of `user_data` (see the
+    /// module documentation). Creates `user_data` when it is missing
+    /// ([`key_account`]).
     pub fn new(user_data: &Path, keystore: Arc<dyn Keystore>) -> Self {
         Self::with_timeout(user_data, keystore, KEYSTORE_TIMEOUT)
     }
@@ -163,10 +246,16 @@ impl SecretStore {
         if let Err(err) = std::fs::create_dir_all(user_data) {
             log::warn!("[secret-store] the userData directory could not be created: {err}");
         }
-        Self {
-            auth_dir: user_data.join("local").join("auth"),
-            key: MasterKey::with_timeout(keystore, key_account(user_data), timeout),
-        }
+        let auth_dir = user_data.join("local").join("auth");
+        let account = resolve_account(user_data, &auth_dir);
+        let closed = account.is_none();
+        // A closed store does not know the key's name: the path's name may
+        // be the recorded name of another directory moved or copied from
+        // this path. It keeps a key of that name only to have one; it
+        // seals, opens and deletes nothing with it
+        // ([`SecretStore::delete_key`]).
+        let account = account.unwrap_or_else(|| key_account(user_data));
+        Self { auth_dir, key: MasterKey::with_timeout(keystore, account, timeout), closed }
     }
 
     /// `local/auth/`.
@@ -184,15 +273,41 @@ impl SecretStore {
         &self.key
     }
 
+    /// Removes the master key from the key store and from memory. A closed
+    /// store removes nothing: the entry of its key's name may be another
+    /// directory's.
+    pub async fn delete_key(&self) -> Result<(), KeystoreError> {
+        if self.closed {
+            log::warn!(
+                "[secret-store] the account record of the secret key cannot be read; the key store \
+                 entry is kept"
+            );
+            return Ok(());
+        }
+        self.key.delete().await
+    }
+
     /// Encrypts `secret` and writes it as the `kind` file, creating
-    /// `local/auth/` and the master key when missing.
+    /// `local/auth/`, the master key and the record of its account name
+    /// when missing. The record is written before the file, and a record
+    /// that cannot be written fails the store: a secret without a record
+    /// would not open once the directory moves.
     pub async fn store(&self, kind: SecretKind, secret: &[u8]) -> Result<(), StoreError> {
+        if self.closed {
+            return Err(StoreError::AccountUnreadable);
+        }
         let key = self.key.read_or_create().await.map_err(|_| StoreError::KeystoreUnavailable)?;
         let sealed = seal_secret(&key, kind, self.key.account(), secret)?;
         let path = self.path(kind);
+        let record = self.auth_dir.join(ACCOUNT_RECORD_FILE);
+        let account = self.key.account().to_owned();
         blocking(move || {
             if let Some(dir) = path.parent() {
                 std::fs::create_dir_all(dir)?;
+            }
+            // A record already there is kept, whatever name it holds.
+            if read_account_record(&record)?.is_none() {
+                write_account_record(&record, &account)?;
             }
             pipette_fs::write_file_atomic(&path, &sealed)
         })
@@ -202,6 +317,9 @@ impl SecretStore {
 
     /// The secret of the `kind` file, or why it cannot be returned.
     pub async fn retrieve(&self, kind: SecretKind) -> Result<Zeroizing<Vec<u8>>, SecretFailure> {
+        if self.closed {
+            return Err(SecretFailure::KeystoreUnavailable);
+        }
         let Ok(file) = read_file(self.path(kind)).await else {
             return Err(if self.key.available().await {
                 SecretFailure::NoPasswordFile
@@ -226,8 +344,12 @@ impl SecretStore {
     }
 
     /// The secret of the `kind` file, `None` when there is no file, without
-    /// asking the key store about a missing one.
+    /// asking the key store about a missing one. A closed store is
+    /// `KeystoreUnavailable` with or without the file.
     pub async fn read_if_present(&self, kind: SecretKind) -> Result<Option<Zeroizing<Vec<u8>>>, ReadError> {
+        if self.closed {
+            return Err(ReadError::KeystoreUnavailable);
+        }
         let file = match read_file(self.path(kind)).await {
             Ok(file) => file,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -337,6 +459,16 @@ mod tests {
     #[test]
     fn the_associated_data_separates_its_parts() {
         assert_eq!(associated_data(SecretKind::SyncPassword, "a/b"), b"PTS1\0sync-password\0a/b\0".to_vec());
+    }
+
+    #[test]
+    fn the_record_is_one_line_of_any_form() {
+        assert_eq!(recorded_account("local-auth-key/0011223344556677\n").unwrap(), Some(ACCOUNT));
+        assert_eq!(recorded_account("  other form\r\n").unwrap(), Some("other form"));
+        assert_eq!(recorded_account("").unwrap(), None);
+        assert_eq!(recorded_account(" \n\t").unwrap(), None);
+        assert!(recorded_account("one\ntwo").is_err());
+        assert!(recorded_account("a\u{7}b").is_err());
     }
 
     #[test]

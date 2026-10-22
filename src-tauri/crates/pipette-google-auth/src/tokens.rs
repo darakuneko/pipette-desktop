@@ -156,7 +156,9 @@ impl TokenFile {
         let json =
             Zeroizing::new(serde_json::to_vec(&tokens).map_err(|err| AuthError::Other(err.to_string()))?);
         self.secrets.store(SecretKind::OauthTokens, &json).await.map_err(|err| match err {
-            StoreError::KeystoreUnavailable => AuthError::KeystoreUnavailable,
+            // A closed store reads as `keystoreUnavailable`; its writes fail
+            // for the same reason.
+            StoreError::KeystoreUnavailable | StoreError::AccountUnreadable => AuthError::KeystoreUnavailable,
             StoreError::Io(err) => AuthError::Other(err.to_string()),
         })?;
         let mut cache = self.cache();

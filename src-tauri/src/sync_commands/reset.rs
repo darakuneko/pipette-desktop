@@ -63,7 +63,7 @@ impl<R: Runtime> ResetHooks for AppResetHooks<R> {
     fn forget_secret_key(&self) -> BoxFuture<'_, ()> {
         let secrets = Arc::clone(&self.app.state::<SyncSecrets>().secrets);
         Box::pin(async move {
-            if let Err(err) = secrets.master_key().delete().await {
+            if let Err(err) = secrets.delete_key().await {
                 log::warn!("[sync] the key store entry of the removed secrets stays: {err}");
             }
         })

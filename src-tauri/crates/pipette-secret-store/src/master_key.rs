@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! The master key of the files of `local/auth/`: 32 random bytes in the key
-//! store under an account name of this userData directory
-//! ([`key_account`]), so another userData directory has a key of its own.
+//! store under an account name of this userData directory, so another
+//! userData directory has a key of its own. The name is the one the
+//! directory records ([`crate::secret_file`]), or the name of its path
+//! ([`key_account`]) when it has no record.
 //!
 //! Every operation on the entry (read, create, delete) runs one at a time
 //! behind one gate per account name in the process, and "missing, so
@@ -48,11 +50,10 @@ pub const KEYSTORE_TIMEOUT: Duration = Duration::from_secs(60);
 pub type Key = Zeroizing<[u8; KEY_LEN]>;
 
 /// `local-auth-key/` and the first 16 hex digits of the SHA-256 of the
-/// userData directory's path ([`resolved_user_data`]).
-///
-/// The account name follows the path, so the secrets of a userData
-/// directory that was moved or copied elsewhere no longer open there: the
-/// sign-in and the sync password have to be entered again.
+/// userData directory's path ([`resolved_user_data`]): the account name of
+/// a userData directory that has not recorded one. The directory records
+/// this name with its first secret, and keeps using the recorded name when
+/// it moves.
 pub fn key_account(user_data: &Path) -> String {
     let resolved = resolved_user_data(user_data);
     let digest = Sha256::digest(resolved.to_string_lossy().as_bytes());
