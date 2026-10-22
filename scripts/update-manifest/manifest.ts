@@ -159,6 +159,7 @@ export function promotionProblems(input: PromotionInput): string[] {
     return problems
   }
   if (version !== tag.replace(/^v/, '')) problems.push(`latest.json is version ${version}, the tag ${tag}`)
+  // promote-update.yml's job `if` makes the same call for a publish: keep the two in step.
   if ((isPreRelease(version) || release.isPrerelease) && channel === 'stable') {
     problems.push('a pre-release goes to beta or staging, never to stable')
   }

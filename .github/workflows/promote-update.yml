@@ -4,8 +4,15 @@ name: Promote update
 # `<channel>.json` of the fixed pre-release `updater-manifest`, which the
 # app reads (src-tauri/src/updater.rs): beta for the pre-releases (the
 # releases go there too, so the betas get them), stable for the releases,
-# staging for trying an update before anyone gets it. Run by hand only,
-# after the release is published and checked.
+# staging for trying an update before anyone gets it.
+#
+# Publishing a release (no pre-release part in the tag, not marked as a
+# pre-release) runs it for stable and beta. A pre-release, and any
+# promotion to staging, is run by hand with a tag and a channel. A tag whose
+# commit lacks the release trigger is promoted by hand. A release published
+# with GITHUB_TOKEN starts no workflow, so this does not run for it.
+# check-promotion (scripts/update-manifest/manifest.ts) makes the same
+# pre-release call for stable on its own: keep the two in step.
 #
 # Before the upload it checks, against what an anonymous user downloads:
 # the release is published and is the tag's; latest.json is the tag's
@@ -19,6 +26,8 @@ name: Promote update
 # Deleting a release whose version a channel's manifest names leaves that
 # manifest pointing at files that are gone: promote another release first.
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -37,17 +46,28 @@ on:
 permissions:
   contents: write
 
-# One promotion at a time: two would race on the same manifest.
-concurrency:
-  group: promote-update
-  cancel-in-progress: false
-
 jobs:
   promote:
+    # Which publishes run it: see the top of this file.
+    if: github.event_name == 'workflow_dispatch' || (github.event.release.prerelease == false && !contains(github.event.release.tag_name, '-'))
     runs-on: ubuntu-latest
+    # One promotion at a time: two would race on the same manifest. On the
+    # job, so a skipped run for a pre-release does not take a waiting run's
+    # place in the group.
+    concurrency:
+      group: promote-update
+      cancel-in-progress: false
+    # max-parallel 1 runs one channel at a time, in no set order. A failed
+    # channel does not cancel the other: promoting a version a channel
+    # already has fails the check, and the other channel still runs.
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        channel: ${{ fromJSON(github.event_name == 'release' && '["stable","beta"]' || format('["{0}"]', inputs.channel)) }}
     env:
-      TAG: ${{ inputs.tag }}
-      CHANNEL: ${{ inputs.channel }}
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      CHANNEL: ${{ matrix.channel }}
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
     steps:
@@ -67,17 +87,31 @@ jobs:
       - name: Read the release
         run: gh release view "$TAG" --repo "$REPO" --json tagName,isDraft,isPrerelease,assets > "$RUNNER_TEMP/release.json"
 
-      # Without credentials, as the app downloads them: a draft's assets or
-      # a missing one fail here.
+      # Without credentials, as the app downloads them. A draft or a missing
+      # asset fails before any download; right after publishing, an asset
+      # that is not served yet is retried for about 5 minutes.
       - name: Download the update files anonymously
         run: |
+          release="$RUNNER_TEMP/release.json"
           dir="$RUNNER_TEMP/release-files"
+          names=(latest.json
+            Pipette-linux-x86_64.AppImage Pipette-linux-x86_64.AppImage.sig
+            Pipette-win-x64.exe Pipette-win-x64.exe.sig
+            Pipette-mac-arm64.app.tar.gz Pipette-mac-arm64.app.tar.gz.sig)
+          if [ "$(jq -r .isDraft "$release")" = true ]; then
+            echo "::error::$TAG is a draft: publish it first"
+            exit 1
+          fi
+          for name in "${names[@]}"; do
+            if ! jq -e --arg name "$name" 'any(.assets[]; .name == $name)' "$release" > /dev/null; then
+              echo "::error::$TAG has no $name"
+              exit 1
+            fi
+          done
           mkdir -p "$dir"
-          for name in latest.json \
-            Pipette-linux-x86_64.AppImage Pipette-linux-x86_64.AppImage.sig \
-            Pipette-win-x64.exe Pipette-win-x64.exe.sig \
-            Pipette-mac-arm64.app.tar.gz Pipette-mac-arm64.app.tar.gz.sig; do
-            curl -fsSL --retry 3 -o "$dir/$name" "https://github.com/$REPO/releases/download/$TAG/$name"
+          for name in "${names[@]}"; do
+            curl -fsSL --retry 30 --retry-delay 10 --retry-all-errors -o "$dir/$name" \
+              "https://github.com/$REPO/releases/download/$TAG/$name"
           done
 
       # The channel's manifest now, if it has one: 404 means none yet.

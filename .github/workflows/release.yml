@@ -5,11 +5,11 @@ name: Release
 # pre-release part (0.5.0-beta.1). With them go the in-app update's files:
 # the update of each system (the AppImage, the installer, the macOS app as
 # .app.tar.gz), its minisign signature (.sig, bound to the version) and
-# latest.json, the manifest naming them. Publishing the release does not
-# offer the update to anyone: promote-update.yml makes a published
-# release's latest.json a channel's manifest. Run by hand, it builds the same
-# files as artifacts and publishes nothing; the version input builds them under
-# another version (to try a pre-release version before tagging one).
+# latest.json, the manifest naming them. promote-update.yml makes a published
+# release's latest.json a channel's manifest (that file says when it runs).
+# Run by hand, this workflow builds the same files as artifacts and publishes
+# nothing; the version input builds them under another version (to try a
+# pre-release version before tagging one).
 on:
   push:
     tags:
