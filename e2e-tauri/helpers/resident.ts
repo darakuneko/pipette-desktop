@@ -144,29 +144,39 @@ export const windowState = (): Promise<WindowState> => invokeCommand<WindowState
 export const waitForWindow = (done: (state: WindowState) => boolean, timeoutMsg: string): Promise<WindowState> =>
   readUntil(windowState, done, timeoutMsg)
 
-/** How long the window state must stay the same to count as settled. */
+/** How long a state must stay the same to count as settled. */
 const SETTLED_MS = 600
 
-/** Waits until the window state satisfies `done` and has not changed for
- *  {@link SETTLED_MS}, and answers it. A mode change of the renderer can
- *  take several calls, each with its own animation, and a state between
- *  two of them can satisfy `done` for a moment. */
-export function waitForSettledWindow(done: (state: WindowState) => boolean, timeoutMsg: string): Promise<WindowState> {
+/** Reads `read` until its answer satisfies `done` and has not changed for
+ *  `settledMs`, and answers it. */
+export function readUntilSettled<T>(
+  read: () => Promise<T>,
+  done: (value: T) => boolean,
+  timeoutMsg: string,
+  settledMs = SETTLED_MS,
+): Promise<T> {
   let previous = ''
   let since = 0
   return readUntil(
-    windowState,
-    (state) => {
-      const text = JSON.stringify(state)
+    read,
+    (value) => {
+      const text = JSON.stringify(value)
       if (text !== previous) {
         previous = text
         since = Date.now()
       }
-      return done(state) && Date.now() - since >= SETTLED_MS
+      return done(value) && Date.now() - since >= settledMs
     },
     timeoutMsg,
   )
 }
+
+/** Waits until the window state satisfies `done` and has settled, and
+ *  answers it. A mode change of the renderer can take several calls, each
+ *  with its own animation, and a state between two of them can satisfy
+ *  `done` for a moment. */
+export const waitForSettledWindow = (done: (state: WindowState) => boolean, timeoutMsg: string): Promise<WindowState> =>
+  readUntilSettled(windowState, done, timeoutMsg)
 
 /** Opens the Settings modal from the device list on the tab `tab`. */
 export async function openSettings(tab: 'tools' | 'notification'): Promise<void> {

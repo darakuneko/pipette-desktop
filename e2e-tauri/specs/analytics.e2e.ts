@@ -23,13 +23,16 @@ import {
   clickIntoFileDialog,
   clickIntoFilesDialog,
   connectVirtualKeyboard,
+  type DaySummary,
   EDITOR_SELECTOR,
   invokeCommand,
+  localDays,
   recordPageErrors,
   recordedPageErrors,
   restartApp,
   textContentOf,
   tid,
+  totalKeystrokes,
   unlockIfAsked,
   vialApi,
   virtualDevice,
@@ -67,11 +70,6 @@ const ANALYZE_TABS: [string, string | null][] = [
   ['layer', null],
   ['layoutComparison', null],
 ]
-
-interface DaySummary {
-  date: string
-  keystrokes: number
-}
 
 interface TypingSyncState {
   my_device_id: string
@@ -190,12 +188,9 @@ function localDate(ms: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const totalKeystrokes = (days: DaySummary[]): number => days.reduce((sum, day) => sum + day.keystrokes, 0)
-
 const runLogs = async (uid: string): Promise<{ id: string }[]> =>
   (await vialApi<{ success: boolean; entries?: { id: string }[] }>('typingRunLogList', uid)).entries ?? []
 
-const localDays = (uid: string): Promise<DaySummary[]> => vialApi<DaySummary[]>('typingAnalyticsListItemsLocal', uid)
 const remoteDays = (uid: string, hash: string): Promise<DaySummary[]> =>
   vialApi<DaySummary[]>('typingAnalyticsListItemsForHash', uid, hash)
 

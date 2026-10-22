@@ -70,6 +70,17 @@ export function useTypingRecordingTray({
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
   }, [devicePrefs.typingRecordEnabled, typingTestMode, keyboard])
 
+  // REC is a per-keyboard setting that stays on across a disconnect, so the
+  // tray and the unlock gate also require a connected real keyboard (not a
+  // dummy or pipette file) whose prefs are applied: the applied-uid check
+  // keeps the previous keyboard's REC from showing while a new keyboard's
+  // prefs load, and a reconnect restarts the tray's count.
+  const recOnLiveKeyboard = devicePrefs.typingRecordEnabled
+    && connectedDevice !== null
+    && !isDummy
+    && keyboard.uid !== EMPTY_UID
+    && devicePrefs.appliedUid === keyboard.uid
+
   // REC-unlock gate: unlocking is a hard precondition for REC to have any
   // effect (a locked keyboard never emits matrix frames), so this fires the
   // unlock dialog once per uid on the rising edge of "REC armed while
@@ -98,13 +109,10 @@ export function useTypingRecordingTray({
       return
     }
     const uid = keyboard.uid
-    const gateActive = !isDummy
+    const gateActive = recOnLiveKeyboard
       && !keyboard.loading
-      && uid !== EMPTY_UID
-      && devicePrefs.appliedUid === uid
       && keyboard.unlockStatusKnown
       && !keyboard.unlockStatus.unlocked
-      && devicePrefs.typingRecordEnabled
     if (!gateActive) {
       promptedUidRef.current = null
       return
@@ -114,29 +122,21 @@ export function useTypingRecordingTray({
     onRequestUnlockDialog()
   }, [
     connectedDevice,
-    isDummy,
+    recOnLiveKeyboard,
     keyboard.loading,
     keyboard.uid,
     keyboard.unlockStatusKnown,
     keyboard.unlockStatus.unlocked,
-    devicePrefs.appliedUid,
-    devicePrefs.typingRecordEnabled,
     onRequestUnlockDialog,
   ])
 
   // System tray: connected-keyboard name + live REC keystroke count.
-  // recordingActive mirrors useInputModes' authoritative definition
-  // exactly (narrower than recordingSnapshotRef's `active` above, which
-  // also counts an editor typing-test practice run) — the tray's REC
-  // line lights up as soon as REC is armed, regardless of Typing View /
-  // Typing Test placement (matching the footer's own Recording indicator).
-  const recordingActive = devicePrefs.typingRecordEnabled ?? false
-  const recKeystroke = useRecKeystrokeCounter(recordingActive)
+  const recKeystroke = useRecKeystrokeCounter(recOnLiveKeyboard)
   // Dummy and pipette-file "connections" have no live device behind them
   // (see useDeviceConnection's connectDummy/connectPipetteFile), so the
   // tray should read as disconnected rather than show a pseudo name.
   const trayKeyboardName = isDummy ? null : (connectedDevice?.productName ?? null)
-  useTrayStatus({ keyboardName: trayKeyboardName, recording: recordingActive, getCount: recKeystroke.getCount, getKpm: recKeystroke.getKpm })
+  useTrayStatus({ keyboardName: trayKeyboardName, recording: recOnLiveKeyboard, getCount: recKeystroke.getCount, getKpm: recKeystroke.getKpm })
 
   return { handleTypingRecordEnabledChange, recKeystroke }
 }

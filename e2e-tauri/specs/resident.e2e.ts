@@ -4,7 +4,8 @@
 // notices from the fake notice server of scripts/fake-notification (the
 // modal newest first, marked seen when closed, the Settings modal's three
 // newest, nothing after a 500, the request's body), the tray's rows (the
-// keyboard's name and REC's count), the close button hiding the window
+// keyboard's name and REC's count, dropped on a disconnect with REC on and
+// counted from zero on the reconnect), the close button hiding the window
 // into the tray, starting hidden in the tray, a login autostart entry in
 // the session's own autostart directory, Reset Local Data › App Settings
 // turning the autostart entry, the tray icon and the zoom back to the
@@ -28,10 +29,13 @@ import {
   countIn,
   EDITOR_SELECTOR,
   invokeCommand,
+  localDays,
   pageZoom,
   readAppLog,
   restartApp,
   tid,
+  totalKeystrokes,
+  UNLOCK_KEYS,
   unlockIfAsked,
   vialApi,
   VIRTUAL_DEVICE_NAME,
@@ -47,9 +51,11 @@ import {
   isWindowVisible,
   openSettings,
   readUntil,
+  readUntilSettled,
   recordVisibility,
   setSettingsToggle,
   trayRows,
+  trayState,
   waitForVisibilityEvents,
   waitForPage,
   waitForTray,
@@ -78,6 +84,9 @@ const MODAL = tid('notification-modal-backdrop')
 const TYPED_KEYS: [number, number][] = [[2, 3], [2, 4], [2, 5]]
 const KEY_HOLD_MS = 120
 const KEY_GAP_MS = 60
+/** Longer than the renderer's throttle of the tray's count updates (1 s),
+ *  so a count that stays this long is the last one sent. */
+const TRAY_COUNT_SETTLED_MS = 1_500
 /** How long the hidden launch may take to fetch its notices. */
 const HIDDEN_LAUNCH_TIMEOUT_MS = 60_000
 /** Under Wayland the app neither reads nor sets its window's position. */
@@ -173,6 +182,18 @@ async function setRec(on: boolean): Promise<void> {
   })
   await clickInPage(tid('typing-record-close'))
   await waitForGone(tid('typing-record-modal'), 'the record modal did not close')
+}
+
+/** Waits for the tray's count to reach `least` and settle, and answers
+ *  the count. */
+async function settledTrayCount(least: number, timeoutMsg: string): Promise<number> {
+  const state = await readUntilSettled(
+    trayState,
+    (tray) => rowNumber(trayRows(tray).count) >= least,
+    timeoutMsg,
+    TRAY_COUNT_SETTLED_MS,
+  )
+  return rowNumber(trayRows(state).count)
 }
 
 /** The pid of the session's app, or null while there is not exactly one. */
@@ -323,6 +344,12 @@ describe('Tauri build resident behaviour', function () {
     await waitForUncovered(EDITOR_SELECTOR)
     await waitForTray((state) => trayRows(state).keyboard === VIRTUAL_DEVICE_NAME, 'the tray did not show the keyboard')
 
+    const { uid } = await vialApi<{ uid: string }>('getKeyboardId')
+    // The flush resolves once the open minute is written to the day file
+    // and the cache the list reads.
+    await vialApi('typingAnalyticsFlush', uid)
+    const recordedBefore = totalKeystrokes(await localDays(uid))
+
     await virtualDevice.setUnlockCounterMax(3)
     await setRec(true)
     const recording = await waitForTray((state) => trayRows(state).recording === 'Recording', 'the tray did not show REC')
@@ -330,14 +357,41 @@ describe('Tauri build resident behaviour', function () {
     expect(recording.items.filter((item) => ['keyboard', 'recording', 'count', 'kpm'].includes(item.id)).every((item) => !item.enabled)).toBe(true)
 
     await tapKeys(2)
-    const first = await waitForTray(
+    await waitForTray(
       (state) => rowNumber(trayRows(state).count) > 0 && rowNumber(trayRows(state).kpm) > 0,
       'the tray count did not move',
     )
     await tapKeys(2)
+    const beforeDisconnect = await settledTrayCount(4 * TYPED_KEYS.length, 'the tray count did not go on counting')
+
+    // REC stays on across the disconnect: the tray drops its REC rows while
+    // no keyboard is connected, and counts from zero again on the reconnect.
+    await disconnectKeyboard()
     await waitForTray(
-      (state) => rowNumber(trayRows(state).count) > rowNumber(trayRows(first).count),
-      'the tray count did not go on counting',
+      (state) => Object.keys(trayRows(state)).join() === 'show,quit' && state.tooltip === 'Pipette',
+      'the REC rows stayed after disconnecting with REC on',
+    )
+    await connectVirtualKeyboard()
+    // Read while the keyboard is still locked, so no key has been counted.
+    const reconnected = await waitForTray(
+      (state) => trayRows(state).recording === 'Recording',
+      'the tray did not show REC again after reconnecting',
+    )
+    expect(Object.keys(trayRows(reconnected))).toEqual(['show', 'keyboard', 'recording', 'count', 'kpm', 'quit'])
+    expect([rowNumber(trayRows(reconnected).count), rowNumber(trayRows(reconnected).kpm)]).toEqual([0, 0])
+    await unlockIfAsked()
+    await waitForUncovered(EDITOR_SELECTOR)
+
+    await tapKeys(4)
+    const afterReconnect = await settledTrayCount(4 * TYPED_KEYS.length, 'the tray count did not count after reconnecting')
+    // The unlock combo's own presses count once the keyboard unlocks.
+    expect(afterReconnect).toBeLessThanOrEqual(4 * TYPED_KEYS.length + UNLOCK_KEYS.length)
+    // The analytics keep every key of both connections.
+    await vialApi('typingAnalyticsFlush', uid)
+    await readUntil(
+      async () => totalKeystrokes(await localDays(uid)),
+      (total) => total === recordedBefore + beforeDisconnect + afterReconnect,
+      'the analytics did not record the keys of both connections',
     )
 
     await setRec(false)

@@ -72,6 +72,17 @@ export async function vialApi<T>(member: string, ...args: unknown[]): Promise<T>
   return JSON.parse(text) as T
 }
 
+/** A day of a keyboard's typing analytics as the Analyze lists it. */
+export interface DaySummary {
+  date: string
+  keystrokes: number
+}
+
+/** The days this machine's typing analytics hold for keyboard `uid`. */
+export const localDays = (uid: string): Promise<DaySummary[]> => vialApi<DaySummary[]>('typingAnalyticsListItemsLocal', uid)
+
+export const totalKeystrokes = (days: DaySummary[]): number => days.reduce((sum, day) => sum + day.keystrokes, 0)
+
 /** Starts recording the page's errors (console.error calls, uncaught
  *  errors and unhandled rejections) until the page loads again. */
 export async function recordPageErrors(): Promise<void> {

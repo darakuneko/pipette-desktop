@@ -13,6 +13,12 @@ import type { DeviceInfo, UnlockStatus } from '../../../shared/types/protocol'
 import { EMPTY_UID } from '../../../shared/constants/protocol'
 import { trayBackends } from './tray-backends'
 
+// The fixture keyboard has no layout to serialize; a stub snapshot lets the
+// snapshot effect reach typingAnalyticsSaveKeymapSnapshot.
+vi.mock('../../components/analyze/keymap-snapshot-builder', () => ({
+  buildKeymapSnapshot: (kb: { uid: string }) => ({ uid: kb.uid }),
+}))
+
 // Mirrors use-view-mode-routing.test.tsx's approach: the hook's Params type
 // pins down the full return types of useKeyboard / useDevicePrefs, far
 // larger than what this hook actually reads. Build a narrow fixture and
@@ -118,9 +124,11 @@ function renderTray(initial: Overrides = {}) {
 }
 
 let trayStatusUpdate: Mock
+let saveKeymapSnapshot: Mock
 
 beforeEach(() => {
   trayStatusUpdate = vi.fn().mockResolvedValue(undefined)
+  saveKeymapSnapshot = vi.fn().mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -129,7 +137,7 @@ afterEach(() => {
 })
 
 const backends = trayBackends((status) => trayStatusUpdate(status), {
-  typingAnalyticsSaveKeymapSnapshot: () => Promise.resolve(),
+  typingAnalyticsSaveKeymapSnapshot: (snap: unknown) => saveKeymapSnapshot(snap),
 })
 
 describe.each(backends)('useTypingRecordingTray ($name)', (backend) => {
@@ -150,6 +158,51 @@ describe.each(backends)('useTypingRecordingTray ($name)', (backend) => {
       expect(trayStatusUpdate).toHaveBeenLastCalledWith(
         expect.objectContaining({ keyboardName: null, recording: false }),
       )
+    })
+
+    it('reports REC as not recording once the keyboard is disconnected', () => {
+      const { update } = renderTray({ unlocked: true, typingRecordEnabled: true })
+      act(() => { update({ connectedDevice: null }) })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyboardName: null, recording: false }),
+      )
+    })
+
+    it('restarts the count from zero when the same keyboard reconnects with REC still on', () => {
+      const { result, update } = renderTray({ unlocked: true, typingRecordEnabled: true })
+      act(() => {
+        result.current.recKeystroke.increment()
+        result.current.recKeystroke.increment()
+      })
+      act(() => { update({ connectedDevice: null }) })
+      act(() => { update({ connectedDevice: makeDevice() }) })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(
+        { keyboardName: 'Test Keyboard', recording: true, count: 0, kpm: 0 },
+      )
+    })
+
+    it('waits for the connected keyboard\'s prefs before reporting REC', () => {
+      const { update } = renderTray({ unlocked: true, typingRecordEnabled: true, appliedUid: 'UID_OLD' })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ recording: false }))
+
+      act(() => { update({ appliedUid: null }) })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ recording: false }))
+
+      act(() => { update({ appliedUid: 'UID1' }) })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ recording: true }))
+    })
+
+    it('reports a dummy connection with REC on as not recording', () => {
+      renderTray({ isDummy: true, typingRecordEnabled: true })
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyboardName: null, recording: false }),
+      )
+    })
+
+    it('saves a snapshot for an editor typing test without reporting REC', () => {
+      renderTray({ unlocked: true, typingRecordEnabled: false, typingTestMode: true })
+      expect(saveKeymapSnapshot).toHaveBeenCalledWith(expect.objectContaining({ uid: 'UID1' }))
+      expect(trayStatusUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ recording: false }))
     })
   })
 
