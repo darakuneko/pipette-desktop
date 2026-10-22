@@ -226,6 +226,7 @@ export const VIAL_API_MEMBER_KINDS = {
   // App Config
   appConfigGetAll: 'request',
   appConfigSet: 'request',
+  appConfigLogDir: 'request',
 
   // Sync
   syncAuthStart: 'request',

@@ -25,6 +25,7 @@ pub const APP_COMMANDS: &[&str] = &[
     // src/app_config.rs
     "app_config_get_all",
     "app_config_set",
+    "app_config_log_dir",
     // src/shell.rs
     "open_external",
     // src/updater.rs

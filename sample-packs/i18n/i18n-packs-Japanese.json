@@ -1,5 +1,5 @@
 {
-  "version": "0.1.124",
+  "version": "0.1.125",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1048,7 +1048,8 @@
     "startInTray": "トレイ常駐で起動",
     "startInTrayDescription": "ウィンドウを開かずタスクトレイ常駐で起動します",
     "debugMode": "デバッグモード",
-    "debugModeDescription": "不具合の調査用にログファイルを書き出します。オフにするとログファイルを削除します"
+    "debugModeDescription": "不具合の調査用にログファイルを書き出します。オフにするとログファイルを削除します",
+    "debugModeLogPath": "ログファイル: {{path}}"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがありません",

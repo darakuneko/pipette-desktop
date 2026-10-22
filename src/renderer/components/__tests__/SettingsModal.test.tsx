@@ -86,6 +86,7 @@ const mockPasswordChangeLockStatus = vi.fn()
 const mockPasswordChangeResume = vi.fn()
 const mockPasswordChangeReleaseLocks = vi.fn()
 const mockSyncFormatStatus = vi.fn().mockResolvedValue(null)
+const mockAppConfigLogDir = vi.fn()
 const BASE_VIAL_API = {
   syncFormatStatus: mockSyncFormatStatus,
   syncOnFormatStatusChanged: () => () => {},
@@ -97,6 +98,7 @@ const BASE_VIAL_API = {
   notificationFetch: mockNotificationFetch,
   keyLabelStoreList: async () => ({ success: true, data: KEY_LABEL_LIST_STUB }),
   keyLabelStoreGet: async () => ({ success: false, errorCode: 'NOT_FOUND' }),
+  appConfigLogDir: mockAppConfigLogDir,
 }
 function installBaseVialAPI(): void {
   Object.defineProperty(window, 'vialAPI', { value: BASE_VIAL_API, writable: true, configurable: true })
@@ -194,6 +196,8 @@ describe('SettingsModal', () => {
     }
     mockPasswordChangeStatus.mockReset()
     mockPasswordChangeStatus.mockResolvedValue({ kind: 'none' })
+    mockAppConfigLogDir.mockReset()
+    mockAppConfigLogDir.mockResolvedValue('/home/user/.config/pipette-desktop/logs')
     mockPasswordChangeLockStatus.mockReset()
     mockPasswordChangeLockStatus.mockResolvedValue(null)
     mockPasswordChangeResume.mockReset()
@@ -914,6 +918,33 @@ describe('SettingsModal', () => {
       expect(toggle.getAttribute('aria-checked')).toBe('true')
       fireEvent.click(toggle)
       expect(mockAppConfigSet).toHaveBeenCalledWith('debugMode', false)
+    })
+
+    it('shows the log folder under the toggle when debug mode is on', async () => {
+      mockAppConfigState.debugMode = true
+      renderAndSwitchToTools()
+
+      expect(await screen.findByTestId('settings-debug-mode-log-path')).toHaveTextContent('settings.debugModeLogPath')
+      expect(mockAppConfigLogDir).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show the log folder when debug mode is off', async () => {
+      renderAndSwitchToTools()
+
+      await waitFor(() => expect(mockAppConfigLogDir).toHaveBeenCalled())
+      await Promise.resolve()
+      expect(screen.queryByTestId('settings-debug-mode-log-path')).not.toBeInTheDocument()
+    })
+
+    it('does not show the log folder when it cannot be read', async () => {
+      mockAppConfigState.debugMode = true
+      mockAppConfigLogDir.mockRejectedValue(new Error('unavailable'))
+      renderAndSwitchToTools()
+
+      await waitFor(() => expect(mockAppConfigLogDir).toHaveBeenCalled())
+      await Promise.resolve()
+      expect(screen.queryByTestId('settings-debug-mode-log-path')).not.toBeInTheDocument()
+      expect(screen.getByTestId('settings-debug-mode-row')).toBeInTheDocument()
     })
   })
 

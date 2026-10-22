@@ -157,6 +157,7 @@ fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
         .manage(config)
         .manage(opener)
         .manage(Dialogs::new(|_| None))
+        .manage(crate::UserDataDir(user_data.to_path_buf()))
         .invoke_handler(crate::app_commands())
         .build(tauri::generate_context!(test = true))
         .unwrap();
@@ -267,7 +268,7 @@ fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<Strin
             return Some(format!("opening the probe handle: {opened:?}"));
         }
     }
-    let expected = expected_response(entry);
+    let expected = expected_response(entry, window);
     match invoke(window, &entry.command, &entry.invoke_args) {
         Ok(response) if response == expected => None,
         Ok(response) => Some(format!("responded {response}, expected {expected}")),
@@ -278,10 +279,15 @@ fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<Strin
 /// The response `entry` must get. `is_always_on_top_supported` answers
 /// from the session's environment, so it gets this machine's answer; the
 /// fixture records the one of an X11 session without Wayland (the e2e
-/// tests' xvfb), which the shim's tests use.
-fn expected_response(entry: &Entry) -> Value {
+/// tests' xvfb), which the shim's tests use. `app_config_log_dir` answers
+/// under the app's temp userData directory, so it gets that path; the
+/// fixture records a Linux one.
+fn expected_response(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Value {
     if entry.command == "is_always_on_top_supported" {
         json!(crate::window_ops::always_on_top::is_supported_here())
+    } else if entry.command == "app_config_log_dir" {
+        let user_data = &window.state::<crate::UserDataDir>().0;
+        json!(crate::log_dir(user_data).to_string_lossy())
     } else {
         entry.response.clone()
     }

@@ -35,4 +35,5 @@ export const appConfigApi = {
     enqueue(SET_QUEUE_KEY, async () => {
       await call<void>('app_config_set', { key, value: JSON.stringify(value) })
     }),
+  appConfigLogDir: () => call<string>('app_config_log_dir'),
 } satisfies Partial<VialAPI>

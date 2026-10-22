@@ -325,6 +325,8 @@ export interface VialAPI {
   // App Config
   appConfigGetAll(): Promise<AppConfig>
   appConfigSet(key: string, value: unknown): Promise<void>
+  /** The folder the Debug Mode log files are written to. */
+  appConfigLogDir(): Promise<string>
 
   // Sync
   syncAuthStart(): Promise<SyncOperationResult>

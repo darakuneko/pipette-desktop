@@ -1,5 +1,5 @@
 {
-  "version": "0.1.124",
+  "version": "0.1.125",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1048,7 +1048,8 @@
     "startInTray": "Start Hidden in Tray",
     "startInTrayDescription": "Launch resident in the system tray without opening the window",
     "debugMode": "Debug Mode",
-    "debugModeDescription": "Write a log file for troubleshooting. Turning it off deletes the log files"
+    "debugModeDescription": "Write a log file for troubleshooting. Turning it off deletes the log files",
+    "debugModeLogPath": "Log files: {{path}}"
   },
   "analyze": {
     "noKeyboards": "No typing data yet.",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.124",
+  "version": "0.1.125",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1038,7 +1038,8 @@
     "startInTray": "トレイに常駐して起動",
     "startInTrayDescription": "ウィンドウを開かず、システムトレイに常駐した状態で起動いたします",
     "debugMode": "デバッグモード",
-    "debugModeDescription": "不具合の調査のためにログファイルを書き出します。オフにいたしますと、ログファイルを削除いたします"
+    "debugModeDescription": "不具合の調査のためにログファイルを書き出します。オフにいたしますと、ログファイルを削除いたします",
+    "debugModeLogPath": "ログファイルの保管先: {{path}}"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵の記録がございません",

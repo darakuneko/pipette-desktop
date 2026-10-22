@@ -88,5 +88,12 @@
       "value": "{\"x\":0,\"y\":0,\"width\":1,\"height\":1}"
     },
     "response": null
+  },
+  {
+    "member": "appConfigLogDir",
+    "args": [],
+    "command": "app_config_log_dir",
+    "invokeArgs": {},
+    "response": "/home/user/.config/pipette-desktop/logs"
   }
 ]

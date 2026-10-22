@@ -76,6 +76,7 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         definition::decompress_definition,
         app_config::app_config_get_all,
         app_config::app_config_set,
+        app_config::app_config_log_dir,
         shell::open_external,
         updater::update_check,
         updater::update_install,
@@ -480,7 +481,12 @@ fn spawn_v04_cleanup(user_data: PathBuf) {
 /// The files stay disabled until the stored Debug Mode is applied, and a
 /// failed build never touches them.
 fn start_log(user_data: &Path) {
-    if let Err(err) = pipette_logger::init(user_data.join("logs"), std::env::home_dir().as_deref()) {
+    if let Err(err) = pipette_logger::init(log_dir(user_data), std::env::home_dir().as_deref()) {
         log::error!("the log file is unavailable: {err}");
     }
+}
+
+/// The directory the log files are written to.
+pub(crate) fn log_dir(user_data: &Path) -> PathBuf {
+    user_data.join("logs")
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The app config commands behind the shim's `appConfigGetAll` and
-//! `appConfigSet` (src/tauri-shim/api/app-config.ts), and what a change the
-//! renderer makes does in this process. The store itself is
-//! crates/pipette-app-config.
+//! The app config commands behind the shim's `appConfigGetAll`,
+//! `appConfigSet` and `appConfigLogDir` (src/tauri-shim/api/app-config.ts),
+//! and what a change the renderer makes does in this process. The store
+//! itself is crates/pipette-app-config.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -47,6 +47,13 @@ pub async fn app_config_set(
     value: Option<String>,
 ) -> Result<(), CommandError> {
     blocking(&config, move |store| store.set_from_renderer(&key, value.as_deref())).await
+}
+
+/// The directory the log files are written to (`log_dir` in main.rs),
+/// shown under Debug Mode in Settings.
+#[tauri::command]
+pub fn app_config_log_dir(user_data: State<'_, crate::UserDataDir>) -> String {
+    crate::log_dir(&user_data.0).to_string_lossy().into_owned()
 }
 
 /// Applies the stored zoom factor to `window` when it is created.

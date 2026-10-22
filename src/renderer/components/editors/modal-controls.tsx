@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { ReactNode } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 
 const TOGGLE_TRACK_BASE = 'relative inline-flex h-5 w-9 items-center rounded-full transition-colors'
@@ -58,12 +59,15 @@ export function ToggleRow({ label, on, onToggle, title, testid }: {
 // SettingsToolsTab. `labelTone` selects between the two label styles used
 // across those rows: `'secondary'` (text-content-secondary, the default —
 // used by rows with a description) and `'content'` (text-content — used
-// by plain rows).
+// by plain rows). `detail` (shown only with a description) is an extra
+// muted line under the description, wrapped anywhere so a long path stays
+// inside the row.
 export function SettingsToggleRow({
   rowTestId,
   toggleTestId,
   label,
   description,
+  detail,
   labelTone = 'secondary',
   on,
   onToggle,
@@ -73,6 +77,7 @@ export function SettingsToggleRow({
   toggleTestId: string
   label: string
   description?: string
+  detail?: ReactNode
   labelTone?: 'secondary' | 'content'
   on: boolean
   onToggle: () => void
@@ -89,11 +94,12 @@ export function SettingsToggleRow({
           {label}
         </span>
       ) : (
-        <div className="flex flex-col gap-0.5">
+        <div className={detail === undefined ? 'flex flex-col gap-0.5' : 'flex min-w-0 flex-col gap-0.5'}>
           <span className={`text-sm font-medium ${labelTone === 'secondary' ? 'text-content-secondary' : 'text-content'}`}>
             {label}
           </span>
           <span className="text-xs text-content-muted">{description}</span>
+          {detail !== undefined && <span className="break-all text-xs text-content-muted">{detail}</span>}
         </div>
       )}
       <button

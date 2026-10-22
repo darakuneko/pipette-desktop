@@ -190,6 +190,7 @@ const CALLERS: Record<string, Caller> = {
     run: ({ appConfig }, [key, value]) => appConfig.appConfigApi.appConfigSet(key as string, value),
     void: true,
   },
+  appConfigLogDir: { run: ({ appConfig }) => appConfig.appConfigApi.appConfigLogDir() },
   'device.decompressDefinition': {
     run: ({ device }, [data]) => device.decompressDefinition(data as number[]),
   },

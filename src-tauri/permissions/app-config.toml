@@ -4,5 +4,5 @@
 
 [[set]]
 identifier = "app-config"
-description = "Reads the app config and sets its fields."
-permissions = ["allow-app-config-get-all", "allow-app-config-set"]
+description = "Reads the app config, sets its fields and reads where the log files are written."
+permissions = ["allow-app-config-get-all", "allow-app-config-set", "allow-app-config-log-dir"]

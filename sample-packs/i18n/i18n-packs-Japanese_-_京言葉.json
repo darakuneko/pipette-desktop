@@ -1,5 +1,5 @@
 {
-  "version": "0.1.124",
+  "version": "0.1.125",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1038,7 +1038,8 @@
     "startInTray": "トレイ常駐で起動どすえ",
     "startInTrayDescription": "ウィンドウを開かんとトレイに常駐したまま起動しますえ",
     "debugMode": "デバッグモードどすえ",
-    "debugModeDescription": "不具合を調べるためにログファイルを書き出しますえ。オフにしはったらログファイルを消しますえ"
+    "debugModeDescription": "不具合を調べるためにログファイルを書き出しますえ。オフにしはったらログファイルを消しますえ",
+    "debugModeLogPath": "ログファイルはこちらどすえ: {{path}}"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがおへんなぁ",

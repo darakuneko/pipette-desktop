@@ -1,5 +1,5 @@
 {
-  "version": "0.1.124",
+  "version": "0.1.125",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1038,7 +1038,8 @@
     "startInTray": "トレイ常駐で起動っしょ",
     "startInTrayDescription": "ウィンドウ開かんとトレイに常駐したまま起動するからね☆",
     "debugMode": "デバッグモードっしょ☆",
-    "debugModeDescription": "トラブル調べる用にログファイル書き出すよ☆ オフにしたらログファイル消しちゃうからね"
+    "debugModeDescription": "トラブル調べる用にログファイル書き出すよ☆ オフにしたらログファイル消しちゃうからね",
+    "debugModeLogPath": "ログファイルはここだよ☆ {{path}}"
   },
   "analyze": {
     "noKeyboards": "データまだなくね？",
