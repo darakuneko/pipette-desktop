@@ -15,6 +15,7 @@ use pipette_drive::DriveApi;
 use pipette_drive::fake::DriveOp;
 use pipette_sync::execute::POLL_INTERVAL;
 use pipette_sync::polling::STARTUP_POLL_DELAY;
+use pipette_sync::triggers::SyncTriggers;
 use pipette_sync_format::drive_names::drive_file_name;
 use pipette_sync_runtime::{SyncDirection, SyncStatus};
 use preflight_harness::Stored;
@@ -221,4 +222,93 @@ async fn a_download_starts_polling_when_auto_sync_is_on() {
     let triggers = world.triggers(true);
     pipette_sync::execute::PassHooks::start_polling_if_auto_sync(&triggers);
     assert!(triggers.poller().is_polling());
+}
+
+/// What each [`tick`] and [`advance`] moves the clock on beyond the time
+/// given: the millisecond a timer's deadline is rounded up to.
+const ROUNDING: Duration = Duration::from_millis(1);
+
+/// How long until the polling's next pass.
+fn due_in(triggers: &SyncTriggers) -> Option<Duration> {
+    triggers.poller().next_poll_due_in()
+}
+
+#[tokio::test]
+async fn the_next_poll_is_the_first_pass_right_after_a_launch() {
+    let world = world().await;
+    let triggers = world.triggers(true);
+    assert_eq!(due_in(&triggers), None);
+    triggers.start();
+    assert_eq!(due_in(&triggers), Some(STARTUP_POLL_DELAY));
+    tick(Duration::from_secs(5)).await;
+    assert_eq!(due_in(&triggers), Some(STARTUP_POLL_DELAY - Duration::from_secs(5) - ROUNDING));
+}
+
+#[tokio::test]
+async fn a_first_pass_waiting_for_the_lock_is_due_now_until_it_starts() {
+    let world = world().await;
+    let triggers = world.triggers(true);
+    let pass = world.runtime().try_claim_sync_lock(false).unwrap();
+    triggers.start();
+    tick(STARTUP_POLL_DELAY).await;
+    assert_eq!(due_in(&triggers), Some(Duration::ZERO));
+    tick(Duration::from_secs(60)).await;
+    assert_eq!(due_in(&triggers), Some(Duration::ZERO));
+
+    drop(pass);
+    until(|| triggers.poller().pass_running()).await;
+    until(|| !triggers.poller().pass_running()).await;
+    let elapsed = STARTUP_POLL_DELAY + Duration::from_secs(60) + ROUNDING * 2;
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL - elapsed));
+}
+
+#[tokio::test]
+async fn after_the_first_pass_the_next_poll_is_the_interval_tick() {
+    let world = world().await;
+    let triggers = world.triggers(true);
+    triggers.start();
+    advance(&world, STARTUP_POLL_DELAY).await;
+    assert_eq!(passes(&world.requests()), 1);
+    let elapsed = STARTUP_POLL_DELAY + ROUNDING;
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL - elapsed));
+
+    advance(&world, POLL_INTERVAL - elapsed).await;
+    assert_eq!(passes(&world.requests()), 1);
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL));
+}
+
+#[tokio::test]
+async fn a_late_tick_moves_the_next_poll_on_from_when_it_ran() {
+    let world = world().await;
+    let triggers = world.triggers(true);
+    triggers.poller().start_polling(None);
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL));
+    // The tick runs 30 seconds late; the next is a full interval after it.
+    advance(&world, POLL_INTERVAL + Duration::from_secs(30)).await;
+    assert_eq!(passes(&world.requests()), 1);
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL));
+
+    // The next pass starts at the recorded time, not before.
+    advance(&world, POLL_INTERVAL - ROUNDING * 3).await;
+    assert_eq!(passes(&world.requests()), 0);
+    advance(&world, ROUNDING * 2).await;
+    assert_eq!(passes(&world.requests()), 1);
+}
+
+#[tokio::test]
+async fn stopping_clears_the_next_poll_and_a_new_start_has_its_own() {
+    let world = world().await;
+    let triggers = world.triggers(true);
+    triggers.start();
+    tick(Duration::from_secs(5)).await;
+    triggers.poller().stop_polling();
+    assert_eq!(due_in(&triggers), None);
+
+    tick(Duration::from_secs(5)).await;
+    triggers.poller().start_polling(None);
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL));
+    // The stopped launch's first pass would be due by now.
+    tick(STARTUP_POLL_DELAY).await;
+    assert_eq!(due_in(&triggers), Some(POLL_INTERVAL - STARTUP_POLL_DELAY - ROUNDING));
+    assert_eq!(passes(&world.requests()), 0);
 }

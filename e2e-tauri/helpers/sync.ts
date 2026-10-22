@@ -153,24 +153,27 @@ async function waitForSyncIdle(): Promise<void> {
 interface DevSyncState {
   workRunning: boolean
   flushDueInMs: number | null
+  pollDueInMs: number | null
 }
 
-/** How far off a scheduled flush may be for the sync to count as quiet. */
-const QUIET_FLUSH_MARGIN_MS = 20_000
+/** How far off a scheduled flush or poll pass may be for the sync to count
+ *  as quiet. */
+const QUIET_MARGIN_MS = 20_000
 
-/** Waits until no sync work runs and no flush is due soon, on two checks
- *  in a row (a manual sync runs several passes, with the lock free in
- *  between), and `ready` holds. A step that a running pass would make skip,
- *  as a connect's download does, waits for it first. */
+/** Whether a sync due in `dueInMs` (null: none is) leaves the sync quiet. */
+const farOff = (dueInMs: number | null): boolean => dueInMs === null || dueInMs > QUIET_MARGIN_MS
+
+/** Waits until no sync work runs and no flush or poll pass is due soon, on
+ *  two checks in a row (a manual sync runs several passes, with the lock
+ *  free in between), and `ready` holds. A step that a running pass would
+ *  make skip, as a connect's download does, waits for it first. */
 export async function waitForQuietSync(ready: () => Promise<boolean> = async () => true): Promise<void> {
   let quietChecks = 0
   await browser.waitUntil(
     async () => {
       const state = await invokeCommand<DevSyncState>('dev_sync_state')
       const quiet =
-        !state.workRunning &&
-        (state.flushDueInMs === null || state.flushDueInMs > QUIET_FLUSH_MARGIN_MS) &&
-        (await ready())
+        !state.workRunning && farOff(state.flushDueInMs) && farOff(state.pollDueInMs) && (await ready())
       quietChecks = quiet ? quietChecks + 1 : 0
       return quietChecks >= 2
     },

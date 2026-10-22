@@ -82,10 +82,17 @@ struct Inner {
     state: Mutex<State>,
 }
 
+/// A timer task and when it next starts a pass.
+struct Timer {
+    task: AbortHandle,
+    due: Instant,
+}
+
 #[derive(Default)]
 struct State {
-    interval: Option<AbortHandle>,
-    first_pass: Option<AbortHandle>,
+    interval: Option<Timer>,
+    /// Kept until the pass starts, also while it waits for the lock.
+    first_pass: Option<Timer>,
     /// Moved on by each stop: a timer task of an earlier start that runs
     /// on after its abort starts nothing.
     epoch: u64,
@@ -119,18 +126,21 @@ impl Poller {
             ticks.set_missed_tick_behavior(MissedTickBehavior::Delay);
             loop {
                 ticks.tick().await;
+                // About when the next tick comes: tokio may keep a deadline
+                // up to a few milliseconds earlier for a tick barely late.
+                poller.set_next_tick(epoch, Instant::now() + POLL_INTERVAL);
                 // A tick while a pass holds the lock starts nothing.
                 poller.try_start_pass(epoch, false);
             }
         });
-        state.interval = Some(interval.abort_handle());
+        state.interval = Some(Timer { task: interval.abort_handle(), due: now + POLL_INTERVAL });
         if let Some(delay) = first_pass_delay {
             let poller = self.clone();
             let first = self.inner.deps.handle.spawn(async move {
                 tokio::time::sleep_until(now + delay).await;
                 poller.run_first_pass(epoch).await;
             });
-            state.first_pass = Some(first.abort_handle());
+            state.first_pass = Some(Timer { task: first.abort_handle(), due: now + delay });
         }
     }
 
@@ -154,14 +164,38 @@ impl Poller {
     pub fn stop_polling(&self) {
         let mut state = self.state();
         state.epoch += 1;
-        for task in [state.interval.take(), state.first_pass.take()].into_iter().flatten() {
-            task.abort();
+        for timer in [state.interval.take(), state.first_pass.take()].into_iter().flatten() {
+            timer.task.abort();
+        }
+    }
+
+    /// Records when the interval of the polling started at `epoch` next
+    /// ticks, unless polling stopped since.
+    fn set_next_tick(&self, epoch: u64, due: Instant) {
+        let mut state = self.state();
+        if state.epoch == epoch
+            && let Some(interval) = state.interval.as_mut()
+        {
+            interval.due = due;
         }
     }
 
     /// Whether polling runs.
     pub fn is_polling(&self) -> bool {
         self.state().interval.is_some()
+    }
+
+    /// About how long until a timer starts the next pass: zero while the
+    /// first pass is due and waits for the lock, `None` while polling is
+    /// stopped.
+    pub fn next_poll_due_in(&self) -> Option<Duration> {
+        let state = self.state();
+        let now = Instant::now();
+        [&state.interval, &state.first_pass]
+            .into_iter()
+            .flatten()
+            .map(|timer| timer.due.saturating_duration_since(now))
+            .min()
     }
 
     /// The delayed first pass: waits out each holder of the sync lock, then

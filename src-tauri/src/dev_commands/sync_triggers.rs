@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//! The automatic sync seen and driven from the e2e tests: a poll pass
-//! (trigger B) on demand, so they need not wait for the launch's first pass
-//! or the three-minute interval, and whether sync work runs or a flush is
-//! due, so a step that a running pass would make skip (a connect's
-//! download) can wait for it. Builds with the development tools only.
+//! The automatic sync seen and driven from the e2e tests. A poll pass
+//! (trigger B) runs on demand, so they need not wait for the launch's first
+//! pass or the three-minute interval. The state tells whether sync work
+//! runs or a flush or a poll pass is due, so a step that a running pass
+//! would make skip (a connect's download, a reset) can wait for it. Builds
+//! with the development tools only.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use pipette_sync::preflight::Preflight;
 use serde::Serialize;
@@ -35,6 +37,9 @@ pub struct DevSyncState {
     work_running: bool,
     /// How long until the scheduled flush runs; null when none is.
     flush_due_in_ms: Option<u64>,
+    /// How long until a polling timer starts a pass (zero while the launch's
+    /// first pass waits for the lock); null while polling is stopped.
+    poll_due_in_ms: Option<u64>,
 }
 
 #[tauri::command]
@@ -42,9 +47,14 @@ pub fn dev_sync_state(
     app: AppHandle<Wry>,
     preflight: State<'_, Arc<Preflight>>,
 ) -> Result<DevSyncState, CommandError> {
-    let due = managed_triggers(&app)?.flusher().due_in();
+    let triggers = managed_triggers(&app)?;
     Ok(DevSyncState {
         work_running: preflight.runtime().sync_work_running(),
-        flush_due_in_ms: due.map(|due| u64::try_from(due.as_millis()).unwrap_or(u64::MAX)),
+        flush_due_in_ms: triggers.flusher().due_in().map(millis),
+        poll_due_in_ms: triggers.poller().next_poll_due_in().map(millis),
     })
+}
+
+fn millis(due: Duration) -> u64 {
+    u64::try_from(due.as_millis()).unwrap_or(u64::MAX)
 }
