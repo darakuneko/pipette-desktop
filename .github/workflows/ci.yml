@@ -127,7 +127,7 @@ jobs:
       # cargo-nextest runs the test binaries side by side, one process per
       # test; cargo test runs one binary at a time, and a few slow ones keep
       # the rest waiting. A prebuilt binary, checked against its checksum.
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+      - uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
         with:
           tool: cargo-nextest@0.9.146
           fallback: none
@@ -311,7 +311,7 @@ jobs:
       - uses: ./.github/actions/install-rust-toolchain
 
       # This workflow runs on no tag; the guard keeps it so if that changes.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
@@ -348,7 +348,7 @@ jobs:
       - uses: ./.github/actions/install-rust-toolchain
 
       # This workflow runs on no tag; the guard keeps it so if that changes.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           workspaces: src-tauri -> target
