@@ -99,7 +99,7 @@ Replace `Pipette.app` in Applications. On macOS 12, a login item registered by 0
 
 #### Linux: from 0.4
 
-Existing udev rules keep working. If 0.4 saved its window size under GNOME Wayland, the first launch opens the window slightly taller. Proxy settings come from the `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` environment variables; the GNOME proxy settings are not used.
+Install the udev rule again; see [udev Rules](#udev-rules). If 0.4 saved its window size under GNOME Wayland, the first launch opens the window slightly taller. Proxy settings come from the `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` environment variables; the GNOME proxy settings are not used.
 
 ## System Requirements
 
@@ -158,11 +158,17 @@ Pipette updates the AppImage itself (see [Updating](#updating)). The AppImage al
 udev rules are required to access keyboards:
 
 ```bash
-sudo cp scripts/99-vial.rules /etc/udev/rules.d/
+sudo cp scripts/59-vial.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-`scripts/99-vial.rules` is in this repository; the AppImage also carries a copy at `usr/lib/Pipette/udev/99-vial.rules`. Rules installed for 0.4 keep working.
+`scripts/59-vial.rules` is in this repository; the AppImage also carries a copy at `usr/lib/Pipette/udev/59-vial.rules`.
+
+If `99-vial.rules` is installed from an earlier version, install the rule above as well. Under the old name the rule runs after systemd's `73-seat-late.rules`, so a keyboard plugged in during a session can stay inaccessible. The old file is then no longer needed:
+
+```bash
+sudo rm /etc/udev/rules.d/99-vial.rules
+```
 
 #### Monitor App on Wayland (GNOME Shell extension)
 
