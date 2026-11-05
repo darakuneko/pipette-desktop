@@ -5,7 +5,7 @@
       "appimage"
     ],
     "resources": {
-      "../scripts/99-vial.rules": "udev/99-vial.rules"
+      "../scripts/59-vial.rules": "udev/59-vial.rules"
     }
   }
 }

@@ -4,8 +4,11 @@
 # Since udev cannot filter by HID usage page directly, this rule
 # grants access to all hidraw devices via the "uaccess" tag.
 #
+# The 59- prefix matters: systemd's 73-seat-late.rules acts on the uaccess
+# tag, so the tag has to be set before that file runs.
+#
 # Install:
-#   sudo cp 99-vial.rules /etc/udev/rules.d/
+#   sudo cp 59-vial.rules /etc/udev/rules.d/
 #   sudo udevadm control --reload-rules && sudo udevadm trigger
 
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", TAG+="uaccess"
