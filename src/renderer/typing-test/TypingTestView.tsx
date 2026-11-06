@@ -13,6 +13,7 @@ import { useLogicalWindowHeight } from './useLogicalWindowHeight'
 import { groupIntoLines, rowIndexForWord } from './typing-test-view-model'
 import type { Props } from './typing-test-view-model'
 import { TypingTestFinishedSection } from './TypingTestFinishedSection'
+import { toInsertedText } from './ime-insert-text'
 
 export type { LineSnapshot } from './typing-test-view-model'
 
@@ -34,6 +35,7 @@ export function TypingTestView({
   romajiGuide = null,
   kanaGuide = null,
   onImeSpaceKey,
+  onImeInsertText,
   displayLines = DEFAULT_DISPLAY_LINES,
   fontSize = DEFAULT_FONT_SIZE,
   onNameResult,
@@ -289,22 +291,27 @@ export function TypingTestView({
             onCompositionEnd?.(e.data)
             clearImeInput()
           }}
-          onInput={() => {
-            // Only clear when not composing — clearing during IME resets the composition
-            if (!isComposingRef.current) {
-              // Japanese IME swallows Space keydown entirely; detect it here via textarea input.
-              // Guard: if the capture-phase keydown already handled Space (via preventDefault),
-              // no input event fires. But some IMEs may fire both — skip if too recent.
-              const val = imeInputRef.current?.value ?? ''
-              if (val === ' ' || val === '\u3000') {
-                const now = Date.now()
-                if (now - lastSpaceTimeRef.current > 50) {
-                  lastSpaceTimeRef.current = now
-                  onImeSpaceKey?.()
-                }
+          onInput={(e) => {
+            const nativeEvent = e.nativeEvent as InputEvent
+            // Leave the textarea alone while composing — clearing during IME resets the composition
+            if (isComposingRef.current || nativeEvent.isComposing) return
+            // Japanese IME swallows Space keydown entirely; detect it here via textarea input.
+            // Guard: if the capture-phase keydown already handled Space (via preventDefault),
+            // no input event fires. But some IMEs may fire both — skip if too recent.
+            const val = imeInputRef.current?.value ?? ''
+            if (val === ' ' || val === '\u3000') {
+              const now = Date.now()
+              if (now - lastSpaceTimeRef.current > 50) {
+                lastSpaceTimeRef.current = now
+                onImeSpaceKey?.()
               }
-              clearImeInput()
+            } else if (onImeInsertText && !document.querySelector('[role="dialog"]')) {
+              // See ime-insert-text.ts. Ordinary keys never reach here (their keydown
+              // is preventDefault-ed); dialogs are skipped like the keydown handler does.
+              const text = toInsertedText(nativeEvent.inputType, nativeEvent.data)
+              if (text) onImeInsertText(text)
             }
+            clearImeInput()
           }}
         />
         {state.status === 'countdown' && (
