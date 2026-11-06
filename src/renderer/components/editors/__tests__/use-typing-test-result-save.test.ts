@@ -91,6 +91,7 @@ function makeTypingTest(stateOverrides: Partial<TypingTestState>, config: Typing
     processCompositionStart: vi.fn(),
     processCompositionUpdate: vi.fn(),
     processCompositionEnd: vi.fn(),
+    processInsertedText: vi.fn(),
     restart: vi.fn(),
     restartWithCountdown: vi.fn(),
     setConfig: vi.fn(),

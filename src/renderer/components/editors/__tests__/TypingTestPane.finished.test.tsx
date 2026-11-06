@@ -9,7 +9,7 @@
 // TypingTestPane.tsx's `hideKeyboardForFinish` doc comment).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import type { RunKeystrokeLog } from '../../../../shared/types/typing-run-log'
 
 vi.mock('react-i18next', () => ({
@@ -21,6 +21,14 @@ vi.mock('react-i18next', () => ({
       return map[key] ?? key
     },
   }),
+}))
+
+const platform = vi.hoisted(() => ({ linux: true }))
+
+vi.mock('../../../typing-test/ime-insert-text', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../typing-test/ime-insert-text')>(),
+  // After the spread, which copies the real const as a plain data property.
+  get IS_LINUX_WEBVIEW() { return platform.linux },
 }))
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({
@@ -63,6 +71,7 @@ function fakeTypingTest(status: 'waiting' | 'running' | 'finished') {
     processCompositionStart: vi.fn(),
     processCompositionUpdate: vi.fn(),
     processCompositionEnd: vi.fn(),
+    processInsertedText: vi.fn(),
     restart: vi.fn(),
     restartWithCountdown: vi.fn(),
     setConfig: vi.fn(),
@@ -153,5 +162,25 @@ describe('TypingTestPane — completion screen flex-height chain (no fixed vh ca
     expect(scrollport.className).toContain('min-h-0')
     expect(scrollport.className).toContain('overflow-auto')
     expect(scrollport.className).not.toMatch(/\bmax-h-/)
+  })
+})
+
+describe('TypingTestPane — IME insertText wiring', () => {
+  function insertText(linux: boolean) {
+    platform.linux = linux
+    const typingTest = fakeTypingTest('running')
+    renderPane('running', { typingTest })
+    const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
+    textarea.value = 'ó'
+    fireEvent.input(textarea, { inputType: 'insertText', data: 'ó' })
+    return typingTest
+  }
+
+  it('forwards insertText to processInsertedText on Linux', () => {
+    expect(insertText(true).processInsertedText).toHaveBeenCalledWith('ó')
+  })
+
+  it('does not forward insertText on other platforms', () => {
+    expect(insertText(false).processInsertedText).not.toHaveBeenCalled()
   })
 })

@@ -581,6 +581,74 @@ describe('TypingTestView IME space key', () => {
   })
 })
 
+describe('TypingTestView IME insertText', () => {
+  function renderRunning(onImeInsertText = vi.fn(), onImeSpaceKey = vi.fn()) {
+    renderView({ state: makeState({ status: 'running' }), onImeInsertText, onImeSpaceKey })
+    const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
+    return { textarea, onImeInsertText, onImeSpaceKey }
+  }
+
+  function commitInsertText(textarea: HTMLTextAreaElement, text: string, init: { isComposing?: boolean } = {}) {
+    textarea.value = text
+    fireEvent.input(textarea, { inputType: 'insertText', data: text, ...init })
+  }
+
+  it('forwards an insertText commit (dead-key letter) and clears the textarea', () => {
+    const { textarea, onImeInsertText, onImeSpaceKey } = renderRunning()
+    commitInsertText(textarea, 'ó')
+    expect(onImeInsertText).toHaveBeenCalledTimes(1)
+    expect(onImeInsertText).toHaveBeenCalledWith('ó')
+    expect(onImeSpaceKey).not.toHaveBeenCalled()
+    expect(textarea.value).toBe('')
+  })
+
+  it('does not forward composition, paste, or data-less inputs', () => {
+    const { textarea, onImeInsertText } = renderRunning()
+    fireEvent.input(textarea, { inputType: 'insertFromComposition', data: 'é' })
+    fireEvent.input(textarea, { inputType: 'insertFromPaste', data: 'é' })
+    fireEvent.input(textarea, { inputType: 'insertText', data: null })
+    expect(onImeInsertText).not.toHaveBeenCalled()
+  })
+
+  it('does not forward while a composition is open (compositionstart seen)', () => {
+    const { textarea, onImeInsertText } = renderRunning()
+    fireEvent.compositionStart(textarea)
+    commitInsertText(textarea, 'ó')
+    expect(onImeInsertText).not.toHaveBeenCalled()
+    // Clearing mid-composition would reset the IME, so the value stays.
+    expect(textarea.value).toBe('ó')
+  })
+
+  it('does not forward when the input event itself reports isComposing', () => {
+    const { textarea, onImeInsertText, onImeSpaceKey } = renderRunning()
+    commitInsertText(textarea, ' ', { isComposing: true })
+    expect(onImeInsertText).not.toHaveBeenCalled()
+    expect(onImeSpaceKey).not.toHaveBeenCalled()
+    expect(textarea.value).toBe(' ')
+  })
+
+  it('does not forward while a dialog is open', () => {
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    document.body.appendChild(dialog)
+    try {
+      const { textarea, onImeInsertText } = renderRunning()
+      commitInsertText(textarea, 'ó')
+      expect(onImeInsertText).not.toHaveBeenCalled()
+      expect(textarea.value).toBe('')
+    } finally {
+      dialog.remove()
+    }
+  })
+
+  it('routes an IME space through onImeSpaceKey only', () => {
+    const { textarea, onImeInsertText, onImeSpaceKey } = renderRunning()
+    commitInsertText(textarea, '\u3000')
+    expect(onImeSpaceKey).toHaveBeenCalledTimes(1)
+    expect(onImeInsertText).not.toHaveBeenCalled()
+  })
+})
+
 describe('TypingTestView romaji guide — flat fallback (no measured lines)', () => {
   // jsdom never lays elements out (width stays 0), so `lines` is always null
   // here regardless of state.lineBreaks — every test in this block exercises

@@ -456,6 +456,17 @@ export function useTypingTest<TPreparedEvent = unknown>(
     })
   }, [])
 
+  // See ime-insert-text.ts. One code unit counts as a keystroke; a surrogate
+  // pair or multi-character commit goes the composition route so it can't
+  // inflate the keystroke count or char analytics. Romaji/kana judge keys only.
+  const processInsertedText = useCallback((text: string) => {
+    const romajiCapable = stateRef.current.romajiCapable
+    if (isRomajiInputActive(configRef.current, languageRef.current, romajiCapable)) return
+    if (isKanaInputActive(configRef.current, languageRef.current, romajiCapable)) return
+    if (text.length === 1) processKeyEvent(text, false, false, false)
+    else processCompositionEnd(text)
+  }, [processKeyEvent, processCompositionEnd])
+
   const { wpm, kpm, accuracy, kspc, elapsedSeconds, remainingSeconds } = useTypingTestMetrics(state, config, setState)
 
   // Full-run per-word romaji table (romajiInput mode only) — see
@@ -543,6 +554,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
     processCompositionStart,
     processCompositionUpdate,
     processCompositionEnd,
+    processInsertedText,
     restart,
     restartWithCountdown,
     setConfig,

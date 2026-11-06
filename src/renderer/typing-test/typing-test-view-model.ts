@@ -65,6 +65,8 @@ export interface Props {
   kanaGuide?: KanaGuide | null
   /** Called when Space is input via IME (keydown swallowed by the IME layer). */
   onImeSpaceKey?: () => void
+  /** Non-composition `insertText` commits — see ime-insert-text.ts. */
+  onImeInsertText?: (text: string) => void
   /** Imported-text display: visible line count + font size (px). Ignored
    *  outside fileImport mode. */
   displayLines?: number

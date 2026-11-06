@@ -157,6 +157,8 @@ export interface UseTypingTestReturn {
   processCompositionStart: () => void
   processCompositionUpdate: (data: string) => void
   processCompositionEnd: (data: string) => void
+  /** See ime-insert-text.ts. Ignored in romaji/kana input modes. */
+  processInsertedText: (text: string) => void
   restart: () => void
   restartWithCountdown: () => void
   setConfig: (config: TypingTestConfig) => void

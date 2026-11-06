@@ -8,6 +8,7 @@ import { buildResultNameChips } from '../../typing-test/result-builder'
 import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { errorClassGroup } from '../../typing-test/error-classify'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
+import { IS_LINUX_WEBVIEW } from '../../typing-test/ime-insert-text'
 import { KeyboardPane } from './KeyboardPane'
 import { useTypingTestPaneWindow } from './use-typing-test-pane-window'
 import { useTypingTestPaneComparison } from './use-typing-test-pane-comparison'
@@ -219,6 +220,7 @@ export function TypingTestPane({
           romajiGuide={typingTest.romajiGuide}
           kanaGuide={typingTest.kanaGuide}
           onImeSpaceKey={() => typingTest.processKeyEvent(' ', false, false, false)}
+          onImeInsertText={IS_LINUX_WEBVIEW ? typingTest.processInsertedText : undefined}
           displayLines={displayLines}
           fontSize={fontSize}
           onNameResult={onNameFinishedResult}
