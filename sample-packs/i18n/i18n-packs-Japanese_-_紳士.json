@@ -1,5 +1,5 @@
 {
-  "version": "0.1.125",
+  "version": "0.1.126",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -2159,6 +2159,7 @@
     "missingKeys": {
       "description": "足りない言葉の雛形を用意いたしました。推敲の後に取り込んでくださいませ。",
       "empty": "全ての言葉が揃っております",
+      "group": "{{name}} ({{n}})",
       "title": "未設定の言葉"
     },
     "modalTitle": "お言葉",

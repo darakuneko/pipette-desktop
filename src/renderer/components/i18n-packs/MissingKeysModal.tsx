@@ -4,9 +4,11 @@
 // (relative to bundled English) and lets the user download a JSON
 // template containing only those keys with the English fallback as
 // the value. The user edits the template and re-imports it via the
-// outer Languages modal.
+// outer Languages modal. The list groups keys by their top-level
+// segment (`common`, `keycodeTooltip`, …), each group collapsed until
+// clicked.
 
-import { useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
@@ -14,6 +16,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { buildSubsetFromKeys } from '../../../shared/i18n/coverage'
 import { downloadJson } from '../../utils/download-json'
 import { PACK_TOOLBAR_BTN } from '../../constants/ui-tokens'
+import { DisclosureRow } from '../ui/DisclosureRow'
 
 export interface MissingKeysModalProps {
   open: boolean
@@ -25,6 +28,66 @@ export interface MissingKeysModalProps {
   /** English pack body — values copied to the exported template so the
    * user has the canonical text to translate against. */
   base: unknown
+}
+
+interface KeyGroup {
+  name: string
+  keys: string[]
+}
+
+/** Group dot-separated key paths by their first segment, keeping the
+ *  order in which each group first appears. */
+function groupByTopLevel(keys: readonly string[]): KeyGroup[] {
+  const groups = new Map<string, string[]>()
+  for (const key of keys) {
+    const dot = key.indexOf('.')
+    const name = dot < 0 ? key : key.slice(0, dot)
+    const list = groups.get(name)
+    if (list) list.push(key)
+    else groups.set(name, [key])
+  }
+  return Array.from(groups, ([name, groupKeys]) => ({ name, keys: groupKeys }))
+}
+
+/** Mounted only while the modal is open, so every group starts
+ *  collapsed each time the modal opens. */
+function MissingKeyGroups({ missingKeys }: { missingKeys: readonly string[] }): JSX.Element {
+  const { t } = useTranslation()
+  const groups = useMemo(() => groupByTopLevel(missingKeys), [missingKeys])
+  const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(() => new Set())
+
+  const toggle = useCallback((name: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }, [])
+
+  return (
+    <div data-testid="missing-keys-modal-list">
+      {groups.map(({ name, keys }) => {
+        const open = openGroups.has(name)
+        return (
+          <div key={name}>
+            <DisclosureRow
+              label={t('i18n.missingKeys.group', { name, n: keys.length })}
+              open={open}
+              onToggle={() => toggle(name)}
+            />
+            {open && (
+              <ul className="space-y-1 pb-1 pl-4 text-xs text-content">
+                {keys.map((key) => (
+                  <li key={key} className="font-mono break-all">{key}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export function MissingKeysModal({
@@ -89,11 +152,7 @@ export function MissingKeysModal({
               {t('i18n.missingKeys.empty')}
             </p>
           ) : (
-            <ul className="space-y-1 text-xs text-content" data-testid="missing-keys-modal-list">
-              {missingKeys.map((key) => (
-                <li key={key} className="font-mono break-all">{key}</li>
-              ))}
-            </ul>
+            <MissingKeyGroups missingKeys={missingKeys} />
           )}
         </div>
       </div>

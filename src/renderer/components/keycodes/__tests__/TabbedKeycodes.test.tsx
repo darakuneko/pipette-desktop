@@ -6,7 +6,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 
 const mockBasicKeycodes = [
   { qmkId: 'KC_A', label: 'A', hidden: false },
-  { qmkId: 'KC_B', label: 'B', hidden: false },
+  { qmkId: 'KC_B', label: 'B', hidden: false, tooltip: 'Letter B', tooltipKey: 'keycodeTooltip.KC_B' },
   { qmkId: 'KC_TILD', label: '~', hidden: false },
 ]
 
@@ -26,6 +26,7 @@ vi.mock('react-i18next', () => ({
         'keycodes.basic': 'Basic',
         'keycodes.behavior': 'Behavior',
         'keycodes.system': 'System',
+        'keycodeTooltip.KC_B': 'Translated B',
       }
       return map[key] ?? key
     },
@@ -273,6 +274,15 @@ describe('TabbedKeycodes hover tooltip (canonicalized shared bubble)', () => {
     act(() => { vi.advanceTimersByTime(300) })
     const bubble = screen.getByRole('tooltip')
     expect(bubble).toHaveTextContent('KC_A')
+  })
+
+  it('shows the language pack translation of the hovered key description', () => {
+    render(<TabbedKeycodes />)
+    fireEvent.mouseEnter(screen.getByText('B').closest('button')!)
+    act(() => { vi.advanceTimersByTime(300) })
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble).toHaveTextContent('Translated B')
+    expect(bubble).not.toHaveTextContent('Letter B')
   })
 
   it('closes instantly on mouse leave, even mid-delay', () => {

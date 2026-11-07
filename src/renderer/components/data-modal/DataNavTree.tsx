@@ -8,6 +8,7 @@ import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/typ
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import { byDisplayName, syncKeyboardName } from './sync-keyboard-name'
+import { DisclosureRow } from '../ui/DisclosureRow'
 
 interface Props {
   storedKeyboards: StoredKeyboardInfo[]
@@ -62,19 +63,6 @@ const LEAF_BASE = 'w-full text-left text-sm py-1 rounded cursor-pointer truncate
 const LEAF_ACTIVE = `${LEAF_BASE} bg-surface-dim text-content font-medium`
 const LEAF_IDLE = `${LEAF_BASE} text-content-secondary hover:text-content hover:bg-surface-dim/50`
 
-const BRANCH_BASE = 'w-full text-left text-sm py-1 flex items-center gap-1 cursor-pointer truncate'
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <span
-      className={`inline-block text-3xs text-content-muted transition-transform ${open ? 'rotate-90' : ''}`}
-      aria-hidden="true"
-    >
-      &#9654;
-    </span>
-  )
-}
-
 interface LeafProps {
   label: string
   depth: number
@@ -112,17 +100,7 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   return (
     <>
       {/* Exception: same as Leaf — runtime depth-based indentation, off-grid 14px step */}
-      <button
-        type="button"
-        className={`${BRANCH_BASE} text-content-secondary hover:text-content`}
-        style={treeIndentStyle(depth)}
-        onClick={onToggle}
-        data-testid={testId}
-        aria-expanded={open}
-      >
-        <Chevron open={open} />
-        <span className="truncate">{label}</span>
-      </button>
+      <DisclosureRow label={label} open={open} onToggle={onToggle} style={treeIndentStyle(depth)} testId={testId} />
       {open && children}
     </>
   )

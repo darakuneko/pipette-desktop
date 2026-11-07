@@ -7,6 +7,7 @@ import { KEYCODE_CATEGORIES } from './categories'
 import { getRemapDisplayLabel } from './KeycodeGrid'
 import { BUBBLE_BASE, computeBubblePosition } from '../ui/Tooltip'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
+import { translateKeycodeTooltip } from './keycode-tooltip-text'
 
 interface SearchEntry {
   keycode: Keycode
@@ -112,14 +113,15 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
     // LM inner: show modifier keycodes instead of basic keycodes
     if (lmMode) {
       for (const kc of getAvailableLMMods()) {
-        const searchParts = [stripPrefix(kc.qmkId), kc.label, kc.tooltip].filter((p): p is string => Boolean(p))
+        const tooltip = translateKeycodeTooltip(t, kc)
+        const searchParts = [stripPrefix(kc.qmkId), kc.label, kc.tooltip, tooltip !== kc.tooltip ? tooltip : undefined].filter((p): p is string => Boolean(p))
         const tokens = searchParts.map((p) => p.toLowerCase())
         entries.push({
           keycode: kc,
           categoryId: 'lm-mods',
           searchText: tokens.join(' '),
           tokens,
-          detail: [kc.qmkId, kc.tooltip].filter(Boolean).join(' \u00b7 '),
+          detail: [kc.qmkId, tooltip].filter(Boolean).join(' \u00b7 '),
         })
       }
       return entries
@@ -131,13 +133,15 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
         if ((maskOnly || hasModMask || basicKeyOnly) && !isBasic(kc.qmkId)) continue
         const extraAliases = kc.alias.slice(1)
         const displayLabel = getRemapDisplayLabel(kc.qmkId, remapLabel)
+        const tooltip = translateKeycodeTooltip(t, kc)
         const searchParts = [
           stripPrefix(kc.qmkId),
           kc.label,
           ...kc.alias.map(stripPrefix),
           kc.tooltip,
+          tooltip !== kc.tooltip ? tooltip : undefined,
         ].filter((p): p is string => Boolean(p))
-        const detailParts = [kc.qmkId, kc.tooltip, ...extraAliases].filter((p): p is string => Boolean(p))
+        const detailParts = [kc.qmkId, tooltip, ...extraAliases].filter((p): p is string => Boolean(p))
         // Surface the default label in the detail line for a remapped
         // entry so the underlying key stays identifiable even though
         // the headline label now shows the pack's text.
@@ -167,7 +171,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
       }
     }
     return entries
-  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, remapLabel, getKeycodeRevision()])
+  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, remapLabel, t, getKeycodeRevision()])
 
   const results = useMemo(() => {
     if (suppressResults) return []
