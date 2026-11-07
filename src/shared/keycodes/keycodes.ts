@@ -2,6 +2,7 @@
 // Ported from vial-gui keycodes/keycodes.py and any_keycode.py
 
 import type { KeycodeOptions } from './keycodes-types'
+import { KEYCODE_TOOLTIP_NS, keycodeTooltipKey } from './keycodes-tooltip-key'
 
 // --- Keycode class ---
 
@@ -10,6 +11,8 @@ export class Keycode {
   readonly cExportId: string | undefined
   readonly label: string
   readonly tooltip: string | undefined
+  readonly tooltipKey: string | undefined
+  readonly tooltipParams: Record<string, string | number> | undefined
   readonly masked: boolean
   readonly printable: string | undefined
   readonly alias: string[]
@@ -21,6 +24,8 @@ export class Keycode {
     this.cExportId = opts.cExportId
     this.label = opts.label
     this.tooltip = opts.tooltip
+    this.tooltipKey = opts.tooltipKey
+    this.tooltipParams = opts.tooltipParams
     this.masked = opts.masked ?? false
     this.printable = opts.printable
     this.alias = [this.qmkId, ...(opts.alias ?? [])]
@@ -78,6 +83,8 @@ function K(
     | string
     | {
         tooltip?: string
+        tooltipKey?: string
+        tooltipParams?: Record<string, string | number>
         masked?: boolean
         printable?: string
         recorderAlias?: string[]
@@ -86,6 +93,8 @@ function K(
         cExportId?: string
       },
   opts?: {
+    tooltipKey?: string
+    tooltipParams?: Record<string, string | number>
     masked?: boolean
     printable?: string
     recorderAlias?: string[]
@@ -94,10 +103,8 @@ function K(
     cExportId?: string
   },
 ): Keycode {
-  if (typeof tooltipOrOpts === 'string') {
-    return new Keycode({ qmkId, label, tooltip: tooltipOrOpts, ...opts })
-  }
-  return new Keycode({ qmkId, label, ...tooltipOrOpts })
+  const o = typeof tooltipOrOpts === 'string' ? { tooltip: tooltipOrOpts, ...opts } : tooltipOrOpts
+  return new Keycode({ qmkId, label, tooltipKey: o?.tooltip ? keycodeTooltipKey(qmkId) : undefined, ...o })
 }
 
 // --- Keycode category arrays ---
@@ -598,16 +605,16 @@ export const KEYCODES_MODIFIERS: Keycode[] = [
 // MOD_* Keycode entries for LM inner display — NOT added to RAWCODES_MAP
 // to avoid conflicting with basic keycodes at the same numeric values.
 export const KEYCODES_LM_MODS: Keycode[] = [
-  new Keycode({ qmkId: 'MOD_LCTL', label: 'LCtl', tooltip: 'Left Control' }),
-  new Keycode({ qmkId: 'MOD_LSFT', label: 'LSft', tooltip: 'Left Shift' }),
-  new Keycode({ qmkId: 'MOD_LALT', label: 'LAlt', tooltip: 'Left Alt' }),
-  new Keycode({ qmkId: 'MOD_LGUI', label: 'LGui', tooltip: 'Left GUI' }),
-  new Keycode({ qmkId: 'MOD_RCTL', label: 'RCtl', tooltip: 'Right Control' }),
-  new Keycode({ qmkId: 'MOD_RSFT', label: 'RSft', tooltip: 'Right Shift' }),
-  new Keycode({ qmkId: 'MOD_RALT', label: 'RAlt', tooltip: 'Right Alt' }),
-  new Keycode({ qmkId: 'MOD_RGUI', label: 'RGui', tooltip: 'Right GUI' }),
-  new Keycode({ qmkId: 'MOD_MEH', label: 'Meh', tooltip: 'Meh (LCTL+LSFT+LALT)' }),
-  new Keycode({ qmkId: 'MOD_HYPR', label: 'Hypr', tooltip: 'Hyper (LCTL+LSFT+LALT+LGUI)' }),
+  K('MOD_LCTL', 'LCtl', 'Left Control'),
+  K('MOD_LSFT', 'LSft', 'Left Shift'),
+  K('MOD_LALT', 'LAlt', 'Left Alt'),
+  K('MOD_LGUI', 'LGui', 'Left GUI'),
+  K('MOD_RCTL', 'RCtl', 'Right Control'),
+  K('MOD_RSFT', 'RSft', 'Right Shift'),
+  K('MOD_RALT', 'RAlt', 'Right Alt'),
+  K('MOD_RGUI', 'RGui', 'Right GUI'),
+  K('MOD_MEH', 'Meh', 'Meh (LCTL+LSFT+LALT)'),
+  K('MOD_HYPR', 'Hypr', 'Hyper (LCTL+LSFT+LALT+LGUI)'),
 ]
 
 export const KEYCODES_BEHAVIOR_MAGIC: Keycode[] = [
@@ -1030,7 +1037,9 @@ export const KEYCODES_SYSTEM_LOCK: Keycode[] = [
 ]
 
 export const KEYCODES_SYSTEM_JOYSTICK: Keycode[] = Array.from({ length: 32 }, (_, i) =>
-  K(`JS_${i}`, `JS\n${i}`, `Joystick button ${i}`),
+  K(`JS_${i}`, `JS\n${i}`, `Joystick button ${i}`, {
+    tooltipKey: `${KEYCODE_TOOLTIP_NS}.joystick`, tooltipParams: { n: i },
+  }),
 )
 
 export const KEYCODES_SYSTEM: Keycode[] = [
@@ -1074,6 +1083,7 @@ export const KEYCODES_MIDI_BASIC: Keycode[] = [
     ['C', 'Cs', 'D', 'Ds', 'E', 'F', 'Fs', 'G', 'Gs', 'A', 'As', 'B'].map((note) =>
       K(`MI_${note}_${oct + 1}`, `MI\n${note}${oct + 1}`, `Midi send note ${note}${oct + 1}`, {
         cExportId: `MI_${note}${oct + 1}`,
+        tooltipKey: `${KEYCODE_TOOLTIP_NS}.midiNote`, tooltipParams: { note, octave: oct + 1 },
       }),
     ),
   ).flat(),
@@ -1104,7 +1114,7 @@ export const KEYCODES_MIDI_TRANSPOSE: Keycode[] = [
       `MI_TRNS_${n < 0 ? 'N' + Math.abs(n) : String(n)}`,
       `MI\nTrans${sign}${n}`,
       `Midi set transposition to ${n} semitones`,
-      { cExportId },
+      { cExportId, tooltipKey: `${KEYCODE_TOOLTIP_NS}.midiTranspose`, tooltipParams: { n } },
     )
   }),
   K('MI_TRNSD', 'MI\nTransDN', 'Midi decrease transposition', { cExportId: 'MI_TRSD' }),
@@ -1115,6 +1125,7 @@ export const KEYCODES_MIDI_VELOCITY: Keycode[] = [
   ...Array.from({ length: 10 }, (_, i) =>
     K(`MI_VEL_${i + 1}`, `MI\nVel${i + 1}`, `Midi set velocity to ${i + 1}`, {
       cExportId: `MI_VL${i + 1}`,
+      tooltipKey: `${KEYCODE_TOOLTIP_NS}.midiVelocity`, tooltipParams: { n: i + 1 },
     }),
   ),
   K('MI_VELD', 'MI\nVelDN', 'Midi decrease velocity'),
@@ -1123,7 +1134,9 @@ export const KEYCODES_MIDI_VELOCITY: Keycode[] = [
 
 export const KEYCODES_MIDI_CHANNEL: Keycode[] = [
   ...Array.from({ length: 16 }, (_, i) =>
-    K(`MI_CH${i + 1}`, `MI\nCH${i + 1}`, `Midi set channel to ${i + 1}`),
+    K(`MI_CH${i + 1}`, `MI\nCH${i + 1}`, `Midi set channel to ${i + 1}`, {
+      tooltipKey: `${KEYCODE_TOOLTIP_NS}.midiChannel`, tooltipParams: { n: i + 1 },
+    }),
   ),
   K('MI_CHD', 'MI\nCHDN', 'Midi decrease channel', { cExportId: 'MI_CHND' }),
   K('MI_CHU', 'MI\nCHUP', 'Midi increase channel', { cExportId: 'MI_CHNU' }),

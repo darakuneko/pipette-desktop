@@ -146,6 +146,8 @@ function makeKeycode(qmkId: string, label?: string): Keycode {
     cExportId: undefined,
     label: label ?? qmkId,
     tooltip: undefined,
+    tooltipKey: undefined,
+    tooltipParams: undefined,
     masked: false,
     printable: undefined,
     alias: [qmkId],

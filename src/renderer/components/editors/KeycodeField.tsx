@@ -9,6 +9,7 @@ import { KeyWidget } from '../keyboard/KeyWidget'
 import type { KleKey } from '../../../shared/kle/types'
 import { KEY_UNIT, KEY_SPACING, KEY_FACE_INSET } from '../keyboard/constants'
 import { Tooltip } from '../ui/Tooltip'
+import { translateKeycodeTooltip } from '../keycodes/keycode-tooltip-text'
 
 interface Props {
   value: number
@@ -62,7 +63,7 @@ export const KEYCODE_FIELD_SIZE = Math.round(FACE_SIZE)
 export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, onDelete, noTooltip, disabled, label }: Props) {
   const { t } = useTranslation()
   const qmkId = serialize(value)
-  const tooltip = noTooltip ? undefined : keycodeTooltip(qmkId)
+  const tooltip = noTooltip ? undefined : keycodeTooltip(qmkId, (kc) => translateKeycodeTooltip(t, kc))
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMasked = onMaskPartClick != null && isMask(qmkId)
 

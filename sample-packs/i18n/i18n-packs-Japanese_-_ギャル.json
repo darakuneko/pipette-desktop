@@ -1,5 +1,5 @@
 {
-  "version": "0.1.125",
+  "version": "0.1.126",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -2169,6 +2169,7 @@
     "missingKeys": {
       "description": "足りないやつのテンプレ出すから編集して入れてねん♡",
       "empty": "全部設定おけ！マジ神☆",
+      "group": "{{name}} ({{n}})",
       "title": "設定してないやつらｗ"
     },
     "modalTitle": "言語っしょ",

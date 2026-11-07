@@ -1,5 +1,5 @@
 {
-  "version": "0.1.125",
+  "version": "0.1.126",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -2169,6 +2169,7 @@
     "missingKeys": {
       "description": "翻訳が必要なキーだけを含む JSON テンプレートをダウンロードします。編集後に再インポートしてください。",
       "empty": "すべてのキーが設定されています",
+      "group": "{{name}} ({{n}})",
       "title": "未設定のキー"
     },
     "modalTitle": "言語パック",

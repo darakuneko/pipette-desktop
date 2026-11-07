@@ -15,6 +15,7 @@ import { KeycodeTabBar } from './KeycodeTabBar'
 import { isShiftedKeycode } from './SplitKey'
 import { BUBBLE_BASE, computeBubblePosition } from '../ui/Tooltip'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
+import { translateKeycodeTooltip } from './keycode-tooltip-text'
 import { expandGrouped, expandPerRow, LM_CATEGORY, type KeycodeIndexEntry, type TabbedKeycodesProps, type TooltipState } from './tabbed-keycodes-model'
 
 export function TabbedKeycodes({
@@ -456,7 +457,7 @@ export function TabbedKeycodes({
           </div>
           {tooltip.keycode.tooltip && (
             <div className="text-xs font-medium text-content whitespace-nowrap">
-              {tooltip.keycode.tooltip}
+              {translateKeycodeTooltip(t, tooltip.keycode)}
             </div>
           )}
         </div>

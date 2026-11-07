@@ -2210,7 +2210,7 @@ Each row shows:
 - **Name** (click to rename inline)
 - **Author** — the uploader's name when the pack came from Hub, blank for local-only packs. Built-in English always shows "pipette"
 - **Updated timestamp** (`YYYY-MM-DD HH:mm`) — the Hub-side last-update time, mirroring what the Hub website displays; blank until the pack has been uploaded. Built-in English shows its own build date instead, since it isn't a Hub-linked pack
-- **Version** chip when the pack covers every key of the current English baseline, or a **not set keys** button that opens a modal listing the missing translation keys
+- **Version** chip when the pack covers every key of the current English baseline, or a **not set keys** button that opens a modal listing the missing translation keys, grouped by their top-level section (e.g. `common (2)`) — click a section to show its keys
 - **Export** / **Delete** actions on the first line
 - **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including owner-only gating on Delete's Hub-post cascade as well as on Update/Remove)
 
@@ -2257,6 +2257,8 @@ A language pack `.json` mirrors the structure of the built-in English pack. Expo
 | (other keys) | Yes | Nested translation tree matching the English structure |
 
 Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains. A standard Japanese pack, plus several Japanese "persona" variants (different speaking styles, translated from the same baseline), are shipped as example packs in the [`sample-packs/i18n/`](../sample-packs/i18n/) directory in the repository.
+
+The descriptions shown when you hover a key in the key picker can be translated too, under `keycodeTooltip`: each key is the keycode's QMK name with each run of symbols replaced by one `_` and a trailing `_` dropped (e.g. `keycodeTooltip.KC_NONUS_HASH`, `keycodeTooltip.LSFT_T_kc` for `LSFT_T(kc)`), except numbered families (layer keys, joystick buttons, MIDI notes, …), which share one entry with a placeholder such as `{{n}}` (e.g. `keycodeTooltip.joystick`). Untranslated descriptions stay in English; names given by a keyboard's definition for its custom keycodes are shown as written.
 
 ### 6.4 Theme Packs Manage
 

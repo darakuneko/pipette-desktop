@@ -1,5 +1,5 @@
 {
-  "version": "0.1.125",
+  "version": "0.1.126",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -2159,6 +2159,7 @@
     "missingKeys": {
       "description": "翻訳が要るキーだけのJSONテンプレートをダウンロードしますえ。編集して再インポートしておくれやす。",
       "empty": "全部のキーが設定されてますえ",
+      "group": "{{name}} ({{n}})",
       "title": "未設定のキー"
     },
     "modalTitle": "言語",

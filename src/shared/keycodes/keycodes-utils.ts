@@ -70,6 +70,7 @@ import { decodeAnyKeycode } from './keycodes-any-keycode'
 // Re-export for backward compatibility
 export { decodeAnyKeycode } from './keycodes-any-keycode'
 import { LAYER_MASK_RE, LAYER_SINGLE_RE } from './keycodes-classify'
+import { KEYCODE_TOOLTIP_NS } from './keycodes-tooltip-key'
 export { getLayerOpTarget, keycodeGroup } from './keycodes-classify'
 export type { KeycodeGroup, LayerOpTarget } from './keycodes-classify'
 
@@ -452,11 +453,16 @@ export function codeToLabel(code: number): string {
   return keycodeLabel(qmkId).replaceAll('\n', ' ')
 }
 
-export function keycodeTooltip(qmkId: string): string | undefined {
+/** `"MO: <text>"` (bare qmkId without text, `undefined` if unknown).
+ *  `resolveText` supplies a translation; the default is English `tooltip`. */
+export function keycodeTooltip(
+  qmkId: string,
+  resolveText: (kc: Keycode) => string | undefined = (kc) => kc.tooltip,
+): string | undefined {
   const kc = findOuterKeycode(qmkId)
   if (kc === undefined) return undefined
-  if (kc.tooltip) return `${kc.qmkId}: ${kc.tooltip}`
-  return kc.qmkId
+  const text = resolveText(kc)
+  return text ? `${kc.qmkId}: ${text}` : kc.qmkId
 }
 
 /** Resolve display labels for a serialized QMK id without depending on
@@ -594,6 +600,8 @@ export function createUserKeycodes(): void {
         qmkId: `USER${String(x).padStart(2, '0')}`,
         label: `User ${x}`,
         tooltip: `User keycode ${x}`,
+        tooltipKey: `${KEYCODE_TOOLTIP_NS}.user`,
+        tooltipParams: { index: x },
       }),
     )
   }
@@ -643,6 +651,7 @@ export function recreateKeyboardKeycodes(keyboard: KeyboardKeycodeContext): void
       qmkId: 'QK_LAYER_LOCK',
       label: 'Layer\nLock',
       tooltip: 'Locks the current layer',
+      tooltipKey: `${KEYCODE_TOOLTIP_NS}.layerLock`,
       alias: ['QK_LLCK'],
       requiresFeature: 'layer_lock',
     }),
@@ -682,6 +691,7 @@ export function recreateKeyboardKeycodes(keyboard: KeyboardKeycodeContext): void
           qmkId: lbl,
           label: lbl,
           tooltip: description,
+          tooltipKey: `${KEYCODE_TOOLTIP_NS}.layer.${label}`,
           requiresFeature: feature,
         }),
       )
@@ -703,6 +713,8 @@ export function recreateKeyboardKeycodes(keyboard: KeyboardKeycodeContext): void
         qmkId: `LT${x}(kc)`,
         label: `LT ${x}\n(kc)`,
         tooltip: `kc on tap, switch to layer ${x} while held`,
+        tooltipKey: `${KEYCODE_TOOLTIP_NS}.layer.LT`,
+        tooltipParams: { layer: x },
         masked: true,
       }),
     )
@@ -716,6 +728,8 @@ export function recreateKeyboardKeycodes(keyboard: KeyboardKeycodeContext): void
         qmkId: `LM${x}(kc)`,
         label: `LM ${x}\n(kc)`,
         tooltip: `Momentarily activates layer ${x} with modifier`,
+        tooltipKey: `${KEYCODE_TOOLTIP_NS}.layer.LM`,
+        tooltipParams: { layer: x },
         masked: true,
       }),
     )
@@ -747,7 +761,12 @@ export function recreateKeyboardKeycodes(keyboard: KeyboardKeycodeContext): void
   for (let x = 0; x < keyboard.tapDanceCount; x++) {
     const lbl = `TD(${x})`
     td.push(
-      new Keycode({ qmkId: lbl, label: lbl, tooltip: 'Tap dance keycode' }),
+      new Keycode({
+        qmkId: lbl,
+        label: lbl,
+        tooltip: 'Tap dance keycode',
+        tooltipKey: `${KEYCODE_TOOLTIP_NS}.tapDance`,
+      }),
     )
   }
   setKeycodeTapDance(td)

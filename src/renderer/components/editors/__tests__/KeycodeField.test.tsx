@@ -5,6 +5,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { KeycodeField } from '../KeycodeField'
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: { defaultValue?: string }) =>
+      key === 'keycodeTooltip.KC_4' ? 'Translated 4' : (opts?.defaultValue ?? key),
+  }),
+}))
+
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
   serialize: (code: number) => (code === 0 ? 'KC_NO' : `KC_${code}`),
   keycodeLabel: (qmkId: string) => {
@@ -12,9 +19,12 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     if (qmkId === 'KC_99') return 'Line1\nLine2'
     return qmkId
   },
-  keycodeTooltip: (qmkId: string) => (qmkId === 'KC_NO' ? undefined : `Tooltip: ${qmkId}`),
   isMask: () => false,
   findKeycode: (qmkId: string) => ({ qmkId, label: qmkId }),
+  keycodeTooltip: (qmkId: string, resolveText: (kc: { tooltip?: string; tooltipKey?: string }) => string | undefined) =>
+    qmkId === 'KC_NO'
+      ? undefined
+      : `${qmkId}: ${String(resolveText({ tooltip: `English ${qmkId}`, tooltipKey: `keycodeTooltip.${qmkId}` }))}`,
   findOuterKeycode: () => undefined,
   findInnerKeycode: () => undefined,
 }))
@@ -49,12 +59,12 @@ describe('KeycodeField', () => {
     expect(screen.getByTestId('keycode-field')).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('exposes keycodeTooltip via the shared Tooltip, not a native title', () => {
+  it('exposes the translated key description via the shared Tooltip, not a native title', () => {
     render(<KeycodeField value={4} selected={false} onSelect={() => {}} />)
     const btn = screen.getByTestId('keycode-field')
     expect(btn).not.toHaveAttribute('title')
     const bubble = screen.getByRole('tooltip')
-    expect(bubble.textContent).toBe('Tooltip: KC_4')
+    expect(bubble.textContent).toBe('KC_4: Translated 4')
     expect(btn.getAttribute('aria-describedby')).toBe(bubble.id)
   })
 

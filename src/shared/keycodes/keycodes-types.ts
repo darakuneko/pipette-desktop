@@ -4,6 +4,11 @@ export interface KeycodeOptions {
   qmkId: string
   label: string
   tooltip?: string
+  /** i18n key for `tooltip`; `tooltip` stays the English fallback. Left
+   *  unset for text the app does not own (customKeycodes titles). */
+  tooltipKey?: string
+  /** Interpolation values for `tooltipKey` (e.g. `{ layer: 2 }`). */
+  tooltipParams?: Record<string, string | number>
   masked?: boolean
   printable?: string
   recorderAlias?: string[]
