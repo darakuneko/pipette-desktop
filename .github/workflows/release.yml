@@ -132,7 +132,7 @@ jobs:
       # cargo-nextest runs the test binaries side by side, one process per
       # test; cargo test runs one binary at a time, and a few slow ones keep
       # the rest waiting. A prebuilt binary, checked against its checksum.
-      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
           fallback: none
@@ -469,7 +469,7 @@ jobs:
         run: npx tsx scripts/update-manifest/cli.ts build --version "${GITHUB_REF_NAME#v}" --dir release-files
 
       # A version with a pre-release part (0.5.0-alpha.1) is a pre-release.
-      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
