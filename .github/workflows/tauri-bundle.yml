@@ -108,7 +108,7 @@ jobs:
       # cargo-nextest runs the test binaries side by side, one process per
       # test; cargo test runs one binary at a time, and a few slow ones keep
       # the rest waiting. A prebuilt binary, checked against its checksum.
-      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-nextest@0.9.146
           fallback: none
