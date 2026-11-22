@@ -2260,6 +2260,8 @@ Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that cove
 
 The descriptions shown when you hover a key in the key picker can be translated too, under `keycodeTooltip`: each key is the keycode's QMK name with each run of symbols replaced by one `_` and a trailing `_` dropped (e.g. `keycodeTooltip.KC_NONUS_HASH`, `keycodeTooltip.LSFT_T_kc` for `LSFT_T(kc)`), except numbered families (layer keys, joystick buttons, MIDI notes, …), which share one entry with a placeholder such as `{{n}}` (e.g. `keycodeTooltip.joystick`). Untranslated descriptions stay in English; names given by a keyboard's definition for its custom keycodes are shown as written.
 
+The field names in the QMK settings modals (opened from the settings buttons under the key picker tabs, such as Tap-Hold or Mouse Keys) are translated under `qmkSettingsField`: each key is `q` followed by the setting's QMK Settings ID, plus `_b` and the bit number for a checkbox that shares that ID with others (e.g. `qmkSettingsField.q7` for Tapping Term, `qmkSettingsField.q1_b0` for "Always send Escape if Alt is pressed"). Untranslated field names stay in English.
+
 ### 6.4 Theme Packs Manage
 
 The Tools tab shows a **Theme Packs** row displaying the currently active theme pack (if any). Click **Edit** to open the Theme Packs modal.
