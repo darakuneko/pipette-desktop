@@ -2262,6 +2262,8 @@ Pipette Hub から言語パックを検索します。2 文字以上入力する
 
 キーピッカーでキーにカーソルを乗せた時に表示される説明文も `keycodeTooltip` の下で翻訳できます。キー名はキーコードの QMK 名の連続する記号を 1 つの `_` に置き換え、末尾の `_` を取り除いたものです (例: `keycodeTooltip.KC_NONUS_HASH`、`LSFT_T(kc)` は `keycodeTooltip.LSFT_T_kc`)。ただし番号の付いた一連のキー (レイヤーキー・ジョイスティックボタン・MIDI ノートなど) は `{{n}}` などの埋め込みを含む 1 つの項目を共有します (例: `keycodeTooltip.joystick`)。翻訳していない説明文は英語のまま表示され、キーボード定義がカスタムキーコードに付けた名前はそのまま表示されます。
 
+QMK 設定モーダル (キーピッカーのタブの下にある Tap-Hold・Mouse Keys などの設定ボタンから開くもの) の項目名は `qmkSettingsField` の下で翻訳できます。キー名は `q` に設定の QMK Settings ID を続けたもので、同じ ID を他の項目と共有するチェックボックスはさらに `_b` とビット番号を付けます (例: Tapping Term は `qmkSettingsField.q7`、「Always send Escape if Alt is pressed」は `qmkSettingsField.q1_b0`)。翻訳していない項目名は英語のまま表示されます。
+
 ### 6.4 Theme Packs Manage
 
 Tools タブに **Theme Packs** 行があり、現在アクティブなテーマパック名が表示されます (未設定の場合は空)。**Edit** をクリックすると Theme Packs モーダルが開きます。

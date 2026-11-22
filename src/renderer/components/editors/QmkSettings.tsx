@@ -6,6 +6,7 @@ import type { QmkSettingsTab, QmkSettingsField } from '../../../shared/types/pro
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { ConfirmButton } from './ConfirmButton'
 import settingsDefs from '../../../shared/qmk-settings-defs.json'
+import { qmkSettingsFieldKey } from '../../../shared/qmk-settings-field-key'
 import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 type SaveStatus = 'idle' | 'saving' | 'resetting' | 'saved' | 'failed'
@@ -280,7 +281,9 @@ export function QmkSettings({
           .filter((f) => supportedQsids.has(f.qsid))
           .map((field, i) => (
             <div key={`${field.qsid}-${field.bit ?? i}`} className="flex items-start gap-3">
-              <label className="flex-1 min-w-0 pt-1 text-sm">{field.title}</label>
+              <label className="flex-1 min-w-0 pt-1 text-sm">
+                {t(qmkSettingsFieldKey(field), { defaultValue: field.title })}
+              </label>
               {field.type === 'boolean' ? (
                 <input
                   type="checkbox"
