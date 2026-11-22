@@ -32,8 +32,10 @@ runs:
       shell: bash
       run: |
         # apt-cache show also succeeds for a name that is only referred to,
-        # so the check is for an installable candidate.
-        if LC_ALL=C apt-cache policy webkitgtk-webdriver | grep -q 'Candidate: [0-9]'; then
+        # so the check is for an installable candidate. grep reads all of
+        # the output: with pipefail, grep -q leaving at the first match
+        # closes the pipe on apt-cache, and its failure fails the check.
+        if LC_ALL=C apt-cache policy webkitgtk-webdriver | grep 'Candidate: [0-9]' >/dev/null; then
           driver=webkitgtk-webdriver
         else
           driver=webkit2gtk-driver
